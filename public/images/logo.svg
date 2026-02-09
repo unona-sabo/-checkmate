@@ -1,0 +1,239 @@
+<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Improved 3D Logo with smooth queen and checkmark -->
+  
+  <defs>
+    <!-- Gradients for 3D effect -->
+    <linearGradient id="queenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#ffc107;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f9a825;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="queenDark" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#c68f00;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9d6e00;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="checkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4caf50;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#45a049;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#388e3c;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffed4e;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#ffc107;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f9a825;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a7bc8;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#2b5aa6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e4085;stop-opacity:1" />
+    </linearGradient>
+    
+    <radialGradient id="crownBall">
+      <stop offset="0%" style="stop-color:#ffed4e;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#ffd700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f9a825;stop-opacity:1" />
+    </radialGradient>
+    
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="3" dy="5" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.4"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- 3D Checkmark -->
+  <g transform="translate(200, 140)" filter="url(#shadow)">
+    <!-- Checkmark shadow -->
+    <ellipse cx="20" cy="75" rx="35" ry="10" fill="#000000" opacity="0.3"/>
+    
+    <!-- Main checkmark body with 3D depth -->
+    <path d="M0 35 Q2 33 5 35 L25 60 Q27 63 30 60 L65 10 Q67 7 70 10 L75 15 Q77 18 75 21 L32 80 Q30 83 27 80 L0 50 Q-2 47 0 45 Z" 
+          fill="url(#checkGradient)"/>
+    
+    <!-- Dark side for 3D -->
+    <path d="M75 15 L70 10 L65 10 L32 80 L27 80 L30 75 L68 18 Z" 
+          fill="#2e7d32" opacity="0.6"/>
+    
+    <!-- Light side -->
+    <path d="M0 35 L5 35 L25 60 L30 60 L28 55 L8 32 Z" 
+          fill="#66bb6a" opacity="0.5"/>
+    
+    <!-- Highlight -->
+    <path d="M10 40 Q12 38 14 40 L26 55 L30 60 L28 58 L15 42 Z" 
+          fill="#a5d6a7" opacity="0.6"/>
+    
+    <!-- Inner shine -->
+    <ellipse cx="20" cy="50" rx="8" ry="12" fill="#c8e6c9" opacity="0.3" transform="rotate(-35 20 50)"/>
+  </g>
+  
+  <!-- 3D Chess Queen with smooth curves -->
+  <g transform="translate(320, 80)" filter="url(#shadow)">
+    
+    <!-- Base shadow -->
+    <ellipse cx="0" cy="200" rx="60" ry="15" fill="#000000" opacity="0.3"/>
+    
+    <!-- Base - smooth rounded platform -->
+    <g>
+      <!-- Bottom disc -->
+      <ellipse cx="0" cy="200" rx="50" ry="12" fill="url(#queenDark)"/>
+      <ellipse cx="0" cy="198" rx="50" ry="10" fill="url(#queenGradient)"/>
+      
+      <!-- Base with smooth curves -->
+      <path d="M-45 200 Q-44 195 -42 190 Q-40 185 -38 185 L38 185 Q40 185 42 190 Q44 195 45 200 Z" 
+            fill="url(#queenGradient)"/>
+      <ellipse cx="0" cy="185" rx="43" ry="10" fill="#ffd700"/>
+      
+      <!-- Decorative ring -->
+      <ellipse cx="0" cy="186" rx="40" ry="8" fill="#c68f00" opacity="0.3"/>
+    </g>
+    
+    <!-- Lower body with smooth taper -->
+    <g>
+      <!-- Smooth curved body -->
+      <path d="M-38 185 Q-36 180 -35 170 Q-34 150 -33 130 Q33 130 34 150 Q35 170 36 180 Q37 185 38 185 Z" 
+            fill="url(#queenGradient)"/>
+      
+      <!-- Side shadows with curve -->
+      <path d="M-38 185 Q-36 180 -35 170 Q-34 150 -33 130 L-28 130 Q-29 150 -30 170 Q-31 180 -33 185 Z" 
+            fill="#f9a825" opacity="0.6"/>
+      <path d="M38 185 Q36 180 35 170 Q34 150 33 130 L28 130 Q29 150 30 170 Q31 180 33 185 Z" 
+            fill="#c68f00" opacity="0.4"/>
+      
+      <!-- Smooth highlight -->
+      <ellipse cx="-28" cy="155" rx="5" ry="25" fill="#ffed4e" opacity="0.5"/>
+      
+      <!-- Top edge smooth -->
+      <ellipse cx="0" cy="130" rx="36" ry="9" fill="#ffd700"/>
+      <ellipse cx="0" cy="129" rx="33" ry="7" fill="#ffed4e" opacity="0.4"/>
+    </g>
+    
+    <!-- Middle section with gentle curve -->
+    <g>
+      <path d="M-32 130 Q-30 120 -29 110 Q-28 100 -28 95 L28 95 Q28 100 29 110 Q30 120 32 130 Z" 
+            fill="url(#queenGradient)"/>
+      
+      <!-- Side shading -->
+      <path d="M-32 130 Q-30 120 -29 110 Q-28 100 -28 95 L-24 95 Q-24 100 -25 110 Q-26 120 -28 130 Z" 
+            fill="#f9a825"/>
+      <path d="M32 130 Q30 120 29 110 Q28 100 28 95 L24 95 Q24 100 25 110 Q26 120 28 130 Z" 
+            fill="#c68f00" opacity="0.5"/>
+      
+      <!-- Smooth top -->
+      <ellipse cx="0" cy="95" rx="29" ry="7" fill="#ffd700"/>
+    </g>
+    
+    <!-- Neck with rounded transition -->
+    <g>
+      <path d="M-20 95 Q-20 90 -20 85 Q-20 75 -20 70 L20 70 Q20 75 20 85 Q20 90 20 95 Z" 
+            fill="url(#queenGradient)"/>
+      
+      <!-- Side panels curved -->
+      <path d="M-20 95 Q-20 90 -20 85 Q-20 75 -20 70 L-14 70 Q-14 75 -14 85 Q-14 90 -14 95 Z" 
+            fill="#f9a825"/>
+      <path d="M20 95 Q20 90 20 85 Q20 75 20 70 L14 70 Q14 75 14 85 Q14 90 14 95 Z" 
+            fill="#c68f00" opacity="0.5"/>
+      
+      <!-- Top -->
+      <ellipse cx="0" cy="70" rx="21" ry="6" fill="#ffd700"/>
+      <ellipse cx="0" cy="69" rx="18" ry="4" fill="#ffed4e"/>
+    </g>
+    
+    <!-- Head with soft corners -->
+    <g>
+      <path d="M-24 70 Q-24 65 -24 55 Q-24 40 -24 30 L24 30 Q24 40 24 55 Q24 65 24 70 Z" 
+            fill="url(#queenGradient)"/>
+      
+      <!-- Side shading smooth -->
+      <path d="M-24 70 Q-24 65 -24 55 Q-24 40 -24 30 L-19 30 Q-19 40 -19 55 Q-19 65 -19 70 Z" 
+            fill="#f9a825"/>
+      <path d="M24 70 Q24 65 24 55 Q24 40 24 30 L19 30 Q19 40 19 55 Q19 65 19 70 Z" 
+            fill="#c68f00" opacity="0.5"/>
+      
+      <!-- Front highlight smooth -->
+      <ellipse cx="-8" cy="50" rx="2" ry="15" fill="#ffed4e" opacity="0.3"/>
+      
+      <!-- Top edge -->
+      <ellipse cx="0" cy="30" rx="25" ry="7" fill="#ffd700"/>
+    </g>
+    
+    <!-- Crown points with smooth curves -->
+    <g>
+      <!-- Point 1 (left) with curve -->
+      <path d="M-26 30 Q-25 25 -24 20 Q-23 10 -22 5 Q-21 10 -20 20 Q-19 25 -18 28 Z" 
+            fill="url(#queenGradient)"/>
+      <path d="M-22 5 Q-21 10 -20 20 Q-19 25 -18 28 L-20 28 Q-21 25 -22 20 Q-23 10 -24 5 Z" 
+            fill="#f9a825"/>
+      
+      <!-- Point 2 -->
+      <path d="M-14 30 Q-13 25 -12 20 Q-11 15 -10 12 Q-9 15 -8 20 Q-7 25 -6 28 Z" 
+            fill="url(#queenGradient)"/>
+      <path d="M-10 12 Q-9 15 -8 20 Q-7 25 -6 28 L-8 28 Q-9 25 -10 20 Q-11 15 -12 12 Z" 
+            fill="#ffed4e" opacity="0.6"/>
+      
+      <!-- Point 3 (center tallest) smooth -->
+      <path d="M-4 30 Q-3 20 -2 10 Q-1 0 0 -5 Q1 0 2 10 Q3 20 4 28 Z" 
+            fill="url(#queenGradient)"/>
+      <path d="M0 -5 Q1 0 2 10 Q3 20 4 28 L2 28 Q1 20 0 10 Q-1 0 -2 -5 Z" 
+            fill="#ffed4e" opacity="0.7"/>
+      <path d="M0 -5 Q-1 0 -2 10 Q-3 20 -4 28 L-2 28 Q-1 20 0 10 Q1 0 2 -5 Z" 
+            fill="#f9a825"/>
+      
+      <!-- Point 4 -->
+      <path d="M6 30 Q7 25 8 20 Q9 15 10 12 Q11 15 12 20 Q13 25 14 28 Z" 
+            fill="url(#queenGradient)"/>
+      <path d="M10 12 Q11 15 12 20 Q13 25 14 28 L12 28 Q11 25 10 20 Q9 15 8 12 Z" 
+            fill="#c68f00" opacity="0.5"/>
+      
+      <!-- Point 5 (right) -->
+      <path d="M18 30 Q19 25 20 20 Q21 10 22 5 Q23 10 24 20 Q25 25 26 28 Z" 
+            fill="url(#queenGradient)"/>
+      <path d="M22 5 Q23 10 24 20 Q25 25 26 28 L24 28 Q23 25 22 20 Q21 10 20 5 Z" 
+            fill="#c68f00" opacity="0.6"/>
+    </g>
+    
+    <!-- Crown top ornament (smooth sphere) -->
+    <g>
+      <ellipse cx="0" cy="-10" rx="12" ry="4" fill="#c68f00" opacity="0.4"/>
+      <circle cx="0" cy="-15" r="12" fill="url(#crownBall)"/>
+      <!-- Highlight -->
+      <ellipse cx="-3" cy="-18" rx="5" ry="4" fill="#ffed4e" opacity="0.7"/>
+      <!-- Shadow -->
+      <ellipse cx="2" cy="-12" rx="6" ry="4" fill="#c68f00" opacity="0.3"/>
+    </g>
+    
+  </g>
+  
+  <!-- Text "CheckMate" with 3D effect -->
+  <g transform="translate(50, 300)">
+    
+    <!-- "Check" 3D -->
+    <text x="5" y="5" font-family="'Arial Black', sans-serif" font-weight="900" font-size="85" fill="#c68f00" opacity="0.4">Check</text>
+    <text x="3" y="3" font-family="'Arial Black', sans-serif" font-weight="900" font-size="85" fill="#f9a825">Check</text>
+    <text x="0" y="0" font-family="'Arial Black', sans-serif" font-weight="900" font-size="85" fill="url(#textGradient)" stroke="#f9a825" stroke-width="1">Check</text>
+    <text x="0" y="0" font-family="'Arial Black', sans-serif" font-weight="900" font-size="85" fill="url(#textGradient)">Check</text>
+    
+    <!-- "Mate" 3D on blue background -->
+    <path d="M305 -65 Q305 -75 315 -75 L530 -75 Q540 -75 540 -65 L540 8 Q540 18 530 18 L315 18 Q305 18 305 8 Z" fill="#1e4085"/>
+    <path d="M303 -67 Q303 -77 313 -77 L528 -77 Q538 -77 538 -67 L538 6 Q538 16 528 16 L313 16 Q303 16 303 6 Z" fill="url(#blueGradient)"/>
+    
+    <text x="318" y="3" font-family="'Arial Black', sans-serif" font-weight="900" font-size="85" fill="#1e4085" opacity="0.5">Mate</text>
+    <text x="315" y="0" font-family="'Arial Black', sans-serif" font-weight="900" font-size="85" fill="white">Mate</text>
+    <text x="315" y="-3" font-family="'Arial Black', sans-serif" font-weight="900" font-size="85" fill="white" opacity="0.3">Mate</text>
+    
+  </g>
+  
+  <!-- Tagline -->
+  <text x="300" y="350" font-family="Arial, sans-serif" font-weight="700" font-size="16" fill="#1e4085" text-anchor="middle" letter-spacing="2">QA MANAGEMENT SYSTEM</text>
+  <text x="299" y="349" font-family="Arial, sans-serif" font-weight="700" font-size="16" fill="#2b5aa6" text-anchor="middle" letter-spacing="2">QA MANAGEMENT SYSTEM</text>
+  
+</svg>

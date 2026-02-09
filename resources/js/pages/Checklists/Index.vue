@@ -17,7 +17,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, ClipboardList, ArrowRight, FileText, StickyNote, Import, Pencil, Trash2 } from 'lucide-vue-next';
+import { Plus, ClipboardList, ArrowRight, FileText, StickyNote, Import, Pencil, Trash2, X, Search } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
 import { ref, computed, watch, onMounted } from 'vue';
 
 interface NoteDraft {
@@ -40,6 +41,18 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const DRAFT_STORAGE_KEY = `checklist-note-draft-${props.project.id}`;
+
+const searchQuery = ref('');
+
+const filteredChecklists = computed(() => {
+    if (!searchQuery.value.trim()) {
+        return props.checklists;
+    }
+    const query = searchQuery.value.toLowerCase();
+    return props.checklists.filter(checklist =>
+        checklist.name.toLowerCase().includes(query)
+    );
+});
 
 const showNoteDialog = ref(false);
 const showDeleteConfirm = ref(false);
@@ -197,6 +210,11 @@ const importNotes = () => {
     );
 };
 
+const clearNotes = () => {
+    noteContent.value = '';
+    deleteDraft();
+};
+
 const onDialogClose = (open: boolean) => {
     if (!open && noteContent.value.trim()) {
         // Save draft when closing with content
@@ -221,7 +239,23 @@ const onDialogClose = (open: boolean) => {
                     <h1 class="text-2xl font-bold tracking-tight">Checklists</h1>
                     <p class="text-muted-foreground">Create and manage custom checklists</p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search checklists..."
+                            class="pl-9 pr-8 w-56"
+                        />
+                        <button
+                            v-if="searchQuery"
+                            @click="searchQuery = ''"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
                     <Dialog v-model:open="showNoteDialog" @update:open="onDialogClose">
                         <DialogTrigger as-child>
                             <Button variant="outline" class="gap-2">
@@ -299,18 +333,30 @@ const onDialogClose = (open: boolean) => {
                                 </div>
                             </div>
 
-                            <DialogFooter>
-                                <Button variant="outline" @click="showNoteDialog = false">
-                                    Cancel
-                                </Button>
+                            <DialogFooter class="flex justify-between sm:justify-between">
                                 <Button
-                                    @click="importNotes"
-                                    :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
-                                    class="gap-2"
+                                    v-if="noteContent.trim()"
+                                    variant="ghost"
+                                    @click="clearNotes"
+                                    class="gap-2 text-muted-foreground hover:text-destructive"
                                 >
-                                    <Import class="h-4 w-4" />
-                                    Import to Checklist
+                                    <X class="h-4 w-4" />
+                                    Clear
                                 </Button>
+                                <div v-else></div>
+                                <div class="flex gap-2">
+                                    <Button variant="outline" @click="showNoteDialog = false">
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        @click="importNotes"
+                                        :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
+                                        class="gap-2"
+                                    >
+                                        <Import class="h-4 w-4" />
+                                        Import to Checklist
+                                    </Button>
+                                </div>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
@@ -374,7 +420,7 @@ const onDialogClose = (open: boolean) => {
                 </Card>
 
                 <!-- Checklist Cards -->
-                <Link v-for="checklist in checklists" :key="checklist.id" :href="`/projects/${project.id}/checklists/${checklist.id}`">
+                <Link v-for="checklist in filteredChecklists" :key="checklist.id" :href="`/projects/${project.id}/checklists/${checklist.id}`">
                     <Card class="transition-all hover:border-primary cursor-pointer h-full">
                         <CardHeader>
                             <CardTitle class="flex items-center justify-between">

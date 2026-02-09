@@ -28,7 +28,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
-    Bold, Heading, GripHorizontal, StickyNote, Import
+    Bold, Heading, GripHorizontal, StickyNote, Import, Pencil, X, Search,
+    MoreHorizontal, Copy, TestTube, Play
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
 
@@ -74,11 +75,135 @@ const hasChanges = ref(false);
 const showDeleteConfirm = ref(false);
 const rowToDeleteIndex = ref<number | null>(null);
 
+// Store original content state (excluding checkboxes) for comparison
+const getContentSnapshot = () => {
+    const checkboxKeys = columns.value.filter(c => c.type === 'checkbox').map(c => c.key);
+    return JSON.stringify(rows.value.map(row => ({
+        id: row.id,
+        row_type: row.row_type,
+        background_color: row.background_color,
+        font_color: row.font_color,
+        font_weight: row.font_weight,
+        data: Object.fromEntries(
+            Object.entries(row.data).filter(([key]) => !checkboxKeys.includes(key))
+        )
+    })));
+};
+const originalContentSnapshot = ref(getContentSnapshot());
+
+// Check if there are actual content changes (not just checkbox changes)
+const hasContentChanges = computed(() => {
+    return getContentSnapshot() !== originalContentSnapshot.value;
+});
+
+// Search state
+const searchQuery = ref('');
+
+const filteredRows = computed(() => {
+    if (!searchQuery.value.trim()) {
+        return rows.value;
+    }
+    const query = searchQuery.value.toLowerCase();
+    return rows.value.filter(row => {
+        // Search through all text values in row data
+        return Object.values(row.data).some(value => {
+            if (typeof value === 'string') {
+                return value.toLowerCase().includes(query);
+            }
+            return false;
+        });
+    });
+});
+
 // Note dialog state
 const showNoteDialog = ref(false);
 const noteContent = ref('');
 const isImporting = ref(false);
 const selectedChecklistId = ref<number>(props.checklist.id);
+const hasDraft = ref(false);
+
+// Draft storage
+const DRAFT_STORAGE_KEY = `checklist-note-draft-${props.checklist.id}`;
+
+interface NoteDraft {
+    content: string;
+    selectedChecklistId: number;
+    selectedColumnKey: string;
+}
+
+const loadDraft = () => {
+    try {
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+            const draft: NoteDraft = JSON.parse(saved);
+            if (draft.content && draft.content.trim()) {
+                hasDraft.value = true;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load draft:', e);
+    }
+};
+
+const saveDraft = () => {
+    if (!noteContent.value.trim()) {
+        deleteDraft();
+        return;
+    }
+
+    const draft: NoteDraft = {
+        content: noteContent.value,
+        selectedChecklistId: selectedChecklistId.value,
+        selectedColumnKey: selectedColumnKey.value,
+    };
+
+    try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+        hasDraft.value = true;
+    } catch (e) {
+        console.error('Failed to save draft:', e);
+    }
+};
+
+const deleteDraft = () => {
+    try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        hasDraft.value = false;
+    } catch (e) {
+        console.error('Failed to delete draft:', e);
+    }
+};
+
+const clearNotes = () => {
+    noteContent.value = '';
+    deleteDraft();
+};
+
+const openDraft = () => {
+    try {
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+            const draft: NoteDraft = JSON.parse(saved);
+            noteContent.value = draft.content;
+            selectedChecklistId.value = draft.selectedChecklistId;
+            selectedColumnKey.value = draft.selectedColumnKey;
+        }
+    } catch (e) {
+        console.error('Failed to open draft:', e);
+    }
+};
+
+const onNoteDialogChange = (open: boolean) => {
+    if (open && hasDraft.value) {
+        openDraft();
+    }
+    if (!open && noteContent.value.trim()) {
+        saveDraft();
+    }
+    if (!open) {
+        noteContent.value = '';
+    }
+};
 
 // Get selected checklist
 const selectedChecklist = computed(() => {
@@ -150,6 +275,7 @@ const importNotes = () => {
                 showNoteDialog.value = false;
                 noteContent.value = '';
                 isImporting.value = false;
+                deleteDraft();
             },
             onError: () => {
                 isImporting.value = false;
@@ -362,6 +488,7 @@ const saveRows = () => {
             preserveScroll: true,
             onSuccess: () => {
                 hasChanges.value = false;
+                originalContentSnapshot.value = getContentSnapshot();
             },
         }
     );
@@ -415,6 +542,78 @@ const getFontWeightClass = (weight: string) => {
     }
 };
 
+// Get all checkbox column keys
+const checkboxColumnKeys = computed(() => {
+    return columns.value.filter(col => col.type === 'checkbox').map(col => col.key);
+});
+
+// Get selected rows (rows with any checkbox checked)
+const selectedRows = computed(() => {
+    const checkboxKeys = checkboxColumnKeys.value;
+    if (checkboxKeys.length === 0) return [];
+
+    return rows.value.filter(row => {
+        if (row.row_type === 'section_header') return false;
+        return checkboxKeys.some(key => !!row.data[key]);
+    });
+});
+
+// Check if any rows are selected
+const hasSelectedRows = computed(() => selectedRows.value.length > 0);
+
+// Check if row has any content (non-empty text fields)
+const rowHasContent = (row: ExtendedChecklistRow, checkboxColumnKey: string): boolean => {
+    return Object.entries(row.data).some(([key, value]) => {
+        // Skip the checkbox column itself
+        if (key === checkboxColumnKey) return false;
+        // Check if value is non-empty string (excluding default placeholders)
+        if (typeof value === 'string') {
+            const trimmed = value.trim().toLowerCase();
+            if (trimmed.length === 0) return false;
+            if (trimmed === 'select...' || trimmed === 'select') return false;
+            return true;
+        }
+        return false;
+    });
+};
+
+// Get checkbox header state: true, false, or 'indeterminate' (only considers rows with content)
+const getHeaderCheckboxState = (columnKey: string): boolean | 'indeterminate' => {
+    const rowsWithContent = rows.value.filter(r =>
+        r.row_type !== 'section_header' && rowHasContent(r, columnKey)
+    );
+
+    if (rowsWithContent.length === 0) return false;
+
+    const checkedCount = rowsWithContent.filter(row => !!row.data[columnKey]).length;
+
+    if (checkedCount === 0) return false;
+    if (checkedCount === rowsWithContent.length) return true;
+    return 'indeterminate';
+};
+
+// Toggle all checkboxes in a column (only for rows with content)
+const toggleAllCheckboxes = (columnKey: string) => {
+    // Get rows that have content
+    const rowsWithContent = rows.value.filter(r =>
+        r.row_type !== 'section_header' && rowHasContent(r, columnKey)
+    );
+
+    if (rowsWithContent.length === 0) return;
+
+    const checkedCount = rowsWithContent.filter(row => !!row.data[columnKey]).length;
+    const allChecked = checkedCount === rowsWithContent.length;
+    const newValue = !allChecked;
+
+    // Update only rows with content
+    rowsWithContent.forEach(row => {
+        updateCell(row, columnKey, newValue);
+    });
+
+    // Force Vue to detect the change
+    rows.value = [...rows.value];
+};
+
 const autoResizeTextarea = (el: HTMLTextAreaElement) => {
     el.style.height = 'auto';
     el.style.height = el.scrollHeight + 'px';
@@ -431,6 +630,7 @@ const resizeAllTextareas = () => {
 
 onMounted(() => {
     resizeAllTextareas();
+    loadDraft();
 });
 
 watch(rows, () => {
@@ -444,33 +644,83 @@ watch(rows, () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <div class="flex items-center justify-between">
-                <div>
+                <div class="flex items-center gap-8">
                     <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
                         <ClipboardList class="h-6 w-6 text-primary" />
                         {{ checklist.name }}
                     </h1>
+                    <div class="relative">
+                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search content..."
+                            class="pl-9 pr-8 w-56"
+                        />
+                        <button
+                            v-if="searchQuery"
+                            @click="searchQuery = ''"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
                 <div class="flex gap-2">
+                    <!-- Actions dropdown when rows are selected -->
+                    <DropdownMenu v-if="hasSelectedRows">
+                        <DropdownMenuTrigger as-child>
+                            <Button class="gap-2">
+                                <MoreHorizontal class="h-4 w-4" />
+                                Actions ({{ selectedRows.length }})
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Selected Rows</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                                <Trash2 class="h-4 w-4 mr-2" />
+                                Delete rows
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <Copy class="h-4 w-4 mr-2" />
+                                Copy to the Checklist
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <TestTube class="h-4 w-4 mr-2" />
+                                Create Test Case
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <Play class="h-4 w-4 mr-2" />
+                                Create Test Run
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <!-- Save Changes button when no rows selected but there are content changes -->
                     <Button
-                        v-if="hasChanges"
+                        v-else-if="hasContentChanges"
                         @click="saveRows"
                         class="gap-2"
                     >
                         <Save class="h-4 w-4" />
                         Save Changes
                     </Button>
-                    <Dialog v-model:open="showNoteDialog">
+                    <Dialog v-model:open="showNoteDialog" @update:open="onNoteDialogChange">
                         <DialogTrigger as-child>
-                            <Button variant="outline" class="gap-2">
-                                <StickyNote class="h-4 w-4" />
-                                Create a Note
+                            <Button
+                                :variant="hasDraft ? 'cta' : 'outline'"
+                                class="gap-2"
+                            >
+                                <Pencil v-if="hasDraft" class="h-4 w-4" />
+                                <StickyNote v-else class="h-4 w-4" />
+                                {{ hasDraft ? 'Draft' : 'Create a Note' }}
                             </Button>
                         </DialogTrigger>
                         <DialogContent class="max-w-2xl">
                             <DialogHeader>
                                 <DialogTitle class="flex items-center gap-2">
                                     <StickyNote class="h-5 w-5 text-primary" />
-                                    Create a Note
+                                    {{ hasDraft ? 'Edit Draft' : 'Create a Note' }}
                                 </DialogTitle>
                                 <DialogDescription>
                                     Write your notes below. Each line will become a separate row in the selected checklist.
@@ -536,18 +786,30 @@ watch(rows, () => {
                                 </div>
                             </div>
 
-                            <DialogFooter>
-                                <Button variant="outline" @click="showNoteDialog = false">
-                                    Cancel
-                                </Button>
+                            <DialogFooter class="flex justify-between sm:justify-between">
                                 <Button
-                                    @click="importNotes"
-                                    :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
-                                    class="gap-2"
+                                    v-if="noteContent.trim()"
+                                    variant="ghost"
+                                    @click="clearNotes"
+                                    class="gap-2 text-muted-foreground hover:text-destructive"
                                 >
-                                    <Import class="h-4 w-4" />
-                                    Import to Checklist
+                                    <X class="h-4 w-4" />
+                                    Clear
                                 </Button>
+                                <div v-else></div>
+                                <div class="flex gap-2">
+                                    <Button variant="outline" @click="showNoteDialog = false">
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        @click="importNotes"
+                                        :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
+                                        class="gap-2"
+                                    >
+                                        <Import class="h-4 w-4" />
+                                        Import to Checklist
+                                    </Button>
+                                </div>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
@@ -603,6 +865,15 @@ watch(rows, () => {
                                     >
                                         <div class="flex items-center gap-1 cursor-grab active:cursor-grabbing">
                                             <GripHorizontal class="h-3 w-3 text-muted-foreground/50" />
+                                            <template v-if="column.type === 'checkbox'">
+                                                <input
+                                                    type="checkbox"
+                                                    :checked="getHeaderCheckboxState(column.key) === true"
+                                                    :indeterminate="getHeaderCheckboxState(column.key) === 'indeterminate'"
+                                                    @click.stop="toggleAllCheckboxes(column.key)"
+                                                    class="h-4 w-4 rounded border-gray-300 mr-1 cursor-pointer"
+                                                />
+                                            </template>
                                             <span class="truncate">{{ column.label }}</span>
                                         </div>
                                         <!-- Resize handle -->
@@ -617,23 +888,23 @@ watch(rows, () => {
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="(row, index) in rows"
+                                    v-for="(row, index) in (searchQuery.trim() ? filteredRows : rows)"
                                     :key="row.id"
                                     class="border-b last:border-0 transition-colors"
                                     :class="[
                                         row.row_type === 'section_header' ? '' : 'hover:bg-muted/50',
                                         getFontWeightClass(row.font_weight),
                                         {
-                                            'border-t-2 border-t-primary': dragOverRowIndex === index,
-                                            'opacity-50': draggedRowIndex === index
+                                            'border-t-2 border-t-primary': dragOverRowIndex === index && !searchQuery.trim(),
+                                            'opacity-50': draggedRowIndex === index && !searchQuery.trim()
                                         }
                                     ]"
                                     :style="getRowStyles(row)"
-                                    draggable="true"
-                                    @dragstart="onRowDragStart(index, $event)"
-                                    @dragover="onRowDragOver(index, $event)"
+                                    :draggable="!searchQuery.trim()"
+                                    @dragstart="!searchQuery.trim() && onRowDragStart(index, $event)"
+                                    @dragover="!searchQuery.trim() && onRowDragOver(index, $event)"
                                     @dragleave="onRowDragLeave"
-                                    @drop="onRowDrop(index, $event)"
+                                    @drop="!searchQuery.trim() && onRowDrop(index, $event)"
                                     @dragend="onRowDragEnd"
                                 >
                                     <td class="px-1 py-1 align-top">
@@ -662,9 +933,11 @@ watch(rows, () => {
                                         >
                                             <template v-if="column.type === 'checkbox'">
                                                 <div class="flex justify-center pt-1">
-                                                    <Checkbox
+                                                    <input
+                                                        type="checkbox"
                                                         :checked="!!row.data[column.key]"
-                                                        @update:checked="(val) => updateCell(row, column.key, val)"
+                                                        @change="(e) => updateCell(row, column.key, (e.target as HTMLInputElement).checked)"
+                                                        class="h-4 w-4 rounded border-gray-300"
                                                     />
                                                 </div>
                                             </template>
@@ -869,6 +1142,11 @@ watch(rows, () => {
                                 <tr v-if="rows.length === 0">
                                     <td :colspan="columns.length + 3" class="p-6 text-center text-muted-foreground text-sm">
                                         No items yet. Click "Add Row" to add your first item.
+                                    </td>
+                                </tr>
+                                <tr v-else-if="searchQuery.trim() && filteredRows.length === 0">
+                                    <td :colspan="columns.length + 3" class="p-6 text-center text-muted-foreground text-sm">
+                                        No items match "{{ searchQuery }}".
                                     </td>
                                 </tr>
                             </tbody>

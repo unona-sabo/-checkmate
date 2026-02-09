@@ -72,15 +72,9 @@ const projectSubItems = computed(() => {
 <template>
     <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
-                            <AppLogo />
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
+            <Link :href="dashboard()" class="flex items-center px-2 py-2">
+                <AppLogo />
+            </Link>
         </SidebarHeader>
 
         <SidebarContent>

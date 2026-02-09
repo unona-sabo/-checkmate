@@ -29,8 +29,12 @@ class ChecklistController extends Controller
     {
         $this->authorize('update', $project);
 
+        $templates = $project->checklists()
+            ->get(['id', 'name', 'columns_config']);
+
         return Inertia::render('Checklists/Create', [
             'project' => $project,
+            'templates' => $templates,
         ]);
     }
 

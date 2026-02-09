@@ -227,9 +227,18 @@
     }
 }
 
-/* Sidebar gradient */
+/* Main layout gradient background */
+[data-slot="sidebar-wrapper"] {
+    background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 40%, #172554 70%, #0f172a 100%) !important;
+}
+
+.dark [data-slot="sidebar-wrapper"] {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 40%, #0a1628 70%, #030712 100%) !important;
+}
+
+/* Sidebar transparent background */
 [data-sidebar="sidebar"] {
-    background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 50%, #172554 100%) !important;
+    background: transparent !important;
     border-color: transparent !important;
 }
 
@@ -249,7 +258,7 @@
 }
 
 .dark [data-sidebar="sidebar"] {
-    background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
+    background: transparent !important;
 }
 
 .dark [data-sidebar="sidebar"] * {
@@ -258,6 +267,16 @@
 
 .dark [data-sidebar="sidebar"] [data-sidebar="separator"] {
     background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Content inset area with glassmorphism effect */
+[data-slot="sidebar-inset"] {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px);
+}
+
+.dark [data-slot="sidebar-inset"] {
+    background: rgba(10, 22, 40, 0.95) !important;
 }
 
 /* Card gradients */
