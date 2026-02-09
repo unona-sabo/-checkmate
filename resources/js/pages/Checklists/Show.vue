@@ -22,16 +22,20 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
-    Bold, Heading, GripHorizontal
+    Bold, Heading, GripHorizontal, StickyNote, Import
 } from 'lucide-vue-next';
-import { ref, watch, onMounted, nextTick } from 'vue';
+import { ref, watch, onMounted, nextTick, computed } from 'vue';
 
 const props = defineProps<{
     project: Project;
     checklist: Checklist;
+    checklists: Checklist[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -69,6 +73,90 @@ const columns = ref<ExtendedColumnConfig[]>(
 const hasChanges = ref(false);
 const showDeleteConfirm = ref(false);
 const rowToDeleteIndex = ref<number | null>(null);
+
+// Note dialog state
+const showNoteDialog = ref(false);
+const noteContent = ref('');
+const isImporting = ref(false);
+const selectedChecklistId = ref<number>(props.checklist.id);
+
+// Get selected checklist
+const selectedChecklist = computed(() => {
+    return props.checklists.find(c => c.id === selectedChecklistId.value) || null;
+});
+
+// Get available text columns for the selected checklist
+const availableColumns = computed(() => {
+    if (!selectedChecklist.value?.columns_config) {
+        return [{ key: 'item', label: 'Item', type: 'text' as const }];
+    }
+    return selectedChecklist.value.columns_config.filter(col => col.type === 'text');
+});
+
+// Find default column key (prefer "check" or "item")
+const getDefaultColumnKey = (cols: ColumnConfig[]) => {
+    const checkColumn = cols.find(
+        col => col.key.toLowerCase().includes('check') || col.label.toLowerCase().includes('check')
+    );
+    if (checkColumn) return checkColumn.key;
+
+    const itemColumn = cols.find(
+        col => col.key.toLowerCase().includes('item') || col.label.toLowerCase().includes('item')
+    );
+    if (itemColumn) return itemColumn.key;
+
+    return cols[0]?.key || 'item';
+};
+
+// Initialize with default column for current checklist
+const selectedColumnKey = ref<string>(getDefaultColumnKey(columns.value.filter(col => col.type === 'text')));
+
+// Set default column when checklist changes
+watch(selectedChecklistId, () => {
+    selectedColumnKey.value = getDefaultColumnKey(availableColumns.value);
+}, { immediate: true });
+
+// Parse notes into array of items
+const parsedNotes = computed(() => {
+    if (!noteContent.value.trim()) return [];
+
+    return noteContent.value
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+            // Remove leading numbers, dots, dashes, etc.
+            return line.replace(/^[\d]+[.\)\-:\s]+/, '').trim();
+        })
+        .filter(line => line.length > 0);
+});
+
+// Import notes to checklist
+const importNotes = () => {
+    if (parsedNotes.value.length === 0 || !selectedChecklistId.value || !selectedColumnKey.value) return;
+
+    isImporting.value = true;
+
+    router.post(
+        `/projects/${props.project.id}/checklists/${selectedChecklistId.value}/import-notes`,
+        {
+            notes: parsedNotes.value,
+            column_key: selectedColumnKey.value,
+        },
+        {
+            preserveState: false,
+            preserveScroll: true,
+            onSuccess: () => {
+                showNoteDialog.value = false;
+                noteContent.value = '';
+                isImporting.value = false;
+            },
+            onError: () => {
+                isImporting.value = false;
+            },
+        }
+    );
+};
 
 watch([rows, columns], () => {
     hasChanges.value = true;
@@ -371,6 +459,98 @@ watch(rows, () => {
                         <Save class="h-4 w-4" />
                         Save Changes
                     </Button>
+                    <Dialog v-model:open="showNoteDialog">
+                        <DialogTrigger as-child>
+                            <Button variant="outline" class="gap-2">
+                                <StickyNote class="h-4 w-4" />
+                                Create a Note
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent class="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle class="flex items-center gap-2">
+                                    <StickyNote class="h-5 w-5 text-primary" />
+                                    Create a Note
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Write your notes below. Each line will become a separate row in the selected checklist.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div class="space-y-4 py-4">
+                                <div class="space-y-2">
+                                    <Label>Notes</Label>
+                                    <Textarea
+                                        v-model="noteContent"
+                                        placeholder="1. First item&#10;2. Second item&#10;3. Third item&#10;&#10;Or just write each item on a new line..."
+                                        rows="10"
+                                        class="font-mono text-sm"
+                                    />
+                                    <p v-if="parsedNotes.length > 0" class="text-sm text-muted-foreground">
+                                        {{ parsedNotes.length }} item(s) will be imported
+                                    </p>
+                                </div>
+
+                                <div v-if="parsedNotes.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30">
+                                    <div class="space-y-2">
+                                        <Label>Import to Checklist</Label>
+                                        <Select v-model="selectedChecklistId">
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a checklist..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem v-for="cl in checklists" :key="cl.id" :value="cl.id">
+                                                    {{ cl.name }}
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div v-if="selectedChecklistId && availableColumns.length > 0" class="space-y-2">
+                                        <Label>Column</Label>
+                                        <Select v-model="selectedColumnKey">
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a column..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem v-for="col in availableColumns" :key="col.key" :value="col.key">
+                                                    {{ col.label }}
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <Label>Preview</Label>
+                                        <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm">
+                                            <ol class="list-decimal list-inside space-y-1">
+                                                <li v-for="(note, index) in parsedNotes.slice(0, 10)" :key="index" class="truncate">
+                                                    {{ note }}
+                                                </li>
+                                                <li v-if="parsedNotes.length > 10" class="text-muted-foreground">
+                                                    ... and {{ parsedNotes.length - 10 }} more
+                                                </li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button variant="outline" @click="showNoteDialog = false">
+                                    Cancel
+                                </Button>
+                                <Button
+                                    @click="importNotes"
+                                    :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
+                                    class="gap-2"
+                                >
+                                    <Import class="h-4 w-4" />
+                                    Import to Checklist
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
                             <Button variant="outline" class="gap-2">

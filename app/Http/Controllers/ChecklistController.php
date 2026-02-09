@@ -63,9 +63,13 @@ class ChecklistController extends Controller
 
         $checklist->load(['rows', 'note']);
 
+        $checklists = $project->checklists()
+            ->get(['id', 'project_id', 'name', 'columns_config']);
+
         return Inertia::render('Checklists/Show', [
             'project' => $project,
             'checklist' => $checklist,
+            'checklists' => $checklists,
         ]);
     }
 
@@ -214,9 +218,21 @@ class ChecklistController extends Controller
             }
         }
 
-        // If no filled rows found, use the max order or start from 0
-        $startOrder = max($lastFilledOrder, $checklist->rows()->max('order') ?? -1) + 1;
+        // Insert position is after the last filled row
+        $insertAfterOrder = $lastFilledOrder;
+        $notesCount = count($validated['notes']);
 
+        // Shift all rows after the insert position to make room for new notes
+        $rowsToShift = $checklist->rows()
+            ->where('order', '>', $insertAfterOrder)
+            ->orderBy('order', 'desc')
+            ->get();
+
+        foreach ($rowsToShift as $row) {
+            $row->update(['order' => $row->order + $notesCount]);
+        }
+
+        // Insert new notes starting after the last filled row
         foreach ($validated['notes'] as $index => $note) {
             $data = [];
             foreach ($columns as $col) {
@@ -231,7 +247,7 @@ class ChecklistController extends Controller
 
             $checklist->rows()->create([
                 'data' => $data,
-                'order' => $startOrder + $index,
+                'order' => $insertAfterOrder + 1 + $index,
                 'row_type' => 'normal',
             ]);
         }
