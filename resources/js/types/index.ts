@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './checkmate';
 export * from './navigation';
 export * from './ui';
 

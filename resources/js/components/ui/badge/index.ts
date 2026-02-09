@@ -9,13 +9,19 @@ export const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+          "border-transparent bg-gradient-to-r from-primary to-primary/80 text-primary-foreground [a&]:hover:from-primary/90 [a&]:hover:to-primary/70",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+          "border-transparent bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground [a&]:hover:from-secondary/90 [a&]:hover:to-secondary/70",
         destructive:
-         "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "border-transparent bg-gradient-to-r from-destructive to-red-600 text-white [a&]:hover:from-destructive/90 [a&]:hover:to-red-500 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40",
         outline:
-          "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+          "text-foreground [a&]:hover:bg-gradient-to-r [a&]:hover:from-accent/20 [a&]:hover:to-accent/10 [a&]:hover:text-accent-foreground",
+        success:
+          "border-transparent bg-gradient-to-r from-emerald-500 to-green-500 text-white",
+        warning:
+          "border-transparent bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-900",
+        info:
+          "border-transparent bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
       },
     },
     defaultVariants: {

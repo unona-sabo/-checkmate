@@ -9,16 +9,24 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground hover:bg-primary/90",
+          "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 shadow-md",
+        cta:
+          "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-amber-900 hover:from-amber-300 hover:via-yellow-200 hover:to-amber-300 font-semibold shadow-md shadow-amber-500/20",
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "bg-gradient-to-r from-destructive to-red-600 text-white hover:from-destructive/90 hover:to-red-500 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 shadow-md",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "border bg-gradient-to-b from-background to-muted/30 shadow-xs hover:from-amber-100 hover:to-yellow-50 hover:border-amber-300 hover:text-amber-800 dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-amber-500/20 dark:hover:to-yellow-500/10 dark:hover:border-amber-500/50 dark:hover:text-amber-300",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground hover:from-amber-100 hover:to-yellow-50 hover:text-amber-800 dark:hover:from-amber-500/20 dark:hover:to-yellow-500/10 dark:hover:text-amber-300",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+          "hover:bg-gradient-to-r hover:from-amber-100 hover:to-yellow-100 hover:text-amber-800 dark:hover:from-amber-500/30 dark:hover:to-yellow-500/20 dark:hover:text-amber-300",
         link: "text-primary underline-offset-4 hover:underline",
+        "gradient-primary":
+          "bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white hover:from-blue-500 hover:via-blue-400 hover:to-indigo-500 shadow-lg shadow-blue-500/30",
+        "gradient-success":
+          "bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white hover:from-emerald-400 hover:via-green-400 hover:to-teal-400 shadow-lg shadow-green-500/30",
+        "gradient-purple":
+          "bg-gradient-to-r from-purple-600 via-violet-500 to-indigo-600 text-white hover:from-purple-500 hover:via-violet-400 hover:to-indigo-500 shadow-lg shadow-purple-500/30",
       },
       size: {
         "default": "h-9 px-4 py-2 has-[>svg]:px-3",

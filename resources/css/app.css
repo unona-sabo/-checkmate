@@ -59,6 +59,24 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    /* CheckMate custom colors */
+    --color-checkmate-primary: var(--checkmate-primary);
+    --color-checkmate-primary-dark: var(--checkmate-primary-dark);
+    --color-checkmate-primary-light: var(--checkmate-primary-light);
+    --color-checkmate-accent: var(--checkmate-accent);
+    --color-checkmate-accent-dark: var(--checkmate-accent-dark);
+    --color-checkmate-accent-light: var(--checkmate-accent-light);
+    --color-checkmate-bg: var(--checkmate-bg);
+    --color-checkmate-bg-white: var(--checkmate-bg-white);
+
+    /* Status colors */
+    --color-status-passed: var(--status-passed);
+    --color-status-failed: var(--status-failed);
+    --color-status-blocked: var(--status-blocked);
+    --color-status-skipped: var(--status-skipped);
+    --color-status-retest: var(--status-retest);
+    --color-status-untested: var(--status-untested);
 }
 
 /*
@@ -90,76 +108,114 @@
 }
 
 :root {
-    --background: hsl(0 0% 100%);
-    --foreground: hsl(0 0% 3.9%);
-    --card: hsl(0 0% 100%);
-    --card-foreground: hsl(0 0% 3.9%);
-    --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(0 0% 3.9%);
-    --primary: hsl(0 0% 9%);
-    --primary-foreground: hsl(0 0% 98%);
-    --secondary: hsl(0 0% 92.1%);
-    --secondary-foreground: hsl(0 0% 9%);
-    --muted: hsl(0 0% 96.1%);
-    --muted-foreground: hsl(0 0% 45.1%);
-    --accent: hsl(0 0% 96.1%);
-    --accent-foreground: hsl(0 0% 9%);
+    /* CheckMate Light Theme - Modern Blue/Amber */
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+    --primary: #1d4ed8;
+    --primary-foreground: #ffffff;
+    --secondary: #e2e8f0;
+    --secondary-foreground: #2563eb;
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b;
+    --accent: #fde047;
+    --accent-foreground: #0f172a;
     --destructive: hsl(0 84.2% 60.2%);
     --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(0 0% 92.8%);
-    --input: hsl(0 0% 89.8%);
-    --ring: hsl(0 0% 3.9%);
-    --chart-1: hsl(12 76% 61%);
-    --chart-2: hsl(173 58% 39%);
-    --chart-3: hsl(197 37% 24%);
-    --chart-4: hsl(43 74% 66%);
-    --chart-5: hsl(27 87% 67%);
+    --border: #e2e8f0;
+    --input: #e2e8f0;
+    --ring: #3b82f6;
+    --chart-1: #3b82f6;
+    --chart-2: #2563eb;
+    --chart-3: #f59e0b;
+    --chart-4: hsl(142 71% 45%);
+    --chart-5: hsl(262 83% 58%);
     --radius: 0.5rem;
-    --sidebar-background: hsl(0 0% 98%);
-    --sidebar-foreground: hsl(240 5.3% 26.1%);
-    --sidebar-primary: hsl(0 0% 10%);
-    --sidebar-primary-foreground: hsl(0 0% 98%);
-    --sidebar-accent: hsl(0 0% 94%);
-    --sidebar-accent-foreground: hsl(0 0% 30%);
-    --sidebar-border: hsl(0 0% 91%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(0 0% 98%);
+    --sidebar-background: #1e3a8a;
+    --sidebar-foreground: #ffffff;
+    --sidebar-primary: #fde047;
+    --sidebar-primary-foreground: #0f172a;
+    --sidebar-accent: rgba(255, 255, 255, 0.1);
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+    --sidebar-ring: #3b82f6;
+    --sidebar: #1e3a8a;
+
+    /* CheckMate custom colors - Modern Blue/Amber */
+    --checkmate-primary: #2563eb;
+    --checkmate-primary-dark: #1d4ed8;
+    --checkmate-primary-light: #60a5fa;
+    --checkmate-accent: #fde047;
+    --checkmate-accent-dark: #fbbf24;
+    --checkmate-accent-light: #fef08a;
+    --checkmate-bg: #f3f4f6;
+    --checkmate-bg-white: #ffffff;
+
+    /* Status colors for test results */
+    --status-passed: hsl(142 71% 45%);
+    --status-failed: hsl(0 84% 60%);
+    --status-blocked: hsl(38 92% 50%);
+    --status-skipped: hsl(262 83% 58%);
+    --status-retest: hsl(199 89% 48%);
+    --status-untested: hsl(0 0% 45%);
 }
 
 .dark {
-    --background: hsl(0 0% 3.9%);
+    /* CheckMate Branding - Modern Blue/Amber */
+    --background: #0a1628;
     --foreground: hsl(0 0% 98%);
-    --card: hsl(0 0% 3.9%);
+    --card: #162d4d;
     --card-foreground: hsl(0 0% 98%);
-    --popover: hsl(0 0% 3.9%);
+    --popover: #162d4d;
     --popover-foreground: hsl(0 0% 98%);
-    --primary: hsl(0 0% 98%);
-    --primary-foreground: hsl(0 0% 9%);
-    --secondary: hsl(0 0% 14.9%);
+    --primary: #1d4ed8;
+    --primary-foreground: hsl(0 0% 98%);
+    --secondary: #1e3a5f;
     --secondary-foreground: hsl(0 0% 98%);
-    --muted: hsl(0 0% 16.08%);
+    --muted: #1e3a5f;
     --muted-foreground: hsl(0 0% 63.9%);
-    --accent: hsl(0 0% 14.9%);
-    --accent-foreground: hsl(0 0% 98%);
+    --accent: #fde047;
+    --accent-foreground: hsl(0 0% 9%);
     --destructive: hsl(0 84% 60%);
     --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(0 0% 14.9%);
-    --input: hsl(0 0% 14.9%);
-    --ring: hsl(0 0% 83.1%);
-    --chart-1: hsl(220 70% 50%);
-    --chart-2: hsl(160 60% 45%);
-    --chart-3: hsl(30 80% 55%);
-    --chart-4: hsl(280 65% 60%);
-    --chart-5: hsl(340 75% 55%);
-    --sidebar-background: hsl(0 0% 7%);
+    --border: #1e3a5f;
+    --input: #1e3a5f;
+    --ring: #2563eb;
+    --chart-1: #2563eb;
+    --chart-2: hsl(142 71% 45%);
+    --chart-3: hsl(0 84% 60%);
+    --chart-4: #fde047;
+    --chart-5: hsl(262 83% 58%);
+    --sidebar-background: #0f172a;
     --sidebar-foreground: hsl(0 0% 95.9%);
-    --sidebar-primary: hsl(360, 100%, 100%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(0 0% 15.9%);
-    --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-    --sidebar-border: hsl(0 0% 15.9%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(240 5.9% 10%);
+    --sidebar-primary: #3b82f6;
+    --sidebar-primary-foreground: hsl(0 0% 98%);
+    --sidebar-accent: rgba(59, 130, 246, 0.15);
+    --sidebar-accent-foreground: hsl(0 0% 98%);
+    --sidebar-border: rgba(59, 130, 246, 0.15);
+    --sidebar-ring: #3b82f6;
+    --sidebar: #0f172a;
+
+    /* CheckMate custom colors - Modern Blue/Amber */
+    --checkmate-primary: #2563eb;
+    --checkmate-primary-dark: #1d4ed8;
+    --checkmate-primary-light: #60a5fa;
+    --checkmate-accent: #fde047;
+    --checkmate-accent-dark: #fbbf24;
+    --checkmate-accent-light: #fef08a;
+    --checkmate-bg: #0a1628;
+    --checkmate-bg-white: #162d4d;
+
+    /* Status colors for test results */
+    --status-passed: hsl(142 71% 45%);
+    --status-failed: hsl(0 84% 60%);
+    --status-blocked: hsl(38 92% 50%);
+    --status-skipped: hsl(262 83% 58%);
+    --status-retest: hsl(199 89% 48%);
+    --status-untested: hsl(0 0% 45%);
 }
 
 @layer base {
@@ -169,4 +225,206 @@
     body {
         @apply bg-background text-foreground;
     }
+}
+
+/* Sidebar gradient */
+[data-sidebar="sidebar"] {
+    background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 50%, #172554 100%) !important;
+    border-color: transparent !important;
+}
+
+[data-sidebar="sidebar"] * {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-sidebar="sidebar"] [data-sidebar="separator"] {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-sidebar="sidebar"] [data-sidebar="header"],
+[data-sidebar="sidebar"] [data-sidebar="footer"],
+[data-sidebar="sidebar"] [data-sidebar="content"],
+[data-sidebar="sidebar"] [data-sidebar="group"] {
+    background: transparent !important;
+}
+
+.dark [data-sidebar="sidebar"] {
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
+}
+
+.dark [data-sidebar="sidebar"] * {
+    border-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+.dark [data-sidebar="sidebar"] [data-sidebar="separator"] {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Card gradients */
+.card-gradient {
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(241,245,249,0.95) 100%);
+    border: 1px solid rgba(226,232,240,0.5);
+}
+
+.dark .card-gradient {
+    background: linear-gradient(135deg, rgba(22,45,77,0.95) 0%, rgba(10,22,40,0.95) 100%);
+    border: 1px solid rgba(59,130,246,0.2);
+}
+
+/* Custom Scrollbar - Blue theme */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--checkmate-bg, #f3f4f6);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--checkmate-primary-light, #3b82f6);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--checkmate-primary, #1e3a8a);
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+/* Progress bar gradient */
+.progress-gradient {
+    background: linear-gradient(90deg, var(--checkmate-primary, #1e3a8a) 0%, var(--checkmate-accent, #fde047) 100%);
+}
+
+/* Gradient Backgrounds */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #1d4ed8 100%);
+}
+
+.bg-gradient-accent {
+    background: linear-gradient(135deg, #fbbf24 0%, #fde047 50%, #fcd34d 100%);
+}
+
+.bg-gradient-hero {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 25%, #3b82f6 50%, #60a5fa 75%, #93c5fd 100%);
+}
+
+.bg-gradient-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(241,245,249,0.9) 100%);
+}
+
+.dark .bg-gradient-card {
+    background: linear-gradient(180deg, rgba(22,45,77,0.9) 0%, rgba(10,22,40,0.9) 100%);
+}
+
+.bg-gradient-sidebar {
+    background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 50%, #172554 100%);
+}
+
+.bg-gradient-page {
+    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.dark .bg-gradient-page {
+    background: linear-gradient(180deg, #0a1628 0%, #0f172a 100%);
+}
+
+/* Mesh gradient background */
+.bg-gradient-mesh {
+    background-color: #f8fafc;
+    background-image:
+        radial-gradient(at 40% 20%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 80% 0%, rgba(253, 224, 71, 0.1) 0px, transparent 50%),
+        radial-gradient(at 0% 50%, rgba(37, 99, 235, 0.1) 0px, transparent 50%),
+        radial-gradient(at 80% 50%, rgba(251, 191, 36, 0.1) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.1) 0px, transparent 50%);
+}
+
+.dark .bg-gradient-mesh {
+    background-color: #0a1628;
+    background-image:
+        radial-gradient(at 40% 20%, rgba(59, 130, 246, 0.2) 0px, transparent 50%),
+        radial-gradient(at 80% 0%, rgba(253, 224, 71, 0.1) 0px, transparent 50%),
+        radial-gradient(at 0% 50%, rgba(37, 99, 235, 0.15) 0px, transparent 50%),
+        radial-gradient(at 80% 50%, rgba(251, 191, 36, 0.08) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%);
+}
+
+/* Glassmorphism card */
+.glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-card {
+    background: rgba(22, 45, 77, 0.7);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Gradient text */
+.text-gradient-primary {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.text-gradient-accent {
+    background: linear-gradient(135deg, #f59e0b 0%, #fde047 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Gradient borders */
+.border-gradient {
+    border: 2px solid transparent;
+    background: linear-gradient(white, white) padding-box,
+                linear-gradient(135deg, #3b82f6, #fde047) border-box;
+}
+
+.dark .border-gradient {
+    background: linear-gradient(#162d4d, #162d4d) padding-box,
+                linear-gradient(135deg, #3b82f6, #fde047) border-box;
+}
+
+/* Animated gradient */
+@keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.bg-gradient-animated {
+    background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #fbbf24, #fde047);
+    background-size: 400% 400%;
+    animation: gradient-shift 8s ease infinite;
+}
+
+/* CTA Button styles */
+.btn-cta {
+    background: linear-gradient(135deg, #fbbf24 0%, #fde047 50%, #fbbf24 100%);
+    color: #0f172a;
+    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+}
+
+.btn-cta:hover {
+    background: linear-gradient(135deg, #fde047 0%, #fef08a 50%, #fde047 100%);
+    box-shadow: 0 6px 20px rgba(253, 224, 71, 0.4);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
 }

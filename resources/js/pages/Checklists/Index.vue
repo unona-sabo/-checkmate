@@ -1,0 +1,419 @@
+<script setup lang="ts">
+import { Head, Link, router } from '@inertiajs/vue3';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project, type Checklist, type ColumnConfig } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Plus, ClipboardList, ArrowRight, FileText, StickyNote, Import, Pencil, Trash2 } from 'lucide-vue-next';
+import { ref, computed, watch, onMounted } from 'vue';
+
+interface NoteDraft {
+    content: string;
+    selectedChecklistId: number | null;
+    selectedColumnKey: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+const props = defineProps<{
+    project: Project;
+    checklists: Checklist[];
+}>();
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Projects', href: '/projects' },
+    { title: props.project.name, href: `/projects/${props.project.id}` },
+    { title: 'Checklists', href: `/projects/${props.project.id}/checklists` },
+];
+
+const DRAFT_STORAGE_KEY = `checklist-note-draft-${props.project.id}`;
+
+const showNoteDialog = ref(false);
+const showDeleteConfirm = ref(false);
+const noteContent = ref('');
+const selectedChecklistId = ref<number | null>(null);
+const selectedColumnKey = ref<string>('');
+const isImporting = ref(false);
+const hasDraft = ref(false);
+const draftPreview = ref('');
+const draftUpdatedAt = ref('');
+
+const loadDraft = () => {
+    try {
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+            const draft: NoteDraft = JSON.parse(saved);
+            if (draft.content && draft.content.trim()) {
+                hasDraft.value = true;
+                draftPreview.value = draft.content.split('\n').filter(l => l.trim()).slice(0, 3).join(', ');
+                if (draftPreview.value.length > 50) {
+                    draftPreview.value = draftPreview.value.substring(0, 50) + '...';
+                }
+                draftUpdatedAt.value = draft.updatedAt;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load draft:', e);
+    }
+};
+
+const saveDraft = () => {
+    if (!noteContent.value.trim()) {
+        deleteDraft();
+        return;
+    }
+
+    const draft: NoteDraft = {
+        content: noteContent.value,
+        selectedChecklistId: selectedChecklistId.value,
+        selectedColumnKey: selectedColumnKey.value,
+        createdAt: draftUpdatedAt.value || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    };
+
+    try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+        hasDraft.value = true;
+        draftPreview.value = draft.content.split('\n').filter(l => l.trim()).slice(0, 3).join(', ');
+        if (draftPreview.value.length > 50) {
+            draftPreview.value = draftPreview.value.substring(0, 50) + '...';
+        }
+        draftUpdatedAt.value = draft.updatedAt;
+    } catch (e) {
+        console.error('Failed to save draft:', e);
+    }
+};
+
+const confirmDeleteDraft = () => {
+    showDeleteConfirm.value = true;
+};
+
+const deleteDraft = () => {
+    try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        hasDraft.value = false;
+        draftPreview.value = '';
+        draftUpdatedAt.value = '';
+        showDeleteConfirm.value = false;
+    } catch (e) {
+        console.error('Failed to delete draft:', e);
+    }
+};
+
+const openDraft = () => {
+    try {
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+            const draft: NoteDraft = JSON.parse(saved);
+            noteContent.value = draft.content;
+            selectedChecklistId.value = draft.selectedChecklistId;
+            selectedColumnKey.value = draft.selectedColumnKey;
+            showNoteDialog.value = true;
+        }
+    } catch (e) {
+        console.error('Failed to open draft:', e);
+    }
+};
+
+const formatDraftDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+onMounted(() => {
+    loadDraft();
+});
+
+const selectedChecklist = computed(() => {
+    if (!selectedChecklistId.value) return null;
+    return props.checklists.find(c => c.id === selectedChecklistId.value) || null;
+});
+
+const availableColumns = computed(() => {
+    if (!selectedChecklist.value?.columns_config) {
+        return [{ key: 'item', label: 'Item', type: 'text' as const }];
+    }
+    return selectedChecklist.value.columns_config.filter(col => col.type === 'text');
+});
+
+watch(selectedChecklistId, () => {
+    if (availableColumns.value.length > 0) {
+        selectedColumnKey.value = availableColumns.value[0].key;
+    }
+});
+
+const parsedNotes = computed(() => {
+    if (!noteContent.value.trim()) return [];
+
+    return noteContent.value
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+            // Remove leading numbers, dots, dashes, etc.
+            return line.replace(/^[\d]+[.\)\-:\s]+/, '').trim();
+        })
+        .filter(line => line.length > 0);
+});
+
+const importNotes = () => {
+    if (!selectedChecklistId.value || parsedNotes.value.length === 0 || !selectedColumnKey.value) return;
+
+    isImporting.value = true;
+
+    router.post(
+        `/projects/${props.project.id}/checklists/${selectedChecklistId.value}/import-notes`,
+        {
+            notes: parsedNotes.value,
+            column_key: selectedColumnKey.value,
+        },
+        {
+            onSuccess: () => {
+                showNoteDialog.value = false;
+                noteContent.value = '';
+                selectedChecklistId.value = null;
+                selectedColumnKey.value = '';
+                isImporting.value = false;
+                deleteDraft();
+            },
+            onError: () => {
+                isImporting.value = false;
+            },
+        }
+    );
+};
+
+const onDialogClose = (open: boolean) => {
+    if (!open && noteContent.value.trim()) {
+        // Save draft when closing with content
+        saveDraft();
+    }
+    if (!open) {
+        // Reset state but don't delete draft
+        noteContent.value = '';
+        selectedChecklistId.value = null;
+        selectedColumnKey.value = '';
+    }
+};
+</script>
+
+<template>
+    <Head title="Checklists" />
+
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex h-full flex-1 flex-col gap-6 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">Checklists</h1>
+                    <p class="text-muted-foreground">Create and manage custom checklists</p>
+                </div>
+                <div class="flex gap-2">
+                    <Dialog v-model:open="showNoteDialog" @update:open="onDialogClose">
+                        <DialogTrigger as-child>
+                            <Button variant="outline" class="gap-2">
+                                <StickyNote class="h-4 w-4" />
+                                Create a Note
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent class="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle class="flex items-center gap-2">
+                                    <StickyNote class="h-5 w-5 text-primary" />
+                                    Create a Note
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Write your notes below. Each line will become a separate row in the checklist.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div class="space-y-4 py-4">
+                                <div class="space-y-2">
+                                    <Label>Notes</Label>
+                                    <Textarea
+                                        v-model="noteContent"
+                                        placeholder="1. First item&#10;2. Second item&#10;3. Third item&#10;&#10;Or just write each item on a new line..."
+                                        rows="10"
+                                        class="font-mono text-sm"
+                                    />
+                                    <p v-if="parsedNotes.length > 0" class="text-sm text-muted-foreground">
+                                        {{ parsedNotes.length }} item(s) will be imported
+                                    </p>
+                                </div>
+
+                                <div v-if="parsedNotes.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30">
+                                    <div class="space-y-2">
+                                        <Label>Import to Checklist</Label>
+                                        <Select v-model="selectedChecklistId">
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a checklist..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem v-for="checklist in checklists" :key="checklist.id" :value="checklist.id">
+                                                    {{ checklist.name }}
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div v-if="selectedChecklistId && availableColumns.length > 0" class="space-y-2">
+                                        <Label>Column</Label>
+                                        <Select v-model="selectedColumnKey">
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a column..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem v-for="col in availableColumns" :key="col.key" :value="col.key">
+                                                    {{ col.label }}
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div v-if="parsedNotes.length > 0" class="space-y-2">
+                                        <Label>Preview</Label>
+                                        <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm">
+                                            <ol class="list-decimal list-inside space-y-1">
+                                                <li v-for="(note, index) in parsedNotes.slice(0, 10)" :key="index" class="truncate">
+                                                    {{ note }}
+                                                </li>
+                                                <li v-if="parsedNotes.length > 10" class="text-muted-foreground">
+                                                    ... and {{ parsedNotes.length - 10 }} more
+                                                </li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button variant="outline" @click="showNoteDialog = false">
+                                    Cancel
+                                </Button>
+                                <Button
+                                    @click="importNotes"
+                                    :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
+                                    class="gap-2"
+                                >
+                                    <Import class="h-4 w-4" />
+                                    Import to Checklist
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Link :href="`/projects/${project.id}/checklists/create`">
+                        <Button variant="cta" class="gap-2">
+                            <Plus class="h-4 w-4" />
+                            New Checklist
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+
+            <div v-if="checklists.length === 0" class="flex flex-1 items-center justify-center">
+                <div class="text-center">
+                    <ClipboardList class="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 class="mt-4 text-lg font-semibold">No checklists yet</h3>
+                    <p class="mt-2 text-sm text-muted-foreground">Create your first checklist to track items.</p>
+                    <Link :href="`/projects/${project.id}/checklists/create`" class="mt-4 inline-block">
+                        <Button variant="cta" class="gap-2">
+                            <Plus class="h-4 w-4" />
+                            Create Checklist
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+
+            <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <!-- Draft Card -->
+                <Card
+                    v-if="hasDraft"
+                    class="transition-all border-dashed border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 cursor-pointer h-full relative group"
+                    @click="openDraft"
+                >
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        class="absolute top-12 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive z-10"
+                        @click.stop="confirmDeleteDraft"
+                        title="Delete draft"
+                    >
+                        <Trash2 class="h-4 w-4" />
+                    </Button>
+                    <CardHeader>
+                        <CardTitle class="flex items-center justify-between">
+                            <span class="flex items-center gap-2">
+                                <StickyNote class="h-5 w-5 text-amber-500" />
+                                <Badge variant="warning" class="text-xs">Draft</Badge>
+                            </span>
+                            <Pencil class="h-4 w-4 text-muted-foreground" />
+                        </CardTitle>
+                        <CardDescription class="line-clamp-2">
+                            {{ draftPreview }}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="text-xs text-muted-foreground">
+                            Last edited: {{ formatDraftDate(draftUpdatedAt) }}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Checklist Cards -->
+                <Link v-for="checklist in checklists" :key="checklist.id" :href="`/projects/${project.id}/checklists/${checklist.id}`">
+                    <Card class="transition-all hover:border-primary cursor-pointer h-full">
+                        <CardHeader>
+                            <CardTitle class="flex items-center justify-between">
+                                <span class="flex items-center gap-2">
+                                    <ClipboardList class="h-5 w-5 text-primary" />
+                                    {{ checklist.name }}
+                                </span>
+                                <ArrowRight class="h-4 w-4 text-muted-foreground" />
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                                <FileText class="h-4 w-4" />
+                                {{ checklist.rows_count || 0 }} items
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
+            </div>
+
+            <!-- Delete Confirmation Dialog -->
+            <Dialog v-model:open="showDeleteConfirm">
+                <DialogContent class="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Draft?</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete this draft? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter class="flex gap-4 sm:justify-end">
+                        <Button variant="secondary" @click="showDeleteConfirm = false" class="flex-1 sm:flex-none">
+                            No
+                        </Button>
+                        <Button variant="destructive" @click="deleteDraft" class="flex-1 sm:flex-none">
+                            Yes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    </AppLayout>
+</template>
