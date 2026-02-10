@@ -65,6 +65,14 @@ class Project extends Model
     }
 
     /**
+     * Get all notes for the project.
+     */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(Note::class);
+    }
+
+    /**
      * Get all users associated with the project (for assignment).
      */
     public function users()

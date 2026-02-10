@@ -3,6 +3,7 @@
 use App\Http\Controllers\BugreportController;
 use App\Http\Controllers\ChecklistController;
 use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TestCaseController;
 use App\Http\Controllers\TestRunCaseController;
@@ -105,6 +106,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('documentations/{documentation}/edit', [DocumentationController::class, 'edit'])->name('edit');
         Route::put('documentations/{documentation}', [DocumentationController::class, 'update'])->name('update');
         Route::delete('documentations/{documentation}', [DocumentationController::class, 'destroy'])->name('destroy');
+    });
+
+    // Notes (nested under projects)
+    Route::prefix('projects/{project}')->name('projects.notes.')->group(function () {
+        Route::get('notes', [NoteController::class, 'index'])->name('index');
+        Route::get('notes/create', [NoteController::class, 'create'])->name('create');
+        Route::post('notes', [NoteController::class, 'store'])->name('store');
+        Route::get('notes/{note}', [NoteController::class, 'show'])->name('show');
+        Route::put('notes/{note}', [NoteController::class, 'update'])->name('update');
+        Route::delete('notes/{note}', [NoteController::class, 'destroy'])->name('destroy');
+        Route::post('notes/{note}/publish', [NoteController::class, 'publish'])->name('publish');
     });
 });
 

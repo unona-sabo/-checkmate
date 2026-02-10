@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, FolderOpen, ClipboardList, TestTube, Play, ChevronRight, Bug, FileText } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid, FolderOpen, ClipboardList, TestTube, Play, ChevronRight, Bug, FileText, StickyNote } from 'lucide-vue-next';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -67,6 +67,7 @@ const projectSubItems = computed(() => {
         { title: 'Test Runs', href: `/projects/${projectId}/test-runs`, icon: Play },
         { title: 'Bugreports', href: `/projects/${projectId}/bugreports`, icon: Bug },
         { title: 'Documentations', href: `/projects/${projectId}/documentations`, icon: FileText },
+        { title: 'Notes', href: `/projects/${projectId}/notes`, icon: StickyNote },
     ];
 });
 </script>
