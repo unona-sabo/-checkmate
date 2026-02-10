@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\BugreportController;
 use App\Http\Controllers\ChecklistController;
+use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TestCaseController;
 use App\Http\Controllers\TestRunCaseController;
@@ -80,6 +82,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('cases/{testRunCase}', [TestRunCaseController::class, 'update'])->name('update');
         Route::post('cases/bulk-update', [TestRunCaseController::class, 'bulkUpdate'])->name('bulk-update');
         Route::post('cases/{testRunCase}/assign-to-me', [TestRunCaseController::class, 'assignToMe'])->name('assign-to-me');
+    });
+
+    // Bugreports (nested under projects)
+    Route::prefix('projects/{project}')->name('bugreports.')->group(function () {
+        Route::get('bugreports', [BugreportController::class, 'index'])->name('index');
+        Route::get('bugreports/create', [BugreportController::class, 'create'])->name('create');
+        Route::post('bugreports', [BugreportController::class, 'store'])->name('store');
+        Route::get('bugreports/{bugreport}', [BugreportController::class, 'show'])->name('show');
+        Route::get('bugreports/{bugreport}/edit', [BugreportController::class, 'edit'])->name('edit');
+        Route::put('bugreports/{bugreport}', [BugreportController::class, 'update'])->name('update');
+        Route::delete('bugreports/{bugreport}', [BugreportController::class, 'destroy'])->name('destroy');
+    });
+
+    // Documentations (nested under projects)
+    Route::prefix('projects/{project}')->name('documentations.')->group(function () {
+        Route::get('documentations', [DocumentationController::class, 'index'])->name('index');
+        Route::get('documentations/create', [DocumentationController::class, 'create'])->name('create');
+        Route::post('documentations', [DocumentationController::class, 'store'])->name('store');
+        Route::post('documentations/reorder', [DocumentationController::class, 'reorder'])->name('reorder');
+        Route::get('documentations/{documentation}', [DocumentationController::class, 'show'])->name('show');
+        Route::get('documentations/{documentation}/edit', [DocumentationController::class, 'edit'])->name('edit');
+        Route::put('documentations/{documentation}', [DocumentationController::class, 'update'])->name('update');
+        Route::delete('documentations/{documentation}', [DocumentationController::class, 'destroy'])->name('destroy');
     });
 });
 

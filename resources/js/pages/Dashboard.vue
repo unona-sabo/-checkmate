@@ -18,7 +18,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col items-center justify-center p-8">
             <div class="flex flex-col items-center gap-6">
-                <img src="/images/logo.svg" alt="CheckMate" class="h-48 w-auto" />
+                <img src="/images/logo.png" alt="CheckMate" class="h-48 w-auto rounded-lg" />
                 <p class="text-2xl font-medium text-muted-foreground italic">
                     Checkmate your bugs
                 </p>

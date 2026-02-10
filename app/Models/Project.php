@@ -47,4 +47,28 @@ class Project extends Model
     {
         return $this->hasMany(TestRun::class);
     }
+
+    /**
+     * Get all bugreports for the project.
+     */
+    public function bugreports(): HasMany
+    {
+        return $this->hasMany(Bugreport::class);
+    }
+
+    /**
+     * Get all documentations for the project.
+     */
+    public function documentations(): HasMany
+    {
+        return $this->hasMany(Documentation::class);
+    }
+
+    /**
+     * Get all users associated with the project (for assignment).
+     */
+    public function users()
+    {
+        return User::query();
+    }
 }
