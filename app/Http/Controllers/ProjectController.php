@@ -13,12 +13,30 @@ class ProjectController extends Controller
     {
         $projects = auth()->user()->projects()
             ->withCount(['checklists', 'testSuites', 'testRuns'])
-            ->latest()
+            ->orderBy('order')
+            ->orderBy('created_at', 'desc')
             ->get();
 
         return Inertia::render('Projects/Index', [
             'projects' => $projects,
         ]);
+    }
+
+    public function reorder(Request $request)
+    {
+        $validated = $request->validate([
+            'projects' => 'required|array',
+            'projects.*.id' => 'required|exists:projects,id',
+            'projects.*.order' => 'required|integer',
+        ]);
+
+        foreach ($validated['projects'] as $projectData) {
+            Project::where('id', $projectData['id'])
+                ->where('user_id', auth()->id())
+                ->update(['order' => $projectData['order']]);
+        }
+
+        return back()->with('success', 'Projects reordered successfully.');
     }
 
     public function create(): Response

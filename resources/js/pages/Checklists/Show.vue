@@ -29,9 +29,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
     ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
     Bold, Heading, GripHorizontal, StickyNote, Import, Pencil, X, Search,
-    MoreHorizontal, Copy, TestTube, Play
+    MoreHorizontal, Copy, Layers, Play, Download, Upload, FileSpreadsheet,
+    ArrowUp, ArrowDown
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
 const props = defineProps<{
     project: Project;
@@ -71,33 +73,27 @@ const columns = ref<ExtendedColumnConfig[]>(
     ]).map(col => ({ ...col, width: col.width || 150 }))
 );
 
-const hasChanges = ref(false);
 const showDeleteConfirm = ref(false);
 const rowToDeleteIndex = ref<number | null>(null);
 
-// Store original content state (excluding checkboxes) for comparison
-const getContentSnapshot = () => {
-    const checkboxKeys = columns.value.filter(c => c.type === 'checkbox').map(c => c.key);
-    return JSON.stringify(rows.value.map(row => ({
-        id: row.id,
-        row_type: row.row_type,
-        background_color: row.background_color,
-        font_color: row.font_color,
-        font_weight: row.font_weight,
-        data: Object.fromEntries(
-            Object.entries(row.data).filter(([key]) => !checkboxKeys.includes(key))
-        )
-    })));
-};
-const originalContentSnapshot = ref(getContentSnapshot());
+// Add rows dialog state
+const showAddRowsDialog = ref(false);
+const addRowsPosition = ref<'above' | 'below' | 'end'>('end');
+const addRowsCount = ref(1);
+const addRowsAtIndex = ref<number>(0);
+const addRowsType = ref<'normal' | 'section_header'>('normal');
 
-// Check if there are actual content changes (not just checkbox changes)
-const hasContentChanges = computed(() => {
-    return getContentSnapshot() !== originalContentSnapshot.value;
-});
+// Track content changes (excluding checkbox changes)
+const hasContentChanges = ref(false);
+const checkboxKeys = computed(() => columns.value.filter(c => c.type === 'checkbox').map(c => c.key));
 
 // Search state
 const searchQuery = ref('');
+
+// Progressive rendering - show rows in batches for better performance
+const INITIAL_ROWS = 50;
+const LOAD_MORE_COUNT = 50;
+const visibleRowCount = ref(INITIAL_ROWS);
 
 const filteredRows = computed(() => {
     if (!searchQuery.value.trim()) {
@@ -114,6 +110,37 @@ const filteredRows = computed(() => {
         });
     });
 });
+
+// Rows to actually render (limited for performance)
+const displayRows = computed(() => {
+    const source = searchQuery.value.trim() ? filteredRows.value : rows.value;
+    return source.slice(0, visibleRowCount.value);
+});
+
+const hasMoreRows = computed(() => {
+    const source = searchQuery.value.trim() ? filteredRows.value : rows.value;
+    return visibleRowCount.value < source.length;
+});
+
+const totalRowCount = computed(() => {
+    return searchQuery.value.trim() ? filteredRows.value.length : rows.value.length;
+});
+
+const loadMoreRows = () => {
+    visibleRowCount.value += LOAD_MORE_COUNT;
+};
+
+const showAllRows = () => {
+    visibleRowCount.value = totalRowCount.value;
+};
+
+// Reset visible count when search changes
+watch(searchQuery, () => {
+    visibleRowCount.value = INITIAL_ROWS;
+});
+
+// Drag-and-drop only allowed when showing all rows and not searching
+const canDragRows = computed(() => !searchQuery.value.trim() && !hasMoreRows.value);
 
 // Note dialog state
 const showNoteDialog = ref(false);
@@ -284,9 +311,6 @@ const importNotes = () => {
     );
 };
 
-watch([rows, columns], () => {
-    hasChanges.value = true;
-}, { deep: true });
 
 // Drag and drop for rows
 const draggedRowIndex = ref<number | null>(null);
@@ -318,6 +342,7 @@ const onRowDrop = (index: number, event: DragEvent) => {
         const draggedRow = rows.value[draggedRowIndex.value];
         rows.value.splice(draggedRowIndex.value, 1);
         rows.value.splice(index, 0, draggedRow);
+        hasContentChanges.value = true;
     }
     draggedRowIndex.value = null;
     dragOverRowIndex.value = null;
@@ -358,6 +383,7 @@ const onColDrop = (index: number, event: DragEvent) => {
         const draggedCol = columns.value[draggedColIndex.value];
         columns.value.splice(draggedColIndex.value, 1);
         columns.value.splice(index, 0, draggedCol);
+        hasContentChanges.value = true;
     }
     draggedColIndex.value = null;
     dragOverColIndex.value = null;
@@ -389,6 +415,9 @@ const onResize = (event: MouseEvent) => {
 };
 
 const stopResize = () => {
+    if (resizingCol.value !== null) {
+        hasContentChanges.value = true;
+    }
     resizingCol.value = null;
     document.removeEventListener('mousemove', onResize);
     document.removeEventListener('mouseup', stopResize);
@@ -452,6 +481,68 @@ const addRow = (type: 'normal' | 'section_header' = 'normal') => {
         updated_at: new Date().toISOString(),
         _isNew: true,
     });
+    hasContentChanges.value = true;
+    // Ensure new row is visible
+    if (visibleRowCount.value < rows.value.length) {
+        visibleRowCount.value = rows.value.length;
+    }
+};
+
+const openAddRowsDialog = (index: number, position: 'above' | 'below' | 'end', type: 'normal' | 'section_header' = 'normal') => {
+    addRowsAtIndex.value = index;
+    addRowsPosition.value = position;
+    addRowsType.value = type;
+    addRowsCount.value = 1;
+    showAddRowsDialog.value = true;
+};
+
+const insertRows = () => {
+    const count = Math.max(1, Math.min(100, addRowsCount.value)); // Limit 1-100
+    let insertIndex: number;
+
+    if (addRowsPosition.value === 'end') {
+        insertIndex = rows.value.length;
+    } else if (addRowsPosition.value === 'above') {
+        insertIndex = addRowsAtIndex.value;
+    } else {
+        insertIndex = addRowsAtIndex.value + 1;
+    }
+
+    const rowType = addRowsType.value;
+    const newRows: ExtendedChecklistRow[] = [];
+    for (let i = 0; i < count; i++) {
+        const newData: Record<string, unknown> = {};
+        columns.value.forEach(col => {
+            newData[col.key] = col.type === 'checkbox' ? false : '';
+        });
+        newRows.push({
+            id: Date.now() + i,
+            checklist_id: props.checklist.id,
+            data: newData,
+            order: 0,
+            row_type: rowType,
+            background_color: rowType === 'section_header' ? '#dbeafe' : null,
+            font_color: null,
+            font_weight: rowType === 'section_header' ? 'bold' : 'normal',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            _isNew: true,
+        });
+    }
+
+    rows.value.splice(insertIndex, 0, ...newRows);
+    showAddRowsDialog.value = false;
+
+    // Ensure new rows are visible
+    const lastNewRowIndex = insertIndex + newRows.length;
+    if (visibleRowCount.value < lastNewRowIndex) {
+        visibleRowCount.value = lastNewRowIndex;
+    }
+
+    // Auto-save after adding rows
+    nextTick(() => {
+        saveRows();
+    });
 };
 
 const confirmRemoveRow = (index: number) => {
@@ -464,6 +555,7 @@ const removeRow = () => {
         rows.value.splice(rowToDeleteIndex.value, 1);
         rowToDeleteIndex.value = null;
         showDeleteConfirm.value = false;
+        hasContentChanges.value = true;
     }
 };
 
@@ -487,8 +579,7 @@ const saveRows = () => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                hasChanges.value = false;
-                originalContentSnapshot.value = getContentSnapshot();
+                hasContentChanges.value = false;
             },
         }
     );
@@ -496,18 +587,25 @@ const saveRows = () => {
 
 const updateCell = (row: ExtendedChecklistRow, key: string, value: unknown) => {
     row.data[key] = value;
+    // Mark content changes only for non-checkbox columns
+    if (!checkboxKeys.value.includes(key)) {
+        hasContentChanges.value = true;
+    }
 };
 
 const setBackgroundColor = (row: ExtendedChecklistRow, color: string | null) => {
     row.background_color = color;
+    hasContentChanges.value = true;
 };
 
 const setFontColor = (row: ExtendedChecklistRow, color: string | null) => {
     row.font_color = color;
+    hasContentChanges.value = true;
 };
 
 const setFontWeight = (row: ExtendedChecklistRow, weight: 'normal' | 'medium' | 'semibold' | 'bold') => {
     row.font_weight = weight;
+    hasContentChanges.value = true;
 };
 
 const toggleRowType = (row: ExtendedChecklistRow) => {
@@ -520,6 +618,7 @@ const toggleRowType = (row: ExtendedChecklistRow) => {
         row.background_color = null;
         row.font_weight = 'normal';
     }
+    hasContentChanges.value = true;
 };
 
 const getRowStyles = (row: ExtendedChecklistRow) => {
@@ -615,8 +714,24 @@ const toggleAllCheckboxes = (columnKey: string) => {
 };
 
 const autoResizeTextarea = (el: HTMLTextAreaElement) => {
+    // First, resize the textarea to fit its content
     el.style.height = 'auto';
     el.style.height = el.scrollHeight + 'px';
+
+    // Then, sync all textareas in the same row to the max height
+    const row = el.closest('tr');
+    if (row) {
+        const textareas = row.querySelectorAll('textarea');
+        let maxHeight = 0;
+        textareas.forEach((textarea) => {
+            const ta = textarea as HTMLTextAreaElement;
+            ta.style.height = 'auto';
+            maxHeight = Math.max(maxHeight, ta.scrollHeight);
+        });
+        textareas.forEach((textarea) => {
+            (textarea as HTMLTextAreaElement).style.height = maxHeight + 'px';
+        });
+    }
 };
 
 const resizeAllTextareas = () => {
@@ -628,14 +743,106 @@ const resizeAllTextareas = () => {
     });
 };
 
+// Import file dialog state
+const showImportDialog = ref(false);
+const importFile = ref<File | null>(null);
+const importError = ref<string | null>(null);
+const isUploadingFile = ref(false);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+const page = usePage();
+
+// Get errors from page props
+const pageErrors = computed(() => {
+    const errors = page.props.errors as Record<string, string> | undefined;
+    return errors || {};
+});
+
+const handleFileSelect = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    importError.value = null;
+
+    if (file) {
+        // Validate file type
+        const validTypes = ['text/csv', 'application/vnd.ms-excel', 'text/plain'];
+        const validExtensions = ['.csv', '.txt'];
+        const hasValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+
+        if (!validTypes.includes(file.type) && !hasValidExtension) {
+            importError.value = 'Please select a valid CSV file.';
+            importFile.value = null;
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            importError.value = 'File size must not exceed 5MB.';
+            importFile.value = null;
+            return;
+        }
+
+        importFile.value = file;
+    }
+};
+
+const submitImport = () => {
+    if (!importFile.value) {
+        importError.value = 'Please select a file to import.';
+        return;
+    }
+
+    isUploadingFile.value = true;
+    importError.value = null;
+
+    const formData = new FormData();
+    formData.append('file', importFile.value);
+
+    router.post(
+        `/projects/${props.project.id}/checklists/${props.checklist.id}/import`,
+        formData,
+        {
+            forceFormData: true,
+            preserveState: false,
+            preserveScroll: false,
+            onSuccess: () => {
+                showImportDialog.value = false;
+                importFile.value = null;
+                isUploadingFile.value = false;
+                if (fileInputRef.value) {
+                    fileInputRef.value.value = '';
+                }
+            },
+            onError: (errors) => {
+                isUploadingFile.value = false;
+                if (errors.file) {
+                    importError.value = errors.file;
+                } else {
+                    importError.value = 'An error occurred during import.';
+                }
+            },
+        }
+    );
+};
+
+const closeImportDialog = () => {
+    showImportDialog.value = false;
+    importFile.value = null;
+    importError.value = null;
+    if (fileInputRef.value) {
+        fileInputRef.value.value = '';
+    }
+};
+
+const exportChecklist = () => {
+    window.location.href = `/projects/${props.project.id}/checklists/${props.checklist.id}/export`;
+};
+
 onMounted(() => {
     resizeAllTextareas();
     loadDraft();
 });
 
-watch(rows, () => {
-    resizeAllTextareas();
-}, { deep: true });
 </script>
 
 <template>
@@ -655,7 +862,7 @@ watch(rows, () => {
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search content..."
-                            class="pl-9 pr-8 w-56"
+                            class="pl-9 pr-8 w-56 bg-background/60"
                         />
                         <button
                             v-if="searchQuery"
@@ -679,20 +886,21 @@ watch(rows, () => {
                             <DropdownMenuLabel>Selected Rows</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem>
-                                <Trash2 class="h-4 w-4 mr-2" />
-                                Delete rows
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
                                 <Copy class="h-4 w-4 mr-2" />
-                                Copy to the Checklist
+                                Copy to Checklist
                             </DropdownMenuItem>
                             <DropdownMenuItem>
-                                <TestTube class="h-4 w-4 mr-2" />
+                                <Layers class="h-4 w-4 mr-2" />
                                 Create Test Case
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                                 <Play class="h-4 w-4 mr-2" />
                                 Create Test Run
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem class="text-destructive focus:text-destructive">
+                                <Trash2 class="h-4 w-4 mr-2" />
+                                Delete Rows
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -705,6 +913,25 @@ watch(rows, () => {
                         <Save class="h-4 w-4" />
                         Save Changes
                     </Button>
+                    <!-- Import/Export dropdown -->
+                    <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                            <Button variant="outline" class="gap-2">
+                                <FileSpreadsheet class="h-4 w-4" />
+                                File
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem @click="showImportDialog = true">
+                                <Download class="h-4 w-4 mr-2" />
+                                Import
+                            </DropdownMenuItem>
+                            <DropdownMenuItem @click="exportChecklist">
+                                <Upload class="h-4 w-4 mr-2" />
+                                Export
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <Dialog v-model:open="showNoteDialog" @update:open="onNoteDialogChange">
                         <DialogTrigger as-child>
                             <Button
@@ -716,7 +943,7 @@ watch(rows, () => {
                                 {{ hasDraft ? 'Draft' : 'Create a Note' }}
                             </Button>
                         </DialogTrigger>
-                        <DialogContent class="max-w-2xl">
+                        <DialogContent class="max-w-2xl overflow-hidden">
                             <DialogHeader>
                                 <DialogTitle class="flex items-center gap-2">
                                     <StickyNote class="h-5 w-5 text-primary" />
@@ -727,21 +954,21 @@ watch(rows, () => {
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div class="space-y-4 py-4">
+                            <div class="space-y-4 py-4 overflow-hidden">
                                 <div class="space-y-2">
                                     <Label>Notes</Label>
                                     <Textarea
                                         v-model="noteContent"
                                         placeholder="1. First item&#10;2. Second item&#10;3. Third item&#10;&#10;Or just write each item on a new line..."
                                         rows="10"
-                                        class="font-mono text-sm"
+                                        class="font-mono text-sm resize-y"
                                     />
                                     <p v-if="parsedNotes.length > 0" class="text-sm text-muted-foreground">
                                         {{ parsedNotes.length }} item(s) will be imported
                                     </p>
                                 </div>
 
-                                <div v-if="parsedNotes.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30">
+                                <div v-if="parsedNotes.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30 overflow-hidden">
                                     <div class="space-y-2">
                                         <Label>Import to Checklist</Label>
                                         <Select v-model="selectedChecklistId">
@@ -770,11 +997,11 @@ watch(rows, () => {
                                         </Select>
                                     </div>
 
-                                    <div class="space-y-2">
+                                    <div class="space-y-2 overflow-hidden">
                                         <Label>Preview</Label>
                                         <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm">
                                             <ol class="list-decimal list-inside space-y-1">
-                                                <li v-for="(note, index) in parsedNotes.slice(0, 10)" :key="index" class="truncate">
+                                                <li v-for="(note, index) in parsedNotes.slice(0, 10)" :key="index" class="break-words whitespace-pre-wrap">
                                                     {{ note }}
                                                 </li>
                                                 <li v-if="parsedNotes.length > 10" class="text-muted-foreground">
@@ -821,11 +1048,11 @@ watch(rows, () => {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem @click="addRow('normal')">
+                            <DropdownMenuItem @click="openAddRowsDialog(rows.length, 'end', 'normal')">
                                 <Plus class="h-4 w-4 mr-2" />
                                 Normal Row
                             </DropdownMenuItem>
-                            <DropdownMenuItem @click="addRow('section_header')">
+                            <DropdownMenuItem @click="openAddRowsDialog(rows.length, 'end', 'section_header')">
                                 <Heading class="h-4 w-4 mr-2" />
                                 Section Header
                             </DropdownMenuItem>
@@ -842,15 +1069,15 @@ watch(rows, () => {
 
             <Card>
                 <CardContent class="p-0">
-                    <div class="overflow-x-auto">
+                    <div class="overflow-auto max-h-[calc(100vh-220px)]">
                         <table class="w-full border-collapse" style="table-layout: auto;">
-                            <thead>
-                                <tr class="border-b bg-muted/30">
-                                    <th class="w-6 px-1 py-1"></th>
+                            <thead class="sticky top-0 z-10">
+                                <tr class="border-b bg-muted">
+                                    <th class="w-6 px-1 py-2"></th>
                                     <th
                                         v-for="(column, colIndex) in columns"
                                         :key="column.key"
-                                        class="px-1 py-1 text-left text-xs font-medium text-muted-foreground relative select-none align-top"
+                                        class="px-1 py-2 text-left text-sm font-medium text-muted-foreground relative select-none align-top"
                                         :style="{ width: column.width + 'px' }"
                                         draggable="true"
                                         @dragstart="onColDragStart(colIndex, $event)"
@@ -882,40 +1109,44 @@ watch(rows, () => {
                                             @mousedown.stop="startResize(colIndex, $event)"
                                         />
                                     </th>
-                                    <th class="w-8 px-1 py-1"></th>
-                                    <th class="w-8 px-1 py-1"></th>
+                                    <th class="w-8 px-1 py-2"></th>
+                                    <th class="w-8 px-1 py-2"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="(row, index) in (searchQuery.trim() ? filteredRows : rows)"
+                                    v-for="(row, index) in displayRows"
                                     :key="row.id"
                                     class="border-b last:border-0 transition-colors"
                                     :class="[
                                         row.row_type === 'section_header' ? '' : 'hover:bg-muted/50',
                                         getFontWeightClass(row.font_weight),
                                         {
-                                            'border-t-2 border-t-primary': dragOverRowIndex === index && !searchQuery.trim(),
-                                            'opacity-50': draggedRowIndex === index && !searchQuery.trim()
+                                            'border-t-2 border-t-primary': dragOverRowIndex === index && canDragRows,
+                                            'opacity-50': draggedRowIndex === index && canDragRows
                                         }
                                     ]"
                                     :style="getRowStyles(row)"
-                                    :draggable="!searchQuery.trim()"
-                                    @dragstart="!searchQuery.trim() && onRowDragStart(index, $event)"
-                                    @dragover="!searchQuery.trim() && onRowDragOver(index, $event)"
+                                    @dragover="canDragRows && onRowDragOver(index, $event)"
                                     @dragleave="onRowDragLeave"
-                                    @drop="!searchQuery.trim() && onRowDrop(index, $event)"
-                                    @dragend="onRowDragEnd"
+                                    @drop="canDragRows && onRowDrop(index, $event)"
                                 >
-                                    <td class="px-1 py-1 align-top">
-                                        <GripVertical class="h-4 w-4 text-muted-foreground/50 cursor-grab active:cursor-grabbing" />
+                                    <td class="px-1 py-0.5 align-top">
+                                        <div
+                                            :draggable="canDragRows"
+                                            @dragstart="canDragRows && onRowDragStart(index, $event)"
+                                            @dragend="onRowDragEnd"
+                                            :class="canDragRows ? 'cursor-grab active:cursor-grabbing' : 'cursor-default opacity-30'"
+                                        >
+                                            <GripVertical class="h-4 w-4 text-muted-foreground/50" />
+                                        </div>
                                     </td>
                                     <template v-if="row.row_type === 'section_header'">
-                                        <td :colspan="columns.length" class="px-1 py-1 align-top">
+                                        <td :colspan="columns.length" class="px-1 py-0.5 align-top">
                                             <Textarea
                                                 :model-value="row.data[columns[0]?.key] as string || ''"
                                                 @update:model-value="(val) => updateCell(row, columns[0]?.key || 'item', val)"
-                                                class="w-full min-h-[28px] border-transparent bg-transparent focus:border-input text-sm resize-none overflow-hidden py-1 px-2 whitespace-pre-wrap break-words"
+                                                class="w-full h-full min-h-[28px] border-transparent bg-transparent focus:border-input text-sm resize-none overflow-hidden py-1 px-2 whitespace-pre-wrap break-words"
                                                 :class="getFontWeightClass(row.font_weight)"
                                                 :style="{ color: row.font_color || 'inherit' }"
                                                 placeholder="Section title..."
@@ -928,11 +1159,11 @@ watch(rows, () => {
                                         <td
                                             v-for="column in columns"
                                             :key="column.key"
-                                            class="px-1 py-1 align-top"
+                                            class="px-1 py-0.5 align-top"
                                             :style="{ width: column.width + 'px' }"
                                         >
                                             <template v-if="column.type === 'checkbox'">
-                                                <div class="flex justify-center pt-1">
+                                                <div class="flex items-start justify-center pt-1">
                                                     <input
                                                         type="checkbox"
                                                         :checked="!!row.data[column.key]"
@@ -1011,7 +1242,7 @@ watch(rows, () => {
                                             </template>
                                         </td>
                                     </template>
-                                    <td class="px-1 py-1 align-top">
+                                    <td class="px-1 py-0.5 align-top">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger as-child>
                                                 <Button
@@ -1024,6 +1255,19 @@ watch(rows, () => {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" class="w-56">
+                                                <!-- Insert Rows -->
+                                                <DropdownMenuLabel>Insert Rows</DropdownMenuLabel>
+                                                <DropdownMenuItem @click="openAddRowsDialog(index, 'above', 'normal')">
+                                                    <ArrowUp class="h-4 w-4 mr-2" />
+                                                    Add rows above
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem @click="openAddRowsDialog(index, 'below', 'normal')">
+                                                    <ArrowDown class="h-4 w-4 mr-2" />
+                                                    Add rows below
+                                                </DropdownMenuItem>
+
+                                                <DropdownMenuSeparator />
+
                                                 <!-- Row Type -->
                                                 <DropdownMenuLabel>Row Type</DropdownMenuLabel>
                                                 <DropdownMenuItem
@@ -1128,7 +1372,7 @@ watch(rows, () => {
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </td>
-                                    <td class="px-1 py-1 align-top">
+                                    <td class="px-1 py-0.5 align-top">
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -1151,6 +1395,24 @@ watch(rows, () => {
                                 </tr>
                             </tbody>
                         </table>
+
+                        <!-- Load More -->
+                        <div v-if="hasMoreRows" class="flex flex-col items-center gap-2 py-4 border-t">
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-muted-foreground">
+                                    Showing {{ displayRows.length }} of {{ totalRowCount }} rows
+                                </span>
+                                <Button variant="outline" size="sm" @click="loadMoreRows">
+                                    Load more
+                                </Button>
+                                <Button variant="ghost" size="sm" @click="showAllRows">
+                                    Show all
+                                </Button>
+                            </div>
+                            <span class="text-xs text-muted-foreground/70">
+                                Show all rows to enable drag-and-drop reordering
+                            </span>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -1170,6 +1432,110 @@ watch(rows, () => {
                         </Button>
                         <Button variant="destructive" @click="removeRow" class="flex-1 sm:flex-none">
                             Yes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Add Rows Dialog -->
+            <Dialog v-model:open="showAddRowsDialog">
+                <DialogContent class="max-w-xs">
+                    <DialogHeader>
+                        <DialogTitle>Add {{ addRowsType === 'section_header' ? 'Section Headers' : 'Rows' }}{{ addRowsPosition === 'above' ? ' Above' : addRowsPosition === 'below' ? ' Below' : '' }}</DialogTitle>
+                        <DialogDescription>
+                            Specify the number of rows to add.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="py-4">
+                        <Label for="rows-count">Number of rows</Label>
+                        <Input
+                            id="rows-count"
+                            v-model.number="addRowsCount"
+                            type="number"
+                            min="1"
+                            max="100"
+                            class="mt-2"
+                        />
+                    </div>
+                    <DialogFooter class="flex gap-2 sm:justify-end">
+                        <Button variant="outline" @click="showAddRowsDialog = false">
+                            Cancel
+                        </Button>
+                        <Button @click="insertRows" class="gap-2">
+                            <Plus class="h-4 w-4" />
+                            Add {{ addRowsCount }} row{{ addRowsCount > 1 ? 's' : '' }}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Import CSV Dialog -->
+            <Dialog v-model:open="showImportDialog">
+                <DialogContent class="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <Download class="h-5 w-5 text-primary" />
+                            Import from CSV
+                        </DialogTitle>
+                        <DialogDescription>
+                            Select a CSV file to import. New rows will be added below existing content.
+                            The CSV headers should match the checklist column names.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="space-y-4 py-4">
+                        <div class="space-y-2">
+                            <Label for="import-file">CSV File</Label>
+                            <Input
+                                id="import-file"
+                                ref="fileInputRef"
+                                type="file"
+                                accept=".csv,.txt"
+                                @change="handleFileSelect"
+                                :class="{ 'border-destructive': importError }"
+                            />
+                            <p class="text-xs text-muted-foreground">
+                                Maximum file size: 5MB. Supported formats: CSV, TXT
+                            </p>
+                        </div>
+
+                        <div v-if="importError" class="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+                            {{ importError }}
+                        </div>
+
+                        <div v-if="importFile" class="rounded-md bg-muted p-3">
+                            <div class="flex items-center gap-2 text-sm">
+                                <FileSpreadsheet class="h-4 w-4 text-primary" />
+                                <span class="font-medium">{{ importFile.name }}</span>
+                                <span class="text-muted-foreground">({{ (importFile.size / 1024).toFixed(1) }} KB)</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-md border p-3 space-y-2">
+                            <p class="text-sm font-medium">Expected columns:</p>
+                            <div class="flex flex-wrap gap-1">
+                                <span
+                                    v-for="col in columns"
+                                    :key="col.key"
+                                    class="px-2 py-0.5 bg-muted rounded text-xs"
+                                >
+                                    {{ col.label }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter class="flex gap-2 sm:justify-end">
+                        <Button variant="outline" @click="closeImportDialog">
+                            Cancel
+                        </Button>
+                        <Button
+                            @click="submitImport"
+                            :disabled="!importFile || isUploadingFile"
+                            class="gap-2"
+                        >
+                            <Download class="h-4 w-4" />
+                            {{ isUploadingFile ? 'Importing...' : 'Import' }}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

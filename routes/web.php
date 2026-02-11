@@ -17,14 +17,15 @@ Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canRegister' => Features::enabled(Features::registration()),
     ]);
-})->name('home');
+})->name('welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
+    Route::get('home', function () {
         return Inertia::render('Dashboard');
-    })->name('dashboard');
+    })->name('home');
 
     // Projects
+    Route::post('projects/reorder', [ProjectController::class, 'reorder'])->name('projects.reorder');
     Route::resource('projects', ProjectController::class);
 
     // Checklists (nested under projects)
@@ -39,6 +40,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('checklists/{checklist}/rows', [ChecklistController::class, 'updateRows'])->name('update-rows');
         Route::put('checklists/{checklist}/note', [ChecklistController::class, 'updateNote'])->name('update-note');
         Route::post('checklists/{checklist}/import-notes', [ChecklistController::class, 'importFromNotes'])->name('import-notes');
+        Route::get('checklists/{checklist}/export', [ChecklistController::class, 'export'])->name('export');
+        Route::post('checklists/{checklist}/import', [ChecklistController::class, 'import'])->name('import');
     });
 
     // Test Suites (nested under projects)
@@ -47,6 +50,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('test-suites/create', [TestSuiteController::class, 'create'])->name('create');
         Route::post('test-suites', [TestSuiteController::class, 'store'])->name('store');
         Route::post('test-suites/reorder', [TestSuiteController::class, 'reorder'])->name('reorder');
+        Route::post('test-suites/reorder-cases', [TestCaseController::class, 'reorderAcrossSuites'])->name('reorder-cases');
         Route::get('test-suites/{testSuite}', [TestSuiteController::class, 'show'])->name('show');
         Route::get('test-suites/{testSuite}/edit', [TestSuiteController::class, 'edit'])->name('edit');
         Route::put('test-suites/{testSuite}', [TestSuiteController::class, 'update'])->name('update');
