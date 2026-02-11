@@ -70,62 +70,58 @@ const getStatusIcon = (status: string) => {
                 </div>
             </div>
 
-            <div v-else class="space-y-4">
+            <div v-else class="space-y-3">
                 <Link
                     v-for="run in testRuns"
                     :key="run.id"
                     :href="`/projects/${project.id}/test-runs/${run.id}`"
+                    class="block"
                 >
                     <Card class="transition-all hover:border-primary cursor-pointer">
-                        <CardContent class="p-6">
-                            <div class="flex items-start justify-between">
-                                <div class="space-y-1">
-                                    <div class="flex items-center gap-2">
-                                        <component :is="getStatusIcon(run.status)" class="h-5 w-5 text-primary" />
-                                        <h3 class="text-lg font-semibold">{{ run.name }}</h3>
-                                    </div>
-                                    <p v-if="run.description" class="text-sm text-muted-foreground line-clamp-1">
-                                        {{ run.description }}
-                                    </p>
-                                    <div class="flex items-center gap-3 text-sm text-muted-foreground">
-                                        <Badge :class="getStatusColor(run.status)" variant="outline">
-                                            {{ run.status }}
-                                        </Badge>
-                                        <span v-if="run.environment">{{ run.environment }}</span>
-                                        <span v-if="run.milestone">{{ run.milestone }}</span>
-                                        <span>{{ run.test_run_cases_count || 0 }} cases</span>
+                        <CardContent class="p-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3 min-w-0 flex-1">
+                                    <component :is="getStatusIcon(run.status)" class="h-4 w-4 text-primary shrink-0" />
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <h3 class="text-sm font-semibold truncate">{{ run.name }}</h3>
+                                            <Badge :class="getStatusColor(run.status)" variant="outline" class="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                                                {{ run.status }}
+                                            </Badge>
+                                        </div>
+                                        <div class="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                                            <span v-if="run.environment">{{ run.environment }}</span>
+                                            <span v-if="run.milestone">{{ run.milestone }}</span>
+                                            <span>{{ run.test_run_cases_count || 0 }} cases</span>
+                                            <!-- Inline Stats -->
+                                            <template v-if="run.stats">
+                                                <span class="text-muted-foreground/50">|</span>
+                                                <span v-if="run.stats.passed" class="flex items-center gap-0.5">
+                                                    <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                                    {{ run.stats.passed }}
+                                                </span>
+                                                <span v-if="run.stats.failed" class="flex items-center gap-0.5">
+                                                    <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                                                    {{ run.stats.failed }}
+                                                </span>
+                                                <span v-if="run.stats.blocked" class="flex items-center gap-0.5">
+                                                    <span class="h-1.5 w-1.5 rounded-full bg-orange-500"></span>
+                                                    {{ run.stats.blocked }}
+                                                </span>
+                                                <span v-if="run.stats.untested" class="flex items-center gap-0.5">
+                                                    <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                                    {{ run.stats.untested }}
+                                                </span>
+                                            </template>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-3 shrink-0">
                                     <div class="text-right">
-                                        <div class="text-2xl font-bold text-primary">{{ run.progress }}%</div>
-                                        <Progress :model-value="run.progress" class="w-24" />
+                                        <div class="text-lg font-bold text-primary">{{ run.progress }}%</div>
+                                        <Progress :model-value="run.progress" class="w-16 h-1.5" />
                                     </div>
-                                    <ArrowRight class="h-5 w-5 text-muted-foreground" />
-                                </div>
-                            </div>
-
-                            <!-- Stats -->
-                            <div v-if="run.stats" class="mt-4 flex gap-4">
-                                <div v-if="run.stats.passed" class="flex items-center gap-1 text-sm">
-                                    <div class="h-2 w-2 rounded-full bg-green-500"></div>
-                                    <span>{{ run.stats.passed }} passed</span>
-                                </div>
-                                <div v-if="run.stats.failed" class="flex items-center gap-1 text-sm">
-                                    <div class="h-2 w-2 rounded-full bg-red-500"></div>
-                                    <span>{{ run.stats.failed }} failed</span>
-                                </div>
-                                <div v-if="run.stats.blocked" class="flex items-center gap-1 text-sm">
-                                    <div class="h-2 w-2 rounded-full bg-orange-500"></div>
-                                    <span>{{ run.stats.blocked }} blocked</span>
-                                </div>
-                                <div v-if="run.stats.skipped" class="flex items-center gap-1 text-sm">
-                                    <div class="h-2 w-2 rounded-full bg-purple-500"></div>
-                                    <span>{{ run.stats.skipped }} skipped</span>
-                                </div>
-                                <div v-if="run.stats.untested" class="flex items-center gap-1 text-sm">
-                                    <div class="h-2 w-2 rounded-full bg-gray-500"></div>
-                                    <span>{{ run.stats.untested }} untested</span>
+                                    <ArrowRight class="h-4 w-4 text-muted-foreground" />
                                 </div>
                             </div>
                         </CardContent>

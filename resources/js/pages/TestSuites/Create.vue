@@ -9,24 +9,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
-import { TestTube } from 'lucide-vue-next';
+import { Layers, Boxes } from 'lucide-vue-next';
 
 const props = defineProps<{
     project: Project;
     parentSuites: Pick<TestSuite, 'id' | 'name'>[];
 }>();
 
+// Get parent_id from URL query params
+const urlParams = new URLSearchParams(window.location.search);
+const preselectedParentId = urlParams.get('parent_id') ? Number(urlParams.get('parent_id')) : null;
+const preselectedParent = preselectedParentId ? props.parentSuites.find(s => s.id === preselectedParentId) : null;
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Test Suites', href: `/projects/${props.project.id}/test-suites` },
-    { title: 'Create', href: `/projects/${props.project.id}/test-suites/create` },
+    { title: preselectedParent ? 'Create Subcategory' : 'Create', href: `/projects/${props.project.id}/test-suites/create` },
 ];
 
 const form = useForm({
     name: '',
     description: '',
-    parent_id: null as number | null,
+    parent_id: preselectedParentId,
 });
 
 const submit = () => {
@@ -35,7 +40,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Create Test Suite" />
+    <Head :title="preselectedParent ? 'Create Subcategory' : 'Create Test Suite'" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
@@ -43,11 +48,17 @@ const submit = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
-                            <TestTube class="h-5 w-5 text-primary" />
-                            Create Test Suite
+                            <Boxes v-if="preselectedParent" class="h-5 w-5 text-yellow-500" />
+                            <Layers v-else class="h-5 w-5 text-primary" />
+                            {{ preselectedParent ? 'Create Subcategory' : 'Create Test Suite' }}
                         </CardTitle>
                         <CardDescription>
-                            Create a new test suite to organize your test cases.
+                            <template v-if="preselectedParent">
+                                Create a new subcategory in <strong>{{ preselectedParent.name }}</strong>
+                            </template>
+                            <template v-else>
+                                Create a new test suite to organize your test cases.
+                            </template>
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

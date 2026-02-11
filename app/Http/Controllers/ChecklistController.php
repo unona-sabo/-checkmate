@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Checklist;
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChecklistController extends Controller
 {
@@ -258,5 +260,210 @@ class ChecklistController extends Controller
 
         return redirect()->route('checklists.show', [$project, $checklist])
             ->with('success', count($validated['notes']).' items imported successfully.');
+    }
+
+    /**
+     * Export checklist data to CSV file.
+     */
+    public function export(Project $project, Checklist $checklist): StreamedResponse
+    {
+        $this->authorize('view', $project);
+
+        $columns = $checklist->columns_config ?? [
+            ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
+            ['key' => 'status', 'label' => 'Status', 'type' => 'checkbox'],
+        ];
+
+        $rows = $checklist->rows()->orderBy('order')->get();
+
+        $filename = str_replace(' ', '_', $checklist->name).'_'.date('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($columns, $rows) {
+            $output = fopen('php://output', 'w');
+
+            // Add BOM for UTF-8 Excel compatibility
+            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // Write header row with column labels
+            $headers = array_map(fn ($col) => $col['label'], $columns);
+            fputcsv($output, $headers);
+
+            // Write data rows
+            foreach ($rows as $row) {
+                $rowData = [];
+                foreach ($columns as $col) {
+                    $value = $row->data[$col['key']] ?? '';
+                    // Convert boolean to string for checkboxes, leave empty if not checked
+                    if ($col['type'] === 'checkbox') {
+                        $value = $value ? 'Yes' : '';
+                    }
+                    $rowData[] = $value;
+                }
+                fputcsv($output, $rowData);
+            }
+
+            fclose($output);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * Import data from CSV file to checklist.
+     */
+    public function import(Request $request, Project $project, Checklist $checklist)
+    {
+        $this->authorize('update', $project);
+
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:csv,txt|max:5120', // 5MB max
+        ], [
+            'file.required' => 'Please select a file to import.',
+            'file.mimes' => 'The file must be a CSV file.',
+            'file.max' => 'The file size must not exceed 5MB.',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        $file = $request->file('file');
+        $content = file_get_contents($file->getRealPath());
+
+        // Remove BOM if present
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+        // Parse CSV
+        $lines = array_filter(explode("\n", $content), fn ($line) => trim($line) !== '');
+
+        if (count($lines) < 1) {
+            return back()->withErrors(['file' => 'The CSV file is empty.']);
+        }
+
+        // Get checklist columns
+        $checklistColumns = $checklist->columns_config ?? [
+            ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
+            ['key' => 'status', 'label' => 'Status', 'type' => 'checkbox'],
+        ];
+
+        // Parse header row
+        $headerLine = array_shift($lines);
+        // Remove any remaining BOM or invisible characters from header
+        $headerLine = preg_replace('/[\x00-\x1F\x7F]/u', '', $headerLine);
+        $csvHeaders = str_getcsv($headerLine);
+        $csvHeaders = array_map(fn ($h) => trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/u', '', $h)), $csvHeaders);
+
+        // Map CSV headers to checklist columns
+        $columnMapping = [];
+        $matchedColKeys = [];
+
+        // First try exact matching by label or key
+        foreach ($csvHeaders as $csvIndex => $csvHeader) {
+            if ($csvHeader === '') {
+                continue;
+            }
+
+            foreach ($checklistColumns as $col) {
+                $label = trim($col['label'] ?? '');
+                $key = trim($col['key'] ?? '');
+
+                // Skip if this column was already matched
+                if (in_array($key, $matchedColKeys)) {
+                    continue;
+                }
+
+                if (
+                    strcasecmp($label, $csvHeader) === 0 ||
+                    strcasecmp($key, $csvHeader) === 0
+                ) {
+                    $columnMapping[$csvIndex] = $col;
+                    $matchedColKeys[] = $key;
+                    break;
+                }
+            }
+        }
+
+        // If column count matches, fill in any missing mappings by position
+        if (count($csvHeaders) === count($checklistColumns)) {
+            foreach ($checklistColumns as $index => $col) {
+                if (! isset($columnMapping[$index])) {
+                    $columnMapping[$index] = $col;
+                }
+            }
+        }
+
+        // Sort by index to ensure correct order
+        ksort($columnMapping);
+
+        if (empty($columnMapping)) {
+            $expectedLabels = implode(', ', array_map(fn ($c) => $c['label'], $checklistColumns));
+
+            return back()->withErrors(['file' => "No matching columns found. Expected: {$expectedLabels}"]);
+        }
+
+        // Find the last row order
+        $maxOrder = $checklist->rows()->max('order') ?? -1;
+
+        // Import data rows
+        $importedCount = 0;
+        foreach ($lines as $line) {
+            // Skip completely empty lines
+            if (trim($line) === '') {
+                continue;
+            }
+
+            // Clean line from invisible characters
+            $line = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $line);
+            $csvRow = str_getcsv($line);
+
+            // Clean first cell from any remaining BOM
+            if (isset($csvRow[0])) {
+                $csvRow[0] = preg_replace('/^[\xEF\xBB\xBF]+/u', '', $csvRow[0]);
+            }
+
+            // Build row data
+            $data = [];
+            foreach ($checklistColumns as $col) {
+                if ($col['type'] === 'checkbox') {
+                    $data[$col['key']] = false;
+                } else {
+                    $data[$col['key']] = '';
+                }
+            }
+
+            // Fill in values from CSV
+            foreach ($columnMapping as $csvIndex => $col) {
+                if (! isset($csvRow[$csvIndex])) {
+                    continue;
+                }
+
+                $value = $csvRow[$csvIndex];
+                // Clean value from BOM and invisible characters
+                $value = preg_replace('/^[\xEF\xBB\xBF]+/u', '', $value);
+                $value = trim($value);
+
+                if ($col['type'] === 'checkbox') {
+                    $value = in_array(strtolower($value), ['yes', 'true', '1', 'x', '+']);
+                }
+
+                $data[$col['key']] = $value;
+            }
+
+            // Import row (allow empty columns)
+            $maxOrder++;
+            $checklist->rows()->create([
+                'data' => $data,
+                'order' => $maxOrder,
+                'row_type' => 'normal',
+            ]);
+            $importedCount++;
+        }
+
+        if ($importedCount === 0) {
+            return back()->withErrors(['file' => 'No data rows found in the CSV file.']);
+        }
+
+        return redirect()->route('checklists.show', [$project, $checklist])
+            ->with('success', $importedCount.' rows imported successfully.');
     }
 }

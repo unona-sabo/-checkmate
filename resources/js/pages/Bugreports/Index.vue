@@ -2,7 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Bug, Plus, Search, X } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
@@ -84,7 +84,7 @@ const getStatusColor = (status: string) => {
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search bugreports..."
-                            class="pl-9 pr-8 w-56"
+                            class="pl-9 pr-8 w-56 bg-background/60"
                         />
                         <button
                             v-if="searchQuery"
@@ -108,33 +108,39 @@ const getStatusColor = (status: string) => {
                 <p class="text-muted-foreground">No bugreports found.</p>
             </div>
 
-            <div v-else class="grid gap-4">
-                <Card v-for="bug in filteredBugreports" :key="bug.id" class="hover:shadow-md transition-shadow">
-                    <CardHeader class="pb-2">
-                        <div class="flex items-start justify-between">
-                            <Link :href="`/projects/${project.id}/bugreports/${bug.id}`" class="hover:underline">
-                                <CardTitle class="text-lg">{{ bug.title }}</CardTitle>
-                            </Link>
-                            <div class="flex gap-2">
-                                <span :class="['px-2 py-1 rounded text-xs font-medium', getSeverityColor(bug.severity)]">
-                                    {{ bug.severity }}
-                                </span>
-                                <span :class="['px-2 py-1 rounded text-xs font-medium', getStatusColor(bug.status)]">
-                                    {{ bug.status.replace('_', ' ') }}
-                                </span>
+            <div v-else class="grid gap-2.5">
+                <Link
+                    v-for="bug in filteredBugreports"
+                    :key="bug.id"
+                    :href="`/projects/${project.id}/bugreports/${bug.id}`"
+                    class="block"
+                >
+                    <Card class="hover:border-primary transition-colors cursor-pointer">
+                        <CardContent class="px-3 py-2">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-base font-semibold truncate">{{ bug.title }}</h3>
+                                        <span :class="['px-1.5 py-0 rounded text-[10px] font-medium h-4 inline-flex items-center shrink-0', getSeverityColor(bug.severity)]">
+                                            {{ bug.severity }}
+                                        </span>
+                                        <span :class="['px-1.5 py-0 rounded text-[10px] font-medium h-4 inline-flex items-center shrink-0', getStatusColor(bug.status)]">
+                                            {{ bug.status.replace('_', ' ') }}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-xs text-muted-foreground mt-2">
+                                        <span v-if="bug.reporter">{{ bug.reporter.name }}</span>
+                                        <span v-if="bug.assignee" class="flex items-center gap-1">
+                                            <span class="text-muted-foreground/50">→</span>
+                                            {{ bug.assignee.name }}
+                                        </span>
+                                        <span v-if="bug.description" class="truncate max-w-xs text-muted-foreground/70">{{ bug.description }}</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <CardDescription v-if="bug.description" class="line-clamp-2">
-                            {{ bug.description }}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div class="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span v-if="bug.reporter">Reported by: {{ bug.reporter.name }}</span>
-                            <span v-if="bug.assignee">Assigned to: {{ bug.assignee.name }}</span>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </Link>
             </div>
         </div>
     </AppLayout>

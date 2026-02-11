@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
-import { Play, TestTube, FileText } from 'lucide-vue-next';
+import { Play, Layers, FileText } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
@@ -175,7 +175,7 @@ const submit = () => {
                                 </div>
 
                                 <div v-if="!testSuites.length" class="rounded-lg border border-dashed p-6 text-center">
-                                    <TestTube class="mx-auto h-8 w-8 text-muted-foreground" />
+                                    <Layers class="mx-auto h-8 w-8 text-muted-foreground" />
                                     <p class="mt-2 text-sm text-muted-foreground">No test suites found. Create test cases first.</p>
                                 </div>
 
@@ -194,7 +194,7 @@ const submit = () => {
                                                     @click="toggleSuite(suite.id)"
                                                     class="flex items-center gap-2 font-medium hover:text-primary"
                                                 >
-                                                    <TestTube class="h-4 w-4" />
+                                                    <Layers class="h-4 w-4" />
                                                     {{ suite.name }}
                                                     <span class="text-xs text-muted-foreground">({{ getAllTestCases(suite).length }} cases)</span>
                                                 </button>
@@ -224,7 +224,7 @@ const submit = () => {
                                                                 :indeterminate="isSuitePartiallySelected(child)"
                                                                 @update:checked="toggleSuiteSelection(child)"
                                                             />
-                                                            <TestTube class="h-3 w-3" />
+                                                            <Layers class="h-3 w-3" />
                                                             <span class="font-medium text-sm">{{ child.name }}</span>
                                                         </div>
                                                         <div

@@ -67,7 +67,7 @@ const filteredDocs = computed(() => {
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search documentations..."
-                            class="pl-9 pr-8 w-56"
+                            class="pl-9 pr-8 w-56 bg-background/60"
                         />
                         <button
                             v-if="searchQuery"

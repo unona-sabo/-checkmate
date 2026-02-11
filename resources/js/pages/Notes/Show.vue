@@ -91,7 +91,7 @@ const formatDate = (date: string) => {
     <Head :title="note.title || 'Untitled Note'" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 p-6">
+        <div class="flex h-full flex-1 flex-col gap-6 p-6 overflow-hidden">
             <div class="flex items-center justify-between">
                 <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
                     <StickyNote class="h-6 w-6 text-yellow-500" />
@@ -114,18 +114,18 @@ const formatDate = (date: string) => {
                 </div>
             </div>
 
-            <div class="grid gap-6 lg:grid-cols-3">
+            <div class="grid gap-6 lg:grid-cols-3 min-w-0">
                 <!-- Main editor -->
-                <div class="lg:col-span-2">
-                    <Card>
+                <div class="lg:col-span-2 min-w-0 overflow-hidden">
+                    <Card class="overflow-hidden">
                         <CardHeader>
                             <CardTitle>Edit Note</CardTitle>
                             <CardDescription>
                                 Last updated: {{ formatDate(note.updated_at) }}
                             </CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <form @submit.prevent="submit" class="space-y-6">
+                        <CardContent class="overflow-hidden">
+                            <form @submit.prevent="submit" class="space-y-6 min-w-0">
                                 <div class="space-y-2">
                                     <Label for="title">Title</Label>
                                     <Input
@@ -138,7 +138,7 @@ const formatDate = (date: string) => {
                                     <InputError :message="form.errors.title" />
                                 </div>
 
-                                <div class="space-y-2">
+                                <div class="space-y-2 min-w-0 overflow-hidden">
                                     <Label for="content">Content</Label>
                                     <Textarea
                                         id="content"

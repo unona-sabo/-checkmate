@@ -225,6 +225,16 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    /* Prevent textarea from overflowing containers */
+    textarea {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        white-space: pre-wrap !important;
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
+        word-break: break-word !important;
+    }
 }
 
 /* Main layout gradient background */

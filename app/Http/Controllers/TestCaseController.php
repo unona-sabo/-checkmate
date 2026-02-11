@@ -132,11 +132,35 @@ class TestCaseController extends Controller
             'cases' => 'required|array',
             'cases.*.id' => 'required|exists:test_cases,id',
             'cases.*.order' => 'required|integer',
+            'cases.*.test_suite_id' => 'nullable|exists:test_suites,id',
+        ]);
+
+        foreach ($validated['cases'] as $caseData) {
+            $updateData = ['order' => $caseData['order']];
+            if (isset($caseData['test_suite_id'])) {
+                $updateData['test_suite_id'] = $caseData['test_suite_id'];
+            }
+            TestCase::where('id', $caseData['id'])->update($updateData);
+        }
+
+        return back()->with('success', 'Test cases reordered successfully.');
+    }
+
+    public function reorderAcrossSuites(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'cases' => 'required|array',
+            'cases.*.id' => 'required|exists:test_cases,id',
+            'cases.*.order' => 'required|integer',
+            'cases.*.test_suite_id' => 'required|exists:test_suites,id',
         ]);
 
         foreach ($validated['cases'] as $caseData) {
             TestCase::where('id', $caseData['id'])->update([
                 'order' => $caseData['order'],
+                'test_suite_id' => $caseData['test_suite_id'],
             ]);
         }
 

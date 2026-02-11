@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, FolderOpen, ClipboardList, TestTube, Play, ChevronRight, Bug, FileText, StickyNote } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid, FolderOpen, ClipboardList, Layers, Play, ChevronRight, Bug, FileText, StickyNote } from 'lucide-vue-next';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -18,7 +18,7 @@ import {
     SidebarMenuSubItem,
     SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { home } from '@/routes';
 import { type NavItem, type Project } from '@/types';
 import AppLogo from './AppLogo.vue';
 import { computed } from 'vue';
@@ -34,8 +34,8 @@ const currentProject = computed(() => {
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
-        href: dashboard(),
+        title: 'Home',
+        href: home(),
         icon: LayoutGrid,
     },
     {
@@ -63,7 +63,7 @@ const projectSubItems = computed(() => {
     const projectId = currentProject.value.id;
     return [
         { title: 'Checklists', href: `/projects/${projectId}/checklists`, icon: ClipboardList },
-        { title: 'Test Suites', href: `/projects/${projectId}/test-suites`, icon: TestTube },
+        { title: 'Test Suites', href: `/projects/${projectId}/test-suites`, icon: Layers },
         { title: 'Test Runs', href: `/projects/${projectId}/test-runs`, icon: Play },
         { title: 'Bugreports', href: `/projects/${projectId}/bugreports`, icon: Bug },
         { title: 'Documentations', href: `/projects/${projectId}/documentations`, icon: FileText },
@@ -75,7 +75,7 @@ const projectSubItems = computed(() => {
 <template>
     <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
-            <Link :href="dashboard()" class="flex w-full items-center justify-center px-0 py-4">
+            <Link :href="home()" class="flex w-full items-center justify-center px-0 py-4">
                 <AppLogo />
             </Link>
         </SidebarHeader>

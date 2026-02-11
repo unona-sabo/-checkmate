@@ -16,7 +16,10 @@ class TestSuiteController extends Controller
 
         $testSuites = $project->testSuites()
             ->whereNull('parent_id')
-            ->with(['children', 'testCases'])
+            ->with([
+                'children.testCases' => fn ($q) => $q->orderBy('order'),
+                'testCases' => fn ($q) => $q->orderBy('order'),
+            ])
             ->withCount('testCases')
             ->orderBy('order')
             ->get();

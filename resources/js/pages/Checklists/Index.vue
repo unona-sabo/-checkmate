@@ -246,7 +246,7 @@ const onDialogClose = (open: boolean) => {
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search checklists..."
-                            class="pl-9 pr-8 w-56"
+                            class="pl-9 pr-8 w-56 bg-background/60"
                         />
                         <button
                             v-if="searchQuery"
