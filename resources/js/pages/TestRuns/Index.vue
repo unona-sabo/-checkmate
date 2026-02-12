@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestRun } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Play, CheckCircle2, Archive, ArrowRight } from 'lucide-vue-next';
+import { Plus, Play, CheckCircle2, Archive, ArrowRight, Search, X } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
 
 const props = defineProps<{
     project: Project;
@@ -36,6 +38,19 @@ const getStatusIcon = (status: string) => {
         default: return Play;
     }
 };
+
+const searchQuery = ref('');
+
+const filteredTestRuns = computed(() => {
+    if (!searchQuery.value.trim()) return props.testRuns;
+    const query = searchQuery.value.toLowerCase();
+    return props.testRuns.filter(run =>
+        run.name.toLowerCase().includes(query) ||
+        run.environment?.toLowerCase().includes(query) ||
+        run.milestone?.toLowerCase().includes(query) ||
+        run.status.toLowerCase().includes(query)
+    );
+});
 </script>
 
 <template>
@@ -51,12 +66,30 @@ const getStatusIcon = (status: string) => {
                     </h1>
                     <p class="text-muted-foreground">Execute and track test case results</p>
                 </div>
-                <Link :href="`/projects/${project.id}/test-runs/create`">
-                    <Button variant="cta" class="gap-2">
-                        <Plus class="h-4 w-4" />
-                        New Test Run
-                    </Button>
-                </Link>
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search test runs..."
+                            class="pl-9 pr-8 w-56 bg-background/60"
+                        />
+                        <button
+                            v-if="searchQuery"
+                            @click="searchQuery = ''"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
+                    <Link :href="`/projects/${project.id}/test-runs/create`">
+                        <Button variant="cta" class="gap-2">
+                            <Plus class="h-4 w-4" />
+                            New Test Run
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             <div v-if="testRuns.length === 0" class="flex flex-1 items-center justify-center">
@@ -73,9 +106,15 @@ const getStatusIcon = (status: string) => {
                 </div>
             </div>
 
+            <div v-else-if="filteredTestRuns.length === 0 && searchQuery.trim()" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Search class="h-12 w-12 mb-3" />
+                <p class="font-semibold">No results found</p>
+                <p class="text-sm">No test runs match "{{ searchQuery }}"</p>
+            </div>
+
             <div v-else class="space-y-3">
                 <Link
-                    v-for="run in testRuns"
+                    v-for="run in filteredTestRuns"
                     :key="run.id"
                     :href="`/projects/${project.id}/test-runs/${run.id}`"
                     class="block"

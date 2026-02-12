@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Play, Edit, CheckCircle2, XCircle, AlertTriangle,
-    SkipForward, RotateCcw, Circle, User, ExternalLink
+    SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X
 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
@@ -123,6 +123,25 @@ const groupedCases = computed(() => {
     });
     return groups;
 });
+
+const searchQuery = ref('');
+
+const filteredGroupedCases = computed(() => {
+    if (!searchQuery.value.trim()) return groupedCases.value;
+    const query = searchQuery.value.toLowerCase();
+    const filtered: Record<string, TestRunCase[]> = {};
+    for (const [suiteName, cases] of Object.entries(groupedCases.value)) {
+        const matched = cases.filter(trc =>
+            trc.test_case?.title?.toLowerCase().includes(query) ||
+            trc.status.toLowerCase().includes(query) ||
+            trc.assigned_user?.name?.toLowerCase().includes(query)
+        );
+        if (matched.length > 0) {
+            filtered[suiteName] = matched;
+        }
+    }
+    return filtered;
+});
 </script>
 
 <template>
@@ -152,7 +171,23 @@ const groupedCases = computed(() => {
                         </span>
                     </div>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search test cases..."
+                            class="pl-9 pr-8 w-56 bg-background/60"
+                        />
+                        <button
+                            v-if="searchQuery"
+                            @click="searchQuery = ''"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
                     <Button
                         v-if="testRun.status === 'active'"
                         @click="completeRun"
@@ -209,8 +244,13 @@ const groupedCases = computed(() => {
             </Card>
 
             <!-- Test Cases by Suite -->
-            <div class="space-y-4">
-                <div v-for="(cases, suiteName) in groupedCases" :key="suiteName">
+            <div v-if="searchQuery.trim() && Object.keys(filteredGroupedCases).length === 0" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Search class="h-12 w-12 mb-3" />
+                <p class="font-semibold">No results found</p>
+                <p class="text-sm">No test cases match "{{ searchQuery }}"</p>
+            </div>
+            <div v-else class="space-y-4">
+                <div v-for="(cases, suiteName) in filteredGroupedCases" :key="suiteName">
                     <h3 class="mb-2 font-semibold">{{ suiteName }}</h3>
                     <div class="space-y-2">
                         <Card

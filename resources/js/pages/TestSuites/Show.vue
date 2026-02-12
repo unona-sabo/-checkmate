@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
     Plus, Edit, Layers, FileText, ArrowRight,
-    Zap, Bug, GripVertical, Boxes, ChevronRight, FolderPlus
+    Zap, Bug, GripVertical, Boxes, ChevronRight, FolderPlus, Search, X
 } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
 import { ref, computed } from 'vue';
 
 const props = defineProps<{
@@ -80,6 +81,20 @@ const totalTestCases = computed(() => {
 });
 
 const isSaving = ref(false);
+
+// Search
+const searchQuery = ref('');
+
+const filteredSections = computed(() => {
+    if (!searchQuery.value.trim()) return suiteSections.value;
+    const query = searchQuery.value.toLowerCase();
+    return suiteSections.value
+        .map(section => ({
+            ...section,
+            testCases: section.testCases.filter(tc => tc.title.toLowerCase().includes(query)),
+        }))
+        .filter(section => section.testCases.length > 0 || section.name.toLowerCase().includes(query));
+});
 
 // Drag and drop state per section
 const dragState = ref<{
@@ -182,7 +197,23 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                         <span v-if="isSaving" class="ml-2 text-primary">Saving...</span>
                     </p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search test cases..."
+                            class="pl-9 pr-8 w-56 bg-background/60"
+                        />
+                        <button
+                            v-if="searchQuery"
+                            @click="searchQuery = ''"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
                     <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/create`">
                         <Button variant="cta" class="gap-2">
                             <Plus class="h-4 w-4" />
@@ -223,24 +254,34 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
 
             <!-- Content -->
             <div v-else class="space-y-2">
+                <!-- No search results -->
+                <div v-if="filteredSections.length === 0 && searchQuery.trim()" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                    <Search class="h-12 w-12 mb-3" />
+                    <p class="font-semibold">No results found</p>
+                    <p class="text-sm">No test cases match "{{ searchQuery }}"</p>
+                </div>
+
                 <!-- Current Suite Test Cases (if any) -->
                 <div
-                    v-for="section in suiteSections"
+                    v-for="section in filteredSections"
                     :key="section.id"
                     class="mt-2.5 first:mt-0"
                 >
                     <!-- Section Header -->
-                    <div class="flex items-center justify-between mb-2 sticky top-0 bg-card/95 backdrop-blur-sm py-2.5 px-4 z-10 rounded-xl border shadow-sm">
+                    <div
+                        class="group/header flex items-center justify-between mb-2 sticky top-0 bg-card/95 backdrop-blur-sm py-2.5 px-4 z-10 rounded-xl border shadow-sm cursor-pointer transition-all duration-150 hover:border-primary/50"
+                        @click="router.visit(`/projects/${project.id}/test-suites/${section.id}`)"
+                    >
                         <div class="flex items-center gap-3">
                             <div
-                                class="h-8 w-8 rounded-lg flex items-center justify-center"
-                                :class="section.isChild ? 'bg-yellow-500/10' : 'bg-primary/10'"
+                                class="h-8 w-8 rounded-lg flex items-center justify-center transition-colors"
+                                :class="section.isChild ? 'bg-yellow-500/10 group-hover/header:bg-primary/10' : 'bg-primary/10'"
                             >
-                                <Boxes v-if="section.isChild" class="h-4 w-4 text-yellow-500" />
+                                <Boxes v-if="section.isChild" class="h-4 w-4 text-yellow-500 group-hover/header:text-primary transition-colors" />
                                 <Layers v-else class="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                                <h3 class="font-semibold text-base">{{ section.name }}</h3>
+                                <h3 class="font-semibold text-base group-hover/header:text-primary transition-colors">{{ section.name }}</h3>
                                 <p v-if="section.isChild" class="text-xs text-muted-foreground">
                                     Subcategory
                                 </p>
@@ -249,20 +290,12 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                                 {{ section.testCases.length }} {{ section.testCases.length === 1 ? 'case' : 'cases' }}
                             </Badge>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <Link :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/create`">
-                                <Button variant="outline" size="sm" class="h-8 text-xs gap-1.5">
-                                    <Plus class="h-3.5 w-3.5" />
-                                    Add
-                                </Button>
-                            </Link>
-                            <Link v-if="section.isChild" :href="`/projects/${project.id}/test-suites/${section.id}`">
-                                <Button variant="ghost" size="sm" class="h-8 text-xs gap-1.5">
-                                    View
-                                    <ChevronRight class="h-3.5 w-3.5" />
-                                </Button>
-                            </Link>
-                        </div>
+                        <Link :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/create`" @click.stop>
+                            <Button variant="outline" size="sm" class="h-8 text-xs gap-1.5">
+                                <Plus class="h-3.5 w-3.5" />
+                                Add
+                            </Button>
+                        </Link>
                     </div>
 
                     <!-- Test Cases -->
@@ -335,31 +368,26 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                         :key="child.id"
                         class="mt-2.5"
                     >
-                        <div class="flex items-center justify-between mb-2 sticky top-0 bg-card/95 backdrop-blur-sm py-2.5 px-4 z-10 rounded-xl border shadow-sm">
+                        <div
+                            class="group/header flex items-center justify-between mb-2 sticky top-0 bg-card/95 backdrop-blur-sm py-2.5 px-4 z-10 rounded-xl border shadow-sm cursor-pointer transition-all duration-150 hover:border-primary/50"
+                            @click="router.visit(`/projects/${project.id}/test-suites/${child.id}`)"
+                        >
                             <div class="flex items-center gap-3">
-                                <div class="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                                    <Boxes class="h-4 w-4 text-yellow-500" />
+                                <div class="h-8 w-8 rounded-lg bg-yellow-500/10 group-hover/header:bg-primary/10 flex items-center justify-center transition-colors">
+                                    <Boxes class="h-4 w-4 text-yellow-500 group-hover/header:text-primary transition-colors" />
                                 </div>
                                 <div>
-                                    <h3 class="font-semibold text-base">{{ child.name }}</h3>
+                                    <h3 class="font-semibold text-base group-hover/header:text-primary transition-colors">{{ child.name }}</h3>
                                     <p class="text-xs text-muted-foreground">Subcategory</p>
                                 </div>
                                 <Badge variant="secondary" class="text-xs font-normal">0 cases</Badge>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <Link :href="`/projects/${project.id}/test-suites/${child.id}/test-cases/create`">
-                                    <Button variant="outline" size="sm" class="h-8 text-xs gap-1.5">
-                                        <Plus class="h-3.5 w-3.5" />
-                                        Add
-                                    </Button>
-                                </Link>
-                                <Link :href="`/projects/${project.id}/test-suites/${child.id}`">
-                                    <Button variant="ghost" size="sm" class="h-8 text-xs gap-1.5">
-                                        View
-                                        <ChevronRight class="h-3.5 w-3.5" />
-                                    </Button>
-                                </Link>
-                            </div>
+                            <Link :href="`/projects/${project.id}/test-suites/${child.id}/test-cases/create`" @click.stop>
+                                <Button variant="outline" size="sm" class="h-8 text-xs gap-1.5">
+                                    <Plus class="h-3.5 w-3.5" />
+                                    Add
+                                </Button>
+                            </Link>
                         </div>
                         <div class="rounded-lg border border-dashed p-6 text-center">
                             <FileText class="mx-auto h-8 w-8 text-muted-foreground" />

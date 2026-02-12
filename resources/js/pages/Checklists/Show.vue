@@ -14,6 +14,9 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import {
     Dialog,
@@ -30,7 +33,7 @@ import {
     ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
     Bold, Heading, GripHorizontal, StickyNote, Import, Pencil, X, Search,
     MoreHorizontal, Copy, Layers, Play, Download, Upload, FileSpreadsheet,
-    ArrowUp, ArrowDown
+    ArrowUp, ArrowDown, Bug, RefreshCw
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
@@ -671,6 +674,47 @@ const selectedRows = computed(() => {
 // Check if any rows are selected
 const hasSelectedRows = computed(() => selectedRows.value.length > 0);
 
+// Get select columns for "Change Status" action
+const selectColumns = computed(() => columns.value.filter(col => col.type === 'select' && col.options?.length));
+
+// Change status of selected rows for a given column
+const changeSelectedStatus = (columnKey: string, value: string) => {
+    selectedRows.value.forEach(row => {
+        row.data[columnKey] = value;
+    });
+    rows.value = [...rows.value];
+    hasContentChanges.value = true;
+    nextTick(() => saveRows());
+};
+
+// Create bugreport from selected rows
+const createBugreportFromSelected = () => {
+    const textColumns = columns.value.filter(col => col.type === 'text');
+    const lines: string[] = [];
+
+    selectedRows.value.forEach((row, idx) => {
+        const parts: string[] = [];
+        textColumns.forEach(col => {
+            const val = row.data[col.key];
+            if (typeof val === 'string' && val.trim()) {
+                parts.push(val.trim());
+            }
+        });
+        if (parts.length > 0) {
+            lines.push(`${idx + 1}. ${parts.join(' — ')}`);
+        }
+    });
+
+    const stepsText = lines.join('\n');
+    const params = new URLSearchParams();
+    params.set('title', `[${props.checklist.name}] Bug`);
+    if (stepsText) {
+        params.set('steps_to_reproduce', stepsText);
+    }
+
+    router.get(`/projects/${props.project.id}/bugreports/create?${params.toString()}`);
+};
+
 // Check if row has any content (non-empty text fields)
 const rowHasContent = (row: ExtendedChecklistRow, checkboxColumnKey: string): boolean => {
     return Object.entries(row.data).some(([key, value]) => {
@@ -895,6 +939,38 @@ onMounted(() => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Selected Rows</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem @click="createBugreportFromSelected">
+                                <Bug class="h-4 w-4 mr-2" />
+                                Create Bugreport
+                            </DropdownMenuItem>
+                            <DropdownMenuSub v-if="selectColumns.length > 0">
+                                <DropdownMenuSubTrigger>
+                                    <RefreshCw class="h-4 w-4 mr-2" />
+                                    Change Status
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                    <template v-for="col in selectColumns" :key="col.key">
+                                        <DropdownMenuLabel v-if="selectColumns.length > 1">{{ col.label }}</DropdownMenuLabel>
+                                        <DropdownMenuItem
+                                            v-for="option in col.options"
+                                            :key="option.value"
+                                            @click="changeSelectedStatus(col.key, option.value)"
+                                        >
+                                            <span
+                                                class="px-2 py-0.5 rounded text-xs font-medium"
+                                                :style="{
+                                                    backgroundColor: option.color || '#dbeafe',
+                                                    color: getTextColorForBg(option.color)
+                                                }"
+                                            >
+                                                {{ option.label }}
+                                            </span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator v-if="selectColumns.length > 1" />
+                                    </template>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem>
                                 <Copy class="h-4 w-4 mr-2" />

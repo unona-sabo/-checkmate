@@ -4,7 +4,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite, type TestCase } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ChevronRight, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus } from 'lucide-vue-next';
+import { Plus, ChevronRight, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -407,6 +408,20 @@ const localFlatSuites = computed<FlatSuite[]>(() => {
 const localTotalTestCases = computed(() => {
     return localFlatSuites.value.reduce((acc, s) => acc + s.testCases.length, 0);
 });
+
+// Search
+const searchQuery = ref('');
+
+const filteredFlatSuites = computed(() => {
+    if (!searchQuery.value.trim()) return localFlatSuites.value;
+    const query = searchQuery.value.toLowerCase();
+    return localFlatSuites.value
+        .map(suite => ({
+            ...suite,
+            testCases: suite.testCases.filter(tc => tc.title.toLowerCase().includes(query)),
+        }))
+        .filter(suite => suite.testCases.length > 0 || suite.name.toLowerCase().includes(query));
+});
 </script>
 
 <template>
@@ -453,7 +468,7 @@ const localTotalTestCases = computed(() => {
                     <div class="w-[480px] shrink-0"></div>
                     <!-- Right side - Selection controls and New Test Suite button -->
                     <div class="flex items-center justify-between flex-1 max-w-4xl pr-2">
-                        <div v-if="localTotalTestCases > 0" class="flex items-center gap-3">
+                        <div v-if="localTotalTestCases > 0 && filteredFlatSuites.length > 0" class="flex items-center gap-3">
                             <button
                                 type="button"
                                 class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-8 px-3 cursor-pointer"
@@ -503,12 +518,30 @@ const localTotalTestCases = computed(() => {
                             </DropdownMenu>
                         </div>
                         <div v-else></div>
-                        <Link :href="`/projects/${project.id}/test-suites/create`">
-                            <Button variant="cta" class="gap-2">
-                                <Plus class="h-4 w-4" />
-                                New Test Suite
-                            </Button>
-                        </Link>
+                        <div class="flex items-center gap-2">
+                            <div class="relative">
+                                <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    v-model="searchQuery"
+                                    type="text"
+                                    placeholder="Search test cases..."
+                                    class="pl-9 pr-8 w-56 bg-background/60"
+                                />
+                                <button
+                                    v-if="searchQuery"
+                                    @click="searchQuery = ''"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                                >
+                                    <X class="h-4 w-4" />
+                                </button>
+                            </div>
+                            <Link :href="`/projects/${project.id}/test-suites/create`">
+                                <Button variant="cta" class="gap-2">
+                                    <Plus class="h-4 w-4" />
+                                    New Test Suite
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
@@ -616,7 +649,12 @@ const localTotalTestCases = computed(() => {
 
                 <!-- Right: Test Cases List -->
                 <div class="flex-1 overflow-y-auto min-h-0 pr-2 max-w-4xl">
-                    <div v-if="localFlatSuites.length === 0" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                    <div v-if="filteredFlatSuites.length === 0 && searchQuery.trim()" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                        <Search class="h-12 w-12 mb-3" />
+                        <p class="font-semibold">No results found</p>
+                        <p class="text-sm">No test cases match "{{ searchQuery }}"</p>
+                    </div>
+                    <div v-else-if="filteredFlatSuites.length === 0" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
                         <FileText class="h-12 w-12 mb-3" />
                         <p class="font-semibold">No test cases yet</p>
                         <p class="text-sm">Add test cases to your suites to see them here.</p>
@@ -624,15 +662,16 @@ const localTotalTestCases = computed(() => {
 
                     <div v-else class="space-y-1">
                         <div
-                            v-for="suite in localFlatSuites"
+                            v-for="suite in filteredFlatSuites"
                             :key="suite.id"
                             :id="`suite-${suite.id}`"
                             class="scroll-mt-4 mt-2.5 first:mt-0"
                         >
                             <!-- Suite Header -->
                             <div
-                                class="flex items-center justify-between mb-2 sticky top-0 bg-card/95 backdrop-blur-sm z-10 rounded-xl border shadow-sm"
+                                class="group/header flex items-center justify-between mb-2 sticky top-0 bg-card/95 backdrop-blur-sm z-10 rounded-xl border shadow-sm cursor-pointer transition-all duration-150 hover:border-primary/50"
                                 :class="suite.parentName ? 'py-2 px-3' : 'py-3.5 px-4'"
+                                @click="router.visit(`/projects/${project.id}/test-suites/${suite.id}`)"
                             >
                                 <div class="flex items-center gap-3">
                                     <div
@@ -649,16 +688,16 @@ const localTotalTestCases = computed(() => {
                                         <Check v-else-if="getSuiteState(suite.id).isFullySelected" class="h-3 w-3" />
                                     </div>
                                     <div
-                                        class="rounded-lg flex items-center justify-center"
+                                        class="rounded-lg flex items-center justify-center transition-colors"
                                         :class="[
-                                            suite.parentName ? 'h-7 w-7 bg-yellow-500/10' : 'h-8 w-8 bg-primary/10'
+                                            suite.parentName ? 'h-7 w-7 bg-yellow-500/10 group-hover/header:bg-primary/10' : 'h-8 w-8 bg-primary/10'
                                         ]"
                                     >
-                                        <Boxes v-if="suite.parentName" class="h-3.5 w-3.5 text-yellow-500" />
+                                        <Boxes v-if="suite.parentName" class="h-3.5 w-3.5 text-yellow-500 group-hover/header:text-primary transition-colors" />
                                         <Layers v-else class="h-4 w-4 text-primary" />
                                     </div>
                                     <div>
-                                        <h3 :class="suite.parentName ? 'font-semibold text-[13px]' : 'font-semibold text-base'">{{ suite.name }}</h3>
+                                        <h3 :class="suite.parentName ? 'font-semibold text-[13px]' : 'font-semibold text-base'" class="group-hover/header:text-primary transition-colors">{{ suite.name }}</h3>
                                         <p v-if="suite.parentName" class="text-[11px] text-muted-foreground">
                                             in {{ suite.parentName }}
                                         </p>
@@ -667,20 +706,12 @@ const localTotalTestCases = computed(() => {
                                         {{ getFlatSuiteTotalTestCases(suite) }} {{ getFlatSuiteTotalTestCases(suite) === 1 ? 'case' : 'cases' }}
                                     </Badge>
                                 </div>
-                                <div class="flex items-center gap-1.5">
-                                    <Link :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/create`">
-                                        <Button variant="outline" size="sm" :class="suite.parentName ? 'h-7 text-[11px] gap-1 px-2.5' : 'h-8 text-xs gap-1.5'">
-                                            <Plus :class="suite.parentName ? 'h-3.5 w-3.5' : 'h-3.5 w-3.5'" />
-                                            Add
-                                        </Button>
-                                    </Link>
-                                    <Link :href="`/projects/${project.id}/test-suites/${suite.id}`">
-                                        <Button variant="ghost" size="sm" :class="suite.parentName ? 'h-7 text-[11px] gap-1 px-2.5' : 'h-8 text-xs gap-1.5'">
-                                            View
-                                            <ChevronRight :class="suite.parentName ? 'h-3.5 w-3.5' : 'h-3.5 w-3.5'" />
-                                        </Button>
-                                    </Link>
-                                </div>
+                                <Link :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/create`" @click.stop>
+                                    <Button variant="outline" size="sm" :class="suite.parentName ? 'h-7 text-[11px] gap-1 px-2.5' : 'h-8 text-xs gap-1.5'">
+                                        <Plus :class="suite.parentName ? 'h-3.5 w-3.5' : 'h-3.5 w-3.5'" />
+                                        Add
+                                    </Button>
+                                </Link>
                             </div>
 
                             <!-- Test Cases -->

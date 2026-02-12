@@ -29,12 +29,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Create', href: `/projects/${props.project.id}/bugreports/create` },
 ];
 
+const urlParams = new URLSearchParams(window.location.search);
+
 const form = useForm({
-    title: '',
-    description: '',
-    steps_to_reproduce: '',
-    expected_result: '',
-    actual_result: '',
+    title: urlParams.get('title') || '',
+    description: urlParams.get('description') || '',
+    steps_to_reproduce: urlParams.get('steps_to_reproduce') || '',
+    expected_result: urlParams.get('expected_result') || '',
+    actual_result: urlParams.get('actual_result') || '',
     severity: 'minor',
     priority: 'medium',
     status: 'new',
