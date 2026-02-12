@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attachment;
 use App\Models\Documentation;
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,6 +52,8 @@ class DocumentationController extends Controller
             'content' => 'nullable|string',
             'category' => 'nullable|string|max:255',
             'parent_id' => 'nullable|exists:documentations,id',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
         ]);
 
         $maxOrder = $project->documentations()
@@ -58,7 +62,21 @@ class DocumentationController extends Controller
 
         $validated['order'] = $maxOrder + 1;
 
-        $documentation = $project->documentations()->create($validated);
+        $documentation = $project->documentations()->create(
+            collect($validated)->except('attachments')->toArray()
+        );
+
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('attachments/documentations', 'public');
+                $documentation->attachments()->create([
+                    'original_filename' => $file->getClientOriginalName(),
+                    'stored_path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ]);
+            }
+        }
 
         return redirect()->route('documentations.show', [$project, $documentation])
             ->with('success', 'Documentation created successfully.');
@@ -68,7 +86,7 @@ class DocumentationController extends Controller
     {
         $this->authorize('view', $project);
 
-        $documentation->load('children');
+        $documentation->load(['children', 'attachments']);
 
         $allDocs = $project->documentations()
             ->whereNull('parent_id')
@@ -86,6 +104,8 @@ class DocumentationController extends Controller
     public function edit(Project $project, Documentation $documentation): Response
     {
         $this->authorize('update', $project);
+
+        $documentation->load('attachments');
 
         $parentOptions = $project->documentations()
             ->whereNull('parent_id')
@@ -109,9 +129,25 @@ class DocumentationController extends Controller
             'content' => 'nullable|string',
             'category' => 'nullable|string|max:255',
             'parent_id' => 'nullable|exists:documentations,id',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
         ]);
 
-        $documentation->update($validated);
+        $documentation->update(
+            collect($validated)->except('attachments')->toArray()
+        );
+
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('attachments/documentations', 'public');
+                $documentation->attachments()->create([
+                    'original_filename' => $file->getClientOriginalName(),
+                    'stored_path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ]);
+            }
+        }
 
         return redirect()->route('documentations.show', [$project, $documentation])
             ->with('success', 'Documentation updated successfully.');
@@ -121,10 +157,61 @@ class DocumentationController extends Controller
     {
         $this->authorize('update', $project);
 
+        foreach ($documentation->attachments as $attachment) {
+            Storage::disk('public')->delete($attachment->stored_path);
+        }
+
         $documentation->delete();
 
         return redirect()->route('documentations.index', $project)
             ->with('success', 'Documentation deleted successfully.');
+    }
+
+    public function destroyAttachment(Project $project, Documentation $documentation, Attachment $attachment)
+    {
+        $this->authorize('update', $project);
+
+        Storage::disk('public')->delete($attachment->stored_path);
+        $attachment->delete();
+
+        return back()->with('success', 'Attachment deleted.');
+    }
+
+    public function uploadImage(Request $request, Project $project, Documentation $documentation)
+    {
+        $this->authorize('update', $project);
+
+        $request->validate([
+            'image' => 'required|image|max:10240',
+        ]);
+
+        $path = $request->file('image')->store('attachments/documentations/images', 'public');
+
+        $documentation->attachments()->create([
+            'original_filename' => $request->file('image')->getClientOriginalName(),
+            'stored_path' => $path,
+            'mime_type' => $request->file('image')->getMimeType(),
+            'size' => $request->file('image')->getSize(),
+        ]);
+
+        return response()->json([
+            'url' => Storage::disk('public')->url($path),
+        ]);
+    }
+
+    public function uploadNewImage(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $request->validate([
+            'image' => 'required|image|max:10240',
+        ]);
+
+        $path = $request->file('image')->store('attachments/documentations/images', 'public');
+
+        return response()->json([
+            'url' => Storage::disk('public')->url($path),
+        ]);
     }
 
     public function reorder(Request $request, Project $project)

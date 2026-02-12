@@ -192,7 +192,7 @@ const submit = () => {
                                                 <button
                                                     type="button"
                                                     @click="toggleSuite(suite.id)"
-                                                    class="flex items-center gap-2 font-medium hover:text-primary"
+                                                    class="flex items-center gap-2 font-medium hover:text-primary cursor-pointer"
                                                 >
                                                     <Layers class="h-4 w-4" />
                                                     {{ suite.name }}

@@ -66,6 +66,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('test-cases/{testCase}/edit', [TestCaseController::class, 'edit'])->name('edit');
         Route::put('test-cases/{testCase}', [TestCaseController::class, 'update'])->name('update');
         Route::delete('test-cases/{testCase}', [TestCaseController::class, 'destroy'])->name('destroy');
+        Route::delete('test-cases/{testCase}/attachments/{attachment}', [TestCaseController::class, 'destroyAttachment'])->name('destroy-attachment');
         Route::put('test-cases/{testCase}/note', [TestCaseController::class, 'updateNote'])->name('update-note');
     });
 
@@ -98,6 +99,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('bugreports/{bugreport}/edit', [BugreportController::class, 'edit'])->name('edit');
         Route::put('bugreports/{bugreport}', [BugreportController::class, 'update'])->name('update');
         Route::delete('bugreports/{bugreport}', [BugreportController::class, 'destroy'])->name('destroy');
+        Route::delete('bugreports/{bugreport}/attachments/{attachment}', [BugreportController::class, 'destroyAttachment'])->name('destroy-attachment');
     });
 
     // Documentations (nested under projects)
@@ -110,6 +112,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('documentations/{documentation}/edit', [DocumentationController::class, 'edit'])->name('edit');
         Route::put('documentations/{documentation}', [DocumentationController::class, 'update'])->name('update');
         Route::delete('documentations/{documentation}', [DocumentationController::class, 'destroy'])->name('destroy');
+        Route::delete('documentations/{documentation}/attachments/{attachment}', [DocumentationController::class, 'destroyAttachment'])->name('destroy-attachment');
+        Route::post('documentations/{documentation}/upload-image', [DocumentationController::class, 'uploadImage'])->name('upload-image');
+        Route::post('documentations/upload-image', [DocumentationController::class, 'uploadNewImage'])->name('upload-new-image');
     });
 
     // Notes (nested under projects)

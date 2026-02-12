@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class TestCase extends Model
 {
@@ -35,27 +36,23 @@ class TestCase extends Model
         ];
     }
 
-    /**
-     * Get the test suite that owns the test case.
-     */
     public function testSuite(): BelongsTo
     {
         return $this->belongsTo(TestSuite::class);
     }
 
-    /**
-     * Get the note for the test case.
-     */
     public function note(): HasOne
     {
         return $this->hasOne(TestCaseNote::class);
     }
 
-    /**
-     * Get all test run cases for this test case.
-     */
     public function testRunCases(): HasMany
     {
         return $this->hasMany(TestRunCase::class);
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 }

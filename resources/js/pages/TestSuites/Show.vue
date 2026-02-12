@@ -168,7 +168,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                         <span>in</span>
                         <Link
                             :href="`/projects/${project.id}/test-suites/${testSuite.parent.id}`"
-                            class="inline-flex items-center gap-1.5 text-primary hover:underline"
+                            class="inline-flex items-center gap-1.5 text-primary hover:underline cursor-pointer"
                         >
                             <Layers class="h-3.5 w-3.5" />
                             {{ testSuite.parent.name }}
@@ -207,9 +207,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
             <!-- Empty State -->
             <div v-if="suiteSections.length === 0 && !testSuite.children?.length" class="flex flex-1 items-center justify-center">
                 <div class="text-center">
-                    <div class="mx-auto h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                        <FileText class="h-8 w-8 text-muted-foreground" />
-                    </div>
+                    <FileText class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="text-lg font-semibold">No test cases yet</h3>
                     <p class="mt-2 text-sm text-muted-foreground max-w-sm">
                         Add test cases to this suite to get started.

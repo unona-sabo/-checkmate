@@ -207,7 +207,7 @@ const formatDate = (date: string) => {
                         <CardContent>
                             <Link
                                 :href="`/projects/${project.id}/documentations/${note.documentation.id}`"
-                                class="text-sm text-primary hover:underline"
+                                class="text-sm text-primary hover:underline cursor-pointer"
                             >
                                 {{ note.documentation.title }}
                             </Link>

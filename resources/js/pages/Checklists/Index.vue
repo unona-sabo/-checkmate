@@ -236,7 +236,10 @@ const onDialogClose = (open: boolean) => {
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight">Checklists</h1>
+                    <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
+                        <ClipboardList class="h-6 w-6 text-primary" />
+                        Checklists
+                    </h1>
                     <p class="text-muted-foreground">Create and manage custom checklists</p>
                 </div>
                 <div class="flex items-center gap-2">
@@ -251,7 +254,7 @@ const onDialogClose = (open: boolean) => {
                         <button
                             v-if="searchQuery"
                             @click="searchQuery = ''"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                             <X class="h-4 w-4" />
                         </button>

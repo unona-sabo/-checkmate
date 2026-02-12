@@ -96,7 +96,7 @@ const getStatusColor = (status: string) => {
                     </div>
                 </div>
                 <Link :href="`/projects/${project.id}/bugreports/create`">
-                    <Button class="gap-2">
+                    <Button variant="cta" class="gap-2">
                         <Plus class="h-4 w-4" />
                         Report Bug
                     </Button>
@@ -120,6 +120,7 @@ const getStatusColor = (status: string) => {
                             <div class="flex items-center justify-between gap-3">
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-2">
+                                        <Bug class="h-4 w-4 text-primary shrink-0" />
                                         <h3 class="text-base font-semibold truncate">{{ bug.title }}</h3>
                                         <span :class="['px-1.5 py-0 rounded text-[10px] font-medium h-4 inline-flex items-center shrink-0', getSeverityColor(bug.severity)]">
                                             {{ bug.severity }}

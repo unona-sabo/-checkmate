@@ -431,9 +431,7 @@ const localTotalTestCases = computed(() => {
             <!-- Empty State -->
             <div v-if="testSuites.length === 0" class="flex flex-1 items-center justify-center">
                 <div class="text-center">
-                    <div class="mx-auto h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                        <Layers class="h-8 w-8 text-muted-foreground" />
-                    </div>
+                    <Layers class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="text-lg font-semibold">No test suites yet</h3>
                     <p class="mt-2 text-sm text-muted-foreground max-w-sm">
                         Create your first test suite to organize your test cases into logical groups.
@@ -458,7 +456,7 @@ const localTotalTestCases = computed(() => {
                         <div v-if="localTotalTestCases > 0" class="flex items-center gap-3">
                             <button
                                 type="button"
-                                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-8 px-3"
+                                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-8 px-3 cursor-pointer"
                                 @click="toggleSelectAll"
                             >
                                 <div
@@ -619,10 +617,8 @@ const localTotalTestCases = computed(() => {
                 <!-- Right: Test Cases List -->
                 <div class="flex-1 overflow-y-auto min-h-0 pr-2 max-w-4xl">
                     <div v-if="localFlatSuites.length === 0" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                        <div class="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
-                            <FileText class="h-6 w-6" />
-                        </div>
-                        <p class="font-medium">No test cases yet</p>
+                        <FileText class="h-12 w-12 mb-3" />
+                        <p class="font-semibold">No test cases yet</p>
                         <p class="text-sm">Add test cases to your suites to see them here.</p>
                     </div>
 

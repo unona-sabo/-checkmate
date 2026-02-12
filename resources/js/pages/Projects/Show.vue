@@ -68,7 +68,7 @@ const getStatusColor = (status: string) => {
                                 <span class="text-sm font-normal text-muted-foreground">({{ project.checklists?.length || 0 }})</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/checklists/create`">
-                                <Button size="sm" variant="ghost" class="h-8 w-8 p-0">
+                                <Button size="sm" variant="ghost" class="h-8 w-8 p-0 cursor-pointer">
                                     <Plus class="h-4 w-4" />
                                 </Button>
                             </Link>
@@ -80,7 +80,7 @@ const getStatusColor = (status: string) => {
                                 v-for="checklist in project.checklists.slice(0, 5)"
                                 :key="checklist.id"
                                 :href="`/projects/${project.id}/checklists/${checklist.id}`"
-                                class="flex items-center justify-between rounded border px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+                                class="flex items-center justify-between rounded border px-3 py-2 text-sm transition-colors hover:bg-muted/50 cursor-pointer"
                             >
                                 <span class="font-medium truncate">{{ checklist.name }}</span>
                                 <ArrowRight class="h-4 w-4 text-muted-foreground shrink-0" />
@@ -90,7 +90,7 @@ const getStatusColor = (status: string) => {
                             No checklists yet
                         </div>
                         <Link :href="`/projects/${project.id}/checklists`" class="mt-auto pt-3 block">
-                            <Button variant="outline" size="sm" class="w-full h-9 text-sm">View All</Button>
+                            <Button variant="outline" size="sm" class="w-full h-9 text-sm cursor-pointer">View All</Button>
                         </Link>
                     </CardContent>
                 </Card>
@@ -105,7 +105,7 @@ const getStatusColor = (status: string) => {
                                 <span class="text-sm font-normal text-muted-foreground">({{ project.test_suites?.length || 0 }})</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/test-suites/create`">
-                                <Button size="sm" variant="ghost" class="h-8 w-8 p-0">
+                                <Button size="sm" variant="ghost" class="h-8 w-8 p-0 cursor-pointer">
                                     <Plus class="h-4 w-4" />
                                 </Button>
                             </Link>
@@ -117,7 +117,7 @@ const getStatusColor = (status: string) => {
                                 v-for="suite in project.test_suites.slice(0, 5)"
                                 :key="suite.id"
                                 :href="`/projects/${project.id}/test-suites/${suite.id}`"
-                                class="flex items-center justify-between rounded border px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+                                class="flex items-center justify-between rounded border px-3 py-2 text-sm transition-colors hover:bg-muted/50 cursor-pointer"
                             >
                                 <span class="font-medium truncate">{{ suite.name }}</span>
                                 <ArrowRight class="h-4 w-4 text-muted-foreground shrink-0" />
@@ -127,7 +127,7 @@ const getStatusColor = (status: string) => {
                             No test suites yet
                         </div>
                         <Link :href="`/projects/${project.id}/test-suites`" class="mt-auto pt-3 block">
-                            <Button variant="outline" size="sm" class="w-full h-9 text-sm">View All</Button>
+                            <Button variant="outline" size="sm" class="w-full h-9 text-sm cursor-pointer">View All</Button>
                         </Link>
                     </CardContent>
                 </Card>
@@ -139,9 +139,10 @@ const getStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <Play class="h-5 w-5 text-primary" />
                                 Test Runs
+                                <span class="text-sm font-normal text-muted-foreground">({{ project.test_runs?.length || 0 }})</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/test-runs/create`">
-                                <Button size="sm" variant="ghost" class="h-8 w-8 p-0">
+                                <Button size="sm" variant="ghost" class="h-8 w-8 p-0 cursor-pointer">
                                     <Plus class="h-4 w-4" />
                                 </Button>
                             </Link>
@@ -153,7 +154,7 @@ const getStatusColor = (status: string) => {
                                 v-for="run in project.test_runs.slice(0, 5)"
                                 :key="run.id"
                                 :href="`/projects/${project.id}/test-runs/${run.id}`"
-                                class="flex items-center justify-between rounded border px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+                                class="flex items-center justify-between rounded border px-3 py-2 text-sm transition-colors hover:bg-muted/50 cursor-pointer"
                             >
                                 <div class="flex items-center gap-2 min-w-0">
                                     <span class="font-medium truncate">{{ run.name }}</span>
@@ -169,7 +170,7 @@ const getStatusColor = (status: string) => {
                             No test runs yet
                         </div>
                         <Link :href="`/projects/${project.id}/test-runs`" class="mt-auto pt-3 block">
-                            <Button variant="outline" size="sm" class="w-full h-9 text-sm">View All</Button>
+                            <Button variant="outline" size="sm" class="w-full h-9 text-sm cursor-pointer">View All</Button>
                         </Link>
                     </CardContent>
                 </Card>

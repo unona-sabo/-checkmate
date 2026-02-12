@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
+import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Bug, Edit, Trash2 } from 'lucide-vue-next';
+import { Bug, Edit, Trash2, Paperclip, Download } from 'lucide-vue-next';
 
 interface Bugreport {
     id: number;
@@ -19,6 +19,7 @@ interface Bugreport {
     environment: string | null;
     reporter: { id: number; name: string } | null;
     assignee: { id: number; name: string } | null;
+    attachments?: Attachment[];
     created_at: string;
     updated_at: string;
 }
@@ -64,6 +65,16 @@ const getPriorityColor = (priority: string) => {
         case 'low': return 'bg-green-100 text-green-800';
         default: return 'bg-gray-100 text-gray-800';
     }
+};
+
+const isImage = (mimeType: string): boolean => {
+    return mimeType.startsWith('image/');
+};
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
 };
 </script>
 
@@ -136,6 +147,66 @@ const getPriorityColor = (priority: string) => {
                             </CardContent>
                         </Card>
                     </div>
+
+                    <!-- Attachments -->
+                    <Card v-if="bugreport.attachments?.length">
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2">
+                                <Paperclip class="h-4 w-4" />
+                                Attachments
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <!-- Image previews -->
+                            <div v-if="bugreport.attachments.some(a => isImage(a.mime_type))" class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                <div
+                                    v-for="attachment in bugreport.attachments.filter(a => isImage(a.mime_type))"
+                                    :key="attachment.id"
+                                    class="group relative overflow-hidden rounded-lg border"
+                                >
+                                    <a :href="attachment.url" target="_blank" class="block">
+                                        <img :src="attachment.url" :alt="attachment.original_filename" class="aspect-video w-full object-cover transition-transform group-hover:scale-105" />
+                                    </a>
+                                    <div class="flex items-center justify-between p-2">
+                                        <span class="truncate text-xs text-muted-foreground">{{ attachment.original_filename }}</span>
+                                        <Link
+                                            :href="`/projects/${project.id}/bugreports/${bugreport.id}/attachments/${attachment.id}`"
+                                            method="delete"
+                                            as="button"
+                                            class="p-1 text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                                        >
+                                            <Trash2 class="h-3.5 w-3.5" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- File list -->
+                            <div class="space-y-2">
+                                <div v-for="attachment in bugreport.attachments.filter(a => !isImage(a.mime_type))" :key="attachment.id" class="flex items-center justify-between rounded-lg border p-2">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <Paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
+                                        <span class="truncate text-sm">{{ attachment.original_filename }}</span>
+                                        <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(attachment.size) }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0">
+                                        <a :href="attachment.url" target="_blank" download>
+                                            <Button type="button" variant="ghost" size="sm" class="h-8 w-8 p-0">
+                                                <Download class="h-4 w-4" />
+                                            </Button>
+                                        </a>
+                                        <Link
+                                            :href="`/projects/${project.id}/bugreports/${bugreport.id}/attachments/${attachment.id}`"
+                                            method="delete"
+                                            as="button"
+                                            class="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
+                                        >
+                                            <Trash2 class="h-4 w-4" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 <div class="space-y-6">

@@ -45,7 +45,10 @@ const getStatusIcon = (status: string) => {
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight">Test Runs</h1>
+                    <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
+                        <Play class="h-6 w-6 text-primary" />
+                        Test Runs
+                    </h1>
                     <p class="text-muted-foreground">Execute and track test case results</p>
                 </div>
                 <Link :href="`/projects/${project.id}/test-runs/create`">

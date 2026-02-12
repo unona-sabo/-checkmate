@@ -1,3 +1,14 @@
+export interface Attachment {
+    id: number;
+    original_filename: string;
+    stored_path: string;
+    mime_type: string;
+    size: number;
+    url: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Project {
     id: number;
     user_id: number;
@@ -92,6 +103,7 @@ export interface TestCase {
     updated_at: string;
     test_suite?: TestSuite;
     note?: TestCaseNote;
+    attachments?: Attachment[];
 }
 
 export interface TestStep {

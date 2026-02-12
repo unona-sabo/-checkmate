@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
-import { FileText } from 'lucide-vue-next';
+import RichTextEditor from '@/components/RichTextEditor.vue';
+import { FileText, Upload, X } from 'lucide-vue-next';
+import { ref } from 'vue';
 
 interface ParentOption {
     id: number;
@@ -33,10 +34,33 @@ const form = useForm({
     content: '',
     category: '',
     parent_id: null as number | null,
+    attachments: [] as File[],
 });
 
+const imageUploadUrl = `/projects/${props.project.id}/documentations/upload-image`;
+
+const onFilesSelected = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+        form.attachments.push(...Array.from(input.files));
+        input.value = '';
+    }
+};
+
+const removeFile = (index: number) => {
+    form.attachments.splice(index, 1);
+};
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 const submit = () => {
-    form.post(`/projects/${props.project.id}/documentations`);
+    form.post(`/projects/${props.project.id}/documentations`, {
+        forceFormData: true,
+    });
 };
 </script>
 
@@ -45,7 +69,7 @@ const submit = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="max-w-3xl">
+            <div class="max-w-4xl">
                 <Card>
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
@@ -53,7 +77,7 @@ const submit = () => {
                             Create Documentation
                         </CardTitle>
                         <CardDescription>
-                            Add new documentation or technical specification.
+                            Add new documentation or technical specification. Paste screenshots directly into the editor.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -99,15 +123,47 @@ const submit = () => {
                             </div>
 
                             <div class="space-y-2">
-                                <Label for="content">Content</Label>
-                                <Textarea
-                                    id="content"
+                                <Label>Content</Label>
+                                <RichTextEditor
                                     v-model="form.content"
-                                    placeholder="Write your documentation here..."
-                                    rows="15"
-                                    class="font-mono text-sm"
+                                    :upload-url="imageUploadUrl"
+                                    placeholder="Write your documentation here... Paste screenshots with Ctrl+V"
                                 />
                                 <InputError :message="form.errors.content" />
+                            </div>
+
+                            <!-- File Attachments -->
+                            <div class="space-y-2">
+                                <Label>Attachments</Label>
+                                <div class="border border-dashed border-input rounded-md p-4">
+                                    <label class="flex flex-col items-center gap-2 cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                                        <Upload class="h-8 w-8" />
+                                        <span class="text-sm">Click to upload files</span>
+                                        <span class="text-xs">(Max 10MB per file)</span>
+                                        <input
+                                            type="file"
+                                            multiple
+                                            class="hidden"
+                                            @change="onFilesSelected"
+                                        />
+                                    </label>
+                                </div>
+                                <div v-if="form.attachments.length > 0" class="space-y-2 mt-2">
+                                    <div
+                                        v-for="(file, index) in form.attachments"
+                                        :key="index"
+                                        class="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2"
+                                    >
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <FileText class="h-4 w-4 text-muted-foreground shrink-0" />
+                                            <span class="text-sm truncate">{{ file.name }}</span>
+                                            <span class="text-xs text-muted-foreground shrink-0">{{ formatFileSize(file.size) }}</span>
+                                        </div>
+                                        <button type="button" @click="removeFile(index)" class="text-muted-foreground hover:text-destructive cursor-pointer">
+                                            <X class="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="flex gap-2">

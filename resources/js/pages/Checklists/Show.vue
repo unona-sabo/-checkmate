@@ -878,7 +878,7 @@ onMounted(() => {
                         <button
                             v-if="searchQuery"
                             @click="searchQuery = ''"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                             <X class="h-4 w-4" />
                         </button>
@@ -1181,7 +1181,7 @@ onMounted(() => {
                                                         type="checkbox"
                                                         :checked="!!row.data[column.key]"
                                                         @change="(e) => updateCell(row, column.key, (e.target as HTMLInputElement).checked)"
-                                                        class="h-4 w-4 rounded border-gray-300"
+                                                        class="h-4 w-4 rounded border-gray-300 cursor-pointer"
                                                     />
                                                 </div>
                                             </template>
@@ -1201,7 +1201,7 @@ onMounted(() => {
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger as-child>
                                                         <button
-                                                            class="h-7 px-2 text-sm rounded border flex items-center gap-1 min-w-[80px] hover:bg-muted/50"
+                                                            class="h-7 px-2 text-sm rounded border flex items-center gap-1 min-w-[80px] hover:bg-muted/50 cursor-pointer"
                                                             :style="getSelectedOption(column, row.data[column.key]) ? {
                                                                 backgroundColor: getSelectedOption(column, row.data[column.key])?.color || '#dbeafe',
                                                                 color: getTextColorForBg(getSelectedOption(column, row.data[column.key])?.color)
@@ -1310,14 +1310,14 @@ onMounted(() => {
                                                         v-for="color in predefinedColors"
                                                         :key="color.value"
                                                         @click="setBackgroundColor(row, color.value)"
-                                                        class="w-8 h-8 rounded border-2 hover:scale-110 transition-transform"
+                                                        class="w-8 h-8 rounded border-2 hover:scale-110 transition-transform cursor-pointer"
                                                         :class="row.background_color === color.value ? 'border-primary' : 'border-transparent'"
                                                         :style="{ backgroundColor: color.value }"
                                                         :title="color.name"
                                                     />
                                                 </div>
                                                 <div class="px-2 pb-2 flex items-center gap-2">
-                                                    <label class="flex items-center gap-2 text-sm flex-1">
+                                                    <label class="flex items-center gap-2 text-sm flex-1 cursor-pointer">
                                                         <input
                                                             type="color"
                                                             :value="row.background_color || '#ffffff'"
@@ -1345,7 +1345,7 @@ onMounted(() => {
                                                         v-for="color in fontColors"
                                                         :key="color.value"
                                                         @click="setFontColor(row, color.value)"
-                                                        class="w-8 h-8 rounded border-2 hover:scale-110 transition-transform flex items-center justify-center"
+                                                        class="w-8 h-8 rounded border-2 hover:scale-110 transition-transform flex items-center justify-center cursor-pointer"
                                                         :class="row.font_color === color.value ? 'border-primary' : 'border-gray-200'"
                                                         :title="color.name"
                                                     >
@@ -1353,7 +1353,7 @@ onMounted(() => {
                                                     </button>
                                                 </div>
                                                 <div class="px-2 pb-2 flex items-center gap-2">
-                                                    <label class="flex items-center gap-2 text-sm flex-1">
+                                                    <label class="flex items-center gap-2 text-sm flex-1 cursor-pointer">
                                                         <input
                                                             type="color"
                                                             :value="row.font_color || '#000000'"

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attachment;
 use App\Models\Bugreport;
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -52,11 +54,25 @@ class BugreportController extends Controller
             'status' => 'required|in:new,open,in_progress,resolved,closed,reopened',
             'environment' => 'nullable|string',
             'assigned_to' => 'nullable|exists:users,id',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
         ]);
 
         $validated['reported_by'] = auth()->id();
 
-        $bugreport = $project->bugreports()->create($validated);
+        $bugreport = $project->bugreports()->create(collect($validated)->except('attachments')->toArray());
+
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('attachments/bugreports', 'public');
+                $bugreport->attachments()->create([
+                    'original_filename' => $file->getClientOriginalName(),
+                    'stored_path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ]);
+            }
+        }
 
         return redirect()->route('bugreports.show', [$project, $bugreport])
             ->with('success', 'Bug report created successfully.');
@@ -66,7 +82,7 @@ class BugreportController extends Controller
     {
         $this->authorize('view', $project);
 
-        $bugreport->load(['reporter', 'assignee']);
+        $bugreport->load(['reporter', 'assignee', 'attachments']);
 
         return Inertia::render('Bugreports/Show', [
             'project' => $project,
@@ -79,6 +95,7 @@ class BugreportController extends Controller
         $this->authorize('update', $project);
 
         $users = $project->users()->get(['users.id', 'users.name']);
+        $bugreport->load('attachments');
 
         return Inertia::render('Bugreports/Edit', [
             'project' => $project,
@@ -102,9 +119,23 @@ class BugreportController extends Controller
             'status' => 'required|in:new,open,in_progress,resolved,closed,reopened',
             'environment' => 'nullable|string',
             'assigned_to' => 'nullable|exists:users,id',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
         ]);
 
-        $bugreport->update($validated);
+        $bugreport->update(collect($validated)->except('attachments')->toArray());
+
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('attachments/bugreports', 'public');
+                $bugreport->attachments()->create([
+                    'original_filename' => $file->getClientOriginalName(),
+                    'stored_path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ]);
+            }
+        }
 
         return redirect()->route('bugreports.show', [$project, $bugreport])
             ->with('success', 'Bug report updated successfully.');
@@ -114,9 +145,23 @@ class BugreportController extends Controller
     {
         $this->authorize('update', $project);
 
+        foreach ($bugreport->attachments as $attachment) {
+            Storage::disk('public')->delete($attachment->stored_path);
+        }
+
         $bugreport->delete();
 
         return redirect()->route('bugreports.index', $project)
             ->with('success', 'Bug report deleted successfully.');
+    }
+
+    public function destroyAttachment(Project $project, Bugreport $bugreport, Attachment $attachment)
+    {
+        $this->authorize('update', $project);
+
+        Storage::disk('public')->delete($attachment->stored_path);
+        $attachment->delete();
+
+        return back()->with('success', 'Attachment deleted successfully.');
     }
 }

@@ -279,7 +279,7 @@ const groupedCases = computed(() => {
                                         v-if="trc.clickup_link"
                                         :href="trc.clickup_link"
                                         target="_blank"
-                                        class="text-muted-foreground hover:text-primary"
+                                        class="text-muted-foreground hover:text-primary cursor-pointer"
                                     >
                                         <ExternalLink class="h-4 w-4" />
                                     </a>

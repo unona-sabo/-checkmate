@@ -90,23 +90,21 @@ const saveOrder = () => {
     <Head title="Projects" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-8 p-6">
+        <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold tracking-tight flex items-center gap-3">
-                        <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                            <FolderKanban class="h-6 w-6 text-primary" />
-                        </div>
+                    <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
+                        <FolderKanban class="h-6 w-6 text-primary" />
                         Projects
                     </h1>
-                    <p class="text-muted-foreground mt-2 text-base">
+                    <p class="text-muted-foreground">
                         Manage your QA projects and test suites
                         <span v-if="isSaving" class="ml-2 text-primary">Saving...</span>
                     </p>
                 </div>
                 <Link href="/projects/create">
-                    <Button variant="cta" class="gap-2 h-11 px-5 text-base">
-                        <Plus class="h-5 w-5" />
+                    <Button variant="cta" class="gap-2">
+                        <Plus class="h-4 w-4" />
                         New Project
                     </Button>
                 </Link>
@@ -114,14 +112,12 @@ const saveOrder = () => {
 
             <div v-if="projects.length === 0" class="flex flex-1 items-center justify-center">
                 <div class="text-center">
-                    <div class="mx-auto h-20 w-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-6">
-                        <Sparkles class="h-10 w-10 text-muted-foreground" />
-                    </div>
-                    <h3 class="text-xl font-semibold">No projects yet</h3>
-                    <p class="mt-2 text-muted-foreground">Get started by creating your first project.</p>
-                    <Link href="/projects/create" class="mt-6 inline-block">
-                        <Button variant="cta" class="gap-2 h-11 px-5">
-                            <Plus class="h-5 w-5" />
+                    <Sparkles class="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 class="mt-4 text-lg font-semibold">No projects yet</h3>
+                    <p class="mt-2 text-sm text-muted-foreground">Get started by creating your first project.</p>
+                    <Link href="/projects/create" class="mt-4 inline-block">
+                        <Button variant="cta" class="gap-2">
+                            <Plus class="h-4 w-4" />
                             Create Project
                         </Button>
                     </Link>

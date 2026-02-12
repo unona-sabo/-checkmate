@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestSuite, type TestCase, type TestStep } from '@/types';
+import { type BreadcrumbItem, type Project, type TestSuite, type TestCase, type TestStep, type Attachment } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import InputError from '@/components/InputError.vue';
-import { Edit, Plus, Trash2 } from 'lucide-vue-next';
+import { Edit, Plus, Trash2, Paperclip, X, Download } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{
@@ -29,6 +29,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const form = useForm({
+    _method: 'put',
     title: props.testCase.title,
     description: props.testCase.description || '',
     preconditions: props.testCase.preconditions || '',
@@ -39,9 +40,11 @@ const form = useForm({
     type: props.testCase.type,
     automation_status: props.testCase.automation_status,
     tags: props.testCase.tags || [],
+    attachments: [] as File[],
 });
 
 const showDeleteDialog = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
 
 const addStep = () => {
     form.steps.push({ action: '', expected: '' });
@@ -51,8 +54,42 @@ const removeStep = (index: number) => {
     form.steps.splice(index, 1);
 };
 
+const onFilesSelected = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.files) {
+        for (const file of Array.from(target.files)) {
+            form.attachments.push(file);
+        }
+    }
+    if (fileInput.value) {
+        fileInput.value.value = '';
+    }
+};
+
+const removeFile = (index: number) => {
+    form.attachments.splice(index, 1);
+};
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+};
+
+const isImage = (mimeType: string): boolean => {
+    return mimeType.startsWith('image/');
+};
+
+const deleteAttachment = (attachmentId: number) => {
+    router.delete(`/projects/${props.project.id}/test-suites/${props.testSuite.id}/test-cases/${props.testCase.id}/attachments/${attachmentId}`, {
+        preserveScroll: true,
+    });
+};
+
 const submit = () => {
-    form.put(`/projects/${props.project.id}/test-suites/${props.testSuite.id}/test-cases/${props.testCase.id}`);
+    form.post(`/projects/${props.project.id}/test-suites/${props.testSuite.id}/test-cases/${props.testCase.id}`, {
+        forceFormData: true,
+    });
 };
 
 const deleteTestCase = () => {
@@ -211,6 +248,64 @@ const deleteTestCase = () => {
                                         </SelectContent>
                                     </Select>
                                 </div>
+                            </div>
+
+                            <!-- Existing Attachments -->
+                            <div v-if="testCase.attachments?.length" class="space-y-2">
+                                <Label>Current Attachments</Label>
+                                <div class="space-y-2">
+                                    <div v-for="attachment in testCase.attachments" :key="attachment.id" class="flex items-center justify-between rounded-lg border p-2">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <img v-if="isImage(attachment.mime_type)" :src="attachment.url" :alt="attachment.original_filename" class="h-10 w-10 rounded object-cover shrink-0" />
+                                            <Paperclip v-else class="h-4 w-4 shrink-0 text-muted-foreground" />
+                                            <span class="truncate text-sm">{{ attachment.original_filename }}</span>
+                                            <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(attachment.size) }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1 shrink-0">
+                                            <a :href="attachment.url" target="_blank" download>
+                                                <Button type="button" variant="ghost" size="sm" class="h-6 w-6 p-0">
+                                                    <Download class="h-4 w-4" />
+                                                </Button>
+                                            </a>
+                                            <Button type="button" variant="ghost" size="sm" @click="deleteAttachment(attachment.id)" class="h-6 w-6 p-0 text-destructive hover:text-destructive">
+                                                <Trash2 class="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- New Attachments -->
+                            <div class="space-y-2">
+                                <Label>Add Attachments</Label>
+                                <div class="flex items-center gap-2">
+                                    <Button type="button" variant="outline" size="sm" @click="fileInput?.click()" class="gap-2">
+                                        <Paperclip class="h-4 w-4" />
+                                        Add Files
+                                    </Button>
+                                    <span class="text-xs text-muted-foreground">Max 10MB per file</span>
+                                </div>
+                                <input
+                                    ref="fileInput"
+                                    type="file"
+                                    multiple
+                                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+                                    class="hidden"
+                                    @change="onFilesSelected"
+                                />
+                                <div v-if="form.attachments.length" class="space-y-2">
+                                    <div v-for="(file, index) in form.attachments" :key="index" class="flex items-center justify-between rounded-lg border p-2">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <Paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
+                                            <span class="truncate text-sm">{{ file.name }}</span>
+                                            <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(file.size) }}</span>
+                                        </div>
+                                        <Button type="button" variant="ghost" size="sm" @click="removeFile(index)" class="h-6 w-6 p-0 shrink-0">
+                                            <X class="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <InputError :message="form.errors.attachments" />
                             </div>
 
                             <div class="flex gap-2">

@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attachment;
 use App\Models\Project;
 use App\Models\TestCase;
 use App\Models\TestSuite;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -38,12 +40,26 @@ class TestCaseController extends Controller
             'type' => 'required|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
             'automation_status' => 'required|in:not_automated,to_be_automated,automated',
             'tags' => 'nullable|array',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
         ]);
 
         $maxOrder = $testSuite->testCases()->max('order') ?? 0;
         $validated['order'] = $maxOrder + 1;
 
-        $testCase = $testSuite->testCases()->create($validated);
+        $testCase = $testSuite->testCases()->create(collect($validated)->except('attachments')->toArray());
+
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('attachments/test-cases', 'public');
+                $testCase->attachments()->create([
+                    'original_filename' => $file->getClientOriginalName(),
+                    'stored_path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ]);
+            }
+        }
 
         return redirect()->route('test-cases.show', [$project, $testSuite, $testCase])
             ->with('success', 'Test case created successfully.');
@@ -53,7 +69,7 @@ class TestCaseController extends Controller
     {
         $this->authorize('view', $project);
 
-        $testCase->load('note');
+        $testCase->load(['note', 'attachments']);
 
         return Inertia::render('TestCases/Show', [
             'project' => $project,
@@ -65,6 +81,8 @@ class TestCaseController extends Controller
     public function edit(Project $project, TestSuite $testSuite, TestCase $testCase): Response
     {
         $this->authorize('update', $project);
+
+        $testCase->load('attachments');
 
         return Inertia::render('TestCases/Edit', [
             'project' => $project,
@@ -90,9 +108,23 @@ class TestCaseController extends Controller
             'type' => 'required|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
             'automation_status' => 'required|in:not_automated,to_be_automated,automated',
             'tags' => 'nullable|array',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
         ]);
 
-        $testCase->update($validated);
+        $testCase->update(collect($validated)->except('attachments')->toArray());
+
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('attachments/test-cases', 'public');
+                $testCase->attachments()->create([
+                    'original_filename' => $file->getClientOriginalName(),
+                    'stored_path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ]);
+            }
+        }
 
         return redirect()->route('test-cases.show', [$project, $testSuite, $testCase])
             ->with('success', 'Test case updated successfully.');
@@ -102,10 +134,24 @@ class TestCaseController extends Controller
     {
         $this->authorize('update', $project);
 
+        foreach ($testCase->attachments as $attachment) {
+            Storage::disk('public')->delete($attachment->stored_path);
+        }
+
         $testCase->delete();
 
         return redirect()->route('test-suites.show', [$project, $testSuite])
             ->with('success', 'Test case deleted successfully.');
+    }
+
+    public function destroyAttachment(Project $project, TestSuite $testSuite, TestCase $testCase, Attachment $attachment)
+    {
+        $this->authorize('update', $project);
+
+        Storage::disk('public')->delete($attachment->stored_path);
+        $attachment->delete();
+
+        return back()->with('success', 'Attachment deleted successfully.');
     }
 
     public function updateNote(Request $request, Project $project, TestSuite $testSuite, TestCase $testCase)

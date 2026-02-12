@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
+import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
-import { FileText } from 'lucide-vue-next';
+import RichTextEditor from '@/components/RichTextEditor.vue';
+import { FileText, Upload, X, Trash2, Download } from 'lucide-vue-next';
 
 interface ParentOption {
     id: number;
@@ -22,6 +22,7 @@ interface Documentation {
     content: string | null;
     category: string | null;
     parent_id: number | null;
+    attachments?: Attachment[];
 }
 
 const props = defineProps<{
@@ -39,14 +40,40 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const form = useForm({
+    _method: 'put',
     title: props.documentation.title,
     content: props.documentation.content || '',
     category: props.documentation.category || '',
     parent_id: props.documentation.parent_id,
+    attachments: [] as File[],
 });
 
+const imageUploadUrl = `/projects/${props.project.id}/documentations/${props.documentation.id}/upload-image`;
+
+const onFilesSelected = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+        form.attachments.push(...Array.from(input.files));
+        input.value = '';
+    }
+};
+
+const removeFile = (index: number) => {
+    form.attachments.splice(index, 1);
+};
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const isImage = (mimeType: string): boolean => mimeType.startsWith('image/');
+
 const submit = () => {
-    form.put(`/projects/${props.project.id}/documentations/${props.documentation.id}`);
+    form.post(`/projects/${props.project.id}/documentations/${props.documentation.id}`, {
+        forceFormData: true,
+    });
 };
 </script>
 
@@ -55,7 +82,7 @@ const submit = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="max-w-3xl">
+            <div class="max-w-4xl">
                 <Card>
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
@@ -63,7 +90,7 @@ const submit = () => {
                             Edit Documentation
                         </CardTitle>
                         <CardDescription>
-                            Update the documentation content.
+                            Update the documentation content. Paste screenshots directly into the editor.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -107,14 +134,84 @@ const submit = () => {
                             </div>
 
                             <div class="space-y-2">
-                                <Label for="content">Content</Label>
-                                <Textarea
-                                    id="content"
+                                <Label>Content</Label>
+                                <RichTextEditor
                                     v-model="form.content"
-                                    rows="15"
-                                    class="font-mono text-sm"
+                                    :upload-url="imageUploadUrl"
+                                    placeholder="Write your documentation here... Paste screenshots with Ctrl+V"
                                 />
                                 <InputError :message="form.errors.content" />
+                            </div>
+
+                            <!-- Existing Attachments -->
+                            <div v-if="documentation.attachments && documentation.attachments.length > 0" class="space-y-2">
+                                <Label>Existing Attachments</Label>
+                                <div class="space-y-2">
+                                    <div
+                                        v-for="attachment in documentation.attachments"
+                                        :key="attachment.id"
+                                        class="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2"
+                                    >
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <img
+                                                v-if="isImage(attachment.mime_type)"
+                                                :src="attachment.url"
+                                                :alt="attachment.original_filename"
+                                                class="h-10 w-10 rounded object-cover shrink-0"
+                                            />
+                                            <FileText v-else class="h-4 w-4 text-muted-foreground shrink-0" />
+                                            <span class="text-sm truncate">{{ attachment.original_filename }}</span>
+                                            <span class="text-xs text-muted-foreground shrink-0">{{ formatFileSize(attachment.size) }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <a :href="attachment.url" target="_blank" class="p-1 text-muted-foreground hover:text-foreground">
+                                                <Download class="h-4 w-4" />
+                                            </a>
+                                            <Link
+                                                :href="`/projects/${project.id}/documentations/${documentation.id}/attachments/${attachment.id}`"
+                                                method="delete"
+                                                as="button"
+                                                class="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
+                                            >
+                                                <Trash2 class="h-4 w-4" />
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- New Attachments -->
+                            <div class="space-y-2">
+                                <Label>Add Attachments</Label>
+                                <div class="border border-dashed border-input rounded-md p-4">
+                                    <label class="flex flex-col items-center gap-2 cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                                        <Upload class="h-8 w-8" />
+                                        <span class="text-sm">Click to upload files</span>
+                                        <span class="text-xs">(Max 10MB per file)</span>
+                                        <input
+                                            type="file"
+                                            multiple
+                                            class="hidden"
+                                            @change="onFilesSelected"
+                                        />
+                                    </label>
+                                </div>
+                                <div v-if="form.attachments.length > 0" class="space-y-2 mt-2">
+                                    <div
+                                        v-for="(file, index) in form.attachments"
+                                        :key="index"
+                                        class="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2"
+                                    >
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <FileText class="h-4 w-4 text-muted-foreground shrink-0" />
+                                            <span class="text-sm truncate">{{ file.name }}</span>
+                                            <span class="text-xs text-muted-foreground shrink-0">{{ formatFileSize(file.size) }}</span>
+                                        </div>
+                                        <button type="button" @click="removeFile(index)" class="text-muted-foreground hover:text-destructive cursor-pointer">
+                                            <X class="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="flex gap-2">

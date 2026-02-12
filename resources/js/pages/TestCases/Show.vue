@@ -5,8 +5,7 @@ import { type BreadcrumbItem, type Project, type TestSuite, type TestCase } from
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Edit, FileText, CheckCircle2, AlertCircle, ListOrdered, Target, Bot, Tag } from 'lucide-vue-next';
+import { Edit, FileText, AlertCircle, ListOrdered, Target, Bot, Tag, Paperclip, Download, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps<{
     project: Project;
@@ -50,6 +49,16 @@ const getAutomationColor = (status: string) => {
         case 'not_automated': return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
         default: return '';
     }
+};
+
+const isImage = (mimeType: string): boolean => {
+    return mimeType.startsWith('image/');
+};
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
 };
 </script>
 
@@ -144,6 +153,66 @@ const getAutomationColor = (status: string) => {
                         </CardHeader>
                         <CardContent>
                             <p class="text-sm text-muted-foreground whitespace-pre-wrap">{{ testCase.expected_result }}</p>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Attachments -->
+                    <Card v-if="testCase.attachments?.length">
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2 text-base">
+                                <Paperclip class="h-4 w-4" />
+                                Attachments
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <!-- Image previews -->
+                            <div v-if="testCase.attachments.some(a => isImage(a.mime_type))" class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                <div
+                                    v-for="attachment in testCase.attachments.filter(a => isImage(a.mime_type))"
+                                    :key="attachment.id"
+                                    class="group relative overflow-hidden rounded-lg border"
+                                >
+                                    <a :href="attachment.url" target="_blank" class="block">
+                                        <img :src="attachment.url" :alt="attachment.original_filename" class="aspect-video w-full object-cover transition-transform group-hover:scale-105" />
+                                    </a>
+                                    <div class="flex items-center justify-between p-2">
+                                        <span class="truncate text-xs text-muted-foreground">{{ attachment.original_filename }}</span>
+                                        <Link
+                                            :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/attachments/${attachment.id}`"
+                                            method="delete"
+                                            as="button"
+                                            class="p-1 text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                                        >
+                                            <Trash2 class="h-3.5 w-3.5" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- File list -->
+                            <div class="space-y-2">
+                                <div v-for="attachment in testCase.attachments.filter(a => !isImage(a.mime_type))" :key="attachment.id" class="flex items-center justify-between rounded-lg border p-2">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <Paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
+                                        <span class="truncate text-sm">{{ attachment.original_filename }}</span>
+                                        <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(attachment.size) }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0">
+                                        <a :href="attachment.url" target="_blank" download>
+                                            <Button type="button" variant="ghost" size="sm" class="h-8 w-8 p-0">
+                                                <Download class="h-4 w-4" />
+                                            </Button>
+                                        </a>
+                                        <Link
+                                            :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/attachments/${attachment.id}`"
+                                            method="delete"
+                                            as="button"
+                                            class="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
+                                        >
+                                            <Trash2 class="h-4 w-4" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
