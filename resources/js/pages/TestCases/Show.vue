@@ -198,7 +198,7 @@ const formatFileSize = (bytes: number): string => {
                                     </div>
                                     <div class="flex items-center gap-1 shrink-0">
                                         <a :href="attachment.url" target="_blank" download>
-                                            <Button type="button" variant="ghost" size="sm" class="h-8 w-8 p-0">
+                                            <Button type="button" variant="ghost" size="icon-sm" class="p-0">
                                                 <Download class="h-4 w-4" />
                                             </Button>
                                         </a>

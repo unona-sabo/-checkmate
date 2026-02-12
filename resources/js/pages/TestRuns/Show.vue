@@ -285,9 +285,9 @@ const filteredGroupedCases = computed(() => {
                                     <!-- Quick status buttons -->
                                     <div v-if="testRun.status === 'active'" class="flex gap-1">
                                         <Button
-                                            size="sm"
+                                            size="icon-sm"
                                             variant="ghost"
-                                            class="h-8 w-8 p-0"
+                                            class="p-0"
                                             :class="{ 'bg-green-500/10': trc.status === 'passed' }"
                                             @click="quickStatus(trc, 'passed')"
                                             title="Pass"
@@ -295,9 +295,9 @@ const filteredGroupedCases = computed(() => {
                                             <CheckCircle2 class="h-4 w-4 text-green-500" />
                                         </Button>
                                         <Button
-                                            size="sm"
+                                            size="icon-sm"
                                             variant="ghost"
-                                            class="h-8 w-8 p-0"
+                                            class="p-0"
                                             :class="{ 'bg-red-500/10': trc.status === 'failed' }"
                                             @click="quickStatus(trc, 'failed')"
                                             title="Fail"
@@ -305,9 +305,9 @@ const filteredGroupedCases = computed(() => {
                                             <XCircle class="h-4 w-4 text-red-500" />
                                         </Button>
                                         <Button
-                                            size="sm"
+                                            size="icon-sm"
                                             variant="ghost"
-                                            class="h-8 w-8 p-0"
+                                            class="p-0"
                                             @click="openResultDialog(trc)"
                                             title="Add Details"
                                         >

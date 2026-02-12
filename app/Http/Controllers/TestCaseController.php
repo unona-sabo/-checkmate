@@ -61,7 +61,7 @@ class TestCaseController extends Controller
             }
         }
 
-        return redirect()->route('test-cases.show', [$project, $testSuite, $testCase])
+        return redirect("/projects/{$project->id}/test-suites/{$testSuite->id}/test-cases/{$testCase->id}")
             ->with('success', 'Test case created successfully.');
     }
 
@@ -126,7 +126,7 @@ class TestCaseController extends Controller
             }
         }
 
-        return redirect()->route('test-cases.show', [$project, $testSuite, $testCase])
+        return redirect("/projects/{$project->id}/test-suites/{$testSuite->id}/test-cases/{$testCase->id}")
             ->with('success', 'Test case updated successfully.');
     }
 

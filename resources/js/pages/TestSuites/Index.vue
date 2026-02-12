@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite, type TestCase } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ChevronRight, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X } from 'lucide-vue-next';
+import { Plus, ChevronRight, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import {
     DropdownMenu,
@@ -14,7 +14,25 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ref, computed } from 'vue';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { ref, computed, onMounted } from 'vue';
 
 const props = defineProps<{
     project: Project;
@@ -422,6 +440,156 @@ const filteredFlatSuites = computed(() => {
         }))
         .filter(suite => suite.testCases.length > 0 || suite.name.toLowerCase().includes(query));
 });
+
+// Note dialog state
+const showNoteDialog = ref(false);
+const noteContent = ref('');
+const noteTitle = ref('');
+const selectedSuiteId = ref<string>('');
+const isImportingNote = ref(false);
+const hasDraft = ref(false);
+const DRAFT_STORAGE_KEY = `test-suite-note-draft-${props.project.id}`;
+
+interface NoteDraft {
+    content: string;
+    title: string;
+    suiteId: string;
+}
+
+const loadDraft = () => {
+    try {
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+            const draft: NoteDraft = JSON.parse(saved);
+            if (draft.content && draft.content.trim()) {
+                hasDraft.value = true;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load draft:', e);
+    }
+};
+
+const saveDraft = () => {
+    if (!noteContent.value.trim()) {
+        deleteDraft();
+        return;
+    }
+    const draft: NoteDraft = {
+        content: noteContent.value,
+        title: noteTitle.value,
+        suiteId: selectedSuiteId.value,
+    };
+    try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+        hasDraft.value = true;
+    } catch (e) {
+        console.error('Failed to save draft:', e);
+    }
+};
+
+const deleteDraft = () => {
+    try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        hasDraft.value = false;
+    } catch (e) {
+        console.error('Failed to delete draft:', e);
+    }
+};
+
+const clearNotes = () => {
+    noteContent.value = '';
+    noteTitle.value = '';
+    selectedSuiteId.value = '';
+    deleteDraft();
+};
+
+const openDraft = () => {
+    try {
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+            const draft: NoteDraft = JSON.parse(saved);
+            noteContent.value = draft.content;
+            noteTitle.value = draft.title;
+            selectedSuiteId.value = draft.suiteId;
+        }
+    } catch (e) {
+        console.error('Failed to open draft:', e);
+    }
+};
+
+const onNoteDialogChange = (open: boolean) => {
+    if (open && hasDraft.value) {
+        openDraft();
+    }
+    if (!open && noteContent.value.trim()) {
+        saveDraft();
+    }
+    if (!open) {
+        noteContent.value = '';
+        noteTitle.value = '';
+    }
+};
+
+// Build flat list of all suites for the selector
+const suiteOptions = computed(() => {
+    const options: { id: number; name: string; parentName?: string }[] = [];
+    props.testSuites.forEach(suite => {
+        options.push({ id: suite.id, name: suite.name });
+        suite.children?.forEach(child => {
+            options.push({ id: child.id, name: child.name, parentName: suite.name });
+        });
+    });
+    return options;
+});
+
+// Parse note lines into test steps
+const parsedSteps = computed(() => {
+    if (!noteContent.value.trim()) return [];
+    return noteContent.value
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => ({
+            action: line.replace(/^[\d]+[.\)\-:\s]+/, '').trim(),
+            expected: null,
+        }))
+        .filter(step => step.action.length > 0);
+});
+
+const importNoteAsTestCase = () => {
+    if (!parsedSteps.value.length || !noteTitle.value.trim() || !selectedSuiteId.value) return;
+    isImportingNote.value = true;
+    router.post(
+        `/projects/${props.project.id}/test-suites/${selectedSuiteId.value}/test-cases`,
+        {
+            title: noteTitle.value.trim(),
+            steps: parsedSteps.value,
+            priority: 'medium',
+            severity: 'major',
+            type: 'functional',
+            automation_status: 'not_automated',
+            tags: [],
+        },
+        {
+            preserveState: false,
+            onSuccess: () => {
+                showNoteDialog.value = false;
+                noteContent.value = '';
+                noteTitle.value = '';
+                isImportingNote.value = false;
+                deleteDraft();
+            },
+            onError: () => {
+                isImportingNote.value = false;
+            },
+        },
+    );
+};
+
+onMounted(() => {
+    loadDraft();
+});
 </script>
 
 <template>
@@ -471,7 +639,7 @@ const filteredFlatSuites = computed(() => {
                         <div v-if="localTotalTestCases > 0 && filteredFlatSuites.length > 0" class="flex items-center gap-3">
                             <button
                                 type="button"
-                                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-8 px-3 cursor-pointer"
+                                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-7 px-2.5 cursor-pointer"
                                 @click="toggleSelectAll"
                             >
                                 <div
@@ -489,7 +657,7 @@ const filteredFlatSuites = computed(() => {
                             <!-- Actions dropdown when test cases are selected -->
                             <DropdownMenu v-if="selectedTestCaseIds.length > 0">
                                 <DropdownMenuTrigger as-child>
-                                    <Button class="gap-2 h-8">
+                                    <Button class="gap-2">
                                         <MoreHorizontal class="h-4 w-4" />
                                         Actions ({{ selectedTestCaseIds.length }})
                                     </Button>
@@ -535,6 +703,114 @@ const filteredFlatSuites = computed(() => {
                                     <X class="h-4 w-4" />
                                 </button>
                             </div>
+                            <Dialog v-model:open="showNoteDialog" @update:open="onNoteDialogChange">
+                                <DialogTrigger as-child>
+                                    <Button
+                                        :variant="hasDraft ? 'cta' : 'outline'"
+                                        class="gap-2"
+                                    >
+                                        <Pencil v-if="hasDraft" class="h-4 w-4" />
+                                        <StickyNote v-else class="h-4 w-4" />
+                                        {{ hasDraft ? 'Continue Draft' : 'Create a Note' }}
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col overflow-hidden">
+                                    <DialogHeader>
+                                        <DialogTitle class="flex items-center gap-2">
+                                            <StickyNote class="h-5 w-5 text-primary" />
+                                            {{ hasDraft ? 'Edit Draft' : 'Create a Note' }}
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            Write your notes below. Each line will become a test step in the new test case.
+                                        </DialogDescription>
+                                    </DialogHeader>
+
+                                    <div class="space-y-4 py-4 overflow-y-auto min-h-0 flex-1">
+                                        <div class="space-y-2">
+                                            <Label>Test Case Title</Label>
+                                            <Input
+                                                v-model="noteTitle"
+                                                type="text"
+                                                placeholder="e.g. Verify user login flow"
+                                            />
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            <Label>Steps (one per line)</Label>
+                                            <Textarea
+                                                v-model="noteContent"
+                                                placeholder="1. Navigate to the login page&#10;2. Enter valid credentials&#10;3. Click the login button&#10;4. Verify dashboard is displayed"
+                                                rows="10"
+                                                class="font-mono text-sm resize-y"
+                                                style="word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap; overflow-y: auto; max-height: 400px;"
+                                            />
+                                            <p v-if="parsedSteps.length > 0" class="text-sm text-muted-foreground">
+                                                {{ parsedSteps.length }} step(s) will be created
+                                            </p>
+                                        </div>
+
+                                        <div v-if="parsedSteps.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30 overflow-hidden">
+                                            <div class="space-y-2">
+                                                <Label>Target Test Suite</Label>
+                                                <Select v-model="selectedSuiteId">
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select a test suite..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem
+                                                            v-for="option in suiteOptions"
+                                                            :key="option.id"
+                                                            :value="String(option.id)"
+                                                        >
+                                                            {{ option.parentName ? `${option.name} — in ${option.parentName}` : option.name }}
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div class="space-y-2 overflow-hidden">
+                                                <Label>Preview</Label>
+                                                <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word;">
+                                                    <ol class="list-decimal list-inside space-y-1">
+                                                        <li v-for="(step, index) in parsedSteps.slice(0, 10)" :key="index" class="break-words whitespace-pre-wrap" style="overflow-wrap: break-word; word-break: break-all;">
+                                                            {{ step.action }}
+                                                        </li>
+                                                        <li v-if="parsedSteps.length > 10" class="text-muted-foreground">
+                                                            ... and {{ parsedSteps.length - 10 }} more
+                                                        </li>
+                                                    </ol>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <DialogFooter class="flex justify-between sm:justify-between">
+                                        <Button
+                                            v-if="noteContent.trim() || noteTitle.trim() || selectedSuiteId"
+                                            variant="ghost"
+                                            @click="clearNotes"
+                                            class="gap-2 text-muted-foreground hover:text-destructive"
+                                        >
+                                            <X class="h-4 w-4" />
+                                            Clear
+                                        </Button>
+                                        <div v-else></div>
+                                        <div class="flex gap-2">
+                                            <Button variant="outline" @click="showNoteDialog = false">
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                @click="importNoteAsTestCase"
+                                                :disabled="!selectedSuiteId || parsedSteps.length === 0 || !noteTitle.trim() || isImportingNote"
+                                                class="gap-2"
+                                            >
+                                                <Plus class="h-4 w-4" />
+                                                Create Test Case
+                                            </Button>
+                                        </div>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                             <Link :href="`/projects/${project.id}/test-suites/create`">
                                 <Button variant="cta" class="gap-2">
                                     <Plus class="h-4 w-4" />
@@ -707,8 +983,8 @@ const filteredFlatSuites = computed(() => {
                                     </Badge>
                                 </div>
                                 <Link :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/create`" @click.stop>
-                                    <Button variant="outline" size="sm" :class="suite.parentName ? 'h-7 text-[11px] gap-1 px-2.5' : 'h-8 text-xs gap-1.5'">
-                                        <Plus :class="suite.parentName ? 'h-3.5 w-3.5' : 'h-3.5 w-3.5'" />
+                                    <Button variant="outline" size="sm" :class="suite.parentName ? 'h-6 text-[11px] gap-1 px-2' : 'text-xs'">
+                                        <Plus class="h-3.5 w-3.5" />
                                         Add
                                     </Button>
                                 </Link>

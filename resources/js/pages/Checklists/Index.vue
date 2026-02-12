@@ -391,7 +391,7 @@ const onDialogClose = (open: boolean) => {
                 <!-- Draft Card -->
                 <Card
                     v-if="hasDraft"
-                    class="transition-all border-dashed border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 cursor-pointer h-full relative group"
+                    class="transition-all border-dashed border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 cursor-pointer h-full relative group flex flex-col"
                     @click="openDraft"
                 >
                     <Button
@@ -403,7 +403,7 @@ const onDialogClose = (open: boolean) => {
                     >
                         <Trash2 class="h-4 w-4" />
                     </Button>
-                    <CardHeader>
+                    <CardHeader class="flex-1">
                         <CardTitle class="flex items-center justify-between">
                             <span class="flex items-center gap-2">
                                 <StickyNote class="h-5 w-5 text-amber-500" />
@@ -424,8 +424,8 @@ const onDialogClose = (open: boolean) => {
 
                 <!-- Checklist Cards -->
                 <Link v-for="checklist in filteredChecklists" :key="checklist.id" :href="`/projects/${project.id}/checklists/${checklist.id}`">
-                    <Card class="transition-all hover:border-primary cursor-pointer h-full">
-                        <CardHeader>
+                    <Card class="transition-all hover:border-primary cursor-pointer h-full flex flex-col">
+                        <CardHeader class="flex-1">
                             <CardTitle class="flex items-center justify-between">
                                 <span class="flex items-center gap-2">
                                     <ClipboardList class="h-5 w-5 text-primary" />

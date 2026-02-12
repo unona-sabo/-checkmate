@@ -68,7 +68,7 @@ const getStatusColor = (status: string) => {
                                 <span class="text-sm font-normal text-muted-foreground">({{ project.checklists?.length || 0 }})</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/checklists/create`">
-                                <Button size="sm" variant="ghost" class="h-8 w-8 p-0 cursor-pointer">
+                                <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
                                     <Plus class="h-4 w-4" />
                                 </Button>
                             </Link>
@@ -90,7 +90,7 @@ const getStatusColor = (status: string) => {
                             No checklists yet
                         </div>
                         <Link :href="`/projects/${project.id}/checklists`" class="mt-auto pt-3 block">
-                            <Button variant="outline" size="sm" class="w-full h-9 text-sm cursor-pointer">View All</Button>
+                            <Button variant="outline" size="sm" class="w-full text-sm cursor-pointer">View All</Button>
                         </Link>
                     </CardContent>
                 </Card>
@@ -105,7 +105,7 @@ const getStatusColor = (status: string) => {
                                 <span class="text-sm font-normal text-muted-foreground">({{ project.test_suites?.length || 0 }})</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/test-suites/create`">
-                                <Button size="sm" variant="ghost" class="h-8 w-8 p-0 cursor-pointer">
+                                <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
                                     <Plus class="h-4 w-4" />
                                 </Button>
                             </Link>
@@ -127,7 +127,7 @@ const getStatusColor = (status: string) => {
                             No test suites yet
                         </div>
                         <Link :href="`/projects/${project.id}/test-suites`" class="mt-auto pt-3 block">
-                            <Button variant="outline" size="sm" class="w-full h-9 text-sm cursor-pointer">View All</Button>
+                            <Button variant="outline" size="sm" class="w-full text-sm cursor-pointer">View All</Button>
                         </Link>
                     </CardContent>
                 </Card>
@@ -142,7 +142,7 @@ const getStatusColor = (status: string) => {
                                 <span class="text-sm font-normal text-muted-foreground">({{ project.test_runs?.length || 0 }})</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/test-runs/create`">
-                                <Button size="sm" variant="ghost" class="h-8 w-8 p-0 cursor-pointer">
+                                <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
                                     <Plus class="h-4 w-4" />
                                 </Button>
                             </Link>
@@ -170,7 +170,7 @@ const getStatusColor = (status: string) => {
                             No test runs yet
                         </div>
                         <Link :href="`/projects/${project.id}/test-runs`" class="mt-auto pt-3 block">
-                            <Button variant="outline" size="sm" class="w-full h-9 text-sm cursor-pointer">View All</Button>
+                            <Button variant="outline" size="sm" class="w-full text-sm cursor-pointer">View All</Button>
                         </Link>
                     </CardContent>
                 </Card>

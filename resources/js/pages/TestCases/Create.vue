@@ -161,9 +161,9 @@ const submit = () => {
                                         v-if="form.steps.length > 1"
                                         type="button"
                                         variant="ghost"
-                                        size="sm"
+                                        size="icon-sm"
                                         @click="removeStep(index)"
-                                        class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                                        class="p-0 text-muted-foreground hover:text-destructive shrink-0"
                                     >
                                         <Trash2 class="h-4 w-4" />
                                     </Button>

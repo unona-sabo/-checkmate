@@ -291,7 +291,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                             </Badge>
                         </div>
                         <Link :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/create`" @click.stop>
-                            <Button variant="outline" size="sm" class="h-8 text-xs gap-1.5">
+                            <Button variant="outline" size="sm" class="text-xs">
                                 <Plus class="h-3.5 w-3.5" />
                                 Add
                             </Button>
@@ -383,7 +383,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                                 <Badge variant="secondary" class="text-xs font-normal">0 cases</Badge>
                             </div>
                             <Link :href="`/projects/${project.id}/test-suites/${child.id}/test-cases/create`" @click.stop>
-                                <Button variant="outline" size="sm" class="h-8 text-xs gap-1.5">
+                                <Button variant="outline" size="sm" class="text-xs">
                                     <Plus class="h-3.5 w-3.5" />
                                     Add
                                 </Button>

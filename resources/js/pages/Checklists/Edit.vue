@@ -167,9 +167,9 @@ const deleteChecklist = () => {
                                                 v-if="column.type === 'select'"
                                                 type="button"
                                                 variant="ghost"
-                                                size="sm"
+                                                size="icon-sm"
                                                 @click="toggleColumnExpand(index)"
-                                                class="h-8 w-8 p-0"
+                                                class="p-0"
                                             >
                                                 <ChevronDown v-if="!expandedColumns[index]" class="h-4 w-4" />
                                                 <ChevronUp v-else class="h-4 w-4" />
@@ -178,9 +178,9 @@ const deleteChecklist = () => {
                                                 v-if="form.columns_config.length > 1"
                                                 type="button"
                                                 variant="ghost"
-                                                size="sm"
+                                                size="icon-sm"
                                                 @click="removeColumn(index)"
-                                                class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                                class="p-0 text-muted-foreground hover:text-destructive"
                                             >
                                                 <Trash2 class="h-4 w-4" />
                                             </Button>

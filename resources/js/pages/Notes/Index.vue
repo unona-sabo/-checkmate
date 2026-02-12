@@ -141,14 +141,14 @@ const deleteNote = () => {
                             </span>
                             <div class="flex gap-1">
                                 <Link :href="`/projects/${project.id}/notes/${note.id}`">
-                                    <Button variant="ghost" size="sm" class="h-8 w-8 p-0">
+                                    <Button variant="ghost" size="icon-sm" class="p-0">
                                         <Edit class="h-4 w-4" />
                                     </Button>
                                 </Link>
                                 <Button
                                     variant="ghost"
-                                    size="sm"
-                                    class="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                    size="icon-sm"
+                                    class="p-0 text-destructive hover:text-destructive"
                                     @click.prevent="confirmDelete(note)"
                                 >
                                     <Trash2 class="h-4 w-4" />
