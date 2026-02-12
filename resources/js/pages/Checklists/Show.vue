@@ -139,6 +139,11 @@ watch(searchQuery, () => {
     visibleRowCount.value = INITIAL_ROWS;
 });
 
+// Resize textareas when visible rows change (load more, show all, search)
+watch(visibleRowCount, () => {
+    resizeAllTextareas();
+});
+
 // Drag-and-drop only allowed when showing all rows and not searching
 const canDragRows = computed(() => !searchQuery.value.trim() && !hasMoreRows.value);
 
@@ -593,6 +598,12 @@ const updateCell = (row: ExtendedChecklistRow, key: string, value: unknown) => {
     }
 };
 
+const saveOnBlur = () => {
+    if (hasContentChanges.value) {
+        saveRows();
+    }
+};
+
 const setBackgroundColor = (row: ExtendedChecklistRow, color: string | null) => {
     row.background_color = color;
     hasContentChanges.value = true;
@@ -943,7 +954,7 @@ onMounted(() => {
                                 {{ hasDraft ? 'Draft' : 'Create a Note' }}
                             </Button>
                         </DialogTrigger>
-                        <DialogContent class="max-w-2xl overflow-hidden">
+                        <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col overflow-hidden">
                             <DialogHeader>
                                 <DialogTitle class="flex items-center gap-2">
                                     <StickyNote class="h-5 w-5 text-primary" />
@@ -954,7 +965,7 @@ onMounted(() => {
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div class="space-y-4 py-4 overflow-hidden">
+                            <div class="space-y-4 py-4 overflow-y-auto min-h-0 flex-1">
                                 <div class="space-y-2">
                                     <Label>Notes</Label>
                                     <Textarea
@@ -962,6 +973,7 @@ onMounted(() => {
                                         placeholder="1. First item&#10;2. Second item&#10;3. Third item&#10;&#10;Or just write each item on a new line..."
                                         rows="10"
                                         class="font-mono text-sm resize-y"
+                                        style="word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap; overflow-y: auto; max-height: 400px;"
                                     />
                                     <p v-if="parsedNotes.length > 0" class="text-sm text-muted-foreground">
                                         {{ parsedNotes.length }} item(s) will be imported
@@ -999,9 +1011,9 @@ onMounted(() => {
 
                                     <div class="space-y-2 overflow-hidden">
                                         <Label>Preview</Label>
-                                        <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm">
+                                        <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word;">
                                             <ol class="list-decimal list-inside space-y-1">
-                                                <li v-for="(note, index) in parsedNotes.slice(0, 10)" :key="index" class="break-words whitespace-pre-wrap">
+                                                <li v-for="(note, index) in parsedNotes.slice(0, 10)" :key="index" class="break-words whitespace-pre-wrap" style="overflow-wrap: break-word; word-break: break-all;">
                                                     {{ note }}
                                                 </li>
                                                 <li v-if="parsedNotes.length > 10" class="text-muted-foreground">
@@ -1152,6 +1164,7 @@ onMounted(() => {
                                                 placeholder="Section title..."
                                                 rows="1"
                                                 @input="(e: Event) => autoResizeTextarea(e.target as HTMLTextAreaElement)"
+                                                @blur="saveOnBlur"
                                             />
                                         </td>
                                     </template>
@@ -1181,6 +1194,7 @@ onMounted(() => {
                                                     :style="{ color: row.font_color || 'inherit' }"
                                                     rows="1"
                                                     @input="(e: Event) => autoResizeTextarea(e.target as HTMLTextAreaElement)"
+                                                    @blur="saveOnBlur"
                                                 />
                                             </template>
                                             <template v-else-if="column.type === 'select'">
@@ -1231,6 +1245,7 @@ onMounted(() => {
                                                     :model-value="row.data[column.key] as string"
                                                     @update:model-value="(val) => updateCell(row, column.key, val)"
                                                     class="h-7 text-sm"
+                                                    @blur="saveOnBlur"
                                                 />
                                             </template>
                                             <template v-else>
@@ -1238,6 +1253,7 @@ onMounted(() => {
                                                     :model-value="row.data[column.key] as string"
                                                     @update:model-value="(val) => updateCell(row, column.key, val)"
                                                     class="h-7 text-sm"
+                                                    @blur="saveOnBlur"
                                                 />
                                             </template>
                                         </td>
