@@ -33,7 +33,7 @@ import {
     ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
     Bold, Heading, GripHorizontal, StickyNote, Import, Pencil, X, Search,
     MoreHorizontal, Copy, Layers, Play, Download, Upload, FileSpreadsheet,
-    ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle
+    ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle, Columns3, Check
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
@@ -75,6 +75,42 @@ const columns = ref<ExtendedColumnConfig[]>(
         { key: 'status', label: 'Status', type: 'checkbox' as const, width: 80 },
     ]).map(col => ({ ...col, width: col.width || 150 }))
 );
+
+// Column visibility
+const HIDDEN_COLS_KEY = `checklist-hidden-cols-${props.checklist.id}`;
+const hiddenColumns = ref<string[]>([]);
+
+const loadHiddenColumns = () => {
+    try {
+        const saved = localStorage.getItem(HIDDEN_COLS_KEY);
+        if (saved) {
+            hiddenColumns.value = JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('Failed to load hidden columns:', e);
+    }
+};
+
+const saveHiddenColumns = () => {
+    try {
+        localStorage.setItem(HIDDEN_COLS_KEY, JSON.stringify(hiddenColumns.value));
+    } catch (e) {
+        console.error('Failed to save hidden columns:', e);
+    }
+};
+
+const toggleColumnVisibility = (key: string) => {
+    const idx = hiddenColumns.value.indexOf(key);
+    if (idx >= 0) {
+        hiddenColumns.value.splice(idx, 1);
+    } else {
+        hiddenColumns.value.push(key);
+    }
+    saveHiddenColumns();
+};
+
+const visibleColumns = computed(() => columns.value.filter(c => !hiddenColumns.value.includes(c.key)));
+const hasHiddenColumns = computed(() => hiddenColumns.value.length > 0);
 
 const showDeleteConfirm = ref(false);
 const rowToDeleteIndex = ref<number | null>(null);
@@ -124,26 +160,29 @@ const dismissSaveError = () => {
 
 // Search state
 const searchQuery = ref('');
+const scrollContainerRef = ref<HTMLElement | null>(null);
+const highlightedRowId = ref<number | null>(null);
 
 // Progressive rendering - show rows in batches for better performance
 const INITIAL_ROWS = 50;
 const LOAD_MORE_COUNT = 50;
 const visibleRowCount = ref(INITIAL_ROWS);
 
+const isRowMatch = (row: ExtendedChecklistRow, query: string): boolean => {
+    return Object.values(row.data).some(value => {
+        if (typeof value === 'string') {
+            return value.toLowerCase().includes(query);
+        }
+        return false;
+    });
+};
+
 const filteredRows = computed(() => {
     if (!searchQuery.value.trim()) {
         return rows.value;
     }
     const query = searchQuery.value.toLowerCase();
-    return rows.value.filter(row => {
-        // Search through all text values in row data
-        return Object.values(row.data).some(value => {
-            if (typeof value === 'string') {
-                return value.toLowerCase().includes(query);
-            }
-            return false;
-        });
-    });
+    return rows.value.filter(row => isRowMatch(row, query));
 });
 
 // Rows to actually render (limited for performance)
@@ -169,7 +208,42 @@ const showAllRows = () => {
     visibleRowCount.value = totalRowCount.value;
 };
 
-// Reset visible count when search changes
+// Navigate to row: clear search, show full table, scroll to row
+let highlightTimer: ReturnType<typeof setTimeout> | null = null;
+
+const navigateToRow = (row: ExtendedChecklistRow) => {
+    if (!searchQuery.value.trim()) return;
+
+    const rowId = row.id;
+    searchQuery.value = '';
+
+    // Ensure the row is within the visible range
+    const rowIndex = rows.value.findIndex(r => r.id === rowId);
+    if (rowIndex >= visibleRowCount.value) {
+        visibleRowCount.value = rowIndex + LOAD_MORE_COUNT;
+    }
+
+    if (highlightTimer) clearTimeout(highlightTimer);
+    highlightedRowId.value = rowId;
+    highlightTimer = setTimeout(() => {
+        highlightedRowId.value = null;
+    }, 2500);
+
+    nextTick(() => {
+        resizeAllTextareas();
+        nextTick(() => {
+            const container = scrollContainerRef.value;
+            if (!container) return;
+            const targetRow = container.querySelector(`tr[data-row-id="${rowId}"]`) as HTMLElement;
+            if (targetRow) {
+                targetRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+        });
+    });
+};
+
+const isSearchActive = computed(() => searchQuery.value.trim().length > 0);
+
 watch(searchQuery, () => {
     visibleRowCount.value = INITIAL_ROWS;
 });
@@ -417,13 +491,21 @@ const onColDragLeave = () => {
     dragOverColIndex.value = null;
 };
 
-const onColDrop = (index: number, event: DragEvent) => {
+const onColDrop = (visibleIndex: number, event: DragEvent) => {
     event.preventDefault();
-    if (draggedColIndex.value !== null && draggedColIndex.value !== index) {
-        const draggedCol = columns.value[draggedColIndex.value];
-        columns.value.splice(draggedColIndex.value, 1);
-        columns.value.splice(index, 0, draggedCol);
-        hasContentChanges.value = true;
+    if (draggedColIndex.value !== null && draggedColIndex.value !== visibleIndex) {
+        // Map visible indices to actual indices in the full columns array
+        const draggedKey = visibleColumns.value[draggedColIndex.value]?.key;
+        const targetKey = visibleColumns.value[visibleIndex]?.key;
+        const actualFrom = columns.value.findIndex(c => c.key === draggedKey);
+        const actualTo = columns.value.findIndex(c => c.key === targetKey);
+
+        if (actualFrom !== -1 && actualTo !== -1 && actualFrom !== actualTo) {
+            const draggedCol = columns.value[actualFrom];
+            columns.value.splice(actualFrom, 1);
+            columns.value.splice(actualTo, 0, draggedCol);
+            hasContentChanges.value = true;
+        }
     }
     draggedColIndex.value = null;
     dragOverColIndex.value = null;
@@ -439,10 +521,14 @@ const resizingCol = ref<number | null>(null);
 const resizeStartX = ref(0);
 const resizeStartWidth = ref(0);
 
-const startResize = (index: number, event: MouseEvent) => {
-    resizingCol.value = index;
+const startResize = (visibleIndex: number, event: MouseEvent) => {
+    // Map visible index to actual index in the full columns array
+    const colKey = visibleColumns.value[visibleIndex]?.key;
+    const actualIndex = columns.value.findIndex(c => c.key === colKey);
+    if (actualIndex === -1) return;
+    resizingCol.value = actualIndex;
     resizeStartX.value = event.clientX;
-    resizeStartWidth.value = columns.value[index].width || 150;
+    resizeStartWidth.value = columns.value[actualIndex].width || 150;
     document.addEventListener('mousemove', onResize);
     document.addEventListener('mouseup', stopResize);
 };
@@ -941,6 +1027,7 @@ const exportChecklist = () => {
 };
 
 onMounted(() => {
+    loadHiddenColumns();
     resizeAllTextareas();
     loadDraft();
 });
@@ -958,21 +1045,26 @@ onMounted(() => {
                         <ClipboardList class="h-6 w-6 text-primary" />
                         {{ checklist.name }}
                     </h1>
-                    <div class="relative">
-                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Search content..."
-                            class="pl-9 pr-8 w-56 bg-background/60"
-                        />
-                        <button
-                            v-if="searchQuery"
-                            @click="searchQuery = ''"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                        >
-                            <X class="h-4 w-4" />
-                        </button>
+                    <div class="flex items-center gap-2">
+                        <div class="relative">
+                            <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                v-model="searchQuery"
+                                type="text"
+                                placeholder="Search content..."
+                                class="pl-9 pr-8 w-56 bg-background/60"
+                            />
+                            <button
+                                v-if="searchQuery"
+                                @click="searchQuery = ''"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                            >
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
+                        <span v-if="isSearchActive && filteredRows.length > 0" class="text-xs text-muted-foreground whitespace-nowrap">
+                            {{ filteredRows.length }} found — click to navigate
+                        </span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -1073,6 +1165,31 @@ onMounted(() => {
                             <DropdownMenuItem @click="exportChecklist">
                                 <Upload class="h-4 w-4 mr-2" />
                                 Export
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <!-- Columns visibility dropdown -->
+                    <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                            <Button :variant="hasHiddenColumns ? 'default' : 'outline'" class="gap-2">
+                                <Columns3 class="h-4 w-4" />
+                                Columns
+                                <span v-if="hasHiddenColumns" class="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-background/20 text-xs font-medium">
+                                    {{ hiddenColumns.length }}
+                                </span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                v-for="column in columns"
+                                :key="column.key"
+                                @select.prevent="toggleColumnVisibility(column.key)"
+                            >
+                                <Check v-if="!hiddenColumns.includes(column.key)" class="h-4 w-4 mr-2" />
+                                <span v-else class="h-4 w-4 mr-2" />
+                                {{ column.label }}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -1243,13 +1360,13 @@ onMounted(() => {
 
             <Card>
                 <CardContent class="p-0">
-                    <div class="overflow-auto max-h-[calc(100vh-220px)]">
+                    <div ref="scrollContainerRef" class="overflow-auto max-h-[calc(100vh-220px)]">
                         <table class="w-full border-collapse" style="table-layout: auto;">
                             <thead class="sticky top-0 z-10">
                                 <tr class="border-b bg-muted">
                                     <th class="w-6 px-1 py-2"></th>
                                     <th
-                                        v-for="(column, colIndex) in columns"
+                                        v-for="(column, colIndex) in visibleColumns"
                                         :key="column.key"
                                         class="px-1 py-2 text-left text-sm font-medium text-muted-foreground relative select-none align-top"
                                         :style="{ width: column.width + 'px' }"
@@ -1288,16 +1405,21 @@ onMounted(() => {
                                 </tr>
                             </thead>
                             <tbody>
+                                <tr class="h-2"><td :colspan="visibleColumns.length + 3"></td></tr>
                                 <tr
                                     v-for="(row, index) in displayRows"
                                     :key="row.id"
-                                    class="border-b last:border-0 transition-colors"
+                                    :data-row-id="row.id"
+                                    @click="isSearchActive ? navigateToRow(row) : undefined"
+                                    class="border-b last:border-0 transition-all duration-500"
                                     :class="[
                                         row.row_type === 'section_header' ? '' : 'hover:bg-muted/50',
                                         getFontWeightClass(row.font_weight),
                                         {
                                             'border-t-2 border-t-primary': dragOverRowIndex === index && canDragRows,
-                                            'opacity-50': draggedRowIndex === index && canDragRows
+                                            'opacity-50': draggedRowIndex === index && canDragRows,
+                                            'ring-2 ring-primary/50 bg-primary/5': highlightedRowId === row.id,
+                                            'cursor-pointer hover:!bg-primary/5': isSearchActive,
                                         }
                                     ]"
                                     :style="getRowStyles(row)"
@@ -1316,7 +1438,7 @@ onMounted(() => {
                                         </div>
                                     </td>
                                     <template v-if="row.row_type === 'section_header'">
-                                        <td :colspan="columns.length" class="px-1 py-0.5 align-top">
+                                        <td :colspan="visibleColumns.length" class="px-1 py-0.5 align-top">
                                             <Textarea
                                                 :model-value="row.data[columns[0]?.key] as string || ''"
                                                 @update:model-value="(val) => updateCell(row, columns[0]?.key || 'item', val)"
@@ -1332,7 +1454,7 @@ onMounted(() => {
                                     </template>
                                     <template v-else>
                                         <td
-                                            v-for="column in columns"
+                                            v-for="column in visibleColumns"
                                             :key="column.key"
                                             class="px-1 py-0.5 align-top"
                                             :style="{ width: column.width + 'px' }"
@@ -1562,12 +1684,12 @@ onMounted(() => {
                                     </td>
                                 </tr>
                                 <tr v-if="rows.length === 0">
-                                    <td :colspan="columns.length + 3" class="p-6 text-center text-muted-foreground text-sm">
+                                    <td :colspan="visibleColumns.length + 3" class="p-6 text-center text-muted-foreground text-sm">
                                         No items yet. Click "Add Row" to add your first item.
                                     </td>
                                 </tr>
                                 <tr v-else-if="searchQuery.trim() && filteredRows.length === 0">
-                                    <td :colspan="columns.length + 3" class="p-6 text-center text-muted-foreground text-sm">
+                                    <td :colspan="visibleColumns.length + 3" class="p-6 text-center text-muted-foreground text-sm">
                                         No items match "{{ searchQuery }}".
                                     </td>
                                 </tr>
