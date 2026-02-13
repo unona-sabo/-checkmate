@@ -14,6 +14,8 @@ import { FileText, Upload, X, Trash2, Download } from 'lucide-vue-next';
 interface ParentOption {
     id: number;
     title: string;
+    parent_id: number | null;
+    parent?: { id: number; title: string } | null;
 }
 
 interface Documentation {
@@ -125,8 +127,8 @@ const submit = () => {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem :value="null">None (top level)</SelectItem>
-                                            <SelectItem v-for="parent in parentOptions" :key="parent.id" :value="parent.id">
-                                                {{ parent.title }}
+                                            <SelectItem v-for="opt in parentOptions" :key="opt.id" :value="opt.id">
+                                                <span v-if="opt.parent" class="text-muted-foreground">{{ opt.parent.title }} / </span>{{ opt.title }}
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>

@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Edit, Trash2, ChevronRight, Download, Paperclip, FolderTree, ExternalLink } from 'lucide-vue-next';
+import { FileText, Edit, Trash2, ChevronRight, Download, Paperclip, FolderTree, ExternalLink, Plus } from 'lucide-vue-next';
 
 interface Documentation {
     id: number;
@@ -81,62 +81,84 @@ const imageAttachments = (attachments?: Attachment[]) =>
                 <div class="lg:col-span-1">
                     <div class="sticky top-0 rounded-xl border bg-card shadow-sm">
                         <div class="p-3 border-b bg-muted/30">
-                            <div class="flex items-center gap-2 text-sm font-medium">
-                                <FolderTree class="h-4 w-4 text-primary" />
-                                <span>Navigation</span>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-sm font-medium">
+                                    <FolderTree class="h-4 w-4 text-primary" />
+                                    <span>Subcategories</span>
+                                </div>
+                                <Link :href="`/projects/${project.id}/documentations/create?parent_id=${documentation.id}`">
+                                    <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer h-6 w-6">
+                                        <Plus class="h-4 w-4" />
+                                    </Button>
+                                </Link>
                             </div>
                         </div>
                         <div class="p-2 space-y-0.5 max-h-[calc(100vh-220px)] overflow-y-auto">
-                            <template v-for="doc in allDocs" :key="doc.id">
-                                <div
-                                    class="group flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-all duration-150"
-                                    :class="doc.id === documentation.id
-                                        ? 'bg-primary text-primary-foreground shadow-sm'
-                                        : 'hover:bg-muted/70'"
-                                >
-                                    <Link
-                                        :href="`/projects/${project.id}/documentations/${doc.id}`"
-                                        class="flex items-center gap-2 min-w-0 flex-1"
-                                    >
-                                        <FileText class="h-4 w-4 shrink-0" :class="doc.id === documentation.id ? '' : 'text-primary'" />
-                                        <span class="font-medium text-sm truncate">{{ doc.title }}</span>
-                                    </Link>
-                                    <Link
-                                        :href="`/projects/${project.id}/documentations/${doc.id}`"
-                                        @click.stop
-                                        class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2"
-                                        :class="doc.id === documentation.id ? 'hover:bg-primary-foreground/20' : 'hover:bg-muted'"
-                                    >
-                                        <ExternalLink class="h-3 w-3" />
-                                    </Link>
-                                </div>
-                                <template v-if="doc.children && doc.children.length > 0">
-                                    <div
-                                        v-for="child in doc.children"
-                                        :key="child.id"
-                                        class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-4 cursor-pointer transition-all duration-150"
-                                        :class="child.id === documentation.id
-                                            ? 'bg-primary text-primary-foreground shadow-sm'
-                                            : 'hover:bg-muted/70'"
-                                    >
+                            <template v-if="documentation.children?.length">
+                                <template v-for="child in documentation.children" :key="child.id">
+                                    <div class="group flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-all duration-150 hover:bg-muted/70">
                                         <Link
                                             :href="`/projects/${project.id}/documentations/${child.id}`"
-                                            class="flex items-center gap-2 min-w-0"
+                                            class="flex items-center gap-2 min-w-0 flex-1"
                                         >
-                                            <ChevronRight class="h-3.5 w-3.5 shrink-0" />
-                                            <span class="text-sm truncate">{{ child.title }}</span>
+                                            <FileText class="h-4 w-4 shrink-0 text-primary" />
+                                            <span class="font-medium text-sm truncate">{{ child.title }}</span>
                                         </Link>
                                         <Link
                                             :href="`/projects/${project.id}/documentations/${child.id}`"
                                             @click.stop
-                                            class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2"
-                                            :class="child.id === documentation.id ? 'hover:bg-primary-foreground/20' : 'hover:bg-muted'"
+                                            class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2 hover:bg-muted"
                                         >
                                             <ExternalLink class="h-3 w-3" />
                                         </Link>
                                     </div>
+                                    <!-- Nested children (level 2) -->
+                                    <template v-if="child.children?.length">
+                                        <template v-for="grandchild in child.children" :key="grandchild.id">
+                                            <div class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-4 cursor-pointer transition-all duration-150 hover:bg-muted/70">
+                                                <Link
+                                                    :href="`/projects/${project.id}/documentations/${grandchild.id}`"
+                                                    class="flex items-center gap-2 min-w-0 flex-1"
+                                                >
+                                                    <ChevronRight class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                                    <span class="text-sm truncate">{{ grandchild.title }}</span>
+                                                </Link>
+                                                <Link
+                                                    :href="`/projects/${project.id}/documentations/${grandchild.id}`"
+                                                    @click.stop
+                                                    class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2 hover:bg-muted"
+                                                >
+                                                    <ExternalLink class="h-3 w-3" />
+                                                </Link>
+                                            </div>
+                                            <!-- Nested children (level 3) -->
+                                            <div
+                                                v-for="deep in grandchild.children"
+                                                :key="deep.id"
+                                                class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-8 cursor-pointer transition-all duration-150 hover:bg-muted/70"
+                                            >
+                                                <Link
+                                                    :href="`/projects/${project.id}/documentations/${deep.id}`"
+                                                    class="flex items-center gap-2 min-w-0 flex-1"
+                                                >
+                                                    <ChevronRight class="h-3 w-3 shrink-0 text-muted-foreground" />
+                                                    <span class="text-xs truncate">{{ deep.title }}</span>
+                                                </Link>
+                                                <Link
+                                                    :href="`/projects/${project.id}/documentations/${deep.id}`"
+                                                    @click.stop
+                                                    class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2 hover:bg-muted"
+                                                >
+                                                    <ExternalLink class="h-3 w-3" />
+                                                </Link>
+                                            </div>
+                                        </template>
+                                    </template>
                                 </template>
                             </template>
+                            <div v-else class="px-3 py-2 text-sm text-muted-foreground">
+                                No subcategories
+                            </div>
                         </div>
                     </div>
                 </div>

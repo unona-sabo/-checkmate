@@ -194,6 +194,28 @@ export interface TestRunCase {
     };
 }
 
+export interface ProjectSearchResultItem {
+    id: number;
+    title: string;
+    subtitle: string | null;
+    badge: string | null;
+    extra_badge?: string | null;
+    url: string;
+}
+
+export interface ProjectSearchResultGroup {
+    type: string;
+    label: string;
+    count: number;
+    items: ProjectSearchResultItem[];
+}
+
+export interface ProjectSearchResponse {
+    query: string;
+    results: ProjectSearchResultGroup[];
+    total: number;
+}
+
 export type TestRunCaseStatus = TestRunCase['status'];
 export type TestCasePriority = TestCase['priority'];
 export type TestCaseSeverity = TestCase['severity'];

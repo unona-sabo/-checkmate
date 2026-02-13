@@ -20,6 +20,7 @@ interface ParentOption {
 const props = defineProps<{
     project: Project;
     parentOptions: ParentOption[];
+    defaultParentId?: number | null;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -33,7 +34,7 @@ const form = useForm({
     title: '',
     content: '',
     category: '',
-    parent_id: null as number | null,
+    parent_id: props.defaultParentId ?? null as number | null,
     attachments: [] as File[],
 });
 
@@ -114,8 +115,8 @@ const submit = () => {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem :value="null">None (top level)</SelectItem>
-                                            <SelectItem v-for="parent in parentOptions" :key="parent.id" :value="parent.id">
-                                                {{ parent.title }}
+                                            <SelectItem v-for="opt in parentOptions" :key="opt.id" :value="opt.id">
+                                                {{ opt.title }}
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>

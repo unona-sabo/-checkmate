@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -54,6 +55,178 @@ class ProjectController extends Controller
 
         return redirect()->route('projects.show', $project)
             ->with('success', 'Project created successfully.');
+    }
+
+    public function search(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $validated = $request->validate([
+            'q' => 'required|string|min:2|max:100',
+        ]);
+
+        $term = '%'.$validated['q'].'%';
+        $results = [];
+
+        // Test Suites
+        $testSuites = $project->testSuites()
+            ->where(function ($q) use ($term) {
+                $q->where('name', 'like', $term)
+                    ->orWhere('description', 'like', $term);
+            })
+            ->with('parent')
+            ->limit(10)
+            ->get();
+
+        if ($testSuites->isNotEmpty()) {
+            $results[] = [
+                'type' => 'test_suites',
+                'label' => 'Test Suites',
+                'count' => $testSuites->count(),
+                'items' => $testSuites->map(fn ($suite) => [
+                    'id' => $suite->id,
+                    'title' => $suite->name,
+                    'subtitle' => $suite->parent ? 'in '.$suite->parent->name : null,
+                    'badge' => $suite->type,
+                    'url' => route('test-suites.show', [$project, $suite]),
+                ]),
+            ];
+        }
+
+        // Test Cases (via testSuites relationship)
+        $testCases = \App\Models\TestCase::query()
+            ->whereHas('testSuite', fn ($q) => $q->where('project_id', $project->id))
+            ->where(function ($q) use ($term) {
+                $q->where('title', 'like', $term)
+                    ->orWhere('description', 'like', $term)
+                    ->orWhere('preconditions', 'like', $term)
+                    ->orWhere('expected_result', 'like', $term);
+            })
+            ->with('testSuite')
+            ->limit(10)
+            ->get();
+
+        if ($testCases->isNotEmpty()) {
+            $results[] = [
+                'type' => 'test_cases',
+                'label' => 'Test Cases',
+                'count' => $testCases->count(),
+                'items' => $testCases->map(fn ($tc) => [
+                    'id' => $tc->id,
+                    'title' => $tc->title,
+                    'subtitle' => $tc->testSuite ? 'in '.$tc->testSuite->name : null,
+                    'badge' => $tc->priority,
+                    'extra_badge' => $tc->type,
+                    'url' => route('test-cases.show', [$project, $tc->testSuite, $tc]),
+                ]),
+            ];
+        }
+
+        // Checklists
+        $checklists = $project->checklists()
+            ->where('name', 'like', $term)
+            ->limit(10)
+            ->get();
+
+        if ($checklists->isNotEmpty()) {
+            $results[] = [
+                'type' => 'checklists',
+                'label' => 'Checklists',
+                'count' => $checklists->count(),
+                'items' => $checklists->map(fn ($cl) => [
+                    'id' => $cl->id,
+                    'title' => $cl->name,
+                    'subtitle' => null,
+                    'badge' => null,
+                    'url' => route('checklists.show', [$project, $cl]),
+                ]),
+            ];
+        }
+
+        // Test Runs
+        $testRuns = $project->testRuns()
+            ->where(function ($q) use ($term) {
+                $q->where('name', 'like', $term)
+                    ->orWhere('description', 'like', $term)
+                    ->orWhere('environment', 'like', $term)
+                    ->orWhere('milestone', 'like', $term);
+            })
+            ->limit(10)
+            ->get();
+
+        if ($testRuns->isNotEmpty()) {
+            $results[] = [
+                'type' => 'test_runs',
+                'label' => 'Test Runs',
+                'count' => $testRuns->count(),
+                'items' => $testRuns->map(fn ($run) => [
+                    'id' => $run->id,
+                    'title' => $run->name,
+                    'subtitle' => $run->environment ? $run->environment : null,
+                    'badge' => $run->status,
+                    'url' => route('test-runs.show', [$project, $run]),
+                ]),
+            ];
+        }
+
+        // Bug Reports
+        $bugreports = $project->bugreports()
+            ->where(function ($q) use ($term) {
+                $q->where('title', 'like', $term)
+                    ->orWhere('description', 'like', $term);
+            })
+            ->limit(10)
+            ->get();
+
+        if ($bugreports->isNotEmpty()) {
+            $results[] = [
+                'type' => 'bugreports',
+                'label' => 'Bug Reports',
+                'count' => $bugreports->count(),
+                'items' => $bugreports->map(fn ($bug) => [
+                    'id' => $bug->id,
+                    'title' => $bug->title,
+                    'subtitle' => null,
+                    'badge' => $bug->status,
+                    'extra_badge' => $bug->severity,
+                    'url' => route('bugreports.show', [$project, $bug]),
+                ]),
+            ];
+        }
+
+        // Documentations
+        $documentations = $project->documentations()
+            ->where(function ($q) use ($term) {
+                $q->where('title', 'like', $term)
+                    ->orWhere('content', 'like', $term)
+                    ->orWhere('category', 'like', $term);
+            })
+            ->with('parent')
+            ->limit(10)
+            ->get();
+
+        if ($documentations->isNotEmpty()) {
+            $results[] = [
+                'type' => 'documentations',
+                'label' => 'Documentations',
+                'count' => $documentations->count(),
+                'items' => $documentations->map(fn ($doc) => [
+                    'id' => $doc->id,
+                    'title' => $doc->title,
+                    'subtitle' => $doc->parent ? 'in '.$doc->parent->title : null,
+                    'badge' => $doc->category,
+                    'url' => route('documentations.show', [$project, $doc]),
+                ]),
+            ];
+        }
+
+        $total = collect($results)->sum('count');
+
+        return response()->json([
+            'query' => $validated['q'],
+            'results' => $results,
+            'total' => $total,
+        ]);
     }
 
     public function show(Project $project): Response

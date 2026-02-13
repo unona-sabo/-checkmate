@@ -26,6 +26,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Projects
     Route::post('projects/reorder', [ProjectController::class, 'reorder'])->name('projects.reorder');
+    Route::get('projects/{project}/search', [ProjectController::class, 'search'])->name('projects.search');
     Route::resource('projects', ProjectController::class);
 
     // Checklists (nested under projects)

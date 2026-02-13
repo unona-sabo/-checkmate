@@ -56,11 +56,11 @@ const filteredDocs = computed(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                        <FileText class="h-6 w-6 text-primary" />
-                        Documentations
-                    </h1>
+                <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
+                    <FileText class="h-6 w-6 text-primary" />
+                    Documentations
+                </h1>
+                <div class="flex items-center gap-3">
                     <div class="relative">
                         <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
@@ -77,13 +77,13 @@ const filteredDocs = computed(() => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
+                    <Link :href="`/projects/${project.id}/documentations/create`">
+                        <Button variant="cta" class="gap-2">
+                            <Plus class="h-4 w-4" />
+                            Add Documentation
+                        </Button>
+                    </Link>
                 </div>
-                <Link :href="`/projects/${project.id}/documentations/create`">
-                    <Button variant="cta" class="gap-2">
-                        <Plus class="h-4 w-4" />
-                        Add Documentation
-                    </Button>
-                </Link>
             </div>
 
             <div v-if="filteredDocs.length === 0" class="flex flex-col items-center justify-center py-12">

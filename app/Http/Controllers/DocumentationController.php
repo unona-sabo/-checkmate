@@ -28,18 +28,27 @@ class DocumentationController extends Controller
         ]);
     }
 
-    public function create(Project $project): Response
+    public function create(Request $request, Project $project): Response
     {
         $this->authorize('update', $project);
 
-        $parentOptions = $project->documentations()
-            ->whereNull('parent_id')
-            ->orderBy('order')
-            ->get(['id', 'title']);
+        $defaultParentId = $request->integer('parent_id') ?: null;
+
+        $query = $project->documentations()->orderBy('order');
+
+        if ($defaultParentId) {
+            $query->where(function ($q) use ($defaultParentId) {
+                $q->where('id', $defaultParentId)
+                    ->orWhere('parent_id', $defaultParentId);
+            });
+        }
+
+        $parentOptions = $query->get(['id', 'title', 'parent_id']);
 
         return Inertia::render('Documentations/Create', [
             'project' => $project,
             'parentOptions' => $parentOptions,
+            'defaultParentId' => $defaultParentId,
         ]);
     }
 
@@ -86,7 +95,7 @@ class DocumentationController extends Controller
     {
         $this->authorize('view', $project);
 
-        $documentation->load(['children', 'attachments']);
+        $documentation->load(['children.children.children', 'attachments']);
 
         $allDocs = $project->documentations()
             ->whereNull('parent_id')
@@ -108,10 +117,10 @@ class DocumentationController extends Controller
         $documentation->load('attachments');
 
         $parentOptions = $project->documentations()
-            ->whereNull('parent_id')
             ->where('id', '!=', $documentation->id)
+            ->with('parent')
             ->orderBy('order')
-            ->get(['id', 'title']);
+            ->get(['id', 'title', 'parent_id']);
 
         return Inertia::render('Documentations/Edit', [
             'project' => $project,
