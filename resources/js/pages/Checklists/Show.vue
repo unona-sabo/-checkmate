@@ -33,7 +33,7 @@ import {
     ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
     Bold, Heading, GripHorizontal, StickyNote, Import, Pencil, X, Search,
     MoreHorizontal, Copy, Layers, Play, Download, Upload, FileSpreadsheet,
-    ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle, Columns3, Check
+    ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle, Columns3, Check, Link2
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
@@ -58,6 +58,32 @@ interface ExtendedChecklistRow extends ChecklistRow {
 interface ExtendedColumnConfig extends ColumnConfig {
     width?: number;
 }
+
+const copied = ref(false);
+
+const titleStart = computed(() => {
+    const words = props.checklist.name.split(' ');
+    return words.length > 1 ? words.slice(0, -1).join(' ') + ' ' : '';
+});
+const titleEnd = computed(() => {
+    const words = props.checklist.name.split(' ');
+    return words[words.length - 1];
+});
+
+const copyLink = () => {
+    const route = `/projects/${props.project.id}/checklists/${props.checklist.id}`;
+    const url = window.location.origin + route;
+    const textArea = document.createElement('textarea');
+    textArea.value = url;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 2000);
+};
 
 const rows = ref<ExtendedChecklistRow[]>(
     props.checklist.rows?.map(r => ({
@@ -210,34 +236,45 @@ const showAllRows = () => {
 
 // Navigate to row: clear search, show full table, scroll to row
 let highlightTimer: ReturnType<typeof setTimeout> | null = null;
+let isNavigating = false;
 
 const navigateToRow = (row: ExtendedChecklistRow) => {
     if (!searchQuery.value.trim()) return;
 
     const rowId = row.id;
-    searchQuery.value = '';
 
-    // Ensure the row is within the visible range
+    // Determine how many rows need to be visible so the target row is rendered
     const rowIndex = rows.value.findIndex(r => r.id === rowId);
-    if (rowIndex >= visibleRowCount.value) {
-        visibleRowCount.value = rowIndex + LOAD_MORE_COUNT;
-    }
+    const requiredCount = rowIndex >= 0 ? rowIndex + LOAD_MORE_COUNT : visibleRowCount.value;
 
-    if (highlightTimer) clearTimeout(highlightTimer);
-    highlightedRowId.value = rowId;
-    highlightTimer = setTimeout(() => {
-        highlightedRowId.value = null;
-    }, 2500);
+    // Skip the watcher reset while navigating — reset flag in nextTick
+    // because Vue 3 watch callbacks are async (flush: 'pre')
+    isNavigating = true;
+    searchQuery.value = '';
+    visibleRowCount.value = Math.max(requiredCount, INITIAL_ROWS);
 
+    // Wait for Vue to update the DOM, then for the browser to paint new rows
     nextTick(() => {
+        isNavigating = false;
         resizeAllTextareas();
-        nextTick(() => {
-            const container = scrollContainerRef.value;
-            if (!container) return;
-            const targetRow = container.querySelector(`tr[data-row-id="${rowId}"]`) as HTMLElement;
-            if (targetRow) {
-                targetRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
-            }
+
+        // requestAnimationFrame ensures the browser has painted new rows
+        // before we add the highlight class (so transition-all animates in)
+        requestAnimationFrame(() => {
+            if (highlightTimer) clearTimeout(highlightTimer);
+            highlightedRowId.value = rowId;
+            highlightTimer = setTimeout(() => {
+                highlightedRowId.value = null;
+            }, 2500);
+
+            nextTick(() => {
+                const container = scrollContainerRef.value;
+                if (!container) return;
+                const targetRow = container.querySelector(`tr[data-row-id="${rowId}"]`) as HTMLElement;
+                if (targetRow) {
+                    targetRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                }
+            });
         });
     });
 };
@@ -245,6 +282,7 @@ const navigateToRow = (row: ExtendedChecklistRow) => {
 const isSearchActive = computed(() => searchQuery.value.trim().length > 0);
 
 watch(searchQuery, () => {
+    if (isNavigating) return;
     visibleRowCount.value = INITIAL_ROWS;
 });
 
@@ -342,7 +380,9 @@ const onNoteDialogChange = (open: boolean) => {
         saveDraft();
     }
     if (!open) {
-        noteContent.value = '';
+        setTimeout(() => {
+            noteContent.value = '';
+        }, 200);
     }
 };
 
@@ -1041,9 +1081,12 @@ onMounted(() => {
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-8">
-                    <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                        <ClipboardList class="h-6 w-6 text-primary" />
-                        {{ checklist.name }}
+                    <h1 class="text-2xl font-bold tracking-tight">
+                        <ClipboardList class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
+                            @click="copyLink"
+                            class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
+                            :title="copied ? 'Copied!' : 'Copy link'"
+                        ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
                     </h1>
                     <div class="flex items-center gap-2">
                         <div class="relative">
@@ -1204,7 +1247,7 @@ onMounted(() => {
                                 {{ hasDraft ? 'Draft' : 'Create a Note' }}
                             </Button>
                         </DialogTrigger>
-                        <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col overflow-hidden">
+                        <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
                             <DialogHeader>
                                 <DialogTitle class="flex items-center gap-2">
                                     <StickyNote class="h-5 w-5 text-primary" />
@@ -1215,22 +1258,23 @@ onMounted(() => {
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div class="space-y-4 py-4 overflow-y-auto min-h-0 flex-1">
+                            <div class="space-y-4 py-4 px-0.5 overflow-y-auto min-h-0 flex-1">
                                 <div class="space-y-2">
                                     <Label>Notes</Label>
                                     <Textarea
-                                        v-model="noteContent"
+                                        :model-value="noteContent"
+                                        @update:model-value="noteContent = $event"
                                         placeholder="1. First item&#10;2. Second item&#10;3. Third item&#10;&#10;Or just write each item on a new line..."
                                         rows="10"
                                         class="font-mono text-sm resize-y"
-                                        style="word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap; overflow-y: auto; max-height: 400px;"
+                                        style="white-space: pre-wrap; overflow-wrap: break-word; overflow-y: auto; max-height: 400px;"
                                     />
                                     <p v-if="parsedNotes.length > 0" class="text-sm text-muted-foreground">
                                         {{ parsedNotes.length }} item(s) will be imported
                                     </p>
                                 </div>
 
-                                <div v-if="parsedNotes.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30 overflow-hidden">
+                                <div v-if="parsedNotes.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30">
                                     <div class="space-y-2">
                                         <Label>Import to Checklist</Label>
                                         <Select v-model="selectedChecklistId">

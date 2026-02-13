@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
-import { Play, Layers, FileText } from 'lucide-vue-next';
+import { Play, Layers, FileText, Boxes } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
@@ -194,7 +194,7 @@ const submit = () => {
                                                     @click="toggleSuite(suite.id)"
                                                     class="flex items-center gap-2 font-medium hover:text-primary cursor-pointer"
                                                 >
-                                                    <Layers class="h-4 w-4" />
+                                                    <Layers class="h-4 w-4 text-primary" />
                                                     {{ suite.name }}
                                                     <span class="text-xs text-muted-foreground">({{ getAllTestCases(suite).length }} cases)</span>
                                                 </button>
@@ -224,7 +224,7 @@ const submit = () => {
                                                                 :indeterminate="isSuitePartiallySelected(child)"
                                                                 @update:checked="toggleSuiteSelection(child)"
                                                             />
-                                                            <Layers class="h-3 w-3" />
+                                                            <Boxes class="h-3 w-3 text-yellow-500" />
                                                             <span class="font-medium text-sm">{{ child.name }}</span>
                                                         </div>
                                                         <div

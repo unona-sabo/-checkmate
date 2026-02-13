@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Play, Edit, CheckCircle2, XCircle, AlertTriangle,
-    SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X
+    SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check
 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
@@ -28,6 +28,32 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Test Runs', href: `/projects/${props.project.id}/test-runs` },
     { title: props.testRun.name, href: `/projects/${props.project.id}/test-runs/${props.testRun.id}` },
 ];
+
+const copied = ref(false);
+
+const titleStart = computed(() => {
+    const words = props.testRun.name.split(' ');
+    return words.length > 1 ? words.slice(0, -1).join(' ') + ' ' : '';
+});
+const titleEnd = computed(() => {
+    const words = props.testRun.name.split(' ');
+    return words[words.length - 1];
+});
+
+const copyLink = () => {
+    const route = `/projects/${props.project.id}/test-runs/${props.testRun.id}`;
+    const url = window.location.origin + route;
+    const textArea = document.createElement('textarea');
+    textArea.value = url;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 2000);
+};
 
 const selectedCase = ref<TestRunCase | null>(null);
 const showResultDialog = ref(false);
@@ -142,6 +168,15 @@ const filteredGroupedCases = computed(() => {
     }
     return filtered;
 });
+
+const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const highlight = (text: string): string => {
+    const safe = escapeHtml(text);
+    if (!searchQuery.value.trim()) return safe;
+    const query = escapeRegExp(searchQuery.value.trim());
+    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+};
 </script>
 
 <template>
@@ -152,9 +187,12 @@ const filteredGroupedCases = computed(() => {
             <!-- Header -->
             <div class="flex items-start justify-between">
                 <div>
-                    <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                        <Play class="h-6 w-6 text-primary" />
-                        {{ testRun.name }}
+                    <h1 class="text-2xl font-bold tracking-tight">
+                        <Play class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
+                            @click="copyLink"
+                            class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
+                            :title="copied ? 'Copied!' : 'Copy link'"
+                        ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
                     </h1>
                     <p v-if="testRun.description" class="mt-1 text-muted-foreground">
                         {{ testRun.description }}
@@ -252,32 +290,29 @@ const filteredGroupedCases = computed(() => {
             <div v-else class="space-y-4">
                 <div v-for="(cases, suiteName) in filteredGroupedCases" :key="suiteName">
                     <h3 class="mb-2 font-semibold">{{ suiteName }}</h3>
-                    <div class="space-y-2">
+                    <div class="space-y-1">
                         <Card
                             v-for="trc in cases"
                             :key="trc.id"
                             class="transition-all hover:border-primary/50"
                         >
-                            <CardContent class="flex items-center justify-between p-4">
+                            <CardContent class="flex items-center justify-between px-4 py-2">
                                 <div class="flex items-center gap-3 flex-1 min-w-0">
                                     <component
                                         :is="getStatusIcon(trc.status)"
-                                        :class="['h-5 w-5 shrink-0', getStatusColor(trc.status)]"
+                                        :class="['h-4 w-4 shrink-0', getStatusColor(trc.status)]"
                                     />
                                     <div class="min-w-0 flex-1">
-                                        <p class="font-medium truncate">{{ trc.test_case?.title }}</p>
-                                        <p v-if="trc.test_case?.expected_result" class="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                                            {{ trc.test_case.expected_result }}
-                                        </p>
-                                        <div class="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                            <Badge :class="getStatusBadgeColor(trc.status)" variant="outline" class="text-xs">
+                                        <div class="flex items-center gap-2">
+                                            <p class="text-sm font-medium truncate" v-html="highlight(trc.test_case?.title ?? '')" />
+                                            <Badge :class="getStatusBadgeColor(trc.status)" variant="outline" class="text-[10px] px-1.5 h-4 shrink-0">
                                                 {{ trc.status }}
                                             </Badge>
-                                            <span v-if="trc.assigned_user" class="flex items-center gap-1">
+                                            <span v-if="trc.assigned_user" class="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                                                 <User class="h-3 w-3" />
                                                 {{ trc.assigned_user.name }}
                                             </span>
-                                            <span v-if="trc.time_spent">{{ trc.time_spent }}min</span>
+                                            <span v-if="trc.time_spent" class="text-xs text-muted-foreground shrink-0">{{ trc.time_spent }}min</span>
                                         </div>
                                     </div>
                                 </div>
@@ -381,3 +416,11 @@ const filteredGroupedCases = computed(() => {
         </Dialog>
     </AppLayout>
 </template>
+
+<style scoped>
+:deep(.search-highlight) {
+    background-color: rgb(147 197 253 / 0.5);
+    border-radius: 0.125rem;
+    padding: 0.0625rem 0.125rem;
+}
+</style>

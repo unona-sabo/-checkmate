@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-    Plus, Edit, Layers, FileText, ArrowRight,
-    Zap, Bug, GripVertical, Boxes, ChevronRight, FolderPlus, Search, X
+    Plus, Edit, Layers, FileText,
+    Zap, Bug, GripVertical, Boxes, FolderPlus, Search, X
 } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { ref, computed } from 'vue';
@@ -113,6 +113,15 @@ const filteredSections = computed(() => {
         .filter(section => section.testCases.length > 0 || section.name.toLowerCase().includes(query));
 });
 
+const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const highlight = (text: string): string => {
+    const safe = escapeHtml(text);
+    if (!searchQuery.value.trim()) return safe;
+    const query = escapeRegExp(searchQuery.value.trim());
+    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+};
+
 // Drag and drop state per section
 const dragState = ref<{
     sectionId: number | null;
@@ -191,9 +200,9 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                        <Boxes v-if="testSuite.parent_id" class="h-6 w-6 text-yellow-500" />
-                        <Layers v-else class="h-6 w-6 text-primary" />
+                    <h1 class="flex items-start gap-2 text-2xl font-bold tracking-tight">
+                        <Boxes v-if="testSuite.parent_id" class="h-6 w-6 shrink-0 mt-1 text-yellow-500" />
+                        <Layers v-else class="h-6 w-6 shrink-0 mt-1 text-primary" />
                         {{ testSuite.name }}
                     </h1>
                     <div v-if="testSuite.parent" class="flex items-center gap-2 text-sm text-muted-foreground mt-1">
@@ -299,7 +308,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                                 <Layers v-else class="h-4 w-4 text-primary" />
                             </div>
                             <div class="min-w-0">
-                                <h3 class="font-semibold text-base group-hover/header:text-primary transition-colors truncate">{{ section.name }}</h3>
+                                <h3 class="font-semibold text-base group-hover/header:text-primary transition-colors truncate" v-html="highlight(section.name)" />
                                 <p v-if="section.isChild" class="text-xs text-muted-foreground">
                                     Subcategory
                                 </p>
@@ -321,9 +330,10 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
 
                     <!-- Test Cases -->
                     <div v-if="section.testCases.length" class="space-y-1.5">
-                        <div
+                        <Link
                             v-for="(testCase, tcIndex) in section.testCases"
                             :key="testCase.id"
+                            :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/${testCase.id}`"
                             class="group flex items-center justify-between px-4 py-2.5 rounded-xl border bg-card hover:border-primary/50 hover:shadow-sm transition-all duration-150"
                             :class="{
                                 'border-t-2 border-t-primary': dragState.sectionId === section.id && dragState.dragOverIndex === tcIndex,
@@ -338,35 +348,25 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                                     draggable="true"
                                     @dragstart="onDragStart(section.id, tcIndex, $event)"
                                     @dragend="onDragEnd"
+                                    @click.stop.prevent
                                     class="cursor-grab active:cursor-grabbing"
                                 >
                                     <GripVertical class="h-4 w-4 text-muted-foreground/50" />
                                 </div>
-                                <Link
-                                    :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/${testCase.id}`"
-                                    class="flex items-center gap-3 min-w-0 flex-1"
-                                >
-                                    <div class="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
-                                        <component :is="getTypeIcon(testCase.type)" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                                    </div>
-                                    <p class="text-sm font-normal truncate group-hover:text-primary transition-colors">
-                                        {{ testCase.title }}
-                                    </p>
-                                </Link>
+                                <div class="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
+                                    <component :is="getTypeIcon(testCase.type)" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                </div>
+                                <p class="text-sm font-normal truncate group-hover:text-primary transition-colors" v-html="highlight(testCase.title)" />
                             </div>
-                            <Link
-                                :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/${testCase.id}`"
-                                class="flex items-center gap-2 shrink-0 ml-4"
-                            >
+                            <div class="flex items-center gap-2 shrink-0 ml-4">
                                 <Badge :class="getPriorityColor(testCase.priority)" variant="outline" class="text-[10px] px-1.5 h-4 font-medium">
                                     {{ testCase.priority }}
                                 </Badge>
                                 <Badge variant="secondary" class="text-[10px] px-1.5 h-4 font-normal">
                                     {{ testCase.type }}
                                 </Badge>
-                                <ChevronRight class="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                            </Link>
-                        </div>
+                            </div>
+                        </Link>
                     </div>
 
                     <!-- Empty state for section -->
@@ -427,3 +427,11 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+:deep(.search-highlight) {
+    background-color: rgb(147 197 253 / 0.5);
+    border-radius: 0.125rem;
+    padding: 0.0625rem 0.125rem;
+}
+</style>

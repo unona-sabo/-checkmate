@@ -22,6 +22,7 @@ class TestRun extends Model
         'stats',
         'started_at',
         'completed_at',
+        'completed_by',
     ];
 
     protected function casts(): array
@@ -42,6 +43,14 @@ class TestRun extends Model
     }
 
     /**
+     * Get the user who completed the test run.
+     */
+    public function completedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'completed_by');
+    }
+
+    /**
      * Get all test run cases for the test run.
      */
     public function testRunCases(): HasMany
@@ -57,6 +66,7 @@ class TestRun extends Model
         $total = $this->testRunCases()->count();
         if ($total === 0) {
             $this->update(['progress' => 0]);
+
             return;
         }
 

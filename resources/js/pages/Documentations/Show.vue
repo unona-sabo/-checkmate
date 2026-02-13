@@ -4,7 +4,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Edit, Trash2, ChevronRight, Download, Paperclip, FolderTree, ExternalLink, Plus } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
+import { FileText, Edit, Trash2, ChevronRight, Download, Paperclip, FolderTree, ExternalLink, Plus, Search, X, Link2, Check } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 
 interface Documentation {
     id: number;
@@ -31,6 +33,81 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: props.documentation.title, href: `/projects/${props.project.id}/documentations/${props.documentation.id}` },
 ];
 
+const copied = ref(false);
+
+const titleStart = computed(() => {
+    const words = props.documentation.title.split(' ');
+    return words.length > 1 ? words.slice(0, -1).join(' ') + ' ' : '';
+});
+const titleEnd = computed(() => {
+    const words = props.documentation.title.split(' ');
+    return words[words.length - 1];
+});
+
+const copyLink = () => {
+    const route = `/projects/${props.project.id}/documentations/${props.documentation.id}`;
+    const url = window.location.origin + route;
+    const textArea = document.createElement('textarea');
+    textArea.value = url;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 2000);
+};
+
+const searchQuery = ref('');
+
+const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const filterChildren = (children: Documentation[]): Documentation[] => {
+    if (!searchQuery.value.trim()) return children;
+    const query = searchQuery.value.toLowerCase();
+    return children.filter(child => {
+        if (child.title.toLowerCase().includes(query)) return true;
+        if (child.children?.length) return filterChildren(child.children).length > 0;
+        return false;
+    });
+};
+
+const filteredChildren = computed(() => {
+    return filterChildren(props.documentation.children ?? []);
+});
+
+const filteredGrandchildren = (children: Documentation[]): Documentation[] => {
+    return filterChildren(children);
+};
+
+const highlightedContent = computed(() => {
+    if (!props.documentation.content) return null;
+    if (!searchQuery.value.trim()) return props.documentation.content;
+
+    const query = escapeRegExp(searchQuery.value.trim());
+    const regex = new RegExp(`(?<=>)([^<]*?)(?=${query})`, 'i');
+
+    // Highlight text nodes only (not inside tags)
+    return props.documentation.content.replace(
+        new RegExp(`(>)([^<]*?)(<)`, 'g'),
+        (match, open, text, close) => {
+            const highlighted = text.replace(
+                new RegExp(`(${query})`, 'gi'),
+                '<mark class="search-highlight">$1</mark>',
+            );
+            return open + highlighted + close;
+        },
+    ).replace(
+        // Also handle text at the very start (before first tag)
+        new RegExp(`^([^<]+)`),
+        (text) => text.replace(
+            new RegExp(`(${query})`, 'gi'),
+            '<mark class="search-highlight">$1</mark>',
+        ),
+    );
+});
+
 const isImage = (mimeType: string): boolean => mimeType.startsWith('image/');
 
 const formatFileSize = (bytes: number): string => {
@@ -52,9 +129,12 @@ const imageAttachments = (attachments?: Attachment[]) =>
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
-                <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                    <FileText class="h-6 w-6 text-primary" />
-                    {{ documentation.title }}
+                <h1 class="text-2xl font-bold tracking-tight">
+                    <FileText class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
+                        @click="copyLink"
+                        class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
+                        :title="copied ? 'Copied!' : 'Copy link'"
+                    ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
                 </h1>
                 <div class="flex gap-2">
                     <Link :href="`/projects/${project.id}/documentations/${documentation.id}/edit`">
@@ -92,10 +172,26 @@ const imageAttachments = (attachments?: Attachment[]) =>
                                     </Button>
                                 </Link>
                             </div>
+                            <div class="relative mt-2">
+                                <Search class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    v-model="searchQuery"
+                                    type="text"
+                                    placeholder="Search..."
+                                    class="pl-7 pr-7 h-8 text-xs bg-background/60"
+                                />
+                                <button
+                                    v-if="searchQuery"
+                                    @click="searchQuery = ''"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                                >
+                                    <X class="h-3.5 w-3.5" />
+                                </button>
+                            </div>
                         </div>
-                        <div class="p-2 space-y-0.5 max-h-[calc(100vh-220px)] overflow-y-auto">
-                            <template v-if="documentation.children?.length">
-                                <template v-for="child in documentation.children" :key="child.id">
+                        <div class="p-2 space-y-0.5 max-h-[calc(100vh-270px)] overflow-y-auto">
+                            <template v-if="filteredChildren.length">
+                                <template v-for="child in filteredChildren" :key="child.id">
                                     <div class="group flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-all duration-150 hover:bg-muted/70">
                                         <Link
                                             :href="`/projects/${project.id}/documentations/${child.id}`"
@@ -114,7 +210,7 @@ const imageAttachments = (attachments?: Attachment[]) =>
                                     </div>
                                     <!-- Nested children (level 2) -->
                                     <template v-if="child.children?.length">
-                                        <template v-for="grandchild in child.children" :key="grandchild.id">
+                                        <template v-for="grandchild in filteredGrandchildren(child.children)" :key="grandchild.id">
                                             <div class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-4 cursor-pointer transition-all duration-150 hover:bg-muted/70">
                                                 <Link
                                                     :href="`/projects/${project.id}/documentations/${grandchild.id}`"
@@ -156,6 +252,9 @@ const imageAttachments = (attachments?: Attachment[]) =>
                                     </template>
                                 </template>
                             </template>
+                            <div v-else-if="searchQuery.trim() && documentation.children?.length" class="px-3 py-2 text-sm text-muted-foreground">
+                                No matches found
+                            </div>
                             <div v-else class="px-3 py-2 text-sm text-muted-foreground">
                                 No subcategories
                             </div>
@@ -175,7 +274,7 @@ const imageAttachments = (attachments?: Attachment[]) =>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div v-if="documentation.content" class="prose prose-sm max-w-none" v-html="documentation.content" />
+                            <div v-if="documentation.content" class="prose prose-sm max-w-none" v-html="highlightedContent" />
                             <p v-else class="text-muted-foreground italic">No content yet.</p>
                         </CardContent>
                     </Card>
@@ -183,8 +282,8 @@ const imageAttachments = (attachments?: Attachment[]) =>
                     <!-- Attachments -->
                     <Card v-if="documentation.attachments && documentation.attachments.length > 0" class="mt-6">
                         <CardHeader>
-                            <CardTitle class="text-base flex items-center gap-2">
-                                <Paperclip class="h-4 w-4" />
+                            <CardTitle class="text-base flex items-start gap-2">
+                                <Paperclip class="h-4 w-4 shrink-0 mt-0.5" />
                                 Attachments
                             </CardTitle>
                         </CardHeader>
@@ -254,8 +353,8 @@ const imageAttachments = (attachments?: Attachment[]) =>
                             <Card v-for="child in documentation.children" :key="child.id" class="hover:border-primary transition-colors cursor-pointer">
                                 <CardHeader class="pb-2">
                                     <Link :href="`/projects/${project.id}/documentations/${child.id}`" class="cursor-pointer">
-                                        <CardTitle class="text-base flex items-center gap-2">
-                                            <FileText class="h-4 w-4 text-primary" />
+                                        <CardTitle class="text-base flex items-start gap-2">
+                                            <FileText class="h-4 w-4 shrink-0 mt-0.5 text-primary" />
                                             {{ child.title }}
                                         </CardTitle>
                                     </Link>
@@ -349,5 +448,11 @@ const imageAttachments = (attachments?: Attachment[]) =>
 
 .prose p {
     margin: 0.25rem 0;
+}
+
+.search-highlight {
+    background-color: rgb(147 197 253 / 0.5);
+    border-radius: 0.125rem;
+    padding: 0.0625rem 0.125rem;
 }
 </style>

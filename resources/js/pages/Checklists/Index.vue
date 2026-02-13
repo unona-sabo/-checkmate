@@ -54,6 +54,15 @@ const filteredChecklists = computed(() => {
     );
 });
 
+const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const highlight = (text: string): string => {
+    const safe = escapeHtml(text);
+    if (!searchQuery.value.trim()) return safe;
+    const query = escapeRegExp(searchQuery.value.trim());
+    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+};
+
 const showNoteDialog = ref(false);
 const showDeleteConfirm = ref(false);
 const noteContent = ref('');
@@ -221,10 +230,12 @@ const onDialogClose = (open: boolean) => {
         saveDraft();
     }
     if (!open) {
-        // Reset state but don't delete draft
-        noteContent.value = '';
-        selectedChecklistId.value = null;
-        selectedColumnKey.value = '';
+        // Reset state after close animation completes
+        setTimeout(() => {
+            noteContent.value = '';
+            selectedChecklistId.value = null;
+            selectedColumnKey.value = '';
+        }, 200);
     }
 };
 </script>
@@ -236,8 +247,8 @@ const onDialogClose = (open: boolean) => {
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                        <ClipboardList class="h-6 w-6 text-primary" />
+                    <h1 class="flex items-start gap-2 text-2xl font-bold tracking-tight">
+                        <ClipboardList class="h-6 w-6 shrink-0 mt-1 text-primary" />
                         Checklists
                     </h1>
                     <p class="text-muted-foreground">Create and manage custom checklists</p>
@@ -266,7 +277,7 @@ const onDialogClose = (open: boolean) => {
                                 Create a Note
                             </Button>
                         </DialogTrigger>
-                        <DialogContent class="max-w-2xl">
+                        <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
                             <DialogHeader>
                                 <DialogTitle class="flex items-center gap-2">
                                     <StickyNote class="h-5 w-5 text-primary" />
@@ -277,14 +288,15 @@ const onDialogClose = (open: boolean) => {
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div class="space-y-4 py-4">
+                            <div class="space-y-4 py-4 px-0.5 overflow-y-auto min-h-0 flex-1">
                                 <div class="space-y-2">
                                     <Label>Notes</Label>
                                     <Textarea
                                         v-model="noteContent"
                                         placeholder="1. First item&#10;2. Second item&#10;3. Third item&#10;&#10;Or just write each item on a new line..."
                                         rows="10"
-                                        class="font-mono text-sm"
+                                        class="font-mono text-sm resize-y"
+                                        style="white-space: pre-wrap; overflow-wrap: break-word; overflow-y: auto; max-height: 400px;"
                                     />
                                     <p v-if="parsedNotes.length > 0" class="text-sm text-muted-foreground">
                                         {{ parsedNotes.length }} item(s) will be imported
@@ -320,11 +332,11 @@ const onDialogClose = (open: boolean) => {
                                         </Select>
                                     </div>
 
-                                    <div v-if="parsedNotes.length > 0" class="space-y-2">
+                                    <div v-if="parsedNotes.length > 0" class="space-y-2 overflow-hidden">
                                         <Label>Preview</Label>
-                                        <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm">
+                                        <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word;">
                                             <ol class="list-decimal list-inside space-y-1">
-                                                <li v-for="(note, index) in parsedNotes.slice(0, 10)" :key="index" class="truncate">
+                                                <li v-for="(note, index) in parsedNotes.slice(0, 10)" :key="index" class="break-words whitespace-pre-wrap" style="overflow-wrap: break-word; word-break: break-all;">
                                                     {{ note }}
                                                 </li>
                                                 <li v-if="parsedNotes.length > 10" class="text-muted-foreground">
@@ -367,7 +379,7 @@ const onDialogClose = (open: boolean) => {
                     <Link :href="`/projects/${project.id}/checklists/create`">
                         <Button variant="cta" class="gap-2">
                             <Plus class="h-4 w-4" />
-                            New Checklist
+                            Checklist
                         </Button>
                     </Link>
                 </div>
@@ -427,11 +439,11 @@ const onDialogClose = (open: boolean) => {
                     <Card class="transition-all hover:border-primary cursor-pointer h-full flex flex-col">
                         <CardHeader class="flex-1">
                             <CardTitle class="flex items-center justify-between">
-                                <span class="flex items-center gap-2">
-                                    <ClipboardList class="h-5 w-5 text-primary" />
-                                    {{ checklist.name }}
+                                <span class="flex items-start gap-2">
+                                    <ClipboardList class="h-5 w-5 shrink-0 mt-0.5 text-primary" />
+                                    <span v-html="highlight(checklist.name)" />
                                 </span>
-                                <ArrowRight class="h-4 w-4 text-muted-foreground" />
+                                <ArrowRight class="h-4 w-4 shrink-0 text-muted-foreground" />
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -466,3 +478,11 @@ const onDialogClose = (open: boolean) => {
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+:deep(.search-highlight) {
+    background-color: rgb(147 197 253 / 0.5);
+    border-radius: 0.125rem;
+    padding: 0.0625rem 0.125rem;
+}
+</style>

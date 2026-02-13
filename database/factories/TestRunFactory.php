@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Project;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -53,6 +54,7 @@ class TestRunFactory extends Factory
             'status' => 'completed',
             'progress' => 100,
             'completed_at' => now(),
+            'completed_by' => User::factory(),
         ]);
     }
 }

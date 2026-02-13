@@ -28,6 +28,10 @@ class TestRunCaseController extends Controller
 
         $testRunCase->update($validated);
 
+        if ($validated['status'] !== 'untested' && $testRun->started_at === null) {
+            $testRun->update(['started_at' => now()]);
+        }
+
         $testRun->updateProgress();
         $testRun->updateStats();
 
@@ -62,6 +66,10 @@ class TestRunCaseController extends Controller
             TestRunCase::whereIn('id', $validated['test_run_case_ids'])
                 ->where('test_run_id', $testRun->id)
                 ->update($updateData);
+        }
+
+        if (isset($validated['status']) && $validated['status'] !== 'untested' && $testRun->started_at === null) {
+            $testRun->update(['started_at' => now()]);
         }
 
         $testRun->updateProgress();

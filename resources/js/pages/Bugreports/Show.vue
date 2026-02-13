@@ -4,7 +4,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Bug, Edit, Trash2, Paperclip, Download } from 'lucide-vue-next';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Bug, Edit, Trash2, Paperclip, Download, Link2, Check } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 
 interface Bugreport {
     id: number;
@@ -76,17 +78,51 @@ const formatFileSize = (bytes: number): string => {
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / 1048576).toFixed(1) + ' MB';
 };
+
+const copied = ref(false);
+const showDeleteConfirm = ref(false);
+
+const titleStart = computed(() => {
+    const words = props.bugreport.title.split(' ');
+    return words.length > 1 ? words.slice(0, -1).join(' ') + ' ' : '';
+});
+const titleEnd = computed(() => {
+    const words = props.bugreport.title.split(' ');
+    return words[words.length - 1];
+});
+
+const copyLink = () => {
+    const route = `/projects/${props.project.id}/bugreports/${props.bugreport.id}`;
+    const url = window.location.origin + route;
+    const textArea = document.createElement('textarea');
+    textArea.value = url;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 2000);
+};
+
+const formatDate = (date: string): string => {
+    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
 </script>
 
 <template>
     <Head :title="bugreport.title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 p-6">
+        <div class="flex h-full flex-1 flex-col gap-[15px] p-6">
             <div class="flex items-center justify-between">
-                <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                    <Bug class="h-6 w-6 text-primary" />
-                    {{ bugreport.title }}
+                <h1 class="text-2xl font-bold tracking-tight">
+                    <Bug class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
+                        @click="copyLink"
+                        class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
+                        :title="copied ? 'Copied!' : 'Copy link'"
+                    ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
                 </h1>
                 <div class="flex gap-2">
                     <Link :href="`/projects/${project.id}/bugreports/${bugreport.id}/edit`">
@@ -95,21 +131,15 @@ const formatFileSize = (bytes: number): string => {
                             Edit
                         </Button>
                     </Link>
-                    <Link
-                        :href="`/projects/${project.id}/bugreports/${bugreport.id}`"
-                        method="delete"
-                        as="button"
-                    >
-                        <Button variant="destructive" class="gap-2">
-                            <Trash2 class="h-4 w-4" />
-                            Delete
-                        </Button>
-                    </Link>
+                    <Button variant="destructive" class="gap-2" @click="showDeleteConfirm = true">
+                        <Trash2 class="h-4 w-4" />
+                        Delete
+                    </Button>
                 </div>
             </div>
 
-            <div class="grid gap-6 lg:grid-cols-3">
-                <div class="lg:col-span-2 space-y-6">
+            <div class="grid gap-[15px] lg:grid-cols-3">
+                <div class="lg:col-span-2 space-y-[15px]">
                     <Card>
                         <CardHeader>
                             <CardTitle>Description</CardTitle>
@@ -209,46 +239,80 @@ const formatFileSize = (bytes: number): string => {
                     </Card>
                 </div>
 
-                <div class="space-y-6">
+                <div class="space-y-[15px]">
                     <Card>
                         <CardHeader>
                             <CardTitle>Details</CardTitle>
                         </CardHeader>
-                        <CardContent class="space-y-4">
+                        <CardContent class="space-y-3">
                             <div>
-                                <p class="text-sm text-muted-foreground">Status</p>
+                                <p class="text-xs text-muted-foreground">Status</p>
                                 <span :class="['px-2 py-1 rounded text-xs font-medium', getStatusColor(bugreport.status)]">
                                     {{ bugreport.status.replace('_', ' ') }}
                                 </span>
                             </div>
                             <div>
-                                <p class="text-sm text-muted-foreground">Severity</p>
+                                <p class="text-xs text-muted-foreground">Severity</p>
                                 <span :class="['px-2 py-1 rounded text-xs font-medium', getSeverityColor(bugreport.severity)]">
                                     {{ bugreport.severity }}
                                 </span>
                             </div>
                             <div>
-                                <p class="text-sm text-muted-foreground">Priority</p>
+                                <p class="text-xs text-muted-foreground">Priority</p>
                                 <span :class="['px-2 py-1 rounded text-xs font-medium', getPriorityColor(bugreport.priority)]">
                                     {{ bugreport.priority }}
                                 </span>
                             </div>
                             <div v-if="bugreport.environment">
-                                <p class="text-sm text-muted-foreground">Environment</p>
-                                <p class="font-medium">{{ bugreport.environment }}</p>
+                                <p class="text-xs text-muted-foreground">Environment</p>
+                                <p class="text-sm font-medium">{{ bugreport.environment }}</p>
                             </div>
                             <div v-if="bugreport.reporter">
-                                <p class="text-sm text-muted-foreground">Reported by</p>
-                                <p class="font-medium">{{ bugreport.reporter.name }}</p>
+                                <p class="text-xs text-muted-foreground">Reported by</p>
+                                <p class="text-sm font-medium">{{ bugreport.reporter.name }}</p>
                             </div>
                             <div v-if="bugreport.assignee">
-                                <p class="text-sm text-muted-foreground">Assigned to</p>
-                                <p class="font-medium">{{ bugreport.assignee.name }}</p>
+                                <p class="text-xs text-muted-foreground">Assigned to</p>
+                                <p class="text-sm font-medium">{{ bugreport.assignee.name }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-muted-foreground">Created</p>
+                                <p class="text-sm font-medium">{{ formatDate(bugreport.created_at) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-muted-foreground">Updated</p>
+                                <p class="text-sm font-medium">{{ formatDate(bugreport.updated_at) }}</p>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
             </div>
         </div>
+
+        <!-- Delete Confirmation Dialog -->
+        <Dialog v-model:open="showDeleteConfirm">
+            <DialogContent class="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Delete Bug Report?</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to delete this bug report? This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="flex gap-4 sm:justify-end">
+                    <Button variant="secondary" @click="showDeleteConfirm = false" class="flex-1 sm:flex-none">
+                        No
+                    </Button>
+                    <Link
+                        :href="`/projects/${project.id}/bugreports/${bugreport.id}`"
+                        method="delete"
+                        as="button"
+                    >
+                        <Button variant="destructive" class="flex-1 sm:flex-none">
+                            Yes
+                        </Button>
+                    </Link>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

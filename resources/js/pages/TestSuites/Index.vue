@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite, type TestCase } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ChevronRight, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil } from 'lucide-vue-next';
+import { Plus, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import {
     DropdownMenu,
@@ -460,6 +460,15 @@ const filteredFlatSuites = computed(() => {
         .filter(suite => suite.testCases.length > 0 || suite.name.toLowerCase().includes(query));
 });
 
+const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const highlight = (text: string): string => {
+    const safe = escapeHtml(text);
+    if (!searchQuery.value.trim()) return safe;
+    const query = escapeRegExp(searchQuery.value.trim());
+    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+};
+
 // Note dialog state
 const showNoteDialog = ref(false);
 const noteContent = ref('');
@@ -663,7 +672,7 @@ onMounted(() => {
                 <!-- Action Header -->
                 <div class="flex items-center mb-3 gap-6">
                     <!-- Spacer for left column -->
-                    <div class="w-[480px] shrink-0"></div>
+                    <div class="w-[430px] shrink-0"></div>
                     <!-- Right side - Selection controls and New Test Suite button -->
                     <div class="flex items-center justify-between flex-1 max-w-4xl pr-2">
                         <div v-if="localTotalTestCases > 0 && filteredFlatSuites.length > 0" class="flex items-center gap-3">
@@ -741,10 +750,10 @@ onMounted(() => {
                                     >
                                         <Pencil v-if="hasDraft" class="h-4 w-4" />
                                         <StickyNote v-else class="h-4 w-4" />
-                                        {{ hasDraft ? 'Continue Draft' : 'Create a Note' }}
+                                        {{ hasDraft ? 'Draft' : 'Create a Note' }}
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col overflow-hidden">
+                                <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
                                     <DialogHeader>
                                         <DialogTitle class="flex items-center gap-2">
                                             <StickyNote class="h-5 w-5 text-primary" />
@@ -755,7 +764,7 @@ onMounted(() => {
                                         </DialogDescription>
                                     </DialogHeader>
 
-                                    <div class="space-y-4 py-4 overflow-y-auto min-h-0 flex-1">
+                                    <div class="space-y-4 py-4 px-0.5 overflow-y-auto min-h-0 flex-1">
                                         <div class="space-y-2">
                                             <Label>Test Case Title</Label>
                                             <Input
@@ -779,9 +788,9 @@ onMounted(() => {
                                             </p>
                                         </div>
 
-                                        <div v-if="parsedSteps.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30 overflow-hidden">
-                                            <div class="grid grid-cols-2 gap-3">
-                                                <div class="space-y-2">
+                                        <div v-if="parsedSteps.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30">
+                                            <div class="grid gap-3">
+                                                <div class="space-y-2 min-w-0">
                                                     <Label>Test Suite</Label>
                                                     <Select v-model="selectedParentSuiteId">
                                                         <SelectTrigger>
@@ -798,7 +807,7 @@ onMounted(() => {
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
-                                                <div class="space-y-2">
+                                                <div class="space-y-2 min-w-0">
                                                     <Label>Subcategory <span class="text-muted-foreground font-normal">(optional)</span></Label>
                                                     <Select v-model="selectedSubcategoryId" :disabled="!subcategoryOptions.length">
                                                         <SelectTrigger>
@@ -873,7 +882,7 @@ onMounted(() => {
                 <!-- Two Column Layout -->
                 <div class="flex gap-6 flex-1 min-h-0">
                 <!-- Left: Test Suites Navigation -->
-                <div class="w-[480px] shrink-0">
+                <div class="w-[430px] shrink-0">
                     <div class="sticky top-0 rounded-xl border bg-card shadow-sm">
                         <div class="p-3 border-b bg-muted/30">
                             <div class="flex items-center gap-2 text-sm font-medium">
@@ -1022,9 +1031,9 @@ onMounted(() => {
                                         <Layers v-else class="h-4 w-4 text-primary" />
                                     </div>
                                     <div class="min-w-0">
-                                        <h3 :class="suite.parentName ? 'font-semibold text-sm' : 'font-semibold text-base'" class="group-hover/header:text-primary transition-colors truncate">{{ suite.name }}</h3>
+                                        <h3 :class="suite.parentName ? 'font-semibold text-sm' : 'font-semibold text-base'" class="group-hover/header:text-primary transition-colors truncate" v-html="highlight(suite.name)" />
                                         <p v-if="suite.parentName" class="text-[11px] text-muted-foreground truncate">
-                                            in {{ suite.parentName }}
+                                            in <span v-html="highlight(suite.parentName ?? '')" />
                                         </p>
                                     </div>
                                     <Badge variant="secondary" :class="suite.parentName ? 'text-[11px] ml-1' : 'text-xs ml-2'" class="shrink-0 font-normal bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800">
@@ -1044,9 +1053,10 @@ onMounted(() => {
 
                             <!-- Test Cases -->
                             <div v-if="suite.testCases.length" class="space-y-[3px]">
-                                <div
+                                <Link
                                     v-for="(testCase, tcIndex) in suite.testCases"
                                     :key="testCase.id"
+                                    :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/${testCase.id}`"
                                     class="group flex items-center justify-between px-4 py-2.5 rounded-xl border bg-card hover:border-primary/50 hover:shadow-sm transition-all duration-150"
                                     :class="{
                                         'border-t-2 border-t-primary': dragOverTestCase?.suiteId === suite.id && dragOverTestCase?.index === tcIndex,
@@ -1063,7 +1073,7 @@ onMounted(() => {
                                             :class="isTestCaseSelected(testCase.id)
                                                 ? 'bg-primary border-primary text-primary-foreground'
                                                 : 'border-input'"
-                                            @click.stop="toggleTestCaseSelection(testCase.id)"
+                                            @click.stop.prevent="toggleTestCaseSelection(testCase.id)"
                                         >
                                             <Check v-if="isTestCaseSelected(testCase.id)" class="h-3 w-3" />
                                         </div>
@@ -1071,35 +1081,25 @@ onMounted(() => {
                                             draggable="true"
                                             @dragstart="onTestCaseDragStart(suite.id, tcIndex, testCase, $event)"
                                             @dragend="onTestCaseDragEnd"
+                                            @click.stop.prevent
                                             class="cursor-grab active:cursor-grabbing"
                                         >
                                             <GripVertical class="h-4 w-4 text-muted-foreground/50" />
                                         </div>
-                                        <Link
-                                            :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/${testCase.id}`"
-                                            class="flex items-center gap-3 min-w-0 flex-1"
-                                        >
-                                            <div class="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
-                                                <FileText class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                                            </div>
-                                            <p class="text-sm font-normal truncate group-hover:text-primary transition-colors">
-                                                {{ testCase.title }}
-                                            </p>
-                                        </Link>
+                                        <div class="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
+                                            <FileText class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                        </div>
+                                        <p class="text-sm font-normal truncate group-hover:text-primary transition-colors" v-html="highlight(testCase.title)" />
                                     </div>
-                                    <Link
-                                        :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/${testCase.id}`"
-                                        class="flex items-center gap-2 shrink-0 ml-4"
-                                    >
+                                    <div class="flex items-center gap-2 shrink-0 ml-4">
                                         <Badge :class="getPriorityColor(testCase.priority)" variant="outline" class="text-[10px] px-1.5 h-4 font-medium">
                                             {{ testCase.priority }}
                                         </Badge>
                                         <Badge variant="secondary" class="text-[10px] px-1.5 h-4 font-normal">
                                             {{ testCase.type }}
                                         </Badge>
-                                        <ChevronRight class="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                    </Link>
-                                </div>
+                                    </div>
+                                </Link>
                             </div>
 
                         </div>
@@ -1110,3 +1110,11 @@ onMounted(() => {
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+:deep(.search-highlight) {
+    background-color: rgb(147 197 253 / 0.5);
+    border-radius: 0.125rem;
+    padding: 0.0625rem 0.125rem;
+}
+</style>

@@ -141,8 +141,8 @@ const getBugStatusColor = (status: string) => {
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                        <FolderOpen class="h-6 w-6 text-primary" />
+                    <h1 class="flex items-start gap-2 text-2xl font-bold tracking-tight">
+                        <FolderOpen class="h-6 w-6 shrink-0 mt-1 text-primary" />
                         {{ project.name }}
                     </h1>
                     <p class="text-muted-foreground">
@@ -361,14 +361,14 @@ const getBugStatusColor = (status: string) => {
                                 :href="`/projects/${project.id}/test-runs/${run.id}`"
                                 class="flex items-center justify-between rounded border px-3 py-2 text-sm transition-colors hover:bg-muted/50 cursor-pointer"
                             >
-                                <div class="flex items-center gap-2 min-w-0">
-                                    <span class="font-medium truncate">{{ run.name }}</span>
-                                    <Badge :class="getStatusColor(run.status)" variant="outline" class="text-xs px-1.5 py-0 h-5 shrink-0">
+                                <span class="font-medium truncate min-w-0">{{ run.name }}</span>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <span class="text-xs text-muted-foreground">{{ run.progress }}%</span>
+                                    <Badge :class="getStatusColor(run.status)" variant="outline" class="text-xs px-1.5 py-0 h-5">
                                         {{ run.status }}
                                     </Badge>
-                                    <span class="text-xs text-muted-foreground shrink-0">{{ run.progress }}%</span>
+                                    <ArrowRight class="h-4 w-4 text-muted-foreground" />
                                 </div>
-                                <ArrowRight class="h-4 w-4 text-muted-foreground shrink-0" />
                             </Link>
                         </div>
                         <div v-else class="py-3 text-center text-sm text-muted-foreground">

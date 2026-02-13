@@ -15,6 +15,7 @@ class TestRunController extends Controller
         $this->authorize('view', $project);
 
         $testRuns = $project->testRuns()
+            ->with('completedByUser:id,name')
             ->withCount('testRunCases')
             ->latest()
             ->get();
@@ -59,7 +60,6 @@ class TestRunController extends Controller
             'environment' => $validated['environment'],
             'milestone' => $validated['milestone'],
             'status' => 'active',
-            'started_at' => now(),
         ]);
 
         foreach ($validated['test_case_ids'] as $testCaseId) {
@@ -114,6 +114,7 @@ class TestRunController extends Controller
 
         if ($validated['status'] === 'completed' && $testRun->status !== 'completed') {
             $validated['completed_at'] = now();
+            $validated['completed_by'] = auth()->id();
         }
 
         $testRun->update($validated);
@@ -139,6 +140,7 @@ class TestRunController extends Controller
         $testRun->update([
             'status' => 'completed',
             'completed_at' => now(),
+            'completed_by' => auth()->id(),
         ]);
 
         return back()->with('success', 'Test run completed.');

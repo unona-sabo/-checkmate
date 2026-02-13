@@ -65,6 +65,15 @@ const getStatusColor = (status: string) => {
         default: return 'bg-gray-100 text-gray-800';
     }
 };
+
+const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const highlight = (text: string): string => {
+    const safe = escapeHtml(text);
+    if (!searchQuery.value.trim()) return safe;
+    const query = escapeRegExp(searchQuery.value.trim());
+    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+};
 </script>
 
 <template>
@@ -73,8 +82,8 @@ const getStatusColor = (status: string) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
-                <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                    <Bug class="h-6 w-6 text-primary" />
+                <h1 class="flex items-start gap-2 text-2xl font-bold tracking-tight">
+                    <Bug class="h-6 w-6 shrink-0 mt-1 text-primary" />
                     Bugreports
                 </h1>
                 <div class="flex items-center gap-2">
@@ -121,7 +130,7 @@ const getStatusColor = (status: string) => {
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-2">
                                         <Bug class="h-4 w-4 text-primary shrink-0" />
-                                        <h3 class="text-base font-semibold truncate">{{ bug.title }}</h3>
+                                        <h3 class="text-base font-semibold truncate" v-html="highlight(bug.title)" />
                                         <span :class="['px-1.5 py-0 rounded text-[10px] font-medium h-4 inline-flex items-center shrink-0', getSeverityColor(bug.severity)]">
                                             {{ bug.severity }}
                                         </span>
@@ -135,7 +144,7 @@ const getStatusColor = (status: string) => {
                                             <span class="text-muted-foreground/50">→</span>
                                             {{ bug.assignee.name }}
                                         </span>
-                                        <span v-if="bug.description" class="truncate max-w-xs text-muted-foreground/70">{{ bug.description }}</span>
+                                        <span v-if="bug.description" class="truncate max-w-xs text-muted-foreground/70" v-html="highlight(bug.description)" />
                                     </div>
                                 </div>
                             </div>
@@ -146,3 +155,11 @@ const getStatusColor = (status: string) => {
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+:deep(.search-highlight) {
+    background-color: rgb(147 197 253 / 0.5);
+    border-radius: 0.125rem;
+    padding: 0.0625rem 0.125rem;
+}
+</style>

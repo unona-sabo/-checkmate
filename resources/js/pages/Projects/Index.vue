@@ -17,12 +17,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // Colors for project cards
 const cardColors = [
+    { bg: 'bg-blue-700/10', icon: 'text-blue-700', accent: 'bg-blue-700', glow: 'shadow-blue-700/20' },
+    { bg: 'bg-yellow-500/10', icon: 'text-yellow-500', accent: 'bg-yellow-500', glow: 'shadow-yellow-500/20' },
     { bg: 'bg-blue-500/10', icon: 'text-blue-500', accent: 'bg-blue-500', glow: 'shadow-blue-500/20' },
-    { bg: 'bg-emerald-500/10', icon: 'text-emerald-500', accent: 'bg-emerald-500', glow: 'shadow-emerald-500/20' },
-    { bg: 'bg-violet-500/10', icon: 'text-violet-500', accent: 'bg-violet-500', glow: 'shadow-violet-500/20' },
-    { bg: 'bg-amber-500/10', icon: 'text-amber-500', accent: 'bg-amber-500', glow: 'shadow-amber-500/20' },
-    { bg: 'bg-rose-500/10', icon: 'text-rose-500', accent: 'bg-rose-500', glow: 'shadow-rose-500/20' },
-    { bg: 'bg-cyan-500/10', icon: 'text-cyan-500', accent: 'bg-cyan-500', glow: 'shadow-cyan-500/20' },
 ];
 
 const getCardColor = (index: number) => cardColors[index % cardColors.length];
@@ -93,8 +90,8 @@ const saveOrder = () => {
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                        <FolderKanban class="h-6 w-6 text-primary" />
+                    <h1 class="flex items-start gap-2 text-2xl font-bold tracking-tight">
+                        <FolderKanban class="h-6 w-6 shrink-0 mt-1 text-primary" />
                         Projects
                     </h1>
                     <p class="text-muted-foreground">
@@ -170,15 +167,15 @@ const saveOrder = () => {
                             <CardContent class="p-4 pt-0 relative">
                                 <div class="flex gap-3 text-sm">
                                     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50">
-                                        <CheckSquare class="h-4 w-4 text-emerald-500" />
+                                        <CheckSquare class="h-4 w-4 text-blue-700" />
                                         <span class="font-medium">{{ project.checklists_count || 0 }}</span>
                                     </div>
                                     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50">
-                                        <Layers class="h-4 w-4 text-blue-500" />
+                                        <Layers class="h-4 w-4 text-yellow-500" />
                                         <span class="font-medium">{{ project.test_suites_count || 0 }}</span>
                                     </div>
                                     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50">
-                                        <PlayCircle class="h-4 w-4 text-violet-500" />
+                                        <PlayCircle class="h-4 w-4 text-blue-500" />
                                         <span class="font-medium">{{ project.test_runs_count || 0 }}</span>
                                     </div>
                                 </div>

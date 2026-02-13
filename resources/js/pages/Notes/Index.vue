@@ -83,8 +83,8 @@ const deleteNote = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
-                <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                    <StickyNote class="h-6 w-6 text-primary" />
+                <h1 class="flex items-start gap-2 text-2xl font-bold tracking-tight">
+                    <StickyNote class="h-6 w-6 shrink-0 mt-1 text-primary" />
                     Notes
                 </h1>
                 <Link :href="`/projects/${project.id}/notes/create`">

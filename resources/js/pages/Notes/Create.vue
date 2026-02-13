@@ -45,9 +45,9 @@ const submit = () => {
     <Head title="Create Note" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 p-6 overflow-hidden">
+        <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="max-w-3xl w-full min-w-0">
-                <Card class="overflow-hidden">
+                <Card>
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
                             <StickyNote class="h-5 w-5 text-yellow-500" />
@@ -57,7 +57,7 @@ const submit = () => {
                             Create a new note or draft. You can optionally link it to a documentation.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent class="overflow-hidden">
+                    <CardContent>
                         <form @submit.prevent="submit" class="space-y-6 min-w-0">
                             <div class="space-y-2">
                                 <Label for="title">Title</Label>
@@ -90,7 +90,7 @@ const submit = () => {
                                 </p>
                             </div>
 
-                            <div class="space-y-2 min-w-0 overflow-hidden">
+                            <div class="space-y-2 min-w-0">
                                 <Label for="content">Content</Label>
                                 <Textarea
                                     id="content"

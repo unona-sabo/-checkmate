@@ -158,8 +158,10 @@ export interface TestRun {
     stats: TestRunStats | null;
     started_at: string | null;
     completed_at: string | null;
+    completed_by: number | null;
     created_at: string;
     updated_at: string;
+    completed_by_user?: { id: number; name: string };
     test_run_cases_count?: number;
     test_run_cases?: TestRunCase[];
 }
