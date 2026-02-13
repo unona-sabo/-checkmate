@@ -52,6 +52,7 @@ class TestSuiteController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'type' => 'nullable|string|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
             'parent_id' => 'nullable|exists:test_suites,id',
             'order' => 'nullable|integer',
         ]);
@@ -104,6 +105,7 @@ class TestSuiteController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'type' => 'nullable|string|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
             'parent_id' => 'nullable|exists:test_suites,id',
             'order' => 'nullable|integer',
         ]);

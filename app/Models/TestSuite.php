@@ -16,6 +16,7 @@ class TestSuite extends Model
         'parent_id',
         'name',
         'description',
+        'type',
         'order',
     ];
 

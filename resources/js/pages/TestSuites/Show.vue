@@ -34,6 +34,20 @@ const getPriorityColor = (priority: string) => {
     }
 };
 
+const getTypeColor = (type: string) => {
+    switch (type) {
+        case 'functional': return 'bg-blue-500/10 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800';
+        case 'smoke': return 'bg-orange-500/10 text-orange-600 border-orange-200 dark:text-orange-400 dark:border-orange-800';
+        case 'regression': return 'bg-red-500/10 text-red-600 border-red-200 dark:text-red-400 dark:border-red-800';
+        case 'integration': return 'bg-purple-500/10 text-purple-600 border-purple-200 dark:text-purple-400 dark:border-purple-800';
+        case 'acceptance': return 'bg-green-500/10 text-green-600 border-green-200 dark:text-green-400 dark:border-green-800';
+        case 'performance': return 'bg-cyan-500/10 text-cyan-600 border-cyan-200 dark:text-cyan-400 dark:border-cyan-800';
+        case 'security': return 'bg-rose-500/10 text-rose-600 border-rose-200 dark:text-rose-400 dark:border-rose-800';
+        case 'usability': return 'bg-pink-500/10 text-pink-600 border-pink-200 dark:text-pink-400 dark:border-pink-800';
+        default: return 'bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800';
+    }
+};
+
 const getTypeIcon = (type: string) => {
     switch (type) {
         case 'smoke': return Zap;
@@ -46,6 +60,7 @@ const getTypeIcon = (type: string) => {
 interface SuiteSection {
     id: number;
     name: string;
+    type: string;
     isChild: boolean;
     testCases: TestCase[];
 }
@@ -53,12 +68,13 @@ interface SuiteSection {
 const suiteSections = computed<SuiteSection[]>(() => {
     const sections: SuiteSection[] = [];
 
-    // Add current suite's test cases
+    // Add current suite's test cases (never mark as child on its own page)
     if (props.testSuite.test_cases?.length) {
         sections.push({
             id: props.testSuite.id,
             name: props.testSuite.name,
-            isChild: !!props.testSuite.parent_id, // Check if current suite is a subcategory
+            type: props.testSuite.type,
+            isChild: false,
             testCases: props.testSuite.test_cases,
         });
     }
@@ -68,6 +84,7 @@ const suiteSections = computed<SuiteSection[]>(() => {
         sections.push({
             id: child.id,
             name: child.name,
+            type: child.type,
             isChild: true,
             testCases: child.test_cases || [],
         });
@@ -214,7 +231,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
-                    <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/create`">
+                    <Link v-if="testSuite.parent_id" :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/create`">
                         <Button variant="cta" class="gap-2">
                             <Plus class="h-4 w-4" />
                             Add Test Case
@@ -267,30 +284,34 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                     :key="section.id"
                     class="mt-2.5 first:mt-0"
                 >
-                    <!-- Section Header -->
+                    <!-- Section Header (hide when on a subcategory page for the current suite) -->
                     <div
+                        v-if="!(section.id === testSuite.id && testSuite.parent_id)"
                         class="group/header flex items-center justify-between mb-2 sticky top-0 bg-card/95 backdrop-blur-sm py-2.5 px-4 z-10 rounded-xl border shadow-sm cursor-pointer transition-all duration-150 hover:border-primary/50"
                         @click="router.visit(`/projects/${project.id}/test-suites/${section.id}`)"
                     >
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-3 min-w-0 flex-1 mr-3">
                             <div
-                                class="h-8 w-8 rounded-lg flex items-center justify-center transition-colors"
+                                class="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center transition-colors"
                                 :class="section.isChild ? 'bg-yellow-500/10 group-hover/header:bg-primary/10' : 'bg-primary/10'"
                             >
                                 <Boxes v-if="section.isChild" class="h-4 w-4 text-yellow-500 group-hover/header:text-primary transition-colors" />
                                 <Layers v-else class="h-4 w-4 text-primary" />
                             </div>
-                            <div>
-                                <h3 class="font-semibold text-base group-hover/header:text-primary transition-colors">{{ section.name }}</h3>
+                            <div class="min-w-0">
+                                <h3 class="font-semibold text-base group-hover/header:text-primary transition-colors truncate">{{ section.name }}</h3>
                                 <p v-if="section.isChild" class="text-xs text-muted-foreground">
                                     Subcategory
                                 </p>
                             </div>
-                            <Badge variant="secondary" class="text-xs font-normal">
+                            <Badge variant="secondary" class="shrink-0 text-xs font-normal bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800">
                                 {{ section.testCases.length }} {{ section.testCases.length === 1 ? 'case' : 'cases' }}
                             </Badge>
+                            <Badge variant="outline" :class="getTypeColor(section.type)" class="shrink-0 text-xs font-normal">
+                                {{ section.type }}
+                            </Badge>
                         </div>
-                        <Link :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/create`" @click.stop>
+                        <Link :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/create`" @click.stop class="shrink-0">
                             <Button variant="outline" size="sm" class="text-xs">
                                 <Plus class="h-3.5 w-3.5" />
                                 Add
@@ -328,7 +349,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                                     <div class="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
                                         <component :is="getTypeIcon(testCase.type)" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                                     </div>
-                                    <p class="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                                    <p class="text-sm font-normal truncate group-hover:text-primary transition-colors">
                                         {{ testCase.title }}
                                     </p>
                                 </Link>
@@ -372,17 +393,18 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                             class="group/header flex items-center justify-between mb-2 sticky top-0 bg-card/95 backdrop-blur-sm py-2.5 px-4 z-10 rounded-xl border shadow-sm cursor-pointer transition-all duration-150 hover:border-primary/50"
                             @click="router.visit(`/projects/${project.id}/test-suites/${child.id}`)"
                         >
-                            <div class="flex items-center gap-3">
-                                <div class="h-8 w-8 rounded-lg bg-yellow-500/10 group-hover/header:bg-primary/10 flex items-center justify-center transition-colors">
+                            <div class="flex items-center gap-3 min-w-0 flex-1 mr-3">
+                                <div class="h-8 w-8 shrink-0 rounded-lg bg-yellow-500/10 group-hover/header:bg-primary/10 flex items-center justify-center transition-colors">
                                     <Boxes class="h-4 w-4 text-yellow-500 group-hover/header:text-primary transition-colors" />
                                 </div>
-                                <div>
-                                    <h3 class="font-semibold text-base group-hover/header:text-primary transition-colors">{{ child.name }}</h3>
+                                <div class="min-w-0">
+                                    <h3 class="font-semibold text-base group-hover/header:text-primary transition-colors truncate">{{ child.name }}</h3>
                                     <p class="text-xs text-muted-foreground">Subcategory</p>
                                 </div>
-                                <Badge variant="secondary" class="text-xs font-normal">0 cases</Badge>
+                                <Badge variant="secondary" class="shrink-0 text-xs font-normal bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800">0 cases</Badge>
+                                <Badge variant="outline" :class="getTypeColor(child.type)" class="shrink-0 text-xs font-normal">{{ child.type }}</Badge>
                             </div>
-                            <Link :href="`/projects/${project.id}/test-suites/${child.id}/test-cases/create`" @click.stop>
+                            <Link :href="`/projects/${project.id}/test-suites/${child.id}/test-cases/create`" @click.stop class="shrink-0">
                                 <Button variant="outline" size="sm" class="text-xs">
                                     <Plus class="h-3.5 w-3.5" />
                                     Add

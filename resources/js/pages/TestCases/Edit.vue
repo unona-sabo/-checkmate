@@ -132,6 +132,7 @@ const deleteTestCase = () => {
                                     id="description"
                                     v-model="form.description"
                                     rows="2"
+                                    autoResize
                                 />
                             </div>
 
@@ -141,6 +142,7 @@ const deleteTestCase = () => {
                                     id="preconditions"
                                     v-model="form.preconditions"
                                     rows="2"
+                                    autoResize
                                 />
                             </div>
 
@@ -162,15 +164,15 @@ const deleteTestCase = () => {
                                             v-model="step.action"
                                             placeholder="Action to perform..."
                                             rows="1"
-                                            class="min-h-[36px] resize-none overflow-hidden"
-                                            @input="(e: Event) => { const el = e.target as HTMLTextAreaElement; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }"
+                                            class="min-h-[36px]"
+                                            autoResize
                                         />
                                         <Textarea
                                             v-model="step.expected"
                                             placeholder="Expected result (optional)..."
                                             rows="1"
-                                            class="min-h-[36px] resize-none overflow-hidden"
-                                            @input="(e: Event) => { const el = e.target as HTMLTextAreaElement; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }"
+                                            class="min-h-[36px]"
+                                            autoResize
                                         />
                                     </div>
                                     <Button
@@ -188,7 +190,7 @@ const deleteTestCase = () => {
 
                             <div class="space-y-2">
                                 <Label for="expected_result">Expected Result</Label>
-                                <Textarea id="expected_result" v-model="form.expected_result" rows="2" />
+                                <Textarea id="expected_result" v-model="form.expected_result" rows="2" autoResize />
                             </div>
 
                             <div class="grid gap-4 md:grid-cols-2">

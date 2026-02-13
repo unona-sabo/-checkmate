@@ -33,7 +33,7 @@ import {
     ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
     Bold, Heading, GripHorizontal, StickyNote, Import, Pencil, X, Search,
     MoreHorizontal, Copy, Layers, Play, Download, Upload, FileSpreadsheet,
-    ArrowUp, ArrowDown, Bug, RefreshCw
+    ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
@@ -89,6 +89,38 @@ const addRowsType = ref<'normal' | 'section_header'>('normal');
 // Track content changes (excluding checkbox changes)
 const hasContentChanges = ref(false);
 const checkboxKeys = computed(() => columns.value.filter(c => c.type === 'checkbox').map(c => c.key));
+
+// Undo last save — tracks the state after each successful save
+type Snapshot = { rows: ExtendedChecklistRow[]; columns: ExtendedColumnConfig[] };
+// State after the last successful save (current "clean" state)
+let lastSavedState: Snapshot = {
+    rows: JSON.parse(JSON.stringify(rows.value)),
+    columns: JSON.parse(JSON.stringify(columns.value)),
+};
+// State after the save before that (what undo reverts to)
+const previousSavedState = ref<Snapshot | null>(null);
+const saveError = ref(false);
+const isSaving = ref(false);
+const canUndo = computed(() => previousSavedState.value !== null);
+
+const undoLastSave = () => {
+    if (!previousSavedState.value) return;
+    const snapshot = previousSavedState.value;
+    previousSavedState.value = null;
+
+    rows.value = JSON.parse(JSON.stringify(snapshot.rows));
+    columns.value = JSON.parse(JSON.stringify(snapshot.columns));
+    hasContentChanges.value = true;
+    saveError.value = false;
+    nextTick(() => {
+        resizeAllTextareas();
+        saveRows();
+    });
+};
+
+const dismissSaveError = () => {
+    saveError.value = false;
+};
 
 // Search state
 const searchQuery = ref('');
@@ -568,6 +600,9 @@ const removeRow = () => {
 };
 
 const saveRows = () => {
+    saveError.value = false;
+    isSaving.value = true;
+
     const rowsData = rows.value.map((row, index) => ({
         id: row._isNew ? null : row.id,
         data: row.data,
@@ -588,6 +623,18 @@ const saveRows = () => {
             preserveScroll: true,
             onSuccess: () => {
                 hasContentChanges.value = false;
+                saveError.value = false;
+                isSaving.value = false;
+                // Shift: previous saved = what was last saved, last saved = current
+                previousSavedState.value = lastSavedState;
+                lastSavedState = {
+                    rows: JSON.parse(JSON.stringify(rows.value)),
+                    columns: JSON.parse(JSON.stringify(columns.value)),
+                };
+            },
+            onError: () => {
+                saveError.value = true;
+                isSaving.value = false;
             },
         }
     );
@@ -928,7 +975,17 @@ onMounted(() => {
                         </button>
                     </div>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
+                    <!-- Undo last save -->
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        :disabled="!canUndo"
+                        @click="undoLastSave"
+                        title="Undo last save"
+                    >
+                        <Undo2 class="h-4 w-4" />
+                    </Button>
                     <!-- Actions dropdown when rows are selected -->
                     <DropdownMenu v-if="hasSelectedRows">
                         <DropdownMenuTrigger as-child>
@@ -1152,6 +1209,35 @@ onMounted(() => {
                             Edit
                         </Button>
                     </Link>
+                </div>
+            </div>
+
+            <!-- Save error banner with undo -->
+            <div
+                v-if="saveError"
+                class="flex items-center justify-between gap-3 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3"
+            >
+                <div class="flex items-center gap-2 text-sm text-destructive">
+                    <AlertCircle class="h-4 w-4 shrink-0" />
+                    <span>Failed to save changes. You can undo to restore the previous state.</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <Button
+                        v-if="saveSnapshot"
+                        variant="outline"
+                        size="sm"
+                        class="gap-1.5"
+                        @click="undoChanges"
+                    >
+                        <Undo2 class="h-3.5 w-3.5" />
+                        Undo
+                    </Button>
+                    <button
+                        class="text-muted-foreground hover:text-foreground"
+                        @click="dismissSaveError"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
                 </div>
             </div>
 

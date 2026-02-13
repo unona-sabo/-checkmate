@@ -113,6 +113,7 @@ const submit = () => {
                                     v-model="form.description"
                                     placeholder="Detailed description of the bug"
                                     rows="3"
+                                    autoResize
                                 />
                                 <InputError :message="form.errors.description" />
                             </div>
@@ -124,6 +125,7 @@ const submit = () => {
                                     v-model="form.steps_to_reproduce"
                                     placeholder="1. Go to...&#10;2. Click on...&#10;3. See error"
                                     rows="4"
+                                    autoResize
                                 />
                                 <InputError :message="form.errors.steps_to_reproduce" />
                             </div>
@@ -136,6 +138,7 @@ const submit = () => {
                                         v-model="form.expected_result"
                                         placeholder="What should happen"
                                         rows="2"
+                                        autoResize
                                     />
                                     <InputError :message="form.errors.expected_result" />
                                 </div>
@@ -147,6 +150,7 @@ const submit = () => {
                                         v-model="form.actual_result"
                                         placeholder="What actually happens"
                                         rows="2"
+                                        autoResize
                                     />
                                     <InputError :message="form.errors.actual_result" />
                                 </div>

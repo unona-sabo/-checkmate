@@ -31,6 +31,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const form = useForm({
     name: '',
     description: '',
+    type: 'functional',
     parent_id: preselectedParentId,
 });
 
@@ -84,6 +85,27 @@ const submit = () => {
                                     rows="3"
                                 />
                                 <InputError :message="form.errors.description" />
+                            </div>
+
+                            <div class="space-y-2">
+                                <Label>Type</Label>
+                                <Select v-model="form.type">
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="functional">Functional</SelectItem>
+                                        <SelectItem value="smoke">Smoke</SelectItem>
+                                        <SelectItem value="regression">Regression</SelectItem>
+                                        <SelectItem value="integration">Integration</SelectItem>
+                                        <SelectItem value="acceptance">Acceptance</SelectItem>
+                                        <SelectItem value="performance">Performance</SelectItem>
+                                        <SelectItem value="security">Security</SelectItem>
+                                        <SelectItem value="usability">Usability</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError :message="form.errors.type" />
                             </div>
 
                             <div v-if="parentSuites.length" class="space-y-2">

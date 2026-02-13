@@ -32,7 +32,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 
 const props = defineProps<{
     project: Project;
@@ -51,6 +51,7 @@ const activeSuiteId = ref<number | null>(null);
 interface FlatSuite {
     id: number;
     name: string;
+    type: string;
     parentName?: string;
     testCases: TestCase[];
 }
@@ -64,6 +65,7 @@ const flatSuites = computed<FlatSuite[]>(() => {
             result.push({
                 id: suite.id,
                 name: suite.name,
+                type: suite.type,
                 testCases: suite.test_cases,
             });
         }
@@ -74,6 +76,7 @@ const flatSuites = computed<FlatSuite[]>(() => {
                 result.push({
                     id: child.id,
                     name: child.name,
+                    type: child.type,
                     parentName: suite.name,
                     testCases: child.test_cases,
                 });
@@ -231,6 +234,20 @@ const getPriorityColor = (priority: string) => {
         case 'medium': return 'bg-yellow-500/10 text-yellow-600 border-yellow-200 dark:text-yellow-400 dark:border-yellow-800';
         case 'low': return 'bg-blue-500/10 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800';
         default: return '';
+    }
+};
+
+const getTypeColor = (type: string) => {
+    switch (type) {
+        case 'functional': return 'bg-blue-500/10 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800';
+        case 'smoke': return 'bg-orange-500/10 text-orange-600 border-orange-200 dark:text-orange-400 dark:border-orange-800';
+        case 'regression': return 'bg-red-500/10 text-red-600 border-red-200 dark:text-red-400 dark:border-red-800';
+        case 'integration': return 'bg-purple-500/10 text-purple-600 border-purple-200 dark:text-purple-400 dark:border-purple-800';
+        case 'acceptance': return 'bg-green-500/10 text-green-600 border-green-200 dark:text-green-400 dark:border-green-800';
+        case 'performance': return 'bg-cyan-500/10 text-cyan-600 border-cyan-200 dark:text-cyan-400 dark:border-cyan-800';
+        case 'security': return 'bg-rose-500/10 text-rose-600 border-rose-200 dark:text-rose-400 dark:border-rose-800';
+        case 'usability': return 'bg-pink-500/10 text-pink-600 border-pink-200 dark:text-pink-400 dark:border-pink-800';
+        default: return 'bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800';
     }
 };
 
@@ -405,6 +422,7 @@ const localFlatSuites = computed<FlatSuite[]>(() => {
             result.push({
                 id: suite.id,
                 name: suite.name,
+                type: suite.type,
                 testCases: suite.test_cases || [],
             });
         }
@@ -414,6 +432,7 @@ const localFlatSuites = computed<FlatSuite[]>(() => {
             result.push({
                 id: child.id,
                 name: child.name,
+                type: child.type,
                 parentName: suite.name,
                 testCases: child.test_cases || [],
             });
@@ -445,15 +464,30 @@ const filteredFlatSuites = computed(() => {
 const showNoteDialog = ref(false);
 const noteContent = ref('');
 const noteTitle = ref('');
-const selectedSuiteId = ref<string>('');
+const selectedParentSuiteId = ref<string>('');
+const selectedSubcategoryId = ref<string>('');
 const isImportingNote = ref(false);
 const hasDraft = ref(false);
 const DRAFT_STORAGE_KEY = `test-suite-note-draft-${props.project.id}`;
 
+// Target suite ID: subcategory takes priority, then parent suite
+const targetSuiteId = computed(() => selectedSubcategoryId.value || selectedParentSuiteId.value);
+
+// Parent suites (top-level only)
+const parentSuiteOptions = computed(() => props.testSuites.map(s => ({ id: s.id, name: s.name })));
+
+// Subcategories filtered by selected parent suite
+const subcategoryOptions = computed(() => {
+    if (!selectedParentSuiteId.value) return [];
+    const parent = props.testSuites.find(s => s.id === Number(selectedParentSuiteId.value));
+    return parent?.children?.map(c => ({ id: c.id, name: c.name })) || [];
+});
+
 interface NoteDraft {
     content: string;
     title: string;
-    suiteId: string;
+    parentSuiteId: string;
+    subcategoryId: string;
 }
 
 const loadDraft = () => {
@@ -478,7 +512,8 @@ const saveDraft = () => {
     const draft: NoteDraft = {
         content: noteContent.value,
         title: noteTitle.value,
-        suiteId: selectedSuiteId.value,
+        parentSuiteId: selectedParentSuiteId.value,
+        subcategoryId: selectedSubcategoryId.value,
     };
     try {
         localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -500,7 +535,8 @@ const deleteDraft = () => {
 const clearNotes = () => {
     noteContent.value = '';
     noteTitle.value = '';
-    selectedSuiteId.value = '';
+    selectedParentSuiteId.value = '';
+    selectedSubcategoryId.value = '';
     deleteDraft();
 };
 
@@ -511,7 +547,8 @@ const openDraft = () => {
             const draft: NoteDraft = JSON.parse(saved);
             noteContent.value = draft.content;
             noteTitle.value = draft.title;
-            selectedSuiteId.value = draft.suiteId;
+            selectedParentSuiteId.value = draft.parentSuiteId || '';
+            selectedSubcategoryId.value = draft.subcategoryId || '';
         }
     } catch (e) {
         console.error('Failed to open draft:', e);
@@ -531,16 +568,9 @@ const onNoteDialogChange = (open: boolean) => {
     }
 };
 
-// Build flat list of all suites for the selector
-const suiteOptions = computed(() => {
-    const options: { id: number; name: string; parentName?: string }[] = [];
-    props.testSuites.forEach(suite => {
-        options.push({ id: suite.id, name: suite.name });
-        suite.children?.forEach(child => {
-            options.push({ id: child.id, name: child.name, parentName: suite.name });
-        });
-    });
-    return options;
+// Reset subcategory when parent suite changes
+watch(selectedParentSuiteId, () => {
+    selectedSubcategoryId.value = '';
 });
 
 // Parse note lines into test steps
@@ -558,10 +588,10 @@ const parsedSteps = computed(() => {
 });
 
 const importNoteAsTestCase = () => {
-    if (!parsedSteps.value.length || !noteTitle.value.trim() || !selectedSuiteId.value) return;
+    if (!parsedSteps.value.length || !noteTitle.value.trim() || !targetSuiteId.value) return;
     isImportingNote.value = true;
     router.post(
-        `/projects/${props.project.id}/test-suites/${selectedSuiteId.value}/test-cases`,
+        `/projects/${props.project.id}/test-suites/${targetSuiteId.value}/test-cases`,
         {
             title: noteTitle.value.trim(),
             steps: parsedSteps.value,
@@ -687,7 +717,7 @@ onMounted(() => {
                         </div>
                         <div v-else></div>
                         <div class="flex items-center gap-2">
-                            <div class="relative">
+                            <div v-if="selectedTestCaseIds.length === 0" class="relative">
                                 <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     v-model="searchQuery"
@@ -750,22 +780,41 @@ onMounted(() => {
                                         </div>
 
                                         <div v-if="parsedSteps.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30 overflow-hidden">
-                                            <div class="space-y-2">
-                                                <Label>Target Test Suite</Label>
-                                                <Select v-model="selectedSuiteId">
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a test suite..." />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem
-                                                            v-for="option in suiteOptions"
-                                                            :key="option.id"
-                                                            :value="String(option.id)"
-                                                        >
-                                                            {{ option.parentName ? `${option.name} — in ${option.parentName}` : option.name }}
-                                                        </SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div class="space-y-2">
+                                                    <Label>Test Suite</Label>
+                                                    <Select v-model="selectedParentSuiteId">
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select suite..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem
+                                                                v-for="suite in parentSuiteOptions"
+                                                                :key="suite.id"
+                                                                :value="String(suite.id)"
+                                                            >
+                                                                {{ suite.name }}
+                                                            </SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div class="space-y-2">
+                                                    <Label>Subcategory <span class="text-muted-foreground font-normal">(optional)</span></Label>
+                                                    <Select v-model="selectedSubcategoryId" :disabled="!subcategoryOptions.length">
+                                                        <SelectTrigger>
+                                                            <SelectValue :placeholder="subcategoryOptions.length ? 'Select subcategory...' : 'No subcategories'" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem
+                                                                v-for="sub in subcategoryOptions"
+                                                                :key="sub.id"
+                                                                :value="String(sub.id)"
+                                                            >
+                                                                {{ sub.name }}
+                                                            </SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
                                             </div>
 
                                             <div class="space-y-2 overflow-hidden">
@@ -786,7 +835,7 @@ onMounted(() => {
 
                                     <DialogFooter class="flex justify-between sm:justify-between">
                                         <Button
-                                            v-if="noteContent.trim() || noteTitle.trim() || selectedSuiteId"
+                                            v-if="noteContent.trim() || noteTitle.trim() || selectedParentSuiteId"
                                             variant="ghost"
                                             @click="clearNotes"
                                             class="gap-2 text-muted-foreground hover:text-destructive"
@@ -801,7 +850,7 @@ onMounted(() => {
                                             </Button>
                                             <Button
                                                 @click="importNoteAsTestCase"
-                                                :disabled="!selectedSuiteId || parsedSteps.length === 0 || !noteTitle.trim() || isImportingNote"
+                                                :disabled="!targetSuiteId || parsedSteps.length === 0 || !noteTitle.trim() || isImportingNote"
                                                 class="gap-2"
                                             >
                                                 <Plus class="h-4 w-4" />
@@ -814,7 +863,7 @@ onMounted(() => {
                             <Link :href="`/projects/${project.id}/test-suites/create`">
                                 <Button variant="cta" class="gap-2">
                                     <Plus class="h-4 w-4" />
-                                    New Test Suite
+                                    Test Suite
                                 </Button>
                             </Link>
                         </div>
@@ -946,10 +995,10 @@ onMounted(() => {
                             <!-- Suite Header -->
                             <div
                                 class="group/header flex items-center justify-between mb-2 sticky top-0 bg-card/95 backdrop-blur-sm z-10 rounded-xl border shadow-sm cursor-pointer transition-all duration-150 hover:border-primary/50"
-                                :class="suite.parentName ? 'py-2 px-3' : 'py-3.5 px-4'"
+                                :class="suite.parentName ? 'py-2 px-4' : 'py-3.5 px-4'"
                                 @click="router.visit(`/projects/${project.id}/test-suites/${suite.id}`)"
                             >
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-3 min-w-0 flex-1 mr-3">
                                     <div
                                         class="h-4 w-4 shrink-0 rounded-[4px] border shadow-xs flex items-center justify-center cursor-pointer transition-colors"
                                         :class="[
@@ -964,25 +1013,28 @@ onMounted(() => {
                                         <Check v-else-if="getSuiteState(suite.id).isFullySelected" class="h-3 w-3" />
                                     </div>
                                     <div
-                                        class="rounded-lg flex items-center justify-center transition-colors"
+                                        class="shrink-0 rounded-lg flex items-center justify-center transition-colors"
                                         :class="[
-                                            suite.parentName ? 'h-7 w-7 bg-yellow-500/10 group-hover/header:bg-primary/10' : 'h-8 w-8 bg-primary/10'
+                                            suite.parentName ? 'h-8 w-8 bg-yellow-500/10 group-hover/header:bg-primary/10' : 'h-8 w-8 bg-primary/10'
                                         ]"
                                     >
                                         <Boxes v-if="suite.parentName" class="h-3.5 w-3.5 text-yellow-500 group-hover/header:text-primary transition-colors" />
                                         <Layers v-else class="h-4 w-4 text-primary" />
                                     </div>
-                                    <div>
-                                        <h3 :class="suite.parentName ? 'font-semibold text-[13px]' : 'font-semibold text-base'" class="group-hover/header:text-primary transition-colors">{{ suite.name }}</h3>
-                                        <p v-if="suite.parentName" class="text-[11px] text-muted-foreground">
+                                    <div class="min-w-0">
+                                        <h3 :class="suite.parentName ? 'font-semibold text-sm' : 'font-semibold text-base'" class="group-hover/header:text-primary transition-colors truncate">{{ suite.name }}</h3>
+                                        <p v-if="suite.parentName" class="text-[11px] text-muted-foreground truncate">
                                             in {{ suite.parentName }}
                                         </p>
                                     </div>
-                                    <Badge variant="secondary" :class="suite.parentName ? 'text-[11px] ml-1' : 'text-xs ml-2'" class="font-normal">
+                                    <Badge variant="secondary" :class="suite.parentName ? 'text-[11px] ml-1' : 'text-xs ml-2'" class="shrink-0 font-normal bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800">
                                         {{ getFlatSuiteTotalTestCases(suite) }} {{ getFlatSuiteTotalTestCases(suite) === 1 ? 'case' : 'cases' }}
                                     </Badge>
+                                    <Badge variant="outline" :class="[suite.parentName ? 'text-[11px]' : 'text-xs', getTypeColor(suite.type)]" class="shrink-0 font-normal">
+                                        {{ suite.type }}
+                                    </Badge>
                                 </div>
-                                <Link :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/create`" @click.stop>
+                                <Link :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/create`" @click.stop class="shrink-0">
                                     <Button variant="outline" size="sm" :class="suite.parentName ? 'h-6 text-[11px] gap-1 px-2' : 'text-xs'">
                                         <Plus class="h-3.5 w-3.5" />
                                         Add
@@ -1030,7 +1082,7 @@ onMounted(() => {
                                             <div class="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
                                                 <FileText class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                                             </div>
-                                            <p class="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                                            <p class="text-sm font-normal truncate group-hover:text-primary transition-colors">
                                                 {{ testCase.title }}
                                             </p>
                                         </Link>

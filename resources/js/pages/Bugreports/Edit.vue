@@ -137,6 +137,7 @@ const submit = () => {
                                     id="description"
                                     v-model="form.description"
                                     rows="3"
+                                    autoResize
                                 />
                                 <InputError :message="form.errors.description" />
                             </div>
@@ -147,6 +148,7 @@ const submit = () => {
                                     id="steps_to_reproduce"
                                     v-model="form.steps_to_reproduce"
                                     rows="4"
+                                    autoResize
                                 />
                                 <InputError :message="form.errors.steps_to_reproduce" />
                             </div>
@@ -158,6 +160,7 @@ const submit = () => {
                                         id="expected_result"
                                         v-model="form.expected_result"
                                         rows="2"
+                                        autoResize
                                     />
                                     <InputError :message="form.errors.expected_result" />
                                 </div>
@@ -168,6 +171,7 @@ const submit = () => {
                                         id="actual_result"
                                         v-model="form.actual_result"
                                         rows="2"
+                                        autoResize
                                     />
                                     <InputError :message="form.errors.actual_result" />
                                 </div>
