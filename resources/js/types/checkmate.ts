@@ -9,6 +9,28 @@ export interface Attachment {
     updated_at: string;
 }
 
+export interface Bugreport {
+    id: number;
+    project_id: number;
+    title: string;
+    status: 'new' | 'open' | 'in_progress' | 'resolved' | 'closed' | 'reopened';
+    severity: 'blocker' | 'critical' | 'major' | 'minor' | 'trivial';
+    priority: 'critical' | 'high' | 'medium' | 'low';
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Documentation {
+    id: number;
+    project_id: number;
+    title: string;
+    category: string | null;
+    order: number;
+    parent_id: number | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Project {
     id: number;
     user_id: number;
@@ -18,9 +40,13 @@ export interface Project {
     checklists_count?: number;
     test_suites_count?: number;
     test_runs_count?: number;
+    bugreports_count?: number;
+    documentations_count?: number;
     checklists?: Checklist[];
     test_suites?: TestSuite[];
     test_runs?: TestRun[];
+    bugreports?: Bugreport[];
+    documentations?: Documentation[];
 }
 
 export interface Checklist {
@@ -76,6 +102,7 @@ export interface TestSuite {
     parent_id: number | null;
     name: string;
     description: string | null;
+    type: string;
     order: number;
     created_at: string;
     updated_at: string;

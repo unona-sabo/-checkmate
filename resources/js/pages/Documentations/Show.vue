@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Edit, Trash2, ChevronRight, Download, Paperclip } from 'lucide-vue-next';
+import { FileText, Edit, Trash2, ChevronRight, Download, Paperclip, FolderTree, ExternalLink } from 'lucide-vue-next';
 
 interface Documentation {
     id: number;
@@ -79,43 +79,66 @@ const imageAttachments = (attachments?: Attachment[]) =>
             <div class="grid gap-6 lg:grid-cols-4">
                 <!-- Sidebar with navigation -->
                 <div class="lg:col-span-1">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle class="text-sm">Navigation</CardTitle>
-                        </CardHeader>
-                        <CardContent class="space-y-1">
+                    <div class="sticky top-0 rounded-xl border bg-card shadow-sm">
+                        <div class="p-3 border-b bg-muted/30">
+                            <div class="flex items-center gap-2 text-sm font-medium">
+                                <FolderTree class="h-4 w-4 text-primary" />
+                                <span>Navigation</span>
+                            </div>
+                        </div>
+                        <div class="p-2 space-y-0.5 max-h-[calc(100vh-220px)] overflow-y-auto">
                             <template v-for="doc in allDocs" :key="doc.id">
-                                <Link
-                                    :href="`/projects/${project.id}/documentations/${doc.id}`"
-                                    :class="[
-                                        'flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors cursor-pointer',
-                                        doc.id === documentation.id
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'hover:bg-muted'
-                                    ]"
+                                <div
+                                    class="group flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-all duration-150"
+                                    :class="doc.id === documentation.id
+                                        ? 'bg-primary text-primary-foreground shadow-sm'
+                                        : 'hover:bg-muted/70'"
                                 >
-                                    <FileText class="h-4 w-4" />
-                                    {{ doc.title }}
-                                </Link>
-                                <template v-if="doc.children && doc.children.length > 0">
                                     <Link
+                                        :href="`/projects/${project.id}/documentations/${doc.id}`"
+                                        class="flex items-center gap-2 min-w-0 flex-1"
+                                    >
+                                        <FileText class="h-4 w-4 shrink-0" :class="doc.id === documentation.id ? '' : 'text-primary'" />
+                                        <span class="font-medium text-sm truncate">{{ doc.title }}</span>
+                                    </Link>
+                                    <Link
+                                        :href="`/projects/${project.id}/documentations/${doc.id}`"
+                                        @click.stop
+                                        class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2"
+                                        :class="doc.id === documentation.id ? 'hover:bg-primary-foreground/20' : 'hover:bg-muted'"
+                                    >
+                                        <ExternalLink class="h-3 w-3" />
+                                    </Link>
+                                </div>
+                                <template v-if="doc.children && doc.children.length > 0">
+                                    <div
                                         v-for="child in doc.children"
                                         :key="child.id"
-                                        :href="`/projects/${project.id}/documentations/${child.id}`"
-                                        :class="[
-                                            'flex items-center gap-2 px-2 py-1.5 pl-6 rounded text-sm transition-colors cursor-pointer',
-                                            child.id === documentation.id
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'hover:bg-muted'
-                                        ]"
+                                        class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-4 cursor-pointer transition-all duration-150"
+                                        :class="child.id === documentation.id
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'hover:bg-muted/70'"
                                     >
-                                        <ChevronRight class="h-3 w-3" />
-                                        {{ child.title }}
-                                    </Link>
+                                        <Link
+                                            :href="`/projects/${project.id}/documentations/${child.id}`"
+                                            class="flex items-center gap-2 min-w-0"
+                                        >
+                                            <ChevronRight class="h-3.5 w-3.5 shrink-0" />
+                                            <span class="text-sm truncate">{{ child.title }}</span>
+                                        </Link>
+                                        <Link
+                                            :href="`/projects/${project.id}/documentations/${child.id}`"
+                                            @click.stop
+                                            class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2"
+                                            :class="child.id === documentation.id ? 'hover:bg-primary-foreground/20' : 'hover:bg-muted'"
+                                        >
+                                            <ExternalLink class="h-3 w-3" />
+                                        </Link>
+                                    </div>
                                 </template>
                             </template>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Main content -->

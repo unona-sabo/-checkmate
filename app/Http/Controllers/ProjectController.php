@@ -64,6 +64,8 @@ class ProjectController extends Controller
             'checklists',
             'testSuites' => fn ($q) => $q->whereNull('parent_id')->with('children'),
             'testRuns' => fn ($q) => $q->latest()->take(5),
+            'bugreports' => fn ($q) => $q->latest()->take(5),
+            'documentations' => fn ($q) => $q->whereNull('parent_id')->orderBy('order')->take(5),
         ]);
 
         return Inertia::render('Projects/Show', [
