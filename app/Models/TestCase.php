@@ -26,6 +26,7 @@ class TestCase extends Model
         'automation_status',
         'tags',
         'order',
+        'created_by',
     ];
 
     protected function casts(): array
@@ -39,6 +40,11 @@ class TestCase extends Model
     public function testSuite(): BelongsTo
     {
         return $this->belongsTo(TestSuite::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function note(): HasOne

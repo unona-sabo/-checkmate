@@ -46,6 +46,7 @@ class TestCaseController extends Controller
 
         $maxOrder = $testSuite->testCases()->max('order') ?? 0;
         $validated['order'] = $maxOrder + 1;
+        $validated['created_by'] = auth()->id();
 
         $testCase = $testSuite->testCases()->create(collect($validated)->except('attachments')->toArray());
 
@@ -150,6 +151,7 @@ class TestCaseController extends Controller
 
         Storage::disk('public')->delete($attachment->stored_path);
         $attachment->delete();
+        $testCase->touch();
 
         return back()->with('success', 'Attachment deleted successfully.');
     }
@@ -166,6 +168,8 @@ class TestCaseController extends Controller
             ['test_case_id' => $testCase->id],
             ['content' => $validated['content']]
         );
+
+        $testCase->touch();
 
         return back()->with('success', 'Note updated successfully.');
     }

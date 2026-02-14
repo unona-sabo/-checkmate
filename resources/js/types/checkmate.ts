@@ -126,9 +126,11 @@ export interface TestCase {
     automation_status: 'not_automated' | 'to_be_automated' | 'automated';
     tags: string[] | null;
     order: number;
+    created_by: number | null;
     created_at: string;
     updated_at: string;
     test_suite?: TestSuite;
+    creator?: { id: number; name: string };
     note?: TestCaseNote;
     attachments?: Attachment[];
 }

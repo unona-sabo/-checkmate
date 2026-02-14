@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\TestSuite;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,16 +18,19 @@ class TestSuiteController extends Controller
         $testSuites = $project->testSuites()
             ->whereNull('parent_id')
             ->with([
-                'children.testCases' => fn ($q) => $q->orderBy('order'),
-                'testCases' => fn ($q) => $q->orderBy('order'),
+                'children.testCases' => fn ($q) => $q->with('creator:id,name')->orderBy('order'),
+                'testCases' => fn ($q) => $q->with('creator:id,name')->orderBy('order'),
             ])
             ->withCount('testCases')
             ->orderBy('order')
             ->get();
 
+        $users = User::query()->select('id', 'name')->orderBy('name')->get();
+
         return Inertia::render('TestSuites/Index', [
             'project' => $project,
             'testSuites' => $testSuites,
+            'users' => $users,
         ]);
     }
 

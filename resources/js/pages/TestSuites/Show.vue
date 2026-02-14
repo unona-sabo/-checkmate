@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
     Plus, Edit, Layers, FileText,
-    Zap, Bug, GripVertical, Boxes, FolderPlus, Search, X
+    Zap, Bug, GripVertical, Boxes, FolderPlus, Search, X, Link2, Check
 } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { ref, computed } from 'vue';
@@ -23,6 +23,32 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Test Suites', href: `/projects/${props.project.id}/test-suites` },
     { title: props.testSuite.name, href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}` },
 ];
+
+const copied = ref(false);
+
+const titleStart = computed(() => {
+    const words = props.testSuite.name.split(' ');
+    return words.length > 1 ? words.slice(0, -1).join(' ') + ' ' : '';
+});
+const titleEnd = computed(() => {
+    const words = props.testSuite.name.split(' ');
+    return words[words.length - 1];
+});
+
+const copyLink = () => {
+    const route = `/projects/${props.project.id}/test-suites/${props.testSuite.id}`;
+    const url = window.location.origin + route;
+    const textArea = document.createElement('textarea');
+    textArea.value = url;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 2000);
+};
 
 const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -200,10 +226,13 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="flex items-start gap-2 text-2xl font-bold tracking-tight">
-                        <Boxes v-if="testSuite.parent_id" class="h-6 w-6 shrink-0 mt-1 text-yellow-500" />
-                        <Layers v-else class="h-6 w-6 shrink-0 mt-1 text-primary" />
-                        {{ testSuite.name }}
+                    <h1 class="text-2xl font-bold tracking-tight">
+                        <Boxes v-if="testSuite.parent_id" class="inline-block h-6 w-6 align-text-top text-yellow-500 mr-2" />
+                        <Layers v-else class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
+                            @click="copyLink"
+                            class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
+                            :title="copied ? 'Copied!' : 'Copy link'"
+                        ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
                     </h1>
                     <div v-if="testSuite.parent" class="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                         <span>in</span>

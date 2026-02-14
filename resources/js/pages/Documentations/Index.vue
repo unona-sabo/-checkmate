@@ -95,7 +95,7 @@ const highlightDescription = (content: string): string => {
                     <Link :href="`/projects/${project.id}/documentations/create`">
                         <Button variant="cta" class="gap-2">
                             <Plus class="h-4 w-4" />
-                            Add Documentation
+                            Documentation
                         </Button>
                     </Link>
                 </div>

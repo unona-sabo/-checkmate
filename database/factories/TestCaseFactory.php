@@ -51,6 +51,7 @@ class TestCaseFactory extends Factory
             'automation_status' => fake()->randomElement($automationStatuses),
             'tags' => fake()->optional()->randomElements(['smoke', 'regression', 'critical', 'P1', 'P2', 'login', 'security'], 2),
             'order' => fake()->numberBetween(0, 20),
+            'created_by' => null,
         ];
     }
 }

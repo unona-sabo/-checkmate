@@ -17,7 +17,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, ClipboardList, ArrowRight, FileText, StickyNote, Import, Pencil, Trash2, X, Search } from 'lucide-vue-next';
+import { Plus, ClipboardList, FileText, StickyNote, Import, Pencil, Trash2, X, Search } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { ref, computed, watch, onMounted } from 'vue';
 
@@ -399,7 +399,7 @@ const onDialogClose = (open: boolean) => {
                 </div>
             </div>
 
-            <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div v-else class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                 <!-- Draft Card -->
                 <Card
                     v-if="hasDraft"
@@ -438,12 +438,9 @@ const onDialogClose = (open: boolean) => {
                 <Link v-for="checklist in filteredChecklists" :key="checklist.id" :href="`/projects/${project.id}/checklists/${checklist.id}`">
                     <Card class="transition-all hover:border-primary cursor-pointer h-full flex flex-col">
                         <CardHeader class="flex-1">
-                            <CardTitle class="flex items-center justify-between">
-                                <span class="flex items-start gap-2">
-                                    <ClipboardList class="h-5 w-5 shrink-0 mt-0.5 text-primary" />
-                                    <span v-html="highlight(checklist.name)" />
-                                </span>
-                                <ArrowRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <CardTitle class="flex items-start gap-2">
+                                <ClipboardList class="h-4 w-4 shrink-0 text-primary" />
+                                <span class="break-words" v-html="highlight(checklist.name)" />
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
