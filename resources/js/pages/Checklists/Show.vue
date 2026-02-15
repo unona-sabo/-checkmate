@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Checklist, type ChecklistRow, type ColumnConfig, type SelectOption } from '@/types';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +34,7 @@ import {
     ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
     Bold, Heading, GripHorizontal, StickyNote, Import, Pencil, X, Search,
     MoreHorizontal, Copy, Layers, Play, Download, Upload, FileSpreadsheet,
-    ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle, Columns3, Check, Link2
+    ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle, Columns3, Check, Link2, Filter
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
@@ -203,27 +204,91 @@ const isRowMatch = (row: ExtendedChecklistRow, query: string): boolean => {
     });
 };
 
+// Filters
+const showFilters = ref(false);
+const filterValues = ref<Record<string, string>>({});
+
+const activeFilterCount = computed(() => {
+    return Object.values(filterValues.value).filter(v => v !== '').length;
+});
+
+const clearFilters = () => {
+    filterValues.value = {};
+};
+
 const filteredRows = computed(() => {
-    if (!searchQuery.value.trim()) {
-        return rows.value;
+    const allRows = rows.value;
+    const query = searchQuery.value.trim().toLowerCase();
+    const hasFilters = activeFilterCount.value > 0;
+
+    if (!query && !hasFilters) return allRows;
+
+    // Filter only data rows (not section headers)
+    let dataRows = allRows.filter(row => row.row_type !== 'section_header');
+
+    if (query) {
+        dataRows = dataRows.filter(row => isRowMatch(row, query));
     }
-    const query = searchQuery.value.toLowerCase();
-    return rows.value.filter(row => isRowMatch(row, query));
+
+    if (hasFilters) {
+        dataRows = dataRows.filter(row => {
+            return Object.entries(filterValues.value).every(([key, value]) => {
+                if (!value) return true;
+                return row.data[key] === value;
+            });
+        });
+    }
+
+    // Re-insert section headers that have matching data rows below them
+    const matchedIds = new Set(dataRows.map(r => r.id));
+    const headersWithMatches = new Set<number>();
+    let currentHeader: ExtendedChecklistRow | null = null;
+
+    for (const row of allRows) {
+        if (row.row_type === 'section_header') {
+            currentHeader = row;
+        } else if (matchedIds.has(row.id) && currentHeader) {
+            headersWithMatches.add(currentHeader.id);
+        }
+    }
+
+    // Build final list preserving original order
+    const result: ExtendedChecklistRow[] = [];
+    currentHeader = null;
+    let headerAdded = false;
+
+    for (const row of allRows) {
+        if (row.row_type === 'section_header') {
+            currentHeader = row;
+            headerAdded = false;
+        } else if (matchedIds.has(row.id)) {
+            if (currentHeader && !headerAdded && headersWithMatches.has(currentHeader.id)) {
+                result.push(currentHeader);
+                headerAdded = true;
+            }
+            result.push(row);
+        }
+    }
+
+    return result;
+});
+
+// Count of matched data rows (excluding section headers)
+const filteredDataRowCount = computed(() => {
+    return filteredRows.value.filter(r => r.row_type !== 'section_header').length;
 });
 
 // Rows to actually render (limited for performance)
 const displayRows = computed(() => {
-    const source = searchQuery.value.trim() ? filteredRows.value : rows.value;
-    return source.slice(0, visibleRowCount.value);
+    return filteredRows.value.slice(0, visibleRowCount.value);
 });
 
 const hasMoreRows = computed(() => {
-    const source = searchQuery.value.trim() ? filteredRows.value : rows.value;
-    return visibleRowCount.value < source.length;
+    return visibleRowCount.value < filteredRows.value.length;
 });
 
 const totalRowCount = computed(() => {
-    return searchQuery.value.trim() ? filteredRows.value.length : rows.value.length;
+    return filteredRows.value.length;
 });
 
 const loadMoreRows = () => {
@@ -292,7 +357,7 @@ watch(visibleRowCount, () => {
 });
 
 // Drag-and-drop only allowed when showing all rows and not searching
-const canDragRows = computed(() => !searchQuery.value.trim() && !hasMoreRows.value);
+const canDragRows = computed(() => !searchQuery.value.trim() && !hasMoreRows.value && activeFilterCount.value === 0);
 
 // Note dialog state
 const showNoteDialog = ref(false);
@@ -850,6 +915,22 @@ const hasSelectedRows = computed(() => selectedRows.value.length > 0);
 // Get select columns for "Change Status" action
 const selectColumns = computed(() => columns.value.filter(col => col.type === 'select' && col.options?.length));
 
+// Clean up filter values when select columns change
+watch(selectColumns, (newCols) => {
+    const validKeys = new Set(newCols.map(c => c.key));
+    for (const key of Object.keys(filterValues.value)) {
+        if (!validKeys.has(key)) {
+            delete filterValues.value[key];
+        } else {
+            const col = newCols.find(c => c.key === key);
+            const validOptions = new Set(col?.options?.map(o => o.value) || []);
+            if (filterValues.value[key] && !validOptions.has(filterValues.value[key])) {
+                filterValues.value[key] = '';
+            }
+        }
+    }
+}, { deep: true });
+
 // Change status of selected rows for a given column
 const changeSelectedStatus = (columnKey: string, value: string) => {
     selectedRows.value.forEach(row => {
@@ -1105,8 +1186,23 @@ onMounted(() => {
                                 <X class="h-4 w-4" />
                             </button>
                         </div>
-                        <span v-if="isSearchActive && filteredRows.length > 0" class="text-xs text-muted-foreground whitespace-nowrap">
-                            {{ filteredRows.length }} found — click to navigate
+                        <Button
+                            v-if="selectColumns.length > 0"
+                            variant="outline"
+                            class="gap-2 relative"
+                            @click="showFilters = !showFilters"
+                        >
+                            <Filter class="h-4 w-4" />
+                            Filter
+                            <Badge
+                                v-if="activeFilterCount > 0"
+                                class="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full"
+                            >
+                                {{ activeFilterCount }}
+                            </Badge>
+                        </Button>
+                        <span v-if="isSearchActive && filteredDataRowCount > 0" class="text-xs text-muted-foreground whitespace-nowrap">
+                            {{ filteredDataRowCount }} found — click to navigate
                         </span>
                     </div>
                 </div>
@@ -1399,6 +1495,70 @@ onMounted(() => {
                     >
                         <X class="h-4 w-4" />
                     </button>
+                </div>
+            </div>
+
+            <!-- Filter Dropdown -->
+            <div v-if="showFilters && selectColumns.length > 0" class="relative z-20">
+                <div class="rounded-xl border bg-card shadow-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-medium flex items-center gap-2">
+                            <Filter class="h-4 w-4 text-primary" />
+                            Filters
+                            <Badge v-if="activeFilterCount > 0" class="h-5 px-1.5 text-[10px] rounded-full">{{ activeFilterCount }}</Badge>
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <Button
+                                v-if="activeFilterCount > 0"
+                                variant="ghost"
+                                size="sm"
+                                class="h-6 gap-1 text-xs text-muted-foreground hover:text-destructive"
+                                @click="clearFilters"
+                            >
+                                <X class="h-3 w-3" />
+                                Clear All
+                            </Button>
+                            <button @click="showFilters = false" class="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer">
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-x-3 gap-y-2.5">
+                        <div v-for="col in selectColumns" :key="col.key" class="relative min-w-[150px]">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">{{ col.label }}</Label>
+                            <Select v-model="filterValues[col.key]">
+                                <SelectTrigger class="h-8 text-xs" :class="filterValues[col.key] ? 'pr-7' : ''">
+                                    <SelectValue placeholder="All" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="option in col.options"
+                                        :key="option.value"
+                                        :value="option.value"
+                                    >
+                                        <span
+                                            class="px-2 py-0.5 rounded text-xs font-medium"
+                                            :style="{
+                                                backgroundColor: option.color || '#dbeafe',
+                                                color: getTextColorForBg(option.color)
+                                            }"
+                                        >
+                                            {{ option.label }}
+                                        </span>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <button v-if="filterValues[col.key]" @click="filterValues[col.key] = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <!-- Results count -->
+                        <div class="flex items-end pb-1 ml-auto">
+                            <span class="text-sm text-muted-foreground">
+                                Found <span class="font-semibold text-foreground">{{ filteredDataRowCount }}</span> {{ filteredDataRowCount === 1 ? 'item' : 'items' }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1732,9 +1892,14 @@ onMounted(() => {
                                         No items yet. Click "Add Row" to add your first item.
                                     </td>
                                 </tr>
-                                <tr v-else-if="searchQuery.trim() && filteredRows.length === 0">
+                                <tr v-else-if="(searchQuery.trim() || activeFilterCount > 0) && filteredDataRowCount === 0">
                                     <td :colspan="visibleColumns.length + 3" class="p-6 text-center text-muted-foreground text-sm">
-                                        No items match "{{ searchQuery }}".
+                                        <template v-if="searchQuery.trim()">No items match "{{ searchQuery }}".</template>
+                                        <template v-else>No items match the selected filters.</template>
+                                        <Button v-if="activeFilterCount > 0" variant="outline" size="sm" class="mt-2 gap-2 ml-2" @click="clearFilters">
+                                            <X class="h-3.5 w-3.5" />
+                                            Clear Filters
+                                        </Button>
                                     </td>
                                 </tr>
                             </tbody>
