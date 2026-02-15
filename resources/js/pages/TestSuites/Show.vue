@@ -313,7 +313,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                 <div v-if="filteredSections.length === 0 && searchQuery.trim()" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
                     <Search class="h-12 w-12 mb-3" />
                     <p class="font-semibold">No results found</p>
-                    <p class="text-sm">No test cases match "{{ searchQuery }}"</p>
+                    <p class="text-sm max-w-full truncate px-4">No test cases match "{{ searchQuery }}"</p>
                 </div>
 
                 <!-- Current Suite Test Cases (if any) -->

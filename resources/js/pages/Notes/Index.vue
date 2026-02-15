@@ -95,16 +95,18 @@ const deleteNote = () => {
                 </Link>
             </div>
 
-            <div v-if="notes.length === 0" class="flex flex-col items-center justify-center py-12">
-                <StickyNote class="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 class="text-lg font-semibold">No notes yet</h3>
-                <p class="mt-2 text-sm text-muted-foreground">Create your first note to get started.</p>
-                <Link :href="`/projects/${project.id}/notes/create`" class="mt-4 inline-block">
-                    <Button variant="cta" class="gap-2">
-                        <Plus class="h-4 w-4" />
-                        Create Note
-                    </Button>
-                </Link>
+            <div v-if="notes.length === 0" class="flex flex-1 items-center justify-center">
+                <div class="text-center">
+                    <StickyNote class="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 class="mt-4 text-lg font-semibold">No notes yet</h3>
+                    <p class="mt-2 text-sm text-muted-foreground">Create your first note to get started.</p>
+                    <Link :href="`/projects/${project.id}/notes/create`" class="mt-4 inline-block">
+                        <Button variant="cta" class="gap-2">
+                            <Plus class="h-4 w-4" />
+                            Create Note
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

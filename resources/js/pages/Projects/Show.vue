@@ -250,7 +250,7 @@ const getBugStatusColor = (status: string) => {
                     <div v-else class="flex flex-col items-center justify-center py-16 text-muted-foreground">
                         <Search class="h-12 w-12 mb-3" />
                         <p class="text-lg font-medium">No results found</p>
-                        <p class="text-sm">No items match "{{ searchResults.query }}"</p>
+                        <p class="text-sm max-w-full truncate px-4">No items match "{{ searchResults.query }}"</p>
                     </div>
                 </div>
 

@@ -13,9 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Play, Edit, CheckCircle2, XCircle, AlertTriangle,
-    SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check
+    SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check, Pause, Timer
 } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps<{
     project: Project;
@@ -138,6 +138,56 @@ const completeRun = () => {
     router.post(`/projects/${props.project.id}/test-runs/${props.testRun.id}/complete`);
 };
 
+const pauseRun = () => {
+    router.post(`/projects/${props.project.id}/test-runs/${props.testRun.id}/pause`, {}, { preserveScroll: true });
+};
+
+const resumeRun = () => {
+    router.post(`/projects/${props.project.id}/test-runs/${props.testRun.id}/resume`, {}, { preserveScroll: true });
+};
+
+const formatElapsed = (seconds: number | null | undefined): string | null => {
+    if (seconds == null || seconds < 0) return null;
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${secs}s`;
+    return `${secs}s`;
+};
+
+// Live timer
+const tick = ref(0);
+let timerInterval: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+    timerInterval = setInterval(() => { tick.value++; }, 1000);
+});
+
+onUnmounted(() => {
+    if (timerInterval) clearInterval(timerInterval);
+});
+
+const liveElapsed = computed((): number | null => {
+    tick.value;
+    const run = props.testRun;
+    if (run.status === 'completed' || run.status === 'archived') {
+        return run.elapsed_seconds ?? null;
+    }
+    const start = run.started_at ?? run.created_at;
+    if (!start) return null;
+    const startMs = new Date(start).getTime();
+    const nowMs = Date.now();
+    let total = Math.floor((nowMs - startMs) / 1000);
+    let paused = run.total_paused_seconds ?? 0;
+    if (run.is_paused && run.paused_at) {
+        paused += Math.floor((nowMs - new Date(run.paused_at).getTime()) / 1000);
+    }
+    return Math.max(0, total - paused);
+});
+
 const groupedCases = computed(() => {
     const groups: Record<string, TestRunCase[]> = {};
     props.testRun.test_run_cases?.forEach(trc => {
@@ -227,6 +277,24 @@ const highlight = (text: string): string => {
                         </button>
                     </div>
                     <Button
+                        v-if="testRun.status === 'active' && !testRun.is_paused"
+                        @click="pauseRun"
+                        variant="outline"
+                        class="gap-2"
+                    >
+                        <Pause class="h-4 w-4" />
+                        Pause
+                    </Button>
+                    <Button
+                        v-if="testRun.status === 'active' && testRun.is_paused"
+                        @click="resumeRun"
+                        variant="outline"
+                        class="gap-2"
+                    >
+                        <Play class="h-4 w-4" />
+                        Resume
+                    </Button>
+                    <Button
                         v-if="testRun.status === 'active'"
                         @click="completeRun"
                         variant="outline"
@@ -256,6 +324,14 @@ const highlight = (text: string): string => {
                             <Progress :model-value="testRun.progress" class="h-3" />
                         </div>
                         <div class="flex gap-6">
+                            <div v-if="formatElapsed(liveElapsed)" class="text-center">
+                                <div class="text-2xl font-bold flex items-center gap-1" :class="testRun.is_paused ? 'text-yellow-500' : 'text-primary'">
+                                    <Pause v-if="testRun.is_paused" class="h-5 w-5" />
+                                    <Timer v-else class="h-5 w-5" />
+                                    {{ formatElapsed(liveElapsed) }}
+                                </div>
+                                <div class="text-xs text-muted-foreground">{{ testRun.is_paused ? 'Paused' : 'Elapsed' }}</div>
+                            </div>
                             <div v-if="testRun.stats?.passed" class="text-center">
                                 <div class="text-2xl font-bold text-green-500">{{ testRun.stats.passed }}</div>
                                 <div class="text-xs text-muted-foreground">Passed</div>
@@ -285,7 +361,7 @@ const highlight = (text: string): string => {
             <div v-if="searchQuery.trim() && Object.keys(filteredGroupedCases).length === 0" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <Search class="h-12 w-12 mb-3" />
                 <p class="font-semibold">No results found</p>
-                <p class="text-sm">No test cases match "{{ searchQuery }}"</p>
+                <p class="text-sm max-w-full truncate px-4">No test cases match "{{ searchQuery }}"</p>
             </div>
             <div v-else class="space-y-4">
                 <div v-for="(cases, suiteName) in filteredGroupedCases" :key="suiteName">

@@ -15,10 +15,14 @@ class TestRunController extends Controller
         $this->authorize('view', $project);
 
         $testRuns = $project->testRuns()
-            ->with('completedByUser:id,name')
+            ->with(['completedByUser:id,name', 'creator:id,name'])
             ->withCount('testRunCases')
             ->latest()
-            ->get();
+            ->get()
+            ->each(function (TestRun $run) {
+                $run->setAttribute('elapsed_seconds', $run->getElapsedSeconds());
+                $run->setAttribute('is_paused', $run->isPaused());
+            });
 
         return Inertia::render('TestRuns/Index', [
             'project' => $project,
@@ -60,6 +64,7 @@ class TestRunController extends Controller
             'environment' => $validated['environment'],
             'milestone' => $validated['milestone'],
             'status' => 'active',
+            'created_by' => auth()->id(),
         ]);
 
         foreach ($validated['test_case_ids'] as $testCaseId) {
@@ -82,7 +87,11 @@ class TestRunController extends Controller
         $testRun->load([
             'testRunCases.testCase.testSuite',
             'testRunCases.assignedUser',
+            'creator:id,name',
         ]);
+
+        $testRun->setAttribute('elapsed_seconds', $testRun->getElapsedSeconds());
+        $testRun->setAttribute('is_paused', $testRun->isPaused());
 
         return Inertia::render('TestRuns/Show', [
             'project' => $project,
@@ -137,11 +146,18 @@ class TestRunController extends Controller
     {
         $this->authorize('update', $project);
 
-        $testRun->update([
+        $data = [
             'status' => 'completed',
             'completed_at' => now(),
             'completed_by' => auth()->id(),
-        ]);
+        ];
+
+        if ($testRun->isPaused()) {
+            $data['total_paused_seconds'] = $testRun->total_paused_seconds + (int) $testRun->paused_at->diffInSeconds(now());
+            $data['paused_at'] = null;
+        }
+
+        $testRun->update($data);
 
         return back()->with('success', 'Test run completed.');
     }
@@ -150,8 +166,44 @@ class TestRunController extends Controller
     {
         $this->authorize('update', $project);
 
-        $testRun->update(['status' => 'archived']);
+        $data = ['status' => 'archived'];
+
+        if ($testRun->isPaused()) {
+            $data['total_paused_seconds'] = $testRun->total_paused_seconds + (int) $testRun->paused_at->diffInSeconds(now());
+            $data['paused_at'] = null;
+        }
+
+        $testRun->update($data);
 
         return back()->with('success', 'Test run archived.');
+    }
+
+    public function pause(Project $project, TestRun $testRun)
+    {
+        $this->authorize('update', $project);
+
+        if ($testRun->status !== 'active' || $testRun->isPaused()) {
+            return back()->with('error', 'Cannot pause this test run.');
+        }
+
+        $testRun->update(['paused_at' => now()]);
+
+        return back()->with('success', 'Test run paused.');
+    }
+
+    public function resume(Project $project, TestRun $testRun)
+    {
+        $this->authorize('update', $project);
+
+        if (! $testRun->isPaused()) {
+            return back()->with('error', 'Test run is not paused.');
+        }
+
+        $testRun->update([
+            'total_paused_seconds' => $testRun->total_paused_seconds + (int) $testRun->paused_at->diffInSeconds(now()),
+            'paused_at' => null,
+        ]);
+
+        return back()->with('success', 'Test run resumed.');
     }
 }

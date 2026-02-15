@@ -23,6 +23,9 @@ class TestRun extends Model
         'started_at',
         'completed_at',
         'completed_by',
+        'created_by',
+        'paused_at',
+        'total_paused_seconds',
     ];
 
     protected function casts(): array
@@ -31,6 +34,7 @@ class TestRun extends Model
             'stats' => 'array',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
+            'paused_at' => 'datetime',
         ];
     }
 
@@ -40,6 +44,14 @@ class TestRun extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Get the user who created the test run.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**
@@ -56,6 +68,36 @@ class TestRun extends Model
     public function testRunCases(): HasMany
     {
         return $this->hasMany(TestRunCase::class);
+    }
+
+    /**
+     * Check if the test run is currently paused.
+     */
+    public function isPaused(): bool
+    {
+        return $this->paused_at !== null;
+    }
+
+    /**
+     * Get elapsed seconds (created_at → now/completed_at, minus paused time).
+     */
+    public function getElapsedSeconds(): ?int
+    {
+        $start = $this->started_at ?? $this->created_at;
+        if (! $start) {
+            return null;
+        }
+
+        $end = $this->completed_at ?? now();
+        $totalSeconds = (int) $start->diffInSeconds($end);
+
+        $pausedSeconds = $this->total_paused_seconds ?? 0;
+
+        if ($this->isPaused() && $this->paused_at) {
+            $pausedSeconds += (int) $this->paused_at->diffInSeconds(now());
+        }
+
+        return max(0, $totalSeconds - $pausedSeconds);
     }
 
     /**

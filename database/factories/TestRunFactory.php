@@ -37,6 +37,9 @@ class TestRunFactory extends Factory
             'stats' => null,
             'started_at' => fake()->dateTimeBetween('-1 month', 'now'),
             'completed_at' => fake()->optional()->dateTimeBetween('now', '+1 week'),
+            'created_by' => User::factory(),
+            'paused_at' => null,
+            'total_paused_seconds' => 0,
         ];
     }
 
@@ -45,6 +48,15 @@ class TestRunFactory extends Factory
         return $this->state(fn () => [
             'status' => 'active',
             'completed_at' => null,
+        ]);
+    }
+
+    public function paused(): static
+    {
+        return $this->state(fn () => [
+            'status' => 'active',
+            'completed_at' => null,
+            'paused_at' => now(),
         ]);
     }
 

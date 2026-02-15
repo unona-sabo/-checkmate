@@ -3,6 +3,7 @@
 use App\Http\Controllers\BugreportController;
 use App\Http\Controllers\ChecklistController;
 use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TestCaseController;
@@ -20,9 +21,12 @@ Route::get('/', function () {
 })->name('welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('home', function () {
-        return Inertia::render('Dashboard');
-    })->name('home');
+    Route::get('home', [HomeController::class, 'index'])->name('home');
+    Route::post('home/sync', [HomeController::class, 'sync'])->name('home.sync');
+    Route::get('home/{section}', [HomeController::class, 'show'])->name('home.show');
+    Route::post('home/{section}/features', [HomeController::class, 'storeFeature'])->name('home.store-feature');
+    Route::put('home/{section}/features/{featureDescription}', [HomeController::class, 'updateFeature'])->name('home.update-feature');
+    Route::delete('home/{section}/features/{featureDescription}', [HomeController::class, 'destroyFeature'])->name('home.destroy-feature');
 
     // Projects
     Route::post('projects/reorder', [ProjectController::class, 'reorder'])->name('projects.reorder');
@@ -82,6 +86,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('test-runs/{testRun}', [TestRunController::class, 'destroy'])->name('destroy');
         Route::post('test-runs/{testRun}/complete', [TestRunController::class, 'complete'])->name('complete');
         Route::post('test-runs/{testRun}/archive', [TestRunController::class, 'archive'])->name('archive');
+        Route::post('test-runs/{testRun}/pause', [TestRunController::class, 'pause'])->name('pause');
+        Route::post('test-runs/{testRun}/resume', [TestRunController::class, 'resume'])->name('resume');
     });
 
     // Test Run Cases

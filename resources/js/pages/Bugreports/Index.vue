@@ -112,9 +112,23 @@ const highlight = (text: string): string => {
                 </div>
             </div>
 
-            <div v-if="filteredBugreports.length === 0" class="flex flex-col items-center justify-center py-12">
+            <div v-if="bugreports.length === 0" class="flex flex-1 items-center justify-center">
+                <div class="text-center">
+                    <Bug class="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 class="mt-4 text-lg font-semibold">No bugreports yet</h3>
+                    <p class="mt-2 text-sm text-muted-foreground">Report your first bug to start tracking issues.</p>
+                    <Link :href="`/projects/${project.id}/bugreports/create`" class="mt-4 inline-block">
+                        <Button variant="cta" class="gap-2">
+                            <Plus class="h-4 w-4" />
+                            Report Bug
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+
+            <div v-else-if="filteredBugreports.length === 0" class="flex flex-col items-center justify-center py-12">
                 <Bug class="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p class="text-muted-foreground">No bugreports found.</p>
+                <p class="text-muted-foreground">No bugreports match your search.</p>
             </div>
 
             <div v-else class="grid gap-2.5">

@@ -111,7 +111,12 @@ const loadHiddenColumns = () => {
     try {
         const saved = localStorage.getItem(HIDDEN_COLS_KEY);
         if (saved) {
-            hiddenColumns.value = JSON.parse(saved);
+            const parsed = JSON.parse(saved) as string[];
+            const validKeys = columns.value.map(c => c.key);
+            hiddenColumns.value = parsed.filter(k => validKeys.includes(k));
+            if (hiddenColumns.value.length !== parsed.length) {
+                saveHiddenColumns();
+            }
         }
     } catch (e) {
         console.error('Failed to load hidden columns:', e);
@@ -207,13 +212,18 @@ const isRowMatch = (row: ExtendedChecklistRow, query: string): boolean => {
 // Filters
 const showFilters = ref(false);
 const filterValues = ref<Record<string, string>>({});
+const filterUpdatedFrom = ref('');
+const filterUpdatedTo = ref('');
 
 const activeFilterCount = computed(() => {
-    return Object.values(filterValues.value).filter(v => v !== '').length;
+    const selectCount = Object.values(filterValues.value).filter(v => v !== '').length;
+    return selectCount + (filterUpdatedFrom.value ? 1 : 0) + (filterUpdatedTo.value ? 1 : 0);
 });
 
 const clearFilters = () => {
     filterValues.value = {};
+    filterUpdatedFrom.value = '';
+    filterUpdatedTo.value = '';
 };
 
 const filteredRows = computed(() => {
@@ -232,10 +242,18 @@ const filteredRows = computed(() => {
 
     if (hasFilters) {
         dataRows = dataRows.filter(row => {
-            return Object.entries(filterValues.value).every(([key, value]) => {
+            // Select column filters
+            const matchesSelects = Object.entries(filterValues.value).every(([key, value]) => {
                 if (!value) return true;
                 return row.data[key] === value;
             });
+            if (!matchesSelects) return false;
+
+            // Date range filters
+            if (filterUpdatedFrom.value && row.updated_at < filterUpdatedFrom.value) return false;
+            if (filterUpdatedTo.value && row.updated_at.slice(0, 10) > filterUpdatedTo.value) return false;
+
+            return true;
         });
     }
 
@@ -1160,53 +1178,50 @@ onMounted(() => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-8">
-                    <h1 class="text-2xl font-bold tracking-tight">
-                        <ClipboardList class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
-                            @click="copyLink"
-                            class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
-                            :title="copied ? 'Copied!' : 'Copy link'"
-                        ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
-                    </h1>
-                    <div class="flex items-center gap-2">
-                        <div class="relative">
-                            <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                v-model="searchQuery"
-                                type="text"
-                                placeholder="Search content..."
-                                class="pl-9 pr-8 w-56 bg-background/60"
-                            />
-                            <button
-                                v-if="searchQuery"
-                                @click="searchQuery = ''"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                            >
-                                <X class="h-4 w-4" />
-                            </button>
-                        </div>
-                        <Button
-                            v-if="selectColumns.length > 0"
-                            variant="outline"
-                            class="gap-2 relative"
-                            @click="showFilters = !showFilters"
-                        >
-                            <Filter class="h-4 w-4" />
-                            Filter
-                            <Badge
-                                v-if="activeFilterCount > 0"
-                                class="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full"
-                            >
-                                {{ activeFilterCount }}
-                            </Badge>
-                        </Button>
-                        <span v-if="isSearchActive && filteredDataRowCount > 0" class="text-xs text-muted-foreground whitespace-nowrap">
-                            {{ filteredDataRowCount }} found — click to navigate
-                        </span>
-                    </div>
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">
+                    <ClipboardList class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
+                        @click="copyLink"
+                        class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
+                        :title="copied ? 'Copied!' : 'Copy link'"
+                    ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
+                </h1>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <div class="relative">
+                    <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Search content..."
+                        class="pl-9 pr-8 w-56 bg-background/60"
+                    />
+                    <button
+                        v-if="searchQuery"
+                        @click="searchQuery = ''"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
                 </div>
-                <div class="flex items-center gap-2">
+                <Button
+                    variant="outline"
+                    class="gap-2 relative"
+                    @click="showFilters = !showFilters"
+                >
+                    <Filter class="h-4 w-4" />
+                    Filter
+                    <Badge
+                        v-if="activeFilterCount > 0"
+                        class="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full"
+                    >
+                        {{ activeFilterCount }}
+                    </Badge>
+                </Button>
+                <span v-if="isSearchActive && filteredDataRowCount > 0" class="text-xs text-muted-foreground whitespace-nowrap">
+                    {{ filteredDataRowCount }} found — click to navigate
+                </span>
+                <div class="flex items-center gap-2 ml-auto">
                     <!-- Undo last save -->
                     <Button
                         variant="ghost"
@@ -1499,7 +1514,7 @@ onMounted(() => {
             </div>
 
             <!-- Filter Dropdown -->
-            <div v-if="showFilters && selectColumns.length > 0" class="relative z-20">
+            <div v-if="showFilters" class="relative z-20">
                 <div class="rounded-xl border bg-card shadow-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-sm font-medium flex items-center gap-2">
@@ -1549,6 +1564,22 @@ onMounted(() => {
                                 </SelectContent>
                             </Select>
                             <button v-if="filterValues[col.key]" @click="filterValues[col.key] = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <!-- Updated From -->
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Updated From</Label>
+                            <Input v-model="filterUpdatedFrom" type="date" class="h-8 text-xs" :class="filterUpdatedFrom ? 'pr-7' : ''" />
+                            <button v-if="filterUpdatedFrom" @click="filterUpdatedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <!-- Updated To -->
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Updated To</Label>
+                            <Input v-model="filterUpdatedTo" type="date" class="h-8 text-xs" :class="filterUpdatedTo ? 'pr-7' : ''" />
+                            <button v-if="filterUpdatedTo" @click="filterUpdatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
                                 <X class="h-3 w-3" />
                             </button>
                         </div>
@@ -1894,7 +1925,7 @@ onMounted(() => {
                                 </tr>
                                 <tr v-else-if="(searchQuery.trim() || activeFilterCount > 0) && filteredDataRowCount === 0">
                                     <td :colspan="visibleColumns.length + 3" class="p-6 text-center text-muted-foreground text-sm">
-                                        <template v-if="searchQuery.trim()">No items match "{{ searchQuery }}".</template>
+                                        <span v-if="searchQuery.trim()" class="inline-block max-w-full truncate align-bottom">No items match "{{ searchQuery }}".</span>
                                         <template v-else>No items match the selected filters.</template>
                                         <Button v-if="activeFilterCount > 0" variant="outline" size="sm" class="mt-2 gap-2 ml-2" @click="clearFilters">
                                             <X class="h-3.5 w-3.5" />

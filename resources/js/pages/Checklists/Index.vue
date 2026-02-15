@@ -451,6 +451,13 @@ const onDialogClose = (open: boolean) => {
                         </CardContent>
                     </Card>
                 </Link>
+
+                <!-- No results -->
+                <div v-if="filteredChecklists.length === 0 && searchQuery.trim()" class="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground">
+                    <Search class="h-12 w-12 mb-3" />
+                    <p class="font-semibold">No results found</p>
+                    <p class="text-sm max-w-full truncate px-4">No checklists match "{{ searchQuery }}"</p>
+                </div>
             </div>
 
             <!-- Delete Confirmation Dialog -->

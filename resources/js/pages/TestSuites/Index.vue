@@ -418,15 +418,13 @@ const localFlatSuites = computed<FlatSuite[]>(() => {
     const result: FlatSuite[] = [];
 
     localTestSuites.value.forEach(suite => {
-        // Add parent suite (if has test cases OR has children)
-        if (suite.test_cases?.length || suite.children?.length) {
-            result.push({
-                id: suite.id,
-                name: suite.name,
-                type: suite.type,
-                testCases: suite.test_cases || [],
-            });
-        }
+        // Always add parent suite block
+        result.push({
+            id: suite.id,
+            name: suite.name,
+            type: suite.type,
+            testCases: suite.test_cases || [],
+        });
 
         // Add all child suites (even without test cases)
         suite.children?.forEach(child => {
@@ -1225,7 +1223,7 @@ onMounted(() => {
                     <div v-if="filteredFlatSuites.length === 0 && (searchQuery.trim() || activeFilterCount > 0)" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
                         <Search class="h-12 w-12 mb-3" />
                         <p class="font-semibold">No results found</p>
-                        <p v-if="searchQuery.trim()" class="text-sm">No test cases match "{{ searchQuery }}"</p>
+                        <p v-if="searchQuery.trim()" class="text-sm max-w-full truncate px-4">No test cases match "{{ searchQuery }}"</p>
                         <p v-else class="text-sm">No test cases match the selected filters</p>
                         <Button v-if="activeFilterCount > 0" variant="outline" size="sm" class="mt-3 gap-2" @click="clearFilters">
                             <X class="h-3.5 w-3.5" />

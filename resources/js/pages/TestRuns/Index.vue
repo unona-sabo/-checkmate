@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestRun } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Play, CheckCircle2, Archive, Search, X, Clock, Calendar, User } from 'lucide-vue-next';
+import { Plus, Play, CheckCircle2, Archive, Search, X, Clock, Calendar, User, Pause, Timer } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 
 const props = defineProps<{
@@ -52,18 +53,11 @@ const filteredTestRuns = computed(() => {
     );
 });
 
-const formatDuration = (run: TestRun): string | null => {
-    if (!run.started_at || !run.completed_at) return null;
-    const start = new Date(run.started_at).getTime();
-    const end = new Date(run.completed_at).getTime();
-    const diffMs = end - start;
-    if (diffMs < 0) return null;
-
-    const totalMinutes = Math.floor(diffMs / 60000);
-    const days = Math.floor(totalMinutes / 1440);
-    const hours = Math.floor((totalMinutes % 1440) / 60);
-    const minutes = totalMinutes % 60;
-
+const formatElapsed = (seconds: number | null | undefined): string | null => {
+    if (seconds == null || seconds < 0) return null;
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
@@ -72,6 +66,45 @@ const formatDuration = (run: TestRun): string | null => {
 const formatDate = (dateStr: string | null): string | null => {
     if (!dateStr) return null;
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+// Live timer: tick every second for active non-paused runs
+const tick = ref(0);
+let timerInterval: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+    timerInterval = setInterval(() => { tick.value++; }, 1000);
+});
+
+onUnmounted(() => {
+    if (timerInterval) clearInterval(timerInterval);
+});
+
+const getLiveElapsed = (run: TestRun): number | null => {
+    // Force reactivity on tick
+    tick.value;
+    if (run.status === 'completed' || run.status === 'archived') {
+        return run.elapsed_seconds ?? null;
+    }
+    // For active runs, compute client-side
+    const start = run.started_at ?? run.created_at;
+    if (!start) return null;
+    const startMs = new Date(start).getTime();
+    const nowMs = Date.now();
+    let total = Math.floor((nowMs - startMs) / 1000);
+    let paused = run.total_paused_seconds ?? 0;
+    if (run.is_paused && run.paused_at) {
+        paused += Math.floor((nowMs - new Date(run.paused_at).getTime()) / 1000);
+    }
+    return Math.max(0, total - paused);
+};
+
+const pauseRun = (run: TestRun) => {
+    router.post(`/projects/${props.project.id}/test-runs/${run.id}/pause`, {}, { preserveScroll: true });
+};
+
+const resumeRun = (run: TestRun) => {
+    router.post(`/projects/${props.project.id}/test-runs/${run.id}/resume`, {}, { preserveScroll: true });
 };
 
 const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -140,7 +173,7 @@ const highlight = (text: string): string => {
             <div v-else-if="filteredTestRuns.length === 0 && searchQuery.trim()" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <Search class="h-12 w-12 mb-3" />
                 <p class="font-semibold">No results found</p>
-                <p class="text-sm">No test runs match "{{ searchQuery }}"</p>
+                <p class="text-sm max-w-full truncate px-4">No test runs match "{{ searchQuery }}"</p>
             </div>
 
             <div v-else class="space-y-3">
@@ -166,15 +199,26 @@ const highlight = (text: string): string => {
                                             <span v-if="run.environment" v-html="highlight(run.environment)" />
                                             <span v-if="run.milestone" v-html="highlight(run.milestone)" />
                                             <span>{{ run.test_run_cases_count || 0 }} cases</span>
-                                            <!-- Duration, date & author for completed/archived runs -->
+                                            <!-- Elapsed time for all runs -->
+                                            <span class="text-muted-foreground/50">|</span>
+                                            <span v-if="formatElapsed(getLiveElapsed(run))" class="flex items-center gap-0.5">
+                                                <Pause v-if="run.is_paused" class="h-3 w-3 text-yellow-500" />
+                                                <Timer v-else class="h-3 w-3" />
+                                                {{ formatElapsed(getLiveElapsed(run)) }}
+                                            </span>
+                                            <!-- Created date & author for all runs -->
+                                            <span v-if="formatDate(run.created_at)" class="flex items-center gap-0.5">
+                                                <Calendar class="h-3 w-3" />
+                                                {{ formatDate(run.created_at) }}
+                                            </span>
+                                            <span v-if="run.creator" class="flex items-center gap-0.5">
+                                                <User class="h-3 w-3" />
+                                                {{ run.creator.name }}
+                                            </span>
+                                            <!-- Completed date & user for completed/archived -->
                                             <template v-if="run.status === 'completed' || run.status === 'archived'">
-                                                <span class="text-muted-foreground/50">|</span>
-                                                <span v-if="formatDuration(run)" class="flex items-center gap-0.5">
-                                                    <Clock class="h-3 w-3" />
-                                                    {{ formatDuration(run) }}
-                                                </span>
                                                 <span v-if="formatDate(run.completed_at)" class="flex items-center gap-0.5">
-                                                    <Calendar class="h-3 w-3" />
+                                                    <CheckCircle2 class="h-3 w-3" />
                                                     {{ formatDate(run.completed_at) }}
                                                 </span>
                                                 <span v-if="run.completed_by_user" class="flex items-center gap-0.5">
@@ -205,7 +249,23 @@ const highlight = (text: string): string => {
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex items-center shrink-0">
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button
+                                        v-if="run.status === 'active' && !run.is_paused"
+                                        @click.prevent.stop="pauseRun(run)"
+                                        class="p-1.5 rounded-md text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10 transition-colors cursor-pointer"
+                                        title="Pause"
+                                    >
+                                        <Pause class="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        v-if="run.status === 'active' && run.is_paused"
+                                        @click.prevent.stop="resumeRun(run)"
+                                        class="p-1.5 rounded-md text-yellow-500 hover:text-green-500 hover:bg-green-500/10 transition-colors cursor-pointer"
+                                        title="Resume"
+                                    >
+                                        <Play class="h-4 w-4" />
+                                    </button>
                                     <div class="text-right">
                                         <div class="text-lg font-bold text-primary">{{ run.progress }}%</div>
                                         <Progress :model-value="run.progress" class="w-24 h-2" />

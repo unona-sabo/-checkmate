@@ -161,8 +161,14 @@ export interface TestRun {
     started_at: string | null;
     completed_at: string | null;
     completed_by: number | null;
+    created_by: number | null;
+    paused_at: string | null;
+    total_paused_seconds: number;
+    elapsed_seconds?: number | null;
+    is_paused?: boolean;
     created_at: string;
     updated_at: string;
+    creator?: { id: number; name: string } | null;
     completed_by_user?: { id: number; name: string };
     test_run_cases_count?: number;
     test_run_cases?: TestRunCase[];
@@ -218,6 +224,32 @@ export interface ProjectSearchResponse {
     query: string;
     results: ProjectSearchResultGroup[];
     total: number;
+}
+
+export interface HomeSection {
+    key: string;
+    title: string;
+    description: string;
+    features: string[];
+    author: string;
+    count: number;
+    latest_created_at: string | null;
+    latest_updated_at: string | null;
+}
+
+export interface SectionFeature {
+    id: number;
+    section_key: string;
+    feature_index: number;
+    title: string;
+    description: string | null;
+    is_custom: boolean;
+    created_by: number | null;
+    updated_by: number | null;
+    creator?: { id: number; name: string } | null;
+    updater?: { id: number; name: string } | null;
+    created_at: string;
+    updated_at: string;
 }
 
 export type TestRunCaseStatus = TestRunCase['status'];
