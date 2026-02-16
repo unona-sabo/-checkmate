@@ -32,6 +32,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 import { ref, computed, onMounted, watch } from 'vue';
 
 const props = defineProps<{
@@ -713,12 +714,14 @@ onMounted(() => {
                     <p class="mt-2 text-sm text-muted-foreground max-w-sm">
                         Create your first test suite to organize your test cases into logical groups.
                     </p>
-                    <Link :href="`/projects/${project.id}/test-suites/create`" class="mt-4 inline-block">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Create Test Suite
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/test-suites/create`" class="mt-4 inline-block">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Create Test Suite
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -749,35 +752,37 @@ onMounted(() => {
                                 {{ selectedTestCaseIds.length }} of {{ localTotalTestCases }} selected
                             </span>
                             <!-- Actions dropdown when test cases are selected -->
-                            <DropdownMenu v-if="selectedTestCaseIds.length > 0">
-                                <DropdownMenuTrigger as-child>
-                                    <Button class="gap-2">
-                                        <MoreHorizontal class="h-4 w-4" />
-                                        Actions ({{ selectedTestCaseIds.length }})
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start">
-                                    <DropdownMenuLabel>Selected Test Cases</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem>
-                                        <Play class="h-4 w-4 mr-2" />
-                                        Create Test Run
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                        <Copy class="h-4 w-4 mr-2" />
-                                        Copy to Test Suite
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                        <FolderPlus class="h-4 w-4 mr-2" />
-                                        Create Subcategory
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem class="text-destructive focus:text-destructive">
-                                        <Trash2 class="h-4 w-4 mr-2" />
-                                        Delete Test Cases
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            <RestrictedAction v-if="selectedTestCaseIds.length > 0">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger as-child>
+                                        <Button class="gap-2">
+                                            <MoreHorizontal class="h-4 w-4" />
+                                            Actions ({{ selectedTestCaseIds.length }})
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start">
+                                        <DropdownMenuLabel>Selected Test Cases</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem>
+                                            <Play class="h-4 w-4 mr-2" />
+                                            Create Test Run
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem>
+                                            <Copy class="h-4 w-4 mr-2" />
+                                            Copy to Test Suite
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem>
+                                            <FolderPlus class="h-4 w-4 mr-2" />
+                                            Create Subcategory
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem class="text-destructive focus:text-destructive">
+                                            <Trash2 class="h-4 w-4 mr-2" />
+                                            Delete Test Cases
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </RestrictedAction>
                         </div>
                         <div v-else></div>
                         <div class="flex items-center gap-2">
@@ -795,17 +800,18 @@ onMounted(() => {
                                     {{ activeFilterCount }}
                                 </Badge>
                             </Button>
-                            <Dialog v-model:open="showNoteDialog" @update:open="onNoteDialogChange">
-                                <DialogTrigger as-child>
-                                    <Button
-                                        :variant="hasDraft ? 'cta' : 'outline'"
-                                        class="gap-2"
-                                    >
-                                        <Pencil v-if="hasDraft" class="h-4 w-4" />
-                                        <StickyNote v-else class="h-4 w-4" />
-                                        {{ hasDraft ? 'Draft' : 'Create a Note' }}
-                                    </Button>
-                                </DialogTrigger>
+                            <RestrictedAction>
+                                <Dialog v-model:open="showNoteDialog" @update:open="onNoteDialogChange">
+                                    <DialogTrigger as-child>
+                                        <Button
+                                            :variant="hasDraft ? 'cta' : 'outline'"
+                                            class="gap-2"
+                                        >
+                                            <Pencil v-if="hasDraft" class="h-4 w-4" />
+                                            <StickyNote v-else class="h-4 w-4" />
+                                            {{ hasDraft ? 'Draft' : 'Create a Note' }}
+                                        </Button>
+                                    </DialogTrigger>
                                 <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
                                     <DialogHeader>
                                         <DialogTitle class="flex items-center gap-2">
@@ -921,13 +927,16 @@ onMounted(() => {
                                         </div>
                                     </DialogFooter>
                                 </DialogContent>
-                            </Dialog>
-                            <Link :href="`/projects/${project.id}/test-suites/create`">
-                                <Button variant="cta" class="gap-2">
-                                    <Plus class="h-4 w-4" />
-                                    Test Suite
-                                </Button>
-                            </Link>
+                                </Dialog>
+                            </RestrictedAction>
+                            <RestrictedAction>
+                                <Link :href="`/projects/${project.id}/test-suites/create`">
+                                    <Button variant="cta" class="gap-2">
+                                        <Plus class="h-4 w-4" />
+                                        Test Suite
+                                    </Button>
+                                </Link>
+                            </RestrictedAction>
                         </div>
                     </div>
                 </div>
@@ -1285,12 +1294,14 @@ onMounted(() => {
                                         {{ suite.type }}
                                     </Badge>
                                 </div>
-                                <Link :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/create`" @click.stop class="shrink-0">
-                                    <Button variant="outline" size="sm" :class="suite.parentName ? 'h-6 text-[11px] gap-1 px-2' : 'text-xs'">
-                                        <Plus class="h-3.5 w-3.5" />
-                                        Add
-                                    </Button>
-                                </Link>
+                                <RestrictedAction>
+                                    <Link :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/create`" @click.stop class="shrink-0">
+                                        <Button variant="outline" size="sm" :class="suite.parentName ? 'h-6 text-[11px] gap-1 px-2' : 'text-xs'">
+                                            <Plus class="h-3.5 w-3.5" />
+                                            Add
+                                        </Button>
+                                    </Link>
+                                </RestrictedAction>
                             </div>
 
                             <!-- Test Cases -->

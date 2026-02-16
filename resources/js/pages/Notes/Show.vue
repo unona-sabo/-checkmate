@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import InputError from '@/components/InputError.vue';
 import { StickyNote, Save, Trash2, Upload, FileText } from 'lucide-vue-next';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 import { computed, ref, watch } from 'vue';
 
 interface Documentation {
@@ -101,16 +102,18 @@ const formatDate = (date: string) => {
                     </Badge>
                 </h1>
                 <div class="flex gap-2">
-                    <Link
-                        :href="`/projects/${project.id}/notes/${note.id}`"
-                        method="delete"
-                        as="button"
-                    >
-                        <Button variant="destructive" class="gap-2">
-                            <Trash2 class="h-4 w-4" />
-                            Delete
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link
+                            :href="`/projects/${project.id}/notes/${note.id}`"
+                            method="delete"
+                            as="button"
+                        >
+                            <Button variant="destructive" class="gap-2">
+                                <Trash2 class="h-4 w-4" />
+                                Delete
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -151,10 +154,12 @@ const formatDate = (date: string) => {
                                 </div>
 
                                 <div class="flex gap-2">
-                                    <Button type="submit" :disabled="form.processing || !hasChanges" class="gap-2">
-                                        <Save class="h-4 w-4" />
-                                        Save Changes
-                                    </Button>
+                                    <RestrictedAction>
+                                        <Button type="submit" :disabled="form.processing || !hasChanges" class="gap-2">
+                                            <Save class="h-4 w-4" />
+                                            Save Changes
+                                        </Button>
+                                    </RestrictedAction>
                                 </div>
                             </form>
                         </CardContent>
@@ -181,15 +186,17 @@ const formatDate = (date: string) => {
                             </Select>
 
                             <div v-if="form.documentation_id" class="pt-2">
-                                <Button
-                                    @click="publish"
-                                    :disabled="form.processing || !note.is_draft"
-                                    class="w-full gap-2"
-                                    :variant="note.is_draft ? 'default' : 'secondary'"
-                                >
-                                    <Upload class="h-4 w-4" />
-                                    {{ note.is_draft ? 'Publish to Documentation' : 'Already Published' }}
-                                </Button>
+                                <RestrictedAction>
+                                    <Button
+                                        @click="publish"
+                                        :disabled="form.processing || !note.is_draft"
+                                        class="w-full gap-2"
+                                        :variant="note.is_draft ? 'default' : 'secondary'"
+                                    >
+                                        <Upload class="h-4 w-4" />
+                                        {{ note.is_draft ? 'Publish to Documentation' : 'Already Published' }}
+                                    </Button>
+                                </RestrictedAction>
                                 <p class="text-xs text-muted-foreground mt-2">
                                     Publishing will append this note's content to the selected documentation.
                                 </p>

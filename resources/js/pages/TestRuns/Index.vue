@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Plus, Play, CheckCircle2, Archive, Search, X, Clock, Calendar, User, Pause, Timer } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 
 const props = defineProps<{
     project: Project;
@@ -147,12 +148,14 @@ const highlight = (text: string): string => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
-                    <Link :href="`/projects/${project.id}/test-runs/create`">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            New Test Run
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/test-runs/create`">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                New Test Run
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -161,12 +164,14 @@ const highlight = (text: string): string => {
                     <Play class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="mt-4 text-lg font-semibold">No test runs yet</h3>
                     <p class="mt-2 text-sm text-muted-foreground">Create a test run to start executing your test cases.</p>
-                    <Link :href="`/projects/${project.id}/test-runs/create`" class="mt-4 inline-block">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Create Test Run
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/test-runs/create`" class="mt-4 inline-block">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Create Test Run
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -250,22 +255,26 @@ const highlight = (text: string): string => {
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
-                                    <button
-                                        v-if="run.status === 'active' && !run.is_paused"
-                                        @click.prevent.stop="pauseRun(run)"
-                                        class="p-1.5 rounded-md text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10 transition-colors cursor-pointer"
-                                        title="Pause"
-                                    >
-                                        <Pause class="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        v-if="run.status === 'active' && run.is_paused"
-                                        @click.prevent.stop="resumeRun(run)"
-                                        class="p-1.5 rounded-md text-yellow-500 hover:text-green-500 hover:bg-green-500/10 transition-colors cursor-pointer"
-                                        title="Resume"
-                                    >
-                                        <Play class="h-4 w-4" />
-                                    </button>
+                                    <RestrictedAction>
+                                        <button
+                                            v-if="run.status === 'active' && !run.is_paused"
+                                            @click.prevent.stop="pauseRun(run)"
+                                            class="p-1.5 rounded-md text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10 transition-colors cursor-pointer"
+                                            title="Pause"
+                                        >
+                                            <Pause class="h-4 w-4" />
+                                        </button>
+                                    </RestrictedAction>
+                                    <RestrictedAction>
+                                        <button
+                                            v-if="run.status === 'active' && run.is_paused"
+                                            @click.prevent.stop="resumeRun(run)"
+                                            class="p-1.5 rounded-md text-yellow-500 hover:text-green-500 hover:bg-green-500/10 transition-colors cursor-pointer"
+                                            title="Resume"
+                                        >
+                                            <Play class="h-4 w-4" />
+                                        </button>
+                                    </RestrictedAction>
                                     <div class="text-right">
                                         <div class="text-lg font-bold text-primary">{{ run.progress }}%</div>
                                         <Progress :model-value="run.progress" class="w-24 h-2" />

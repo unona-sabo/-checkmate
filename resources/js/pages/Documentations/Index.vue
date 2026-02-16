@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, Plus, Search, X, FolderTree, ExternalLink, ChevronRight } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { ref, computed } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 
 interface Documentation {
     id: number;
@@ -72,12 +73,14 @@ const highlightDescription = (content: string): string => {
                     <FileText class="h-6 w-6 shrink-0 mt-1 text-primary" />
                     Documentations
                 </h1>
-                <Link :href="`/projects/${project.id}/documentations/create`">
-                    <Button variant="cta" class="gap-2 cursor-pointer">
-                        <Plus class="h-4 w-4" />
-                        Documentation
-                    </Button>
-                </Link>
+                <RestrictedAction>
+                    <Link :href="`/projects/${project.id}/documentations/create`">
+                        <Button variant="cta" class="gap-2 cursor-pointer">
+                            <Plus class="h-4 w-4" />
+                            Documentation
+                        </Button>
+                    </Link>
+                </RestrictedAction>
             </div>
 
             <div v-if="documentations.length === 0" class="flex flex-1 items-center justify-center">
@@ -85,12 +88,14 @@ const highlightDescription = (content: string): string => {
                     <FileText class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="mt-4 text-lg font-semibold">No documentations yet</h3>
                     <p class="mt-2 text-sm text-muted-foreground">Create your first documentation page.</p>
-                    <Link :href="`/projects/${project.id}/documentations/create`" class="mt-4 inline-block">
-                        <Button variant="cta" class="gap-2 cursor-pointer">
-                            <Plus class="h-4 w-4" />
-                            Create Documentation
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/documentations/create`" class="mt-4 inline-block">
+                            <Button variant="cta" class="gap-2 cursor-pointer">
+                                <Plus class="h-4 w-4" />
+                                Create Documentation
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 

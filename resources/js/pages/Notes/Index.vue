@@ -14,6 +14,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { StickyNote, Plus, FileText, Edit, Trash2 } from 'lucide-vue-next';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 import { ref } from 'vue';
 
 interface Documentation {
@@ -87,12 +88,14 @@ const deleteNote = () => {
                     <StickyNote class="h-6 w-6 shrink-0 mt-1 text-primary" />
                     Notes
                 </h1>
-                <Link :href="`/projects/${project.id}/notes/create`">
-                    <Button variant="cta" class="gap-2">
-                        <Plus class="h-4 w-4" />
-                        New Note
-                    </Button>
-                </Link>
+                <RestrictedAction>
+                    <Link :href="`/projects/${project.id}/notes/create`">
+                        <Button variant="cta" class="gap-2">
+                            <Plus class="h-4 w-4" />
+                            New Note
+                        </Button>
+                    </Link>
+                </RestrictedAction>
             </div>
 
             <div v-if="notes.length === 0" class="flex flex-1 items-center justify-center">
@@ -100,12 +103,14 @@ const deleteNote = () => {
                     <StickyNote class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="mt-4 text-lg font-semibold">No notes yet</h3>
                     <p class="mt-2 text-sm text-muted-foreground">Create your first note to get started.</p>
-                    <Link :href="`/projects/${project.id}/notes/create`" class="mt-4 inline-block">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Create Note
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/notes/create`" class="mt-4 inline-block">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Create Note
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -147,14 +152,16 @@ const deleteNote = () => {
                                         <Edit class="h-4 w-4" />
                                     </Button>
                                 </Link>
-                                <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    class="p-0 text-destructive hover:text-destructive"
-                                    @click.prevent="confirmDelete(note)"
-                                >
-                                    <Trash2 class="h-4 w-4" />
-                                </Button>
+                                <RestrictedAction>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        class="p-0 text-destructive hover:text-destructive"
+                                        @click.prevent="confirmDelete(note)"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </Button>
+                                </RestrictedAction>
                             </div>
                         </div>
                     </CardContent>

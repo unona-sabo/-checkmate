@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FileText, Edit, Trash2, ChevronRight, Download, Paperclip, FolderTree, ExternalLink, Plus, Search, X, Link2, Check } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 
 interface Documentation {
     id: number;
@@ -137,22 +138,26 @@ const imageAttachments = (attachments?: Attachment[]) =>
                     ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
                 </h1>
                 <div class="flex gap-2">
-                    <Link :href="`/projects/${project.id}/documentations/${documentation.id}/edit`">
-                        <Button variant="outline" class="gap-2">
-                            <Edit class="h-4 w-4" />
-                            Edit
-                        </Button>
-                    </Link>
-                    <Link
-                        :href="`/projects/${project.id}/documentations/${documentation.id}`"
-                        method="delete"
-                        as="button"
-                    >
-                        <Button variant="destructive" class="gap-2">
-                            <Trash2 class="h-4 w-4" />
-                            Delete
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/documentations/${documentation.id}/edit`">
+                            <Button variant="outline" class="gap-2">
+                                <Edit class="h-4 w-4" />
+                                Edit
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
+                    <RestrictedAction>
+                        <Link
+                            :href="`/projects/${project.id}/documentations/${documentation.id}`"
+                            method="delete"
+                            as="button"
+                        >
+                            <Button variant="destructive" class="gap-2">
+                                <Trash2 class="h-4 w-4" />
+                                Delete
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -166,11 +171,13 @@ const imageAttachments = (attachments?: Attachment[]) =>
                                     <FolderTree class="h-4 w-4 text-primary" />
                                     <span>Subcategories</span>
                                 </div>
-                                <Link :href="`/projects/${project.id}/documentations/create?parent_id=${documentation.id}`">
-                                    <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer h-6 w-6">
-                                        <Plus class="h-4 w-4" />
-                                    </Button>
-                                </Link>
+                                <RestrictedAction>
+                                    <Link :href="`/projects/${project.id}/documentations/create?parent_id=${documentation.id}`">
+                                        <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer h-6 w-6">
+                                            <Plus class="h-4 w-4" />
+                                        </Button>
+                                    </Link>
+                                </RestrictedAction>
                             </div>
                             <div class="relative mt-2">
                                 <Search class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -304,14 +311,16 @@ const imageAttachments = (attachments?: Attachment[]) =>
                                     </a>
                                     <div class="flex items-center justify-between p-2">
                                         <span class="text-xs text-muted-foreground truncate">{{ attachment.original_filename }}</span>
-                                        <Link
-                                            :href="`/projects/${project.id}/documentations/${documentation.id}/attachments/${attachment.id}`"
-                                            method="delete"
-                                            as="button"
-                                            class="p-1 text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
-                                        >
-                                            <Trash2 class="h-3.5 w-3.5" />
-                                        </Link>
+                                        <RestrictedAction>
+                                            <Link
+                                                :href="`/projects/${project.id}/documentations/${documentation.id}/attachments/${attachment.id}`"
+                                                method="delete"
+                                                as="button"
+                                                class="p-1 text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                                            >
+                                                <Trash2 class="h-3.5 w-3.5" />
+                                            </Link>
+                                        </RestrictedAction>
                                     </div>
                                 </div>
                             </div>
@@ -332,14 +341,16 @@ const imageAttachments = (attachments?: Attachment[]) =>
                                         <a :href="attachment.url" target="_blank" class="p-1 text-muted-foreground hover:text-foreground">
                                             <Download class="h-4 w-4" />
                                         </a>
-                                        <Link
-                                            :href="`/projects/${project.id}/documentations/${documentation.id}/attachments/${attachment.id}`"
-                                            method="delete"
-                                            as="button"
-                                            class="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
-                                        >
-                                            <Trash2 class="h-4 w-4" />
-                                        </Link>
+                                        <RestrictedAction>
+                                            <Link
+                                                :href="`/projects/${project.id}/documentations/${documentation.id}/attachments/${attachment.id}`"
+                                                method="delete"
+                                                as="button"
+                                                class="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
+                                            >
+                                                <Trash2 class="h-4 w-4" />
+                                            </Link>
+                                        </RestrictedAction>
                                     </div>
                                 </div>
                             </div>

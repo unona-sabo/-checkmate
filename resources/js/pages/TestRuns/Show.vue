@@ -16,6 +16,7 @@ import {
     SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check, Pause, Timer
 } from 'lucide-vue-next';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 
 const props = defineProps<{
     project: Project;
@@ -276,39 +277,47 @@ const highlight = (text: string): string => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
-                    <Button
-                        v-if="testRun.status === 'active' && !testRun.is_paused"
-                        @click="pauseRun"
-                        variant="outline"
-                        class="gap-2"
-                    >
-                        <Pause class="h-4 w-4" />
-                        Pause
-                    </Button>
-                    <Button
-                        v-if="testRun.status === 'active' && testRun.is_paused"
-                        @click="resumeRun"
-                        variant="outline"
-                        class="gap-2"
-                    >
-                        <Play class="h-4 w-4" />
-                        Resume
-                    </Button>
-                    <Button
-                        v-if="testRun.status === 'active'"
-                        @click="completeRun"
-                        variant="outline"
-                        class="gap-2"
-                    >
-                        <CheckCircle2 class="h-4 w-4" />
-                        Complete Run
-                    </Button>
-                    <Link :href="`/projects/${project.id}/test-runs/${testRun.id}/edit`">
-                        <Button variant="outline" class="gap-2">
-                            <Edit class="h-4 w-4" />
-                            Edit
+                    <RestrictedAction>
+                        <Button
+                            v-if="testRun.status === 'active' && !testRun.is_paused"
+                            @click="pauseRun"
+                            variant="outline"
+                            class="gap-2"
+                        >
+                            <Pause class="h-4 w-4" />
+                            Pause
                         </Button>
-                    </Link>
+                    </RestrictedAction>
+                    <RestrictedAction>
+                        <Button
+                            v-if="testRun.status === 'active' && testRun.is_paused"
+                            @click="resumeRun"
+                            variant="outline"
+                            class="gap-2"
+                        >
+                            <Play class="h-4 w-4" />
+                            Resume
+                        </Button>
+                    </RestrictedAction>
+                    <RestrictedAction>
+                        <Button
+                            v-if="testRun.status === 'active'"
+                            @click="completeRun"
+                            variant="outline"
+                            class="gap-2"
+                        >
+                            <CheckCircle2 class="h-4 w-4" />
+                            Complete Run
+                        </Button>
+                    </RestrictedAction>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/test-runs/${testRun.id}/edit`">
+                            <Button variant="outline" class="gap-2">
+                                <Edit class="h-4 w-4" />
+                                Edit
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -394,37 +403,39 @@ const highlight = (text: string): string => {
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
                                     <!-- Quick status buttons -->
-                                    <div v-if="testRun.status === 'active'" class="flex gap-1">
-                                        <Button
-                                            size="icon-sm"
-                                            variant="ghost"
-                                            class="p-0"
-                                            :class="{ 'bg-green-500/10': trc.status === 'passed' }"
-                                            @click="quickStatus(trc, 'passed')"
-                                            title="Pass"
-                                        >
-                                            <CheckCircle2 class="h-4 w-4 text-green-500" />
-                                        </Button>
-                                        <Button
-                                            size="icon-sm"
-                                            variant="ghost"
-                                            class="p-0"
-                                            :class="{ 'bg-red-500/10': trc.status === 'failed' }"
-                                            @click="quickStatus(trc, 'failed')"
-                                            title="Fail"
-                                        >
-                                            <XCircle class="h-4 w-4 text-red-500" />
-                                        </Button>
-                                        <Button
-                                            size="icon-sm"
-                                            variant="ghost"
-                                            class="p-0"
-                                            @click="openResultDialog(trc)"
-                                            title="Add Details"
-                                        >
-                                            <Edit class="h-4 w-4" />
-                                        </Button>
-                                    </div>
+                                    <RestrictedAction>
+                                        <div v-if="testRun.status === 'active'" class="flex gap-1">
+                                            <Button
+                                                size="icon-sm"
+                                                variant="ghost"
+                                                class="p-0"
+                                                :class="{ 'bg-green-500/10': trc.status === 'passed' }"
+                                                @click="quickStatus(trc, 'passed')"
+                                                title="Pass"
+                                            >
+                                                <CheckCircle2 class="h-4 w-4 text-green-500" />
+                                            </Button>
+                                            <Button
+                                                size="icon-sm"
+                                                variant="ghost"
+                                                class="p-0"
+                                                :class="{ 'bg-red-500/10': trc.status === 'failed' }"
+                                                @click="quickStatus(trc, 'failed')"
+                                                title="Fail"
+                                            >
+                                                <XCircle class="h-4 w-4 text-red-500" />
+                                            </Button>
+                                            <Button
+                                                size="icon-sm"
+                                                variant="ghost"
+                                                class="p-0"
+                                                @click="openResultDialog(trc)"
+                                                title="Add Details"
+                                            >
+                                                <Edit class="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </RestrictedAction>
                                     <!-- External Links -->
                                     <a
                                         v-if="trc.clickup_link"
@@ -486,7 +497,9 @@ const highlight = (text: string): string => {
                 </div>
                 <DialogFooter>
                     <Button variant="outline" @click="showResultDialog = false">Cancel</Button>
-                    <Button @click="saveResult">Save Result</Button>
+                    <RestrictedAction>
+                        <Button @click="saveResult">Save Result</Button>
+                    </RestrictedAction>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

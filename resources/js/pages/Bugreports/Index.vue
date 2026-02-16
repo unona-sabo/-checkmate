@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Bug, Plus, Search, X } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { ref, computed } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 
 interface Bugreport {
     id: number;
@@ -103,12 +104,14 @@ const highlight = (text: string): string => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
-                    <Link :href="`/projects/${project.id}/bugreports/create`">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Report Bug
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/bugreports/create`">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Report Bug
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -117,12 +120,14 @@ const highlight = (text: string): string => {
                     <Bug class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="mt-4 text-lg font-semibold">No bugreports yet</h3>
                     <p class="mt-2 text-sm text-muted-foreground">Report your first bug to start tracking issues.</p>
-                    <Link :href="`/projects/${project.id}/bugreports/create`" class="mt-4 inline-block">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Report Bug
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/bugreports/create`" class="mt-4 inline-block">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Report Bug
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 

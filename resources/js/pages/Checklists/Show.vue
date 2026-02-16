@@ -39,6 +39,10 @@ import {
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import RestrictedAction from '@/components/RestrictedAction.vue';
+import { useCanEdit } from '@/composables/useCanEdit';
+
+const { canEdit } = useCanEdit();
 
 const props = defineProps<{
     project: Project;
@@ -1225,105 +1229,113 @@ onMounted(() => {
                 </span>
                 <div class="flex items-center gap-2 ml-auto">
                     <!-- Undo last save -->
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        :disabled="!canUndo"
-                        @click="undoLastSave"
-                        title="Undo last save"
-                    >
-                        <Undo2 class="h-4 w-4" />
-                    </Button>
+                    <RestrictedAction>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            :disabled="!canUndo"
+                            @click="undoLastSave"
+                            title="Undo last save"
+                        >
+                            <Undo2 class="h-4 w-4" />
+                        </Button>
+                    </RestrictedAction>
                     <!-- Actions dropdown when rows are selected -->
-                    <DropdownMenu v-if="hasSelectedRows">
-                        <DropdownMenuTrigger as-child>
-                            <Button class="gap-2">
-                                <MoreHorizontal class="h-4 w-4" />
-                                Actions ({{ selectedRows.length }})
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Selected Rows</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem @click="createBugreportFromSelected">
-                                <Bug class="h-4 w-4 mr-2" />
-                                Create Bugreport
-                            </DropdownMenuItem>
-                            <DropdownMenuSub v-if="selectColumns.length > 0">
-                                <DropdownMenuSubTrigger>
-                                    <RefreshCw class="h-4 w-4 mr-2" />
-                                    Change Status
-                                </DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent>
-                                    <template v-for="col in selectColumns" :key="col.key">
-                                        <DropdownMenuLabel v-if="selectColumns.length > 1">{{ col.label }}</DropdownMenuLabel>
-                                        <DropdownMenuItem
-                                            v-for="option in col.options"
-                                            :key="option.value"
-                                            @click="changeSelectedStatus(col.key, option.value)"
-                                        >
-                                            <span
-                                                class="px-2 py-0.5 rounded text-xs font-medium"
-                                                :style="{
-                                                    backgroundColor: option.color || '#dbeafe',
-                                                    color: getTextColorForBg(option.color)
-                                                }"
+                    <RestrictedAction>
+                        <DropdownMenu v-if="hasSelectedRows">
+                            <DropdownMenuTrigger as-child>
+                                <Button class="gap-2">
+                                    <MoreHorizontal class="h-4 w-4" />
+                                    Actions ({{ selectedRows.length }})
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Selected Rows</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem @click="createBugreportFromSelected">
+                                    <Bug class="h-4 w-4 mr-2" />
+                                    Create Bugreport
+                                </DropdownMenuItem>
+                                <DropdownMenuSub v-if="selectColumns.length > 0">
+                                    <DropdownMenuSubTrigger>
+                                        <RefreshCw class="h-4 w-4 mr-2" />
+                                        Change Status
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuSubContent>
+                                        <template v-for="col in selectColumns" :key="col.key">
+                                            <DropdownMenuLabel v-if="selectColumns.length > 1">{{ col.label }}</DropdownMenuLabel>
+                                            <DropdownMenuItem
+                                                v-for="option in col.options"
+                                                :key="option.value"
+                                                @click="changeSelectedStatus(col.key, option.value)"
                                             >
-                                                {{ option.label }}
-                                            </span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator v-if="selectColumns.length > 1" />
-                                    </template>
-                                </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                                <Copy class="h-4 w-4 mr-2" />
-                                Copy to Checklist
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <Layers class="h-4 w-4 mr-2" />
-                                Create Test Case
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <Play class="h-4 w-4 mr-2" />
-                                Create Test Run
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem class="text-destructive focus:text-destructive">
-                                <Trash2 class="h-4 w-4 mr-2" />
-                                Delete Rows
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                                <span
+                                                    class="px-2 py-0.5 rounded text-xs font-medium"
+                                                    :style="{
+                                                        backgroundColor: option.color || '#dbeafe',
+                                                        color: getTextColorForBg(option.color)
+                                                    }"
+                                                >
+                                                    {{ option.label }}
+                                                </span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator v-if="selectColumns.length > 1" />
+                                        </template>
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem>
+                                    <Copy class="h-4 w-4 mr-2" />
+                                    Copy to Checklist
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                    <Layers class="h-4 w-4 mr-2" />
+                                    Create Test Case
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                    <Play class="h-4 w-4 mr-2" />
+                                    Create Test Run
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem class="text-destructive focus:text-destructive">
+                                    <Trash2 class="h-4 w-4 mr-2" />
+                                    Delete Rows
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </RestrictedAction>
                     <!-- Save Changes button when no rows selected but there are content changes -->
-                    <Button
-                        v-else-if="hasContentChanges"
-                        @click="saveRows"
-                        class="gap-2"
-                    >
-                        <Save class="h-4 w-4" />
-                        Save Changes
-                    </Button>
+                    <RestrictedAction>
+                        <Button
+                            v-if="!hasSelectedRows && hasContentChanges"
+                            @click="saveRows"
+                            class="gap-2"
+                        >
+                            <Save class="h-4 w-4" />
+                            Save Changes
+                        </Button>
+                    </RestrictedAction>
                     <!-- Import/Export dropdown -->
-                    <DropdownMenu>
-                        <DropdownMenuTrigger as-child>
-                            <Button variant="outline" class="gap-2">
-                                <FileSpreadsheet class="h-4 w-4" />
-                                File
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem @click="showImportDialog = true">
-                                <Download class="h-4 w-4 mr-2" />
-                                Import
-                            </DropdownMenuItem>
-                            <DropdownMenuItem @click="exportChecklist">
-                                <Upload class="h-4 w-4 mr-2" />
-                                Export
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <RestrictedAction>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="outline" class="gap-2">
+                                    <FileSpreadsheet class="h-4 w-4" />
+                                    File
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem @click="showImportDialog = true">
+                                    <Download class="h-4 w-4 mr-2" />
+                                    Import
+                                </DropdownMenuItem>
+                                <DropdownMenuItem @click="exportChecklist">
+                                    <Upload class="h-4 w-4 mr-2" />
+                                    Export
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </RestrictedAction>
                     <!-- Columns visibility dropdown -->
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
@@ -1350,16 +1362,18 @@ onMounted(() => {
                         </DropdownMenuContent>
                     </DropdownMenu>
                     <Dialog v-model:open="showNoteDialog" @update:open="onNoteDialogChange">
-                        <DialogTrigger as-child>
-                            <Button
-                                :variant="hasDraft ? 'cta' : 'outline'"
-                                class="gap-2"
-                            >
-                                <Pencil v-if="hasDraft" class="h-4 w-4" />
-                                <StickyNote v-else class="h-4 w-4" />
-                                {{ hasDraft ? 'Draft' : 'Create a Note' }}
-                            </Button>
-                        </DialogTrigger>
+                        <RestrictedAction>
+                            <DialogTrigger as-child>
+                                <Button
+                                    :variant="hasDraft ? 'cta' : 'outline'"
+                                    class="gap-2"
+                                >
+                                    <Pencil v-if="hasDraft" class="h-4 w-4" />
+                                    <StickyNote v-else class="h-4 w-4" />
+                                    {{ hasDraft ? 'Draft' : 'Create a Note' }}
+                                </Button>
+                            </DialogTrigger>
+                        </RestrictedAction>
                         <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
                             <DialogHeader>
                                 <DialogTitle class="flex items-center gap-2">
@@ -1447,42 +1461,48 @@ onMounted(() => {
                                     <Button variant="outline" @click="showNoteDialog = false">
                                         Cancel
                                     </Button>
-                                    <Button
-                                        @click="importNotes"
-                                        :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
-                                        class="gap-2"
-                                    >
-                                        <Import class="h-4 w-4" />
-                                        Import to Checklist
-                                    </Button>
+                                    <RestrictedAction>
+                                        <Button
+                                            @click="importNotes"
+                                            :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
+                                            class="gap-2"
+                                        >
+                                            <Import class="h-4 w-4" />
+                                            Import to Checklist
+                                        </Button>
+                                    </RestrictedAction>
                                 </div>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger as-child>
+                    <RestrictedAction>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="outline" class="gap-2">
+                                    <Plus class="h-4 w-4" />
+                                    Add Row
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem @click="openAddRowsDialog(rows.length, 'end', 'normal')">
+                                    <Plus class="h-4 w-4 mr-2" />
+                                    Normal Row
+                                </DropdownMenuItem>
+                                <DropdownMenuItem @click="openAddRowsDialog(rows.length, 'end', 'section_header')">
+                                    <Heading class="h-4 w-4 mr-2" />
+                                    Section Header
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </RestrictedAction>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/checklists/${checklist.id}/edit`">
                             <Button variant="outline" class="gap-2">
-                                <Plus class="h-4 w-4" />
-                                Add Row
+                                <Edit class="h-4 w-4" />
+                                Edit
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem @click="openAddRowsDialog(rows.length, 'end', 'normal')">
-                                <Plus class="h-4 w-4 mr-2" />
-                                Normal Row
-                            </DropdownMenuItem>
-                            <DropdownMenuItem @click="openAddRowsDialog(rows.length, 'end', 'section_header')">
-                                <Heading class="h-4 w-4 mr-2" />
-                                Section Header
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Link :href="`/projects/${project.id}/checklists/${checklist.id}/edit`">
-                        <Button variant="outline" class="gap-2">
-                            <Edit class="h-4 w-4" />
-                            Edit
-                        </Button>
-                    </Link>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -1711,6 +1731,7 @@ onMounted(() => {
                                                 :style="{ color: row.font_color || 'inherit' }"
                                                 placeholder="Section title..."
                                                 rows="1"
+                                                :readonly="!canEdit"
                                                 @input="(e: Event) => autoResizeTextarea(e.target as HTMLTextAreaElement)"
                                                 @blur="saveOnBlur"
                                             />
@@ -1730,6 +1751,7 @@ onMounted(() => {
                                                         :checked="!!row.data[column.key]"
                                                         @change="(e) => updateCell(row, column.key, (e.target as HTMLInputElement).checked)"
                                                         class="h-4 w-4 rounded border-gray-300 cursor-pointer"
+                                                        :disabled="!canEdit"
                                                     />
                                                 </div>
                                             </template>
@@ -1741,6 +1763,7 @@ onMounted(() => {
                                                     :class="getFontWeightClass(row.font_weight)"
                                                     :style="{ color: row.font_color || 'inherit' }"
                                                     rows="1"
+                                                    :readonly="!canEdit"
                                                     @input="(e: Event) => autoResizeTextarea(e.target as HTMLTextAreaElement)"
                                                     @blur="saveOnBlur"
                                                 />
@@ -1750,6 +1773,7 @@ onMounted(() => {
                                                     <DropdownMenuTrigger as-child>
                                                         <button
                                                             class="h-7 px-2 text-sm rounded border flex items-center gap-1 min-w-[80px] hover:bg-muted/50 cursor-pointer"
+                                                            :class="{ 'pointer-events-none opacity-70': !canEdit }"
                                                             :style="getSelectedOption(column, row.data[column.key]) ? {
                                                                 backgroundColor: getSelectedOption(column, row.data[column.key])?.color || '#dbeafe',
                                                                 color: getTextColorForBg(getSelectedOption(column, row.data[column.key])?.color)
@@ -1793,6 +1817,7 @@ onMounted(() => {
                                                     :model-value="row.data[column.key] as string"
                                                     @update:model-value="(val) => updateCell(row, column.key, val)"
                                                     class="h-7 text-sm"
+                                                    :readonly="!canEdit"
                                                     @blur="saveOnBlur"
                                                 />
                                             </template>
@@ -1801,23 +1826,25 @@ onMounted(() => {
                                                     :model-value="row.data[column.key] as string"
                                                     @update:model-value="(val) => updateCell(row, column.key, val)"
                                                     class="h-7 text-sm"
+                                                    :readonly="!canEdit"
                                                     @blur="saveOnBlur"
                                                 />
                                             </template>
                                         </td>
                                     </template>
                                     <td class="px-1 py-0.5 align-top">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger as-child>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    class="h-7 w-7 p-0"
-                                                    title="Row Style"
-                                                >
-                                                    <Edit class="h-3.5 w-3.5" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
+                                        <RestrictedAction>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger as-child>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        class="h-7 w-7 p-0"
+                                                        title="Row Style"
+                                                    >
+                                                        <Edit class="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" class="w-56">
                                                 <!-- Insert Rows -->
                                                 <DropdownMenuLabel>Insert Rows</DropdownMenuLabel>
@@ -1934,17 +1961,20 @@ onMounted(() => {
                                                     <span :class="getFontWeightClass(weight.value)">{{ weight.label }}</span>
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
-                                        </DropdownMenu>
+                                            </DropdownMenu>
+                                        </RestrictedAction>
                                     </td>
                                     <td class="px-1 py-0.5 align-top">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            @click="confirmRemoveRow(index)"
-                                            class="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                        >
-                                            <Trash2 class="h-3.5 w-3.5" />
-                                        </Button>
+                                        <RestrictedAction>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="confirmRemoveRow(index)"
+                                                class="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                            >
+                                                <Trash2 class="h-3.5 w-3.5" />
+                                            </Button>
+                                        </RestrictedAction>
                                     </td>
                                 </tr>
                                 <tr v-if="rows.length === 0">
@@ -1999,9 +2029,11 @@ onMounted(() => {
                         <Button variant="secondary" @click="showDeleteConfirm = false" class="flex-1 sm:flex-none">
                             No
                         </Button>
-                        <Button variant="destructive" @click="removeRow" class="flex-1 sm:flex-none">
-                            Yes
-                        </Button>
+                        <RestrictedAction>
+                            <Button variant="destructive" @click="removeRow" class="flex-1 sm:flex-none">
+                                Yes
+                            </Button>
+                        </RestrictedAction>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -2030,10 +2062,12 @@ onMounted(() => {
                         <Button variant="outline" @click="showAddRowsDialog = false">
                             Cancel
                         </Button>
-                        <Button @click="insertRows" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Add {{ addRowsCount }} row{{ addRowsCount > 1 ? 's' : '' }}
-                        </Button>
+                        <RestrictedAction>
+                            <Button @click="insertRows" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Add {{ addRowsCount }} row{{ addRowsCount > 1 ? 's' : '' }}
+                            </Button>
+                        </RestrictedAction>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -2098,14 +2132,16 @@ onMounted(() => {
                         <Button variant="outline" @click="closeImportDialog">
                             Cancel
                         </Button>
-                        <Button
-                            @click="submitImport"
-                            :disabled="!importFile || isUploadingFile"
-                            class="gap-2"
-                        >
-                            <Download class="h-4 w-4" />
-                            {{ isUploadingFile ? 'Importing...' : 'Import' }}
-                        </Button>
+                        <RestrictedAction>
+                            <Button
+                                @click="submitImport"
+                                :disabled="!importFile || isUploadingFile"
+                                class="gap-2"
+                            >
+                                <Download class="h-4 w-4" />
+                                {{ isUploadingFile ? 'Importing...' : 'Import' }}
+                            </Button>
+                        </RestrictedAction>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

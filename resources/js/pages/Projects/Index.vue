@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Plus, FolderKanban, CheckSquare, Layers, PlayCircle, Calendar, Sparkles, GripVertical } from 'lucide-vue-next';
 import { ref } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 
 const props = defineProps<{
     projects: Project[];
@@ -99,12 +100,14 @@ const saveOrder = () => {
                         <span v-if="isSaving" class="ml-2 text-primary">Saving...</span>
                     </p>
                 </div>
-                <Link href="/projects/create">
-                    <Button variant="cta" class="gap-2">
-                        <Plus class="h-4 w-4" />
-                        New Project
-                    </Button>
-                </Link>
+                <RestrictedAction>
+                    <Link href="/projects/create">
+                        <Button variant="cta" class="gap-2">
+                            <Plus class="h-4 w-4" />
+                            New Project
+                        </Button>
+                    </Link>
+                </RestrictedAction>
             </div>
 
             <div v-if="projects.length === 0" class="flex flex-1 items-center justify-center">
@@ -112,12 +115,14 @@ const saveOrder = () => {
                     <Sparkles class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="mt-4 text-lg font-semibold">No projects yet</h3>
                     <p class="mt-2 text-sm text-muted-foreground">Get started by creating your first project.</p>
-                    <Link href="/projects/create" class="mt-4 inline-block">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Create Project
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link href="/projects/create" class="mt-4 inline-block">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Create Project
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -183,15 +188,17 @@ const saveOrder = () => {
                         </Card>
                     </Link>
                     <!-- Drag handle -->
-                    <div
-                        draggable="true"
-                        @dragstart="onDragStart(index, $event)"
-                        @dragend="onDragEnd"
-                        class="absolute top-2 right-2 p-1.5 rounded-lg bg-muted/80 hover:bg-muted cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        @click.prevent.stop
-                    >
-                        <GripVertical class="h-4 w-4 text-muted-foreground" />
-                    </div>
+                    <RestrictedAction>
+                        <div
+                            draggable="true"
+                            @dragstart="onDragStart(index, $event)"
+                            @dragend="onDragEnd"
+                            class="absolute top-2 right-2 p-1.5 rounded-lg bg-muted/80 hover:bg-muted cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            @click.prevent.stop
+                        >
+                            <GripVertical class="h-4 w-4 text-muted-foreground" />
+                        </div>
+                    </RestrictedAction>
                 </div>
             </div>
         </div>

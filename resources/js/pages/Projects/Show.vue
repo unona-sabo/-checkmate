@@ -21,6 +21,7 @@ import {
 } from 'lucide-vue-next';
 import { ref, watch, computed } from 'vue';
 import axios from 'axios';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 
 const props = defineProps<{
     project: Project;
@@ -166,12 +167,14 @@ const getBugStatusColor = (status: string) => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
-                    <Link :href="`/projects/${project.id}/edit`">
-                        <Button variant="outline" class="gap-2">
-                            <Edit class="h-4 w-4" />
-                            Edit Project
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/edit`">
+                            <Button variant="outline" class="gap-2">
+                                <Edit class="h-4 w-4" />
+                                Edit Project
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -272,11 +275,13 @@ const getBugStatusColor = (status: string) => {
                                 Checklists
                                 <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.checklists?.length || 0 }}</span>
                             </CardTitle>
-                            <Link :href="`/projects/${project.id}/checklists/create`">
-                                <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
-                                    <Plus class="h-4 w-4" />
-                                </Button>
-                            </Link>
+                            <RestrictedAction>
+                                <Link :href="`/projects/${project.id}/checklists/create`">
+                                    <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
+                                        <Plus class="h-4 w-4" />
+                                    </Button>
+                                </Link>
+                            </RestrictedAction>
                         </div>
                     </CardHeader>
                     <CardContent class="p-5 pt-0 flex flex-col flex-1">
@@ -309,11 +314,13 @@ const getBugStatusColor = (status: string) => {
                                 Test Suites
                                 <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.test_suites?.length || 0 }}</span>
                             </CardTitle>
-                            <Link :href="`/projects/${project.id}/test-suites/create`">
-                                <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
-                                    <Plus class="h-4 w-4" />
-                                </Button>
-                            </Link>
+                            <RestrictedAction>
+                                <Link :href="`/projects/${project.id}/test-suites/create`">
+                                    <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
+                                        <Plus class="h-4 w-4" />
+                                    </Button>
+                                </Link>
+                            </RestrictedAction>
                         </div>
                     </CardHeader>
                     <CardContent class="p-5 pt-0 flex flex-col flex-1">
@@ -346,11 +353,13 @@ const getBugStatusColor = (status: string) => {
                                 Test Runs
                                 <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.test_runs?.length || 0 }}</span>
                             </CardTitle>
-                            <Link :href="`/projects/${project.id}/test-runs/create`">
-                                <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
-                                    <Plus class="h-4 w-4" />
-                                </Button>
-                            </Link>
+                            <RestrictedAction>
+                                <Link :href="`/projects/${project.id}/test-runs/create`">
+                                    <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
+                                        <Plus class="h-4 w-4" />
+                                    </Button>
+                                </Link>
+                            </RestrictedAction>
                         </div>
                     </CardHeader>
                     <CardContent class="p-5 pt-0 flex flex-col flex-1">
@@ -389,11 +398,13 @@ const getBugStatusColor = (status: string) => {
                                 Bug Reports
                                 <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.bugreports?.length || 0 }}</span>
                             </CardTitle>
-                            <Link :href="`/projects/${project.id}/bugreports/create`">
-                                <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
-                                    <Plus class="h-4 w-4" />
-                                </Button>
-                            </Link>
+                            <RestrictedAction>
+                                <Link :href="`/projects/${project.id}/bugreports/create`">
+                                    <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
+                                        <Plus class="h-4 w-4" />
+                                    </Button>
+                                </Link>
+                            </RestrictedAction>
                         </div>
                     </CardHeader>
                     <CardContent class="p-5 pt-0 flex flex-col flex-1">
@@ -431,11 +442,13 @@ const getBugStatusColor = (status: string) => {
                                 Documentations
                                 <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.documentations?.length || 0 }}</span>
                             </CardTitle>
-                            <Link :href="`/projects/${project.id}/documentations/create`">
-                                <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
-                                    <Plus class="h-4 w-4" />
-                                </Button>
-                            </Link>
+                            <RestrictedAction>
+                                <Link :href="`/projects/${project.id}/documentations/create`">
+                                    <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
+                                        <Plus class="h-4 w-4" />
+                                    </Button>
+                                </Link>
+                            </RestrictedAction>
                         </div>
                     </CardHeader>
                     <CardContent class="p-5 pt-0 flex flex-col flex-1">

@@ -10,6 +10,7 @@ import {
     Zap, Bug, GripVertical, Boxes, FolderPlus, Search, X, Link2, Check
 } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 import { ref, computed } from 'vue';
 
 const props = defineProps<{
@@ -269,24 +270,30 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
-                    <Link v-if="testSuite.parent_id" :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/create`">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Add Test Case
-                        </Button>
-                    </Link>
-                    <Link v-if="!testSuite.parent_id" :href="`/projects/${project.id}/test-suites/create?parent_id=${testSuite.id}`">
-                        <Button variant="outline" class="gap-2">
-                            <FolderPlus class="h-4 w-4" />
-                            Add Subcategory
-                        </Button>
-                    </Link>
-                    <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/edit`">
-                        <Button variant="outline" class="gap-2">
-                            <Edit class="h-4 w-4" />
-                            Edit Suite
-                        </Button>
-                    </Link>
+                    <RestrictedAction v-if="testSuite.parent_id">
+                        <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/create`">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Add Test Case
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
+                    <RestrictedAction v-if="!testSuite.parent_id">
+                        <Link :href="`/projects/${project.id}/test-suites/create?parent_id=${testSuite.id}`">
+                            <Button variant="outline" class="gap-2">
+                                <FolderPlus class="h-4 w-4" />
+                                Add Subcategory
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/edit`">
+                            <Button variant="outline" class="gap-2">
+                                <Edit class="h-4 w-4" />
+                                Edit Suite
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -298,12 +305,14 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                     <p class="mt-2 text-sm text-muted-foreground max-w-sm">
                         Add test cases to this suite to get started.
                     </p>
-                    <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/create`" class="mt-4 inline-block">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Add Test Case
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/create`" class="mt-4 inline-block">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Add Test Case
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -349,12 +358,14 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                                 {{ section.type }}
                             </Badge>
                         </div>
-                        <Link :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/create`" @click.stop class="shrink-0">
-                            <Button variant="outline" size="sm" class="text-xs">
-                                <Plus class="h-3.5 w-3.5" />
-                                Add
-                            </Button>
-                        </Link>
+                        <RestrictedAction>
+                            <Link :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/create`" @click.stop class="shrink-0">
+                                <Button variant="outline" size="sm" class="text-xs">
+                                    <Plus class="h-3.5 w-3.5" />
+                                    Add
+                                </Button>
+                            </Link>
+                        </RestrictedAction>
                     </div>
 
                     <!-- Test Cases -->
@@ -402,12 +413,14 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                     <div v-else class="rounded-lg border border-dashed p-6 text-center">
                         <FileText class="mx-auto h-8 w-8 text-muted-foreground" />
                         <p class="mt-2 text-sm text-muted-foreground">No test cases in this {{ section.isChild ? 'subcategory' : 'suite' }}</p>
-                        <Link :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/create`" class="mt-3 inline-block">
-                            <Button size="sm" variant="outline" class="gap-2">
-                                <Plus class="h-4 w-4" />
-                                Add Test Case
-                            </Button>
-                        </Link>
+                        <RestrictedAction>
+                            <Link :href="`/projects/${project.id}/test-suites/${section.id}/test-cases/create`" class="mt-3 inline-block">
+                                <Button size="sm" variant="outline" class="gap-2">
+                                    <Plus class="h-4 w-4" />
+                                    Add Test Case
+                                </Button>
+                            </Link>
+                        </RestrictedAction>
                     </div>
                 </div>
 
@@ -433,22 +446,26 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                                 <Badge variant="secondary" class="shrink-0 text-xs font-normal bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800">0 cases</Badge>
                                 <Badge variant="outline" :class="getTypeColor(child.type)" class="shrink-0 text-xs font-normal">{{ child.type }}</Badge>
                             </div>
-                            <Link :href="`/projects/${project.id}/test-suites/${child.id}/test-cases/create`" @click.stop class="shrink-0">
-                                <Button variant="outline" size="sm" class="text-xs">
-                                    <Plus class="h-3.5 w-3.5" />
-                                    Add
-                                </Button>
-                            </Link>
+                            <RestrictedAction>
+                                <Link :href="`/projects/${project.id}/test-suites/${child.id}/test-cases/create`" @click.stop class="shrink-0">
+                                    <Button variant="outline" size="sm" class="text-xs">
+                                        <Plus class="h-3.5 w-3.5" />
+                                        Add
+                                    </Button>
+                                </Link>
+                            </RestrictedAction>
                         </div>
                         <div class="rounded-lg border border-dashed p-6 text-center">
                             <FileText class="mx-auto h-8 w-8 text-muted-foreground" />
                             <p class="mt-2 text-sm text-muted-foreground">No test cases in this subcategory</p>
-                            <Link :href="`/projects/${project.id}/test-suites/${child.id}/test-cases/create`" class="mt-3 inline-block">
-                                <Button size="sm" variant="outline" class="gap-2">
-                                    <Plus class="h-4 w-4" />
-                                    Add Test Case
-                                </Button>
-                            </Link>
+                            <RestrictedAction>
+                                <Link :href="`/projects/${project.id}/test-suites/${child.id}/test-cases/create`" class="mt-3 inline-block">
+                                    <Button size="sm" variant="outline" class="gap-2">
+                                        <Plus class="h-4 w-4" />
+                                        Add Test Case
+                                    </Button>
+                                </Link>
+                            </RestrictedAction>
                         </div>
                     </div>
                 </template>

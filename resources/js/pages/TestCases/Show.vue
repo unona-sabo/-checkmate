@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Edit, FileText, AlertCircle, ListOrdered, Target, Tag, Paperclip, Download, Trash2, Link2, Check } from 'lucide-vue-next';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 import { ref, computed } from 'vue';
 
 const props = defineProps<{
@@ -111,16 +112,20 @@ const formatDate = (date: string): string => {
                     </h1>
                 </div>
                 <div class="flex gap-2">
-                    <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/edit`">
-                        <Button variant="outline" class="gap-2">
-                            <Edit class="h-4 w-4" />
-                            Edit
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/edit`">
+                            <Button variant="outline" class="gap-2">
+                                <Edit class="h-4 w-4" />
+                                Edit
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
+                    <RestrictedAction>
+                        <Button variant="destructive" class="gap-2" @click="showDeleteConfirm = true">
+                            <Trash2 class="h-4 w-4" />
+                            Delete
                         </Button>
-                    </Link>
-                    <Button variant="destructive" class="gap-2" @click="showDeleteConfirm = true">
-                        <Trash2 class="h-4 w-4" />
-                        Delete
-                    </Button>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -206,14 +211,16 @@ const formatDate = (date: string): string => {
                                     </a>
                                     <div class="flex items-center justify-between p-2">
                                         <span class="truncate text-xs text-muted-foreground">{{ attachment.original_filename }}</span>
-                                        <Link
-                                            :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/attachments/${attachment.id}`"
-                                            method="delete"
-                                            as="button"
-                                            class="p-1 text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
-                                        >
-                                            <Trash2 class="h-3.5 w-3.5" />
-                                        </Link>
+                                        <RestrictedAction>
+                                            <Link
+                                                :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/attachments/${attachment.id}`"
+                                                method="delete"
+                                                as="button"
+                                                class="p-1 text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                                            >
+                                                <Trash2 class="h-3.5 w-3.5" />
+                                            </Link>
+                                        </RestrictedAction>
                                     </div>
                                 </div>
                             </div>
@@ -231,14 +238,16 @@ const formatDate = (date: string): string => {
                                                 <Download class="h-4 w-4" />
                                             </Button>
                                         </a>
-                                        <Link
-                                            :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/attachments/${attachment.id}`"
-                                            method="delete"
-                                            as="button"
-                                            class="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
-                                        >
-                                            <Trash2 class="h-4 w-4" />
-                                        </Link>
+                                        <RestrictedAction>
+                                            <Link
+                                                :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/attachments/${attachment.id}`"
+                                                method="delete"
+                                                as="button"
+                                                class="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
+                                            >
+                                                <Trash2 class="h-4 w-4" />
+                                            </Link>
+                                        </RestrictedAction>
                                     </div>
                                 </div>
                             </div>

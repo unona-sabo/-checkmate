@@ -27,6 +27,7 @@ import {
 import { Plus, ClipboardList, FileText, StickyNote, Import, Pencil, Trash2, X, Search, GripVertical, ChevronDown, ChevronRight, Tag, FolderOpen } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 
 interface NoteDraft {
     id: string;
@@ -630,12 +631,14 @@ const onDialogClose = (open: boolean) => {
                         </button>
                     </div>
                     <Dialog v-model:open="showNoteDialog" @update:open="onDialogClose">
-                        <DialogTrigger as-child>
-                            <Button variant="outline" class="gap-2" @click="editingDraftId = null; noteContent = ''; selectedChecklistId = null; selectedColumnKey = ''">
-                                <StickyNote class="h-4 w-4" />
-                                Create a Note
-                            </Button>
-                        </DialogTrigger>
+                        <RestrictedAction>
+                            <DialogTrigger as-child>
+                                <Button variant="outline" class="gap-2" @click="editingDraftId = null; noteContent = ''; selectedChecklistId = null; selectedColumnKey = ''">
+                                    <StickyNote class="h-4 w-4" />
+                                    Create a Note
+                                </Button>
+                            </DialogTrigger>
+                        </RestrictedAction>
                         <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
                             <DialogHeader>
                                 <DialogTitle class="flex items-center gap-2">
@@ -737,25 +740,29 @@ const onDialogClose = (open: boolean) => {
                                     <Button variant="outline" @click="showNoteDialog = false">
                                         Cancel
                                     </Button>
-                                    <Button
-                                        @click="importNotes"
-                                        :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
-                                        class="gap-2"
-                                    >
-                                        <Import class="h-4 w-4" />
-                                        Import to Checklist
-                                    </Button>
+                                    <RestrictedAction>
+                                        <Button
+                                            @click="importNotes"
+                                            :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
+                                            class="gap-2"
+                                        >
+                                            <Import class="h-4 w-4" />
+                                            Import to Checklist
+                                        </Button>
+                                    </RestrictedAction>
                                 </div>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
 
-                    <Link :href="`/projects/${project.id}/checklists/create`">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Checklist
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/checklists/create`">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Checklist
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -764,12 +771,14 @@ const onDialogClose = (open: boolean) => {
                     <ClipboardList class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="mt-4 text-lg font-semibold">No checklists yet</h3>
                     <p class="mt-2 text-sm text-muted-foreground">Create your first checklist to track items.</p>
-                    <Link :href="`/projects/${project.id}/checklists/create`" class="mt-4 inline-block">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            Create Checklist
-                        </Button>
-                    </Link>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/checklists/create`" class="mt-4 inline-block">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                Create Checklist
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
                 </div>
             </div>
 
@@ -782,15 +791,17 @@ const onDialogClose = (open: boolean) => {
                         class="transition-all border-dashed border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 cursor-pointer h-full relative group flex flex-col"
                         @click="openDraft(draft)"
                     >
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            class="absolute top-12 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive z-10"
-                            @click.stop="confirmDeleteDraft(draft.id)"
-                            title="Delete draft"
-                        >
-                            <Trash2 class="h-4 w-4" />
-                        </Button>
+                        <RestrictedAction>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                class="absolute top-12 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive z-10"
+                                @click.stop="confirmDeleteDraft(draft.id)"
+                                title="Delete draft"
+                            >
+                                <Trash2 class="h-4 w-4" />
+                            </Button>
+                        </RestrictedAction>
                         <CardHeader class="flex-1">
                             <CardTitle class="flex items-center justify-between">
                                 <span class="flex items-center gap-2">
@@ -868,14 +879,16 @@ const onDialogClose = (open: boolean) => {
                         <Badge variant="secondary" class="text-xs ml-1">{{ group.checklists.length }}</Badge>
 
                         <!-- Rename button for named categories -->
-                        <button
-                            v-if="group.name && renamingCategory !== group.name"
-                            class="opacity-0 group-hover/header:opacity-100 transition-opacity cursor-pointer p-0.5 rounded hover:bg-muted"
-                            title="Rename category"
-                            @click.stop="startRenameCategory(group.name)"
-                        >
-                            <Pencil class="h-3.5 w-3.5 text-muted-foreground" />
-                        </button>
+                        <RestrictedAction>
+                            <button
+                                v-if="group.name && renamingCategory !== group.name"
+                                class="opacity-0 group-hover/header:opacity-100 transition-opacity cursor-pointer p-0.5 rounded hover:bg-muted"
+                                title="Rename category"
+                                @click.stop="startRenameCategory(group.name)"
+                            >
+                                <Pencil class="h-3.5 w-3.5 text-muted-foreground" />
+                            </button>
+                        </RestrictedAction>
                     </div>
 
                     <!-- Cards Grid -->
@@ -918,47 +931,49 @@ const onDialogClose = (open: boolean) => {
                                             <FileText class="h-4 w-4" />
                                             {{ checklist.rows_count || 0 }} items
                                             <!-- Category pill -->
-                                            <DropdownMenu v-if="canDrag">
-                                                <DropdownMenuTrigger as-child>
-                                                    <button
-                                                        @click.prevent.stop
-                                                        class="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors cursor-pointer"
-                                                        :class="checklist.category
-                                                            ? 'bg-primary/10 text-primary hover:bg-primary/20'
-                                                            : 'bg-muted text-muted-foreground hover:bg-muted/80 opacity-0 group-hover/card:opacity-100'"
-                                                    >
-                                                        <Tag class="h-3 w-3" />
-                                                        {{ checklist.category || 'Category' }}
-                                                    </button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" class="w-48">
-                                                    <DropdownMenuItem
-                                                        v-for="cat in allCategories"
-                                                        :key="cat"
-                                                        class="cursor-pointer"
-                                                        @click.prevent.stop="setCategoryForChecklist(checklist.id, cat)"
-                                                    >
-                                                        <FolderOpen class="h-4 w-4 mr-2" />
-                                                        {{ cat }}
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator v-if="allCategories.length > 0" />
-                                                    <DropdownMenuItem
-                                                        class="cursor-pointer"
-                                                        @click.prevent.stop="editingChecklistId = checklist.id; showCategoryDialog = true"
-                                                    >
-                                                        <Plus class="h-4 w-4 mr-2" />
-                                                        New category...
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        v-if="checklist.category"
-                                                        class="cursor-pointer text-destructive"
-                                                        @click.prevent.stop="setCategoryForChecklist(checklist.id, null)"
-                                                    >
-                                                        <X class="h-4 w-4 mr-2" />
-                                                        Remove category
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                            <RestrictedAction>
+                                                <DropdownMenu v-if="canDrag">
+                                                    <DropdownMenuTrigger as-child>
+                                                        <button
+                                                            @click.prevent.stop
+                                                            class="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors cursor-pointer"
+                                                            :class="checklist.category
+                                                                ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                                                                : 'bg-muted text-muted-foreground hover:bg-muted/80 opacity-0 group-hover/card:opacity-100'"
+                                                        >
+                                                            <Tag class="h-3 w-3" />
+                                                            {{ checklist.category || 'Category' }}
+                                                        </button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" class="w-48">
+                                                        <DropdownMenuItem
+                                                            v-for="cat in allCategories"
+                                                            :key="cat"
+                                                            class="cursor-pointer"
+                                                            @click.prevent.stop="setCategoryForChecklist(checklist.id, cat)"
+                                                        >
+                                                            <FolderOpen class="h-4 w-4 mr-2" />
+                                                            {{ cat }}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator v-if="allCategories.length > 0" />
+                                                        <DropdownMenuItem
+                                                            class="cursor-pointer"
+                                                            @click.prevent.stop="editingChecklistId = checklist.id; showCategoryDialog = true"
+                                                        >
+                                                            <Plus class="h-4 w-4 mr-2" />
+                                                            New category...
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            v-if="checklist.category"
+                                                            class="cursor-pointer text-destructive"
+                                                            @click.prevent.stop="setCategoryForChecklist(checklist.id, null)"
+                                                        >
+                                                            <X class="h-4 w-4 mr-2" />
+                                                            Remove category
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </RestrictedAction>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -995,13 +1010,15 @@ const onDialogClose = (open: boolean) => {
                         <Button variant="secondary" @click="showCategoryDialog = false; newCategoryName = ''" class="flex-1 sm:flex-none">
                             Cancel
                         </Button>
-                        <Button
-                            @click="editingChecklistId && setNewCategory(editingChecklistId)"
-                            :disabled="!newCategoryName.trim()"
-                            class="flex-1 sm:flex-none"
-                        >
-                            Create
-                        </Button>
+                        <RestrictedAction>
+                            <Button
+                                @click="editingChecklistId && setNewCategory(editingChecklistId)"
+                                :disabled="!newCategoryName.trim()"
+                                class="flex-1 sm:flex-none"
+                            >
+                                Create
+                            </Button>
+                        </RestrictedAction>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -1019,9 +1036,11 @@ const onDialogClose = (open: boolean) => {
                         <Button variant="secondary" @click="showDeleteConfirm = false" class="flex-1 sm:flex-none">
                             No
                         </Button>
-                        <Button variant="destructive" @click="deleteDraft()" class="flex-1 sm:flex-none">
-                            Yes
-                        </Button>
+                        <RestrictedAction>
+                            <Button variant="destructive" @click="deleteDraft()" class="flex-1 sm:flex-none">
+                                Yes
+                            </Button>
+                        </RestrictedAction>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
 import { Play, Layers, FileText, Boxes } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 
 const props = defineProps<{
     project: Project;
@@ -251,9 +252,11 @@ const submit = () => {
                             </div>
 
                             <div class="flex gap-2">
-                                <Button type="submit" variant="cta" :disabled="form.processing || !form.name || form.test_case_ids.length === 0">
-                                    Create Test Run
-                                </Button>
+                                <RestrictedAction>
+                                    <Button type="submit" variant="cta" :disabled="form.processing || !form.name || form.test_case_ids.length === 0">
+                                        Create Test Run
+                                    </Button>
+                                </RestrictedAction>
                                 <Button type="button" variant="outline" @click="$inertia.visit(`/projects/${project.id}/test-runs`)">
                                     Cancel
                                 </Button>
