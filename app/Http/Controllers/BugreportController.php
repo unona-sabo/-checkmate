@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Attachment;
 use App\Models\Bugreport;
+use App\Models\ChecklistRow;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -56,11 +57,17 @@ class BugreportController extends Controller
             'assigned_to' => 'nullable|exists:users,id',
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
+            'checklist_id' => 'nullable|integer|exists:checklists,id',
+            'checklist_row_ids' => 'nullable|string',
+            'checklist_link_column' => 'nullable|string|max:255',
         ]);
 
         $validated['reported_by'] = auth()->id();
 
-        $bugreport = $project->bugreports()->create(collect($validated)->except('attachments')->toArray());
+        $checklistFields = ['checklist_id', 'checklist_row_ids', 'checklist_link_column'];
+        $bugreport = $project->bugreports()->create(
+            collect($validated)->except(['attachments', ...$checklistFields])->toArray()
+        );
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
@@ -73,6 +80,8 @@ class BugreportController extends Controller
                 ]);
             }
         }
+
+        $this->linkBugreportToChecklistRow($project, $bugreport, $validated);
 
         return redirect()->route('bugreports.show', [$project, $bugreport])
             ->with('success', 'Bug report created successfully.');
@@ -163,5 +172,42 @@ class BugreportController extends Controller
         $attachment->delete();
 
         return back()->with('success', 'Attachment deleted successfully.');
+    }
+
+    /**
+     * Link the bugreport back to the originating checklist row.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function linkBugreportToChecklistRow(Project $project, Bugreport $bugreport, array $validated): void
+    {
+        $checklistId = $validated['checklist_id'] ?? null;
+        $rowIds = $validated['checklist_row_ids'] ?? null;
+        $linkColumn = $validated['checklist_link_column'] ?? null;
+
+        if (! $checklistId || ! $rowIds || ! $linkColumn) {
+            return;
+        }
+
+        $checklist = $project->checklists()->find($checklistId);
+        if (! $checklist) {
+            return;
+        }
+
+        $columnsConfig = $checklist->columns_config ?? [];
+        $columnExists = collect($columnsConfig)->contains('key', $linkColumn);
+        if (! $columnExists) {
+            return;
+        }
+
+        $firstRowId = (int) explode(',', $rowIds)[0];
+        $row = ChecklistRow::where('checklist_id', $checklist->id)->find($firstRowId);
+        if (! $row) {
+            return;
+        }
+
+        $data = $row->data ?? [];
+        $data[$linkColumn] = url("/projects/{$project->id}/bugreports/{$bugreport->id}");
+        $row->update(['data' => $data]);
     }
 }

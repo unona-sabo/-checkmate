@@ -860,7 +860,7 @@ const onDialogClose = (open: boolean) => {
                         <FolderOpen v-if="group.name" class="h-4 w-4 text-muted-foreground shrink-0" />
 
                         <!-- Inline rename input -->
-                        <template v-if="renamingCategory === group.name">
+                        <template v-if="renamingCategory !== null && renamingCategory === group.name">
                             <input
                                 ref="renameCategoryInput"
                                 v-model="renameCategoryValue"

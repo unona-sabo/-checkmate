@@ -35,9 +35,17 @@ class ChecklistController extends Controller
         $templates = $project->checklists()
             ->get(['id', 'name', 'columns_config']);
 
+        $categories = $project->checklists()
+            ->whereNotNull('category')
+            ->distinct()
+            ->pluck('category')
+            ->sort()
+            ->values();
+
         return Inertia::render('Checklists/Create', [
             'project' => $project,
             'templates' => $templates,
+            'categories' => $categories,
         ]);
     }
 
@@ -74,12 +82,20 @@ class ChecklistController extends Controller
         $checklist->load(['rows', 'note']);
 
         $checklists = $project->checklists()
+            ->with(['sectionHeaders:id,checklist_id,data,order'])
             ->get(['id', 'project_id', 'name', 'columns_config']);
+
+        $testSuites = $project->testSuites()
+            ->whereNull('parent_id')
+            ->with(['children:id,parent_id,name,order'])
+            ->orderBy('order')
+            ->get(['id', 'project_id', 'parent_id', 'name', 'order']);
 
         return Inertia::render('Checklists/Show', [
             'project' => $project,
             'checklist' => $checklist,
             'checklists' => $checklists,
+            'testSuites' => $testSuites,
         ]);
     }
 
@@ -546,6 +562,136 @@ class ChecklistController extends Controller
 
         return redirect()->route('checklists.show', [$project, $checklist])
             ->with('success', $importedCount.' rows imported successfully.');
+    }
+
+    /**
+     * Copy rows from the request body into the target checklist.
+     */
+    public function copyRows(Request $request, Project $project, Checklist $checklist)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'rows' => 'required|array|min:1',
+            'rows.*.data' => 'required|array',
+            'rows.*.row_type' => 'nullable|in:normal,section_header',
+            'rows.*.background_color' => 'nullable|string|max:7',
+            'rows.*.font_color' => 'nullable|string|max:7',
+            'rows.*.font_weight' => 'nullable|in:normal,medium,semibold,bold',
+            'section_row_id' => 'nullable|integer|exists:checklist_rows,id',
+            'source_columns_config' => 'nullable|array',
+            'source_columns_config.*.key' => 'required|string',
+            'source_columns_config.*.label' => 'required|string',
+            'source_columns_config.*.type' => 'required|string',
+        ]);
+
+        $rowCount = count($validated['rows']);
+
+        if (! empty($validated['section_row_id'])) {
+            $existingRows = $checklist->rows()->orderBy('order')->get();
+            $sectionRow = $existingRows->firstWhere('id', $validated['section_row_id']);
+
+            if (! $sectionRow || $sectionRow->row_type !== 'section_header') {
+                return back()->withErrors(['section_row_id' => 'Section not found.']);
+            }
+
+            // Find the last filled row in this section (same pattern as importFromNotes)
+            $insertAfterOrder = $sectionRow->order;
+            foreach ($existingRows as $row) {
+                if ($row->order <= $sectionRow->order) {
+                    continue;
+                }
+                if ($row->row_type === 'section_header') {
+                    break;
+                }
+                $hasContent = collect($row->data)->contains(fn ($value) => $value !== null && $value !== '' && $value !== false);
+                if ($hasContent) {
+                    $insertAfterOrder = $row->order;
+                }
+            }
+
+            // Shift subsequent rows to make room
+            $checklist->rows()
+                ->where('order', '>', $insertAfterOrder)
+                ->orderBy('order', 'desc')
+                ->get()
+                ->each(fn ($row) => $row->update(['order' => $row->order + $rowCount]));
+
+            $startOrder = $insertAfterOrder;
+        } else {
+            $startOrder = $checklist->rows()->max('order') ?? -1;
+        }
+
+        // Build column mapping when source has different columns than target
+        $columnMap = null;
+        $targetColumns = $checklist->columns_config ?? [
+            ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
+            ['key' => 'status', 'label' => 'Status', 'type' => 'checkbox'],
+        ];
+
+        if (! empty($validated['source_columns_config'])) {
+            $sourceColumns = $validated['source_columns_config'];
+            $columnMap = [];
+            $mappedTargetKeys = [];
+
+            // Pass 1: match by key
+            foreach ($sourceColumns as $srcCol) {
+                foreach ($targetColumns as $tgtCol) {
+                    if ($srcCol['key'] === $tgtCol['key'] && ! in_array($tgtCol['key'], $mappedTargetKeys, true)) {
+                        $columnMap[$srcCol['key']] = $tgtCol['key'];
+                        $mappedTargetKeys[] = $tgtCol['key'];
+                        break;
+                    }
+                }
+            }
+
+            // Pass 2: match remaining by label (case-insensitive)
+            foreach ($sourceColumns as $srcCol) {
+                if (isset($columnMap[$srcCol['key']])) {
+                    continue;
+                }
+                foreach ($targetColumns as $tgtCol) {
+                    if (in_array($tgtCol['key'], $mappedTargetKeys, true)) {
+                        continue;
+                    }
+                    if (strcasecmp($srcCol['label'], $tgtCol['label']) === 0) {
+                        $columnMap[$srcCol['key']] = $tgtCol['key'];
+                        $mappedTargetKeys[] = $tgtCol['key'];
+                        break;
+                    }
+                }
+            }
+        }
+
+        foreach ($validated['rows'] as $rowData) {
+            $startOrder++;
+            $data = $rowData['data'];
+
+            if ($columnMap !== null) {
+                $mapped = [];
+                foreach ($targetColumns as $tgtCol) {
+                    $mapped[$tgtCol['key']] = $tgtCol['type'] === 'checkbox' ? false : '';
+                }
+                foreach ($data as $srcKey => $value) {
+                    if (isset($columnMap[$srcKey])) {
+                        $mapped[$columnMap[$srcKey]] = $value;
+                    }
+                }
+                $data = $mapped;
+            }
+
+            $checklist->rows()->create([
+                'data' => $data,
+                'order' => $startOrder,
+                'row_type' => $rowData['row_type'] ?? 'normal',
+                'background_color' => $rowData['background_color'] ?? null,
+                'font_color' => $rowData['font_color'] ?? null,
+                'font_weight' => $rowData['font_weight'] ?? 'normal',
+            ]);
+        }
+
+        return redirect()->route('checklists.show', [$project, $checklist])
+            ->with('success', count($validated['rows']).' rows copied successfully.');
     }
 
     /**

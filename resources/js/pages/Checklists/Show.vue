@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type Checklist, type ChecklistRow, type ColumnConfig, type SelectOption } from '@/types';
+import { type BreadcrumbItem, type Project, type Checklist, type ChecklistRow, type ColumnConfig, type SelectOption, type TestSuite } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,7 @@ const props = defineProps<{
     project: Project;
     checklist: Checklist;
     checklists: Checklist[];
+    testSuites: TestSuite[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -66,6 +67,43 @@ interface ExtendedColumnConfig extends ColumnConfig {
 }
 
 const copied = ref(false);
+const copiedRows = ref(false);
+
+// Internal clipboard (localStorage)
+const CLIPBOARD_KEY = 'checkmate-row-clipboard';
+
+interface ClipboardData {
+    rows: Array<{
+        data: Record<string, unknown>;
+        row_type: string;
+        background_color: string | null;
+        font_color: string | null;
+        font_weight: string;
+    }>;
+    source_columns_config: ColumnConfig[];
+    source_checklist_name: string;
+    timestamp: number;
+}
+
+const clipboardData = ref<ClipboardData | null>(null);
+
+const loadClipboard = () => {
+    try {
+        const saved = localStorage.getItem(CLIPBOARD_KEY);
+        if (saved) {
+            clipboardData.value = JSON.parse(saved);
+        }
+    } catch (e) {
+        clipboardData.value = null;
+    }
+};
+
+const clearClipboard = () => {
+    localStorage.removeItem(CLIPBOARD_KEY);
+    clipboardData.value = null;
+};
+
+const hasClipboardRows = computed(() => clipboardData.value !== null && clipboardData.value.rows.length > 0);
 
 const titleStart = computed(() => {
     const words = props.checklist.name.split(' ');
@@ -151,6 +189,34 @@ const hasHiddenColumns = computed(() => hiddenColumns.value.length > 0);
 
 const showDeleteConfirm = ref(false);
 const rowToDeleteIndex = ref<number | null>(null);
+
+// Copy to Checklist dialog state
+const showCopyToChecklistDialog = ref(false);
+const copyTargetChecklistId = ref<number | null>(null);
+const copyTargetSectionId = ref<number | null>(null);
+const isCopying = ref(false);
+
+const otherChecklists = computed(() => props.checklists.filter(c => c.id !== props.checklist.id));
+
+const targetSectionHeaders = computed(() => {
+    if (!copyTargetChecklistId.value) return [];
+    const target = props.checklists.find(c => c.id === copyTargetChecklistId.value);
+    if (!target?.section_headers?.length) return [];
+
+    const cols = target.columns_config || [{ key: 'item', label: 'Item', type: 'text' as const }];
+    const labelKey = cols[0]?.key || 'item';
+
+    return target.section_headers
+        .sort((a, b) => a.order - b.order)
+        .map(sh => ({
+            id: sh.id,
+            label: String(sh.data[labelKey] || `Section ${sh.order}`),
+        }));
+});
+
+watch(copyTargetChecklistId, () => {
+    copyTargetSectionId.value = null;
+});
 
 // Add rows dialog state
 const showAddRowsDialog = ref(false);
@@ -736,11 +802,12 @@ const addRow = (type: 'normal' | 'section_header' = 'normal') => {
         updated_at: new Date().toISOString(),
         _isNew: true,
     });
-    hasContentChanges.value = true;
     // Ensure new row is visible
     if (visibleRowCount.value < rows.value.length) {
         visibleRowCount.value = rows.value.length;
     }
+    // Auto-save after adding row
+    nextTick(() => saveRows());
 };
 
 const openAddRowsDialog = (index: number, position: 'above' | 'below' | 'end', type: 'normal' | 'section_header' = 'normal') => {
@@ -800,6 +867,16 @@ const insertRows = () => {
     });
 };
 
+const showDeleteSelectedConfirm = ref(false);
+
+const removeSelectedRows = () => {
+    const selectedIds = new Set(selectedRows.value.map(r => r.id));
+    rows.value = rows.value.filter(r => !selectedIds.has(r.id));
+    showDeleteSelectedConfirm.value = false;
+    hasContentChanges.value = false;
+    nextTick(() => saveRows());
+};
+
 const confirmRemoveRow = (index: number) => {
     rowToDeleteIndex.value = index;
     showDeleteConfirm.value = true;
@@ -810,7 +887,8 @@ const removeRow = () => {
         rows.value.splice(rowToDeleteIndex.value, 1);
         rowToDeleteIndex.value = null;
         showDeleteConfirm.value = false;
-        hasContentChanges.value = true;
+        hasContentChanges.value = false;
+        nextTick(() => saveRows());
     }
 };
 
@@ -855,10 +933,23 @@ const saveRows = () => {
     );
 };
 
+const selectColumnKeys = computed(() => columns.value.filter(c => c.type === 'select').map(c => c.key));
+
+let checkboxSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
 const updateCell = (row: ExtendedChecklistRow, key: string, value: unknown) => {
     row.data[key] = value;
-    // Mark content changes only for non-checkbox columns
-    if (!checkboxKeys.value.includes(key)) {
+    // Auto-save immediately for select columns
+    if (selectColumnKeys.value.includes(key)) {
+        nextTick(() => saveRows());
+    } else if (checkboxKeys.value.includes(key)) {
+        // Debounced save for checkboxes — waits 1.5s after last toggle
+        if (checkboxSaveTimer) clearTimeout(checkboxSaveTimer);
+        checkboxSaveTimer = setTimeout(() => {
+            checkboxSaveTimer = null;
+            saveRows();
+        }, 1500);
+    } else {
         hasContentChanges.value = true;
     }
 };
@@ -901,6 +992,10 @@ const getRowStyles = (row: ExtendedChecklistRow) => {
     const styles: Record<string, string> = {};
     if (row.background_color) {
         styles.backgroundColor = row.background_color;
+        if (!row.font_color) {
+            // Force dark text on colored backgrounds so it's readable in dark theme
+            styles.color = '#1f2937';
+        }
     }
     if (row.font_color) {
         styles.color = row.font_color;
@@ -965,6 +1060,129 @@ const changeSelectedStatus = (columnKey: string, value: string) => {
     nextTick(() => saveRows());
 };
 
+// Open copy to checklist dialog
+const openCopyToChecklistDialog = () => {
+    if (otherChecklists.value.length === 0) return;
+    copyTargetChecklistId.value = otherChecklists.value[0].id;
+    copyTargetSectionId.value = null;
+    showCopyToChecklistDialog.value = true;
+};
+
+// Copy selected rows to another checklist
+const copyToChecklist = () => {
+    if (!copyTargetChecklistId.value || selectedRows.value.length === 0) return;
+
+    isCopying.value = true;
+
+    const rowsPayload = selectedRows.value.map(row => ({
+        data: row.data,
+        row_type: row.row_type || 'normal',
+        background_color: row.background_color || null,
+        font_color: row.font_color || null,
+        font_weight: row.font_weight || 'normal',
+    }));
+
+    router.post(
+        `/projects/${props.project.id}/checklists/${copyTargetChecklistId.value}/copy-rows`,
+        {
+            rows: rowsPayload,
+            section_row_id: copyTargetSectionId.value,
+            source_columns_config: columns.value.map(c => ({ key: c.key, label: c.label, type: c.type })),
+        },
+        {
+            preserveState: false,
+            onSuccess: () => {
+                showCopyToChecklistDialog.value = false;
+                isCopying.value = false;
+            },
+            onError: () => {
+                isCopying.value = false;
+            },
+        }
+    );
+};
+
+// Copy selected rows to internal app clipboard (localStorage)
+const copyRowsToClipboard = () => {
+    if (selectedRows.value.length === 0) return;
+
+    const payload: ClipboardData = {
+        rows: selectedRows.value.map(row => ({
+            data: { ...row.data },
+            row_type: row.row_type || 'normal',
+            background_color: row.background_color || null,
+            font_color: row.font_color || null,
+            font_weight: row.font_weight || 'normal',
+        })),
+        source_columns_config: columns.value.map(c => ({ key: c.key, label: c.label, type: c.type, options: c.options })),
+        source_checklist_name: props.checklist.name,
+        timestamp: Date.now(),
+    };
+
+    try {
+        localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(payload));
+        clipboardData.value = payload;
+        copiedRows.value = true;
+        setTimeout(() => { copiedRows.value = false; }, 2000);
+    } catch (e) {
+        console.error('Failed to save to clipboard:', e);
+    }
+};
+
+// Paste rows dialog state
+const showPasteDialog = ref(false);
+const pasteSectionId = ref<number | null>(null);
+const isPasting = ref(false);
+
+const currentSectionHeaders = computed(() => {
+    return rows.value
+        .filter(r => r.row_type === 'section_header')
+        .map(r => {
+            const labelKey = columns.value[0]?.key || 'item';
+            return {
+                id: r.id,
+                label: String(r.data[labelKey] || `Section ${r.order}`),
+            };
+        });
+});
+
+const openPasteDialog = () => {
+    pasteSectionId.value = null;
+    showPasteDialog.value = true;
+};
+
+const pasteRows = () => {
+    if (!clipboardData.value || clipboardData.value.rows.length === 0) return;
+
+    isPasting.value = true;
+
+    const payload = {
+        rows: clipboardData.value.rows,
+        section_row_id: pasteSectionId.value,
+        source_columns_config: clipboardData.value.source_columns_config,
+    };
+
+    // Clear localStorage before POST so the re-rendered component won't reload it
+    const backup = localStorage.getItem(CLIPBOARD_KEY);
+    clearClipboard();
+
+    router.post(
+        `/projects/${props.project.id}/checklists/${props.checklist.id}/copy-rows`,
+        payload,
+        {
+            preserveState: false,
+            onError: () => {
+                // Restore clipboard on error
+                if (backup) {
+                    localStorage.setItem(CLIPBOARD_KEY, backup);
+                    loadClipboard();
+                }
+                isPasting.value = false;
+            },
+        }
+    );
+};
+
 // Create bugreport from selected rows
 const createBugreportFromSelected = () => {
     const textColumns = columns.value.filter(col => col.type === 'text');
@@ -990,7 +1208,98 @@ const createBugreportFromSelected = () => {
         params.set('steps_to_reproduce', stepsText);
     }
 
+    // Pass checklist context for auto-link-back
+    params.set('checklist_id', String(props.checklist.id));
+
+    const persistedRowIds = selectedRows.value
+        .filter(row => !row._isNew && row.id)
+        .map(row => row.id);
+    if (persistedRowIds.length > 0) {
+        params.set('checklist_row_ids', persistedRowIds.join(','));
+    }
+
+    const bugreportColumn = columns.value.find(col =>
+        col.key.toLowerCase().includes('bugreport') || col.label.toLowerCase().includes('bugreport'),
+    );
+    if (bugreportColumn) {
+        params.set('checklist_link_column', bugreportColumn.key);
+    }
+
     router.get(`/projects/${props.project.id}/bugreports/create?${params.toString()}`);
+};
+
+// Create test case from selected rows
+const showTestCaseDialog = ref(false);
+const testCaseTargetSuiteId = ref<number | null>(null);
+const testCaseTargetChildId = ref<number | null>(null);
+
+const selectedParentSuiteChildren = computed(() => {
+    if (!testCaseTargetSuiteId.value) return [];
+    const parent = props.testSuites.find(s => s.id === testCaseTargetSuiteId.value);
+    if (!parent?.children?.length) return [];
+    return [...parent.children].sort((a, b) => a.order - b.order);
+});
+
+watch(testCaseTargetSuiteId, () => {
+    testCaseTargetChildId.value = null;
+});
+
+const effectiveTestSuiteId = computed(() => testCaseTargetChildId.value ?? testCaseTargetSuiteId.value);
+
+const openTestCaseDialog = () => {
+    if (props.testSuites.length === 0) return;
+    testCaseTargetSuiteId.value = props.testSuites[0].id;
+    testCaseTargetChildId.value = null;
+    showTestCaseDialog.value = true;
+};
+
+const createTestCaseFromSelected = () => {
+    if (!effectiveTestSuiteId.value) return;
+
+    const textColumns = columns.value.filter(col => col.type === 'text');
+    const steps = selectedRows.value.map(row => {
+        const parts: string[] = [];
+        textColumns.forEach(col => {
+            const val = row.data[col.key];
+            if (typeof val === 'string' && val.trim()) {
+                parts.push(val.trim());
+            }
+        });
+        return { action: parts.join(' — '), expected: '' };
+    }).filter(s => s.action);
+
+    const params = new URLSearchParams();
+    params.set('title', `[${props.checklist.name}] Test Case`);
+    if (steps.length > 0) {
+        params.set('steps', JSON.stringify(steps));
+    }
+
+    // Pass checklist context for auto-link-back
+    params.set('checklist_id', String(props.checklist.id));
+
+    const persistedRowIds = selectedRows.value
+        .filter(row => !row._isNew && row.id)
+        .map(row => row.id);
+    if (persistedRowIds.length > 0) {
+        params.set('checklist_row_ids', persistedRowIds.join(','));
+    }
+
+    // Auto-detect test case link column
+    const testCaseColumn = columns.value.find(col =>
+        col.key.toLowerCase().includes('testcase') ||
+        col.key.toLowerCase().includes('test_case') ||
+        col.label.toLowerCase().includes('testcase') ||
+        col.label.toLowerCase().includes('test case'),
+    ) || columns.value.find(col =>
+        col.key.toLowerCase().includes('test') ||
+        col.label.toLowerCase().includes('test'),
+    );
+    if (testCaseColumn) {
+        params.set('checklist_link_column', testCaseColumn.key);
+    }
+
+    showTestCaseDialog.value = false;
+    router.get(`/projects/${props.project.id}/test-suites/${effectiveTestSuiteId.value}/test-cases/create?${params.toString()}`);
 };
 
 // Check if row has any content (non-empty text fields)
@@ -1175,6 +1484,7 @@ onMounted(() => {
     loadHiddenColumns();
     resizeAllTextareas();
     loadDraft();
+    loadClipboard();
 });
 
 </script>
@@ -1212,10 +1522,11 @@ onMounted(() => {
                 </div>
                 <Button
                     variant="outline"
-                    class="gap-2 relative"
+                    size="sm"
+                    class="gap-1.5 relative text-xs"
                     @click="showFilters = !showFilters"
                 >
-                    <Filter class="h-4 w-4" />
+                    <Filter class="h-3.5 w-3.5" />
                     Filter
                     <Badge
                         v-if="activeFilterCount > 0"
@@ -1227,25 +1538,26 @@ onMounted(() => {
                 <span v-if="isSearchActive && filteredDataRowCount > 0" class="text-xs text-muted-foreground whitespace-nowrap">
                     {{ filteredDataRowCount }} found — click to navigate
                 </span>
-                <div class="flex items-center gap-2 ml-auto">
+                <div class="flex items-center gap-1.5 ml-auto">
                     <!-- Undo last save -->
                     <RestrictedAction>
                         <Button
                             variant="ghost"
                             size="icon"
+                            class="h-8 w-8"
                             :disabled="!canUndo"
                             @click="undoLastSave"
                             title="Undo last save"
                         >
-                            <Undo2 class="h-4 w-4" />
+                            <Undo2 class="h-3.5 w-3.5" />
                         </Button>
                     </RestrictedAction>
                     <!-- Actions dropdown when rows are selected -->
                     <RestrictedAction>
                         <DropdownMenu v-if="hasSelectedRows">
                             <DropdownMenuTrigger as-child>
-                                <Button class="gap-2">
-                                    <MoreHorizontal class="h-4 w-4" />
+                                <Button size="sm" class="gap-1.5 text-xs">
+                                    <MoreHorizontal class="h-3.5 w-3.5" />
                                     Actions ({{ selectedRows.length }})
                                 </Button>
                             </DropdownMenuTrigger>
@@ -1284,11 +1596,11 @@ onMounted(() => {
                                     </DropdownMenuSubContent>
                                 </DropdownMenuSub>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
+                                <DropdownMenuItem @click="openCopyToChecklistDialog" :disabled="otherChecklists.length === 0">
                                     <Copy class="h-4 w-4 mr-2" />
                                     Copy to Checklist
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem @click="openTestCaseDialog" :disabled="testSuites.length === 0">
                                     <Layers class="h-4 w-4 mr-2" />
                                     Create Test Case
                                 </DropdownMenuItem>
@@ -1297,30 +1609,52 @@ onMounted(() => {
                                     Create Test Run
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem class="text-destructive focus:text-destructive">
+                                <DropdownMenuItem class="text-destructive focus:text-destructive" @click="showDeleteSelectedConfirm = true">
                                     <Trash2 class="h-4 w-4 mr-2" />
                                     Delete Rows
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </RestrictedAction>
+                    <!-- Copy Rows / Paste Rows — mutually exclusive -->
+                    <Button
+                        v-if="hasClipboardRows"
+                        variant="outline"
+                        size="sm"
+                        @click="openPasteDialog"
+                        class="gap-1.5 text-xs cursor-pointer"
+                    >
+                        <ClipboardList class="h-3.5 w-3.5" />
+                        Paste ({{ clipboardData?.rows.length }})
+                    </Button>
+                    <Button
+                        v-else-if="hasSelectedRows"
+                        variant="outline"
+                        size="sm"
+                        @click="copyRowsToClipboard"
+                        class="gap-1.5 text-xs cursor-pointer"
+                    >
+                        <Copy class="h-3.5 w-3.5" />
+                        {{ copiedRows ? 'Copied!' : 'Copy Row' }}
+                    </Button>
                     <!-- Save Changes button when no rows selected but there are content changes -->
                     <RestrictedAction>
                         <Button
                             v-if="!hasSelectedRows && hasContentChanges"
+                            size="sm"
                             @click="saveRows"
-                            class="gap-2"
+                            class="gap-1.5 text-xs"
                         >
-                            <Save class="h-4 w-4" />
-                            Save Changes
+                            <Save class="h-3.5 w-3.5" />
+                            Save
                         </Button>
                     </RestrictedAction>
                     <!-- Import/Export dropdown -->
                     <RestrictedAction>
                         <DropdownMenu>
                             <DropdownMenuTrigger as-child>
-                                <Button variant="outline" class="gap-2">
-                                    <FileSpreadsheet class="h-4 w-4" />
+                                <Button variant="outline" size="sm" class="gap-1.5 text-xs">
+                                    <FileSpreadsheet class="h-3.5 w-3.5" />
                                     File
                                 </Button>
                             </DropdownMenuTrigger>
@@ -1339,10 +1673,10 @@ onMounted(() => {
                     <!-- Columns visibility dropdown -->
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
-                            <Button :variant="hasHiddenColumns ? 'default' : 'outline'" class="gap-2">
-                                <Columns3 class="h-4 w-4" />
-                                Columns
-                                <span v-if="hasHiddenColumns" class="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-background/20 text-xs font-medium">
+                            <Button :variant="hasHiddenColumns ? 'default' : 'outline'" size="sm" class="gap-1.5 text-xs">
+                                <Columns3 class="h-3.5 w-3.5" />
+                                Cols
+                                <span v-if="hasHiddenColumns" class="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background/20 text-[10px] font-medium">
                                     {{ hiddenColumns.length }}
                                 </span>
                             </Button>
@@ -1366,11 +1700,12 @@ onMounted(() => {
                             <DialogTrigger as-child>
                                 <Button
                                     :variant="hasDraft ? 'cta' : 'outline'"
-                                    class="gap-2"
+                                    size="sm"
+                                    class="gap-1.5 text-xs"
                                 >
-                                    <Pencil v-if="hasDraft" class="h-4 w-4" />
-                                    <StickyNote v-else class="h-4 w-4" />
-                                    {{ hasDraft ? 'Draft' : 'Create a Note' }}
+                                    <Pencil v-if="hasDraft" class="h-3.5 w-3.5" />
+                                    <StickyNote v-else class="h-3.5 w-3.5" />
+                                    {{ hasDraft ? 'Draft' : 'Note' }}
                                 </Button>
                             </DialogTrigger>
                         </RestrictedAction>
@@ -1478,8 +1813,8 @@ onMounted(() => {
                     <RestrictedAction>
                         <DropdownMenu>
                             <DropdownMenuTrigger as-child>
-                                <Button variant="outline" class="gap-2">
-                                    <Plus class="h-4 w-4" />
+                                <Button variant="outline" size="sm" class="gap-1.5 text-xs">
+                                    <Plus class="h-3.5 w-3.5" />
                                     Add Row
                                 </Button>
                             </DropdownMenuTrigger>
@@ -1497,8 +1832,8 @@ onMounted(() => {
                     </RestrictedAction>
                     <RestrictedAction>
                         <Link :href="`/projects/${project.id}/checklists/${checklist.id}/edit`">
-                            <Button variant="outline" class="gap-2">
-                                <Edit class="h-4 w-4" />
+                            <Button variant="outline" size="sm" class="gap-1.5 text-xs">
+                                <Edit class="h-3.5 w-3.5" />
                                 Edit
                             </Button>
                         </Link>
@@ -2038,6 +2373,28 @@ onMounted(() => {
                 </DialogContent>
             </Dialog>
 
+            <!-- Delete Selected Rows Confirmation Dialog -->
+            <Dialog v-model:open="showDeleteSelectedConfirm">
+                <DialogContent class="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete {{ selectedRows.length }} Row{{ selectedRows.length !== 1 ? 's' : '' }}?</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete the selected rows? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter class="flex gap-4 sm:justify-end">
+                        <Button variant="secondary" @click="showDeleteSelectedConfirm = false" class="flex-1 sm:flex-none cursor-pointer">
+                            No
+                        </Button>
+                        <RestrictedAction>
+                            <Button variant="destructive" @click="removeSelectedRows" class="flex-1 sm:flex-none cursor-pointer">
+                                Yes
+                            </Button>
+                        </RestrictedAction>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <!-- Add Rows Dialog -->
             <Dialog v-model:open="showAddRowsDialog">
                 <DialogContent class="max-w-xs">
@@ -2068,6 +2425,196 @@ onMounted(() => {
                                 Add {{ addRowsCount }} row{{ addRowsCount > 1 ? 's' : '' }}
                             </Button>
                         </RestrictedAction>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Copy to Checklist Dialog -->
+            <Dialog v-model:open="showCopyToChecklistDialog">
+                <DialogContent class="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <Copy class="h-5 w-5 text-primary" />
+                            Copy Rows to Checklist
+                        </DialogTitle>
+                        <DialogDescription>
+                            Copy {{ selectedRows.length }} selected row{{ selectedRows.length !== 1 ? 's' : '' }} to another checklist.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="py-4 space-y-4">
+                        <div class="space-y-2">
+                            <Label for="copy-target-checklist">Target Checklist</Label>
+                            <Select v-model="copyTargetChecklistId">
+                                <SelectTrigger id="copy-target-checklist">
+                                    <SelectValue placeholder="Select checklist..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="cl in otherChecklists"
+                                        :key="cl.id"
+                                        :value="cl.id"
+                                    >
+                                        {{ cl.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div v-if="targetSectionHeaders.length > 0" class="space-y-2">
+                            <Label for="copy-target-section">Insert into Section</Label>
+                            <div class="flex gap-2">
+                                <Select v-model="copyTargetSectionId" class="flex-1">
+                                    <SelectTrigger id="copy-target-section">
+                                        <SelectValue placeholder="End of checklist (default)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="sh in targetSectionHeaders"
+                                            :key="sh.id"
+                                            :value="sh.id"
+                                            :textValue="sh.label"
+                                        >
+                                            {{ sh.label }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button v-if="copyTargetSectionId !== null" variant="ghost" size="icon" class="shrink-0" @click="copyTargetSectionId = null">
+                                    <X class="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter class="flex gap-2 sm:justify-end">
+                        <Button variant="outline" @click="showCopyToChecklistDialog = false">
+                            Cancel
+                        </Button>
+                        <RestrictedAction>
+                            <Button @click="copyToChecklist" :disabled="!copyTargetChecklistId || isCopying" class="gap-2">
+                                <Copy class="h-4 w-4" />
+                                {{ isCopying ? 'Copying...' : 'Copy Rows' }}
+                            </Button>
+                        </RestrictedAction>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Paste Rows Dialog -->
+            <Dialog v-model:open="showPasteDialog">
+                <DialogContent class="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <ClipboardList class="h-5 w-5 text-primary" />
+                            Paste Rows
+                        </DialogTitle>
+                        <DialogDescription>
+                            Paste {{ clipboardData?.rows.length }} row{{ (clipboardData?.rows.length ?? 0) !== 1 ? 's' : '' }} from "{{ clipboardData?.source_checklist_name }}".
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="py-4 space-y-4">
+                        <div v-if="currentSectionHeaders.length > 0" class="space-y-2">
+                            <Label for="paste-section">Insert into Section</Label>
+                            <div class="flex gap-2">
+                                <Select v-model="pasteSectionId" class="flex-1">
+                                    <SelectTrigger id="paste-section">
+                                        <SelectValue placeholder="End of checklist (default)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="sh in currentSectionHeaders"
+                                            :key="sh.id"
+                                            :value="sh.id"
+                                            :textValue="sh.label"
+                                        >
+                                            {{ sh.label }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button v-if="pasteSectionId !== null" variant="ghost" size="icon" class="shrink-0 cursor-pointer" @click="pasteSectionId = null">
+                                    <X class="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter class="flex gap-2 sm:justify-between">
+                        <Button variant="ghost" @click="clearClipboard(); showPasteDialog = false" class="gap-2 text-muted-foreground hover:text-destructive cursor-pointer">
+                            <Trash2 class="h-4 w-4" />
+                            Clear
+                        </Button>
+                        <div class="flex gap-2">
+                            <Button variant="outline" @click="showPasteDialog = false" class="cursor-pointer">
+                                Cancel
+                            </Button>
+                            <RestrictedAction>
+                                <Button @click="pasteRows" :disabled="isPasting" class="gap-2 cursor-pointer">
+                                    <ClipboardList class="h-4 w-4" />
+                                    {{ isPasting ? 'Pasting...' : 'Paste Rows' }}
+                                </Button>
+                            </RestrictedAction>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Create Test Case Dialog -->
+            <Dialog v-model:open="showTestCaseDialog">
+                <DialogContent class="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <Layers class="h-5 w-5 text-primary" />
+                            Create Test Case
+                        </DialogTitle>
+                        <DialogDescription>
+                            Create a test case from {{ selectedRows.length }} selected row{{ selectedRows.length !== 1 ? 's' : '' }}. Select the target test suite.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="py-4 space-y-4">
+                        <div class="space-y-2">
+                            <Label for="test-case-target-suite">Test Suite</Label>
+                            <Select v-model="testCaseTargetSuiteId">
+                                <SelectTrigger id="test-case-target-suite">
+                                    <SelectValue placeholder="Select test suite..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="suite in testSuites"
+                                        :key="suite.id"
+                                        :value="suite.id"
+                                    >
+                                        {{ suite.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div v-if="selectedParentSuiteChildren.length > 0" class="space-y-2">
+                            <Label for="test-case-target-child">Subcategory</Label>
+                            <div class="flex gap-2">
+                                <Select v-model="testCaseTargetChildId" class="flex-1">
+                                    <SelectTrigger id="test-case-target-child">
+                                        <SelectValue placeholder="None (save in parent)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="child in selectedParentSuiteChildren"
+                                            :key="child.id"
+                                            :value="child.id"
+                                        >
+                                            {{ child.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button v-if="testCaseTargetChildId !== null" variant="ghost" size="icon" class="shrink-0 cursor-pointer" @click="testCaseTargetChildId = null">
+                                    <X class="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter class="flex gap-2 sm:justify-end">
+                        <Button variant="outline" @click="showTestCaseDialog = false">
+                            Cancel
+                        </Button>
+                        <Button @click="createTestCaseFromSelected" :disabled="!testCaseTargetSuiteId" class="gap-2">
+                            <Layers class="h-4 w-4" />
+                            Create Test Case
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

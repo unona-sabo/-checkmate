@@ -25,11 +25,24 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Create Test Case', href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}/test-cases/create` },
 ];
 
+const urlParams = new URLSearchParams(window.location.search);
+
+const parseStepsParam = (): TestStep[] => {
+    const raw = urlParams.get('steps');
+    if (!raw) return [{ action: '', expected: '' }];
+    try {
+        const parsed = JSON.parse(raw) as TestStep[];
+        return parsed.length > 0 ? parsed : [{ action: '', expected: '' }];
+    } catch {
+        return [{ action: '', expected: '' }];
+    }
+};
+
 const form = useForm({
-    title: '',
+    title: urlParams.get('title') || '',
     description: '',
     preconditions: '',
-    steps: [{ action: '', expected: '' }] as TestStep[],
+    steps: parseStepsParam(),
     expected_result: '',
     priority: 'medium' as const,
     severity: 'major' as const,
@@ -37,6 +50,9 @@ const form = useForm({
     automation_status: 'not_automated' as const,
     tags: [] as string[],
     attachments: [] as File[],
+    checklist_id: urlParams.get('checklist_id') || null as string | null,
+    checklist_row_ids: urlParams.get('checklist_row_ids') || null as string | null,
+    checklist_link_column: urlParams.get('checklist_link_column') || null as string | null,
 });
 
 const fileInput = ref<HTMLInputElement | null>(null);

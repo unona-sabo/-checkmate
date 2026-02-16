@@ -60,6 +60,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('checklists/{checklist}/import-notes', [ChecklistController::class, 'importFromNotes'])->name('import-notes');
         Route::get('checklists/{checklist}/export', [ChecklistController::class, 'export'])->name('export');
         Route::post('checklists/{checklist}/import', [ChecklistController::class, 'import'])->name('import');
+        Route::post('checklists/{checklist}/copy-rows', [ChecklistController::class, 'copyRows'])->name('copy-rows');
     });
 
     // Test Suites (nested under projects)

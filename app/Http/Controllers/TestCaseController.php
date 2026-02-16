@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attachment;
+use App\Models\ChecklistRow;
 use App\Models\Project;
 use App\Models\TestCase;
 use App\Models\TestSuite;
@@ -42,13 +43,18 @@ class TestCaseController extends Controller
             'tags' => 'nullable|array',
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
+            'checklist_id' => 'nullable|integer|exists:checklists,id',
+            'checklist_row_ids' => 'nullable|string',
+            'checklist_link_column' => 'nullable|string|max:255',
         ]);
+
+        $checklistFields = ['checklist_id', 'checklist_row_ids', 'checklist_link_column'];
 
         $maxOrder = $testSuite->testCases()->max('order') ?? 0;
         $validated['order'] = $maxOrder + 1;
         $validated['created_by'] = auth()->id();
 
-        $testCase = $testSuite->testCases()->create(collect($validated)->except('attachments')->toArray());
+        $testCase = $testSuite->testCases()->create(collect($validated)->except(['attachments', ...$checklistFields])->toArray());
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
@@ -61,6 +67,8 @@ class TestCaseController extends Controller
                 ]);
             }
         }
+
+        $this->linkTestCaseToChecklistRows($project, $testSuite, $testCase, $validated);
 
         return redirect("/projects/{$project->id}/test-suites/{$testSuite->id}/test-cases/{$testCase->id}")
             ->with('success', 'Test case created successfully.');
@@ -215,5 +223,45 @@ class TestCaseController extends Controller
         }
 
         return back()->with('success', 'Test cases reordered successfully.');
+    }
+
+    /**
+     * Link the test case back to the originating checklist rows.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function linkTestCaseToChecklistRows(Project $project, TestSuite $testSuite, TestCase $testCase, array $validated): void
+    {
+        $checklistId = $validated['checklist_id'] ?? null;
+        $rowIds = $validated['checklist_row_ids'] ?? null;
+        $linkColumn = $validated['checklist_link_column'] ?? null;
+
+        if (! $checklistId || ! $rowIds || ! $linkColumn) {
+            return;
+        }
+
+        $checklist = $project->checklists()->find($checklistId);
+        if (! $checklist) {
+            return;
+        }
+
+        $columnsConfig = $checklist->columns_config ?? [];
+        $columnExists = collect($columnsConfig)->contains('key', $linkColumn);
+        if (! $columnExists) {
+            return;
+        }
+
+        $url = url("/projects/{$project->id}/test-suites/{$testSuite->id}/test-cases/{$testCase->id}");
+        $ids = array_map('intval', explode(',', $rowIds));
+
+        $rows = ChecklistRow::where('checklist_id', $checklist->id)
+            ->whereIn('id', $ids)
+            ->get();
+
+        foreach ($rows as $row) {
+            $data = $row->data ?? [];
+            $data[$linkColumn] = $url;
+            $row->update(['data' => $data]);
+        }
     }
 }

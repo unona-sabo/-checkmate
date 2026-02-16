@@ -43,6 +43,9 @@ const form = useForm({
     environment: '',
     assigned_to: null as number | null,
     attachments: [] as File[],
+    checklist_id: urlParams.get('checklist_id') || null as string | null,
+    checklist_row_ids: urlParams.get('checklist_row_ids') || null as string | null,
+    checklist_link_column: urlParams.get('checklist_link_column') || null as string | null,
 });
 
 const fileInput = ref<HTMLInputElement | null>(null);

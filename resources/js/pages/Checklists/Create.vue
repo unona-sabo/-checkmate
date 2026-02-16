@@ -14,6 +14,7 @@ import { ref, watch } from 'vue';
 const props = defineProps<{
     project: Project;
     templates: Checklist[];
+    categories: string[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -42,8 +43,12 @@ const defaultColumns: ColumnConfig[] = [
     { key: 'status', label: 'Status', type: 'checkbox' as const },
 ];
 
+const urlParams = new URLSearchParams(window.location.search);
+const defaultCategory = urlParams.get('category') || props.categories[0] || 'Category';
+
 const form = useForm({
     name: '',
+    category: defaultCategory as string | null,
     columns_config: [...defaultColumns] as ColumnConfig[],
 });
 
@@ -173,6 +178,32 @@ const submit = () => {
                                     :class="{ 'border-destructive': form.errors.name }"
                                 />
                                 <InputError :message="form.errors.name" />
+                            </div>
+
+                            <div class="space-y-2">
+                                <Label for="category">Category</Label>
+                                <div class="flex gap-2">
+                                    <Input
+                                        id="category"
+                                        v-model="form.category"
+                                        list="category-suggestions"
+                                        placeholder="No category"
+                                    />
+                                    <datalist id="category-suggestions">
+                                        <option v-for="cat in categories" :key="cat" :value="cat" />
+                                    </datalist>
+                                    <Button
+                                        v-if="form.category"
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="shrink-0 cursor-pointer"
+                                        @click="form.category = null"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                <InputError :message="form.errors.category" />
                             </div>
 
                             <div class="space-y-3">
