@@ -24,6 +24,8 @@ class ChecklistFactory extends Factory
                 'Bug Triage Checklist',
                 'Testing Checklist',
             ]),
+            'order' => 0,
+            'category' => null,
             'columns_config' => [
                 ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
                 ['key' => 'status', 'label' => 'Done', 'type' => 'checkbox'],

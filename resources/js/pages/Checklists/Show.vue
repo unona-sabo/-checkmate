@@ -34,7 +34,8 @@ import {
     ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
     Bold, Heading, GripHorizontal, StickyNote, Import, Pencil, X, Search,
     MoreHorizontal, Copy, Layers, Play, Download, Upload, FileSpreadsheet,
-    ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle, Columns3, Check, Link2, Filter
+    ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle, Columns3, Check, Link2, Filter,
+    LocateFixed
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
@@ -249,9 +250,10 @@ const filteredRows = computed(() => {
             });
             if (!matchesSelects) return false;
 
-            // Date range filters
-            if (filterUpdatedFrom.value && row.updated_at < filterUpdatedFrom.value) return false;
-            if (filterUpdatedTo.value && row.updated_at.slice(0, 10) > filterUpdatedTo.value) return false;
+            // Date range filters (compare date-only strings YYYY-MM-DD)
+            const rowDate = row.updated_at ? row.updated_at.slice(0, 10) : '';
+            if (filterUpdatedFrom.value && rowDate < filterUpdatedFrom.value) return false;
+            if (filterUpdatedTo.value && rowDate > filterUpdatedTo.value) return false;
 
             return true;
         });
@@ -1570,7 +1572,14 @@ onMounted(() => {
                         <!-- Updated From -->
                         <div class="relative">
                             <Label class="text-[11px] text-muted-foreground mb-1 block">Updated From</Label>
-                            <Input v-model="filterUpdatedFrom" type="date" class="h-8 text-xs" :class="filterUpdatedFrom ? 'pr-7' : ''" />
+                            <input
+                                :value="filterUpdatedFrom"
+                                @input="filterUpdatedFrom = ($event.target as HTMLInputElement).value"
+                                type="date"
+                                data-slot="input"
+                                class="border-input dark:bg-input/30 h-8 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                                :class="filterUpdatedFrom ? 'pr-7' : ''"
+                            />
                             <button v-if="filterUpdatedFrom" @click="filterUpdatedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
                                 <X class="h-3 w-3" />
                             </button>
@@ -1578,7 +1587,14 @@ onMounted(() => {
                         <!-- Updated To -->
                         <div class="relative">
                             <Label class="text-[11px] text-muted-foreground mb-1 block">Updated To</Label>
-                            <Input v-model="filterUpdatedTo" type="date" class="h-8 text-xs" :class="filterUpdatedTo ? 'pr-7' : ''" />
+                            <input
+                                :value="filterUpdatedTo"
+                                @input="filterUpdatedTo = ($event.target as HTMLInputElement).value"
+                                type="date"
+                                data-slot="input"
+                                class="border-input dark:bg-input/30 h-8 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                                :class="filterUpdatedTo ? 'pr-7' : ''"
+                            />
                             <button v-if="filterUpdatedTo" @click="filterUpdatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
                                 <X class="h-3 w-3" />
                             </button>
@@ -1605,19 +1621,23 @@ onMounted(() => {
                                         :key="column.key"
                                         class="px-1 py-2 text-left text-sm font-medium text-muted-foreground relative select-none align-top"
                                         :style="{ width: column.width + 'px' }"
-                                        draggable="true"
-                                        @dragstart="onColDragStart(colIndex, $event)"
                                         @dragover="onColDragOver(colIndex, $event)"
                                         @dragleave="onColDragLeave"
                                         @drop="onColDrop(colIndex, $event)"
-                                        @dragend="onColDragEnd"
                                         :class="{
                                             'bg-primary/10': dragOverColIndex === colIndex,
                                             'opacity-50': draggedColIndex === colIndex
                                         }"
                                     >
-                                        <div class="flex items-center gap-1 cursor-grab active:cursor-grabbing">
-                                            <GripHorizontal class="h-3 w-3 text-muted-foreground/50" />
+                                        <div class="flex items-center gap-1">
+                                            <div
+                                                draggable="true"
+                                                class="shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-muted"
+                                                @dragstart="onColDragStart(colIndex, $event)"
+                                                @dragend="onColDragEnd"
+                                            >
+                                                <GripHorizontal class="h-3 w-3 text-muted-foreground/50" />
+                                            </div>
                                             <template v-if="column.type === 'checkbox'">
                                                 <input
                                                     type="checkbox"
@@ -1631,9 +1651,11 @@ onMounted(() => {
                                         </div>
                                         <!-- Resize handle -->
                                         <div
-                                            class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary"
+                                            class="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize group"
                                             @mousedown.stop="startResize(colIndex, $event)"
-                                        />
+                                        >
+                                            <div class="absolute right-1 top-0 bottom-0 w-0.5 group-hover:bg-primary/50 group-active:bg-primary" />
+                                        </div>
                                     </th>
                                     <th class="w-8 px-1 py-2"></th>
                                     <th class="w-8 px-1 py-2"></th>
@@ -1645,7 +1667,6 @@ onMounted(() => {
                                     v-for="(row, index) in displayRows"
                                     :key="row.id"
                                     :data-row-id="row.id"
-                                    @click="isSearchActive ? navigateToRow(row) : undefined"
                                     class="border-b last:border-0 transition-all duration-500"
                                     :class="[
                                         row.row_type === 'section_header' ? '' : 'hover:bg-muted/50',
@@ -1654,7 +1675,6 @@ onMounted(() => {
                                             'border-t-2 border-t-primary': dragOverRowIndex === index && canDragRows,
                                             'opacity-50': draggedRowIndex === index && canDragRows,
                                             'ring-2 ring-primary/50 bg-primary/5': highlightedRowId === row.id,
-                                            'cursor-pointer hover:!bg-primary/5': isSearchActive,
                                         }
                                     ]"
                                     :style="getRowStyles(row)"
@@ -1663,7 +1683,16 @@ onMounted(() => {
                                     @drop="canDragRows && onRowDrop(index, $event)"
                                 >
                                     <td class="px-1 py-0.5 align-top">
+                                        <button
+                                            v-if="isSearchActive"
+                                            @click="navigateToRow(row)"
+                                            class="p-0.5 rounded hover:bg-primary/10 cursor-pointer"
+                                            title="Go to row"
+                                        >
+                                            <LocateFixed class="h-4 w-4 text-primary" />
+                                        </button>
                                         <div
+                                            v-else
                                             :draggable="canDragRows"
                                             @dragstart="canDragRows && onRowDragStart(index, $event)"
                                             @dragend="onRowDragEnd"

@@ -205,7 +205,7 @@ const getBugStatusColor = (status: string) => {
                             <div class="mb-2 flex items-center gap-2">
                                 <component :is="getTypeIcon(group.type)" class="h-4 w-4 text-muted-foreground" />
                                 <h3 class="text-sm font-semibold">{{ group.label }}</h3>
-                                <span class="text-xs text-muted-foreground">({{ group.count }})</span>
+                                <span class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-medium text-muted-foreground">{{ group.count }}</span>
                             </div>
                             <div class="space-y-[3px]">
                                 <a
@@ -270,7 +270,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <ClipboardList class="h-5 w-5 text-primary" />
                                 Checklists
-                                <span class="text-sm font-normal text-muted-foreground">({{ project.checklists?.length || 0 }})</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.checklists?.length || 0 }}</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/checklists/create`">
                                 <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
@@ -307,7 +307,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <Layers class="h-5 w-5 text-primary" />
                                 Test Suites
-                                <span class="text-sm font-normal text-muted-foreground">({{ project.test_suites?.length || 0 }})</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.test_suites?.length || 0 }}</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/test-suites/create`">
                                 <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
@@ -344,7 +344,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <Play class="h-5 w-5 text-primary" />
                                 Test Runs
-                                <span class="text-sm font-normal text-muted-foreground">({{ project.test_runs?.length || 0 }})</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.test_runs?.length || 0 }}</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/test-runs/create`">
                                 <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
@@ -387,7 +387,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <Bug class="h-5 w-5 text-primary" />
                                 Bug Reports
-                                <span class="text-sm font-normal text-muted-foreground">({{ project.bugreports?.length || 0 }})</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.bugreports?.length || 0 }}</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/bugreports/create`">
                                 <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
@@ -429,7 +429,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <FileText class="h-5 w-5 text-primary" />
                                 Documentations
-                                <span class="text-sm font-normal text-muted-foreground">({{ project.documentations?.length || 0 }})</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.documentations?.length || 0 }}</span>
                             </CardTitle>
                             <Link :href="`/projects/${project.id}/documentations/create`">
                                 <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">

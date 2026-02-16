@@ -16,6 +16,8 @@ class Checklist extends Model
         'project_id',
         'name',
         'columns_config',
+        'order',
+        'category',
     ];
 
     protected function casts(): array
@@ -39,6 +41,16 @@ class Checklist extends Model
     public function rows(): HasMany
     {
         return $this->hasMany(ChecklistRow::class)->orderBy('order');
+    }
+
+    /**
+     * Get only section header rows for the checklist.
+     */
+    public function sectionHeaders(): HasMany
+    {
+        return $this->hasMany(ChecklistRow::class)
+            ->where('row_type', 'section_header')
+            ->orderBy('order');
     }
 
     /**

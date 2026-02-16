@@ -54,10 +54,13 @@ export interface Checklist {
     project_id: number;
     name: string;
     columns_config: ColumnConfig[] | null;
+    order: number;
+    category: string | null;
     created_at: string;
     updated_at: string;
     rows_count?: number;
     rows?: ChecklistRow[];
+    section_headers?: Pick<ChecklistRow, 'id' | 'checklist_id' | 'data' | 'order'>[];
     note?: ChecklistNote;
 }
 

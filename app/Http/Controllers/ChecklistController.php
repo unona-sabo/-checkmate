@@ -18,8 +18,9 @@ class ChecklistController extends Controller
 
         $checklists = $project->checklists()
             ->withCount('rows')
-            ->latest()
-            ->get(['id', 'project_id', 'name', 'columns_config', 'created_at', 'updated_at']);
+            ->with(['sectionHeaders:id,checklist_id,data,order'])
+            ->orderBy('order')
+            ->get(['id', 'project_id', 'name', 'columns_config', 'order', 'category', 'created_at', 'updated_at']);
 
         return Inertia::render('Checklists/Index', [
             'project' => $project,
@@ -46,6 +47,7 @@ class ChecklistController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'category' => 'nullable|string|max:255',
             'columns_config' => 'nullable|array',
             'columns_config.*.key' => 'required|string',
             'columns_config.*.label' => 'required|string',
@@ -56,6 +58,8 @@ class ChecklistController extends Controller
             'columns_config.*.options.*.label' => 'required|string',
             'columns_config.*.options.*.color' => 'nullable|string|max:7',
         ]);
+
+        $validated['order'] = ($project->checklists()->max('order') ?? -1) + 1;
 
         $checklist = $project->checklists()->create($validated);
 
@@ -122,6 +126,29 @@ class ChecklistController extends Controller
             ->with('success', 'Checklist deleted successfully.');
     }
 
+    public function reorder(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'items' => 'required|array',
+            'items.*.id' => 'required|exists:checklists,id',
+            'items.*.order' => 'required|integer|min:0',
+            'items.*.category' => 'nullable|string|max:255',
+        ]);
+
+        foreach ($validated['items'] as $item) {
+            Checklist::where('id', $item['id'])
+                ->where('project_id', $project->id)
+                ->update([
+                    'order' => $item['order'],
+                    'category' => $item['category'] ?? null,
+                ]);
+        }
+
+        return back()->with('success', 'Checklists reordered successfully.');
+    }
+
     public function updateRows(Request $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
@@ -150,7 +177,10 @@ class ChecklistController extends Controller
             $checklist->update(['columns_config' => $validated['columns_config']]);
         }
 
+        // Load existing rows for change detection (to update updated_at only when data changes)
+        $existingRows = $checklist->rows()->get()->keyBy('id');
         $existingIds = [];
+        $now = now()->format('Y-m-d H:i:s');
 
         foreach ($validated['rows'] as $rowData) {
             $updateData = [
@@ -163,6 +193,13 @@ class ChecklistController extends Controller
             ];
 
             if (isset($rowData['id'])) {
+                $existing = $existingRows->get($rowData['id']);
+
+                // Only bump updated_at when content or appearance actually changed
+                if ($existing && $this->rowContentChanged($existing, $updateData)) {
+                    $updateData['updated_at'] = $now;
+                }
+
                 $checklist->rows()->where('id', $rowData['id'])->update($updateData);
                 $existingIds[] = $rowData['id'];
             } else {
@@ -200,6 +237,7 @@ class ChecklistController extends Controller
             'notes' => 'required|array',
             'notes.*' => 'required|string',
             'column_key' => 'required|string',
+            'section_row_id' => 'nullable|integer|exists:checklist_rows,id',
         ]);
 
         $columns = $checklist->columns_config ?? [
@@ -213,20 +251,63 @@ class ChecklistController extends Controller
             return back()->withErrors(['column_key' => 'Column not found in checklist.']);
         }
 
-        // Find the last row with content in the target column
         $existingRows = $checklist->rows()->orderBy('order')->get();
-        $lastFilledOrder = -1;
+        $notesCount = count($validated['notes']);
+        $columnKey = $validated['column_key'];
 
-        foreach ($existingRows as $row) {
-            $cellValue = $row->data[$validated['column_key']] ?? null;
-            if ($cellValue !== null && $cellValue !== '') {
-                $lastFilledOrder = $row->order;
+        if (! empty($validated['section_row_id'])) {
+            // Insert after the last filled row in the specified section
+            $sectionRow = $existingRows->firstWhere('id', $validated['section_row_id']);
+
+            if (! $sectionRow || $sectionRow->row_type !== 'section_header') {
+                return back()->withErrors(['section_row_id' => 'Section not found.']);
+            }
+
+            $insertAfterOrder = $sectionRow->order;
+            foreach ($existingRows as $row) {
+                if ($row->order <= $sectionRow->order) {
+                    continue;
+                }
+                if ($row->row_type === 'section_header') {
+                    break;
+                }
+                $cellValue = $row->data[$columnKey] ?? null;
+                if ($cellValue !== null && $cellValue !== '') {
+                    $insertAfterOrder = $row->order;
+                }
+            }
+        } else {
+            // Find the last section header
+            $lastSectionOrder = null;
+            foreach ($existingRows as $row) {
+                if ($row->row_type === 'section_header') {
+                    $lastSectionOrder = $row->order;
+                }
+            }
+
+            if ($lastSectionOrder !== null) {
+                // Insert after the last filled row in the last section
+                $insertAfterOrder = $lastSectionOrder;
+                foreach ($existingRows as $row) {
+                    if ($row->order <= $lastSectionOrder) {
+                        continue;
+                    }
+                    $cellValue = $row->data[$columnKey] ?? null;
+                    if ($cellValue !== null && $cellValue !== '') {
+                        $insertAfterOrder = $row->order;
+                    }
+                }
+            } else {
+                // No sections — insert after the last filled row in the whole checklist
+                $insertAfterOrder = -1;
+                foreach ($existingRows as $row) {
+                    $cellValue = $row->data[$columnKey] ?? null;
+                    if ($cellValue !== null && $cellValue !== '') {
+                        $insertAfterOrder = $row->order;
+                    }
+                }
             }
         }
-
-        // Insert position is after the last filled row
-        $insertAfterOrder = $lastFilledOrder;
-        $notesCount = count($validated['notes']);
 
         // Shift all rows after the insert position to make room for new notes
         $rowsToShift = $checklist->rows()
@@ -238,7 +319,7 @@ class ChecklistController extends Controller
             $row->update(['order' => $row->order + $notesCount]);
         }
 
-        // Insert new notes starting after the last filled row
+        // Insert new notes starting after the insert position
         foreach ($validated['notes'] as $index => $note) {
             $data = [];
             foreach ($columns as $col) {
@@ -465,5 +546,35 @@ class ChecklistController extends Controller
 
         return redirect()->route('checklists.show', [$project, $checklist])
             ->with('success', $importedCount.' rows imported successfully.');
+    }
+
+    /**
+     * Check if a row's content or appearance changed compared to the incoming data.
+     *
+     * @param  array<string, mixed>  $updateData
+     */
+    private function rowContentChanged(\App\Models\ChecklistRow $existing, array $updateData): bool
+    {
+        if ($existing->data != $updateData['data']) {
+            return true;
+        }
+
+        if ($existing->row_type !== $updateData['row_type']) {
+            return true;
+        }
+
+        if ($existing->background_color !== $updateData['background_color']) {
+            return true;
+        }
+
+        if ($existing->font_color !== $updateData['font_color']) {
+            return true;
+        }
+
+        if ($existing->font_weight !== $updateData['font_weight']) {
+            return true;
+        }
+
+        return false;
     }
 }
