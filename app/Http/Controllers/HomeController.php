@@ -187,6 +187,8 @@ class HomeController extends Controller
                     'Copy link to clipboard',
                     'Drag-and-drop card reordering on index page',
                     'Category grouping with collapsible sections',
+                    'Inline category rename from section header',
+                    'Import notes into specific section by header',
                 ],
                 'model' => Checklist::class,
             ],
