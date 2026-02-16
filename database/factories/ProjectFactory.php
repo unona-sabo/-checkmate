@@ -14,6 +14,7 @@ class ProjectFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
+            'workspace_id' => null,
             'name' => fake()->randomElement([
                 'E-Commerce Platform',
                 'Mobile App',

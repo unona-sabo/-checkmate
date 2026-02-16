@@ -255,6 +255,23 @@ export interface SectionFeature {
     updated_at: string;
 }
 
+export interface Workspace {
+    id: number;
+    name: string;
+    slug: string;
+    owner_id: number;
+    role?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface WorkspaceMember {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+}
+
 export type TestRunCaseStatus = TestRunCase['status'];
 export type TestCasePriority = TestCase['priority'];
 export type TestCaseSeverity = TestCase['severity'];

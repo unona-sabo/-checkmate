@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\WorkspaceRole;
 use App\Models\Project;
 use App\Models\User;
 
@@ -20,7 +21,16 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
-        return $user->id === $project->user_id;
+        if (! $project->workspace_id) {
+            return $user->id === $project->user_id;
+        }
+
+        return $user->hasWorkspaceRole($project->workspace, [
+            WorkspaceRole::Owner,
+            WorkspaceRole::Admin,
+            WorkspaceRole::Member,
+            WorkspaceRole::Viewer,
+        ]);
     }
 
     /**
@@ -28,7 +38,15 @@ class ProjectPolicy
      */
     public function create(User $user): bool
     {
-        return true;
+        $workspace = $user->currentWorkspace;
+
+        if (! $workspace) {
+            return true;
+        }
+
+        $role = $user->workspaceRole($workspace);
+
+        return $role ? $role->canManageProjects() : false;
     }
 
     /**
@@ -36,7 +54,15 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project): bool
     {
-        return $user->id === $project->user_id;
+        if (! $project->workspace_id) {
+            return $user->id === $project->user_id;
+        }
+
+        return $user->hasWorkspaceRole($project->workspace, [
+            WorkspaceRole::Owner,
+            WorkspaceRole::Admin,
+            WorkspaceRole::Member,
+        ]);
     }
 
     /**
@@ -44,6 +70,13 @@ class ProjectPolicy
      */
     public function delete(User $user, Project $project): bool
     {
-        return $user->id === $project->user_id;
+        if (! $project->workspace_id) {
+            return $user->id === $project->user_id;
+        }
+
+        return $user->hasWorkspaceRole($project->workspace, [
+            WorkspaceRole::Owner,
+            WorkspaceRole::Admin,
+        ]);
     }
 }

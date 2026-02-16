@@ -41,7 +41,12 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+function createUserWithWorkspace(string $role = 'owner'): array
 {
-    // ..
+    $user = \App\Models\User::factory()->create();
+    $workspace = \App\Models\Workspace::factory()->create(['owner_id' => $user->id]);
+    $workspace->members()->attach($user->id, ['role' => $role]);
+    $user->update(['current_workspace_id' => $workspace->id]);
+
+    return [$user->fresh(), $workspace];
 }

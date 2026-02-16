@@ -10,6 +10,8 @@ use App\Http\Controllers\TestCaseController;
 use App\Http\Controllers\TestRunCaseController;
 use App\Http\Controllers\TestRunController;
 use App\Http\Controllers\TestSuiteController;
+use App\Http\Controllers\WorkspaceController;
+use App\Http\Controllers\WorkspaceMemberController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -27,6 +29,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('home/{section}/features', [HomeController::class, 'storeFeature'])->name('home.store-feature');
     Route::put('home/{section}/features/{featureDescription}', [HomeController::class, 'updateFeature'])->name('home.update-feature');
     Route::delete('home/{section}/features/{featureDescription}', [HomeController::class, 'destroyFeature'])->name('home.destroy-feature');
+
+    // Workspaces
+    Route::post('workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
+    Route::post('workspaces/switch', [WorkspaceController::class, 'switchWorkspace'])->name('workspaces.switch');
+    Route::get('workspaces/settings', [WorkspaceController::class, 'show'])->name('workspaces.show');
+    Route::put('workspaces/settings', [WorkspaceController::class, 'update'])->name('workspaces.update');
+    Route::delete('workspaces/settings', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
+    Route::post('workspaces/members', [WorkspaceMemberController::class, 'store'])->name('workspaces.members.store');
+    Route::put('workspaces/members/{member}', [WorkspaceMemberController::class, 'update'])->name('workspaces.members.update');
+    Route::delete('workspaces/members/{member}', [WorkspaceMemberController::class, 'destroy'])->name('workspaces.members.destroy');
 
     // Projects
     Route::post('projects/reorder', [ProjectController::class, 'reorder'])->name('projects.reorder');

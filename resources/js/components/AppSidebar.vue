@@ -4,6 +4,7 @@ import { BookOpen, Folder, LayoutGrid, FolderOpen, Component, ClipboardList, Lay
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
+import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.vue';
 import {
     Sidebar,
     SidebarContent,
@@ -78,6 +79,7 @@ const projectSubItems = computed(() => {
             <Link :href="home()" class="flex w-full items-center justify-center px-0 py-4">
                 <AppLogo />
             </Link>
+            <WorkspaceSwitcher />
         </SidebarHeader>
 
         <SidebarContent>

@@ -10,9 +10,15 @@ use Inertia\Response;
 
 class ProjectController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $projects = auth()->user()->projects()
+        $workspace = $request->attributes->get('workspace');
+
+        $query = $workspace
+            ? $workspace->projects()
+            : auth()->user()->projects();
+
+        $projects = $query
             ->withCount(['checklists', 'testSuites', 'testRuns'])
             ->orderBy('order')
             ->orderBy('created_at', 'desc')
@@ -31,10 +37,16 @@ class ProjectController extends Controller
             'projects.*.order' => 'required|integer',
         ]);
 
+        $workspace = $request->attributes->get('workspace');
+
         foreach ($validated['projects'] as $projectData) {
-            Project::where('id', $projectData['id'])
-                ->where('user_id', auth()->id())
-                ->update(['order' => $projectData['order']]);
+            $query = Project::where('id', $projectData['id']);
+            if ($workspace) {
+                $query->where('workspace_id', $workspace->id);
+            } else {
+                $query->where('user_id', auth()->id());
+            }
+            $query->update(['order' => $projectData['order']]);
         }
 
         return back()->with('success', 'Projects reordered successfully.');
@@ -47,11 +59,18 @@ class ProjectController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Project::class);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
         ]);
 
-        $project = auth()->user()->projects()->create($validated);
+        $workspace = $request->attributes->get('workspace');
+
+        $project = auth()->user()->projects()->create([
+            ...$validated,
+            'workspace_id' => $workspace?->id,
+        ]);
 
         return redirect()->route('projects.show', $project)
             ->with('success', 'Project created successfully.');

@@ -35,13 +35,28 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $workspace = $request->attributes->get('workspace');
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'currentWorkspace' => $user && $workspace ? [
+                'id' => $workspace->id,
+                'name' => $workspace->name,
+                'slug' => $workspace->slug,
+                'owner_id' => $workspace->owner_id,
+                'role' => $user->workspaceRole($workspace)?->value,
+            ] : null,
+            'workspaces' => $user ? $user->workspaces()->select('workspaces.id', 'name', 'slug')->get()->map(fn ($ws) => [
+                'id' => $ws->id,
+                'name' => $ws->name,
+                'slug' => $ws->slug,
+            ]) : [],
         ];
     }
 }
