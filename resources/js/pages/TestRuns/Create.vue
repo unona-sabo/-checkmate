@@ -185,9 +185,8 @@ const submit = () => {
                                         <div class="space-y-2">
                                             <div class="flex items-center gap-2 py-1">
                                                 <Checkbox
-                                                    :checked="isSuiteSelected(suite)"
-                                                    :indeterminate="isSuitePartiallySelected(suite)"
-                                                    @update:checked="toggleSuiteSelection(suite)"
+                                                    :model-value="isSuitePartiallySelected(suite) ? 'indeterminate' : isSuiteSelected(suite)"
+                                                    @update:model-value="toggleSuiteSelection(suite)"
                                                 />
                                                 <button
                                                     type="button"
@@ -208,8 +207,8 @@ const submit = () => {
                                                     class="flex items-center gap-2 py-1 text-sm"
                                                 >
                                                     <Checkbox
-                                                        :checked="form.test_case_ids.includes(testCase.id)"
-                                                        @update:checked="toggleTestCase(testCase.id)"
+                                                        :model-value="form.test_case_ids.includes(testCase.id)"
+                                                        @update:model-value="toggleTestCase(testCase.id)"
                                                     />
                                                     <FileText class="h-3 w-3 text-muted-foreground" />
                                                     <span>{{ testCase.title }}</span>
@@ -220,9 +219,8 @@ const submit = () => {
                                                     <div class="ml-4 space-y-1">
                                                         <div class="flex items-center gap-2 py-1">
                                                             <Checkbox
-                                                                :checked="isSuiteSelected(child)"
-                                                                :indeterminate="isSuitePartiallySelected(child)"
-                                                                @update:checked="toggleSuiteSelection(child)"
+                                                                :model-value="isSuitePartiallySelected(child) ? 'indeterminate' : isSuiteSelected(child)"
+                                                                @update:model-value="toggleSuiteSelection(child)"
                                                             />
                                                             <Boxes class="h-3 w-3 text-yellow-500" />
                                                             <span class="font-medium text-sm">{{ child.name }}</span>
@@ -233,8 +231,8 @@ const submit = () => {
                                                             class="ml-6 flex items-center gap-2 py-1 text-sm"
                                                         >
                                                             <Checkbox
-                                                                :checked="form.test_case_ids.includes(tc.id)"
-                                                                @update:checked="toggleTestCase(tc.id)"
+                                                                :model-value="form.test_case_ids.includes(tc.id)"
+                                                                @update:model-value="toggleTestCase(tc.id)"
                                                             />
                                                             <FileText class="h-3 w-3 text-muted-foreground" />
                                                             <span>{{ tc.title }}</span>
