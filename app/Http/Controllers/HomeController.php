@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AutomationTestResult;
 use App\Models\Bugreport;
 use App\Models\Checklist;
 use App\Models\DesignLink;
@@ -288,6 +289,28 @@ class HomeController extends Controller
                     'Creator tracking per link',
                 ],
                 'model' => DesignLink::class,
+            ],
+            'automation' => [
+                'key' => 'automation',
+                'title' => 'Automation',
+                'description' => 'Playwright integration for automated test execution, discovery, and result tracking with tags and environments.',
+                'features' => [
+                    'Configure path to existing Playwright test projects',
+                    'Auto-discover test files from tests/ and e2e/ directories',
+                    'Parse test.describe() and test() blocks with @tag extraction',
+                    'Support for .spec.js, .spec.ts, .test.js, .test.ts files',
+                    'Link Playwright tests to CheckMate test cases',
+                    'Run Playwright tests directly from CheckMate UI',
+                    'Import JSON test results with pass/fail/skip/timeout statuses',
+                    'Track error messages, stack traces, and execution times',
+                    'Latest run statistics dashboard with pass rate',
+                    'Results history with environment and tag display',
+                    'Test environments with base URL, browser, workers, retries, and custom variables',
+                    'Run templates: saved test profiles with environment, tags, and file patterns',
+                    'Tag-based filtering with OR/AND mode for targeted test execution',
+                    'One-click run from templates with pre-configured settings',
+                ],
+                'model' => AutomationTestResult::class,
             ],
             'releases' => [
                 'key' => 'releases',

@@ -15,7 +15,7 @@ test('home page returns sections data for authenticated users', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Dashboard')
-        ->has('sections', 10)
+        ->has('sections', 11)
         ->has('sections.0', fn ($section) => $section
             ->where('key', 'checklists')
             ->where('title', 'Checklists')
@@ -37,17 +37,18 @@ test('home page sections include all six modules', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Dashboard')
-        ->has('sections', 10)
+        ->has('sections', 11)
         ->where('sections.0.key', 'checklists')
         ->where('sections.1.key', 'test-suites')
         ->where('sections.2.key', 'test-runs')
         ->where('sections.3.key', 'bugreports')
         ->where('sections.4.key', 'design')
-        ->where('sections.5.key', 'releases')
-        ->where('sections.6.key', 'test-coverage')
-        ->where('sections.7.key', 'test-data')
-        ->where('sections.8.key', 'documentations')
-        ->where('sections.9.key', 'notes')
+        ->where('sections.5.key', 'automation')
+        ->where('sections.6.key', 'releases')
+        ->where('sections.7.key', 'test-coverage')
+        ->where('sections.8.key', 'test-data')
+        ->where('sections.9.key', 'documentations')
+        ->where('sections.10.key', 'notes')
     );
 });
 
@@ -263,7 +264,7 @@ test('sync endpoint syncs features for all sections', function () {
 
     // Verify features exist for all sections
     $sectionKeys = FeatureDescription::query()->distinct()->pluck('section_key')->sort()->values()->all();
-    expect($sectionKeys)->toBe(['bugreports', 'checklists', 'design', 'documentations', 'notes', 'releases', 'test-coverage', 'test-data', 'test-runs', 'test-suites']);
+    expect($sectionKeys)->toBe(['automation', 'bugreports', 'checklists', 'design', 'documentations', 'notes', 'releases', 'test-coverage', 'test-data', 'test-runs', 'test-suites']);
 });
 
 test('sync endpoint requires authentication', function () {
@@ -506,6 +507,7 @@ test('all six section keys return valid show pages', function (string $sectionKe
     'test-coverage',
     'releases',
     'design',
+    'automation',
     'documentations',
     'notes',
 ]);

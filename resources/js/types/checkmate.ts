@@ -518,3 +518,88 @@ export interface AiGeneratedTestCase {
     created_at: string;
     updated_at: string;
 }
+
+export interface AutomationTestResult {
+    id: number;
+    project_id: number;
+    test_case_id: number | null;
+    environment_id: number | null;
+    template_id: number | null;
+    test_file: string;
+    test_name: string;
+    status: 'passed' | 'failed' | 'skipped' | 'timedout';
+    duration_ms: number;
+    error_message: string | null;
+    error_stack: string[] | null;
+    screenshot_path: string | null;
+    video_path: string | null;
+    tags: string[] | null;
+    executed_at: string;
+    created_at: string;
+    updated_at: string;
+    test_case?: TestCase;
+    environment?: { id: number; name: string } | null;
+}
+
+export interface AutomationScanResult {
+    tests_path: string;
+    total_files: number;
+    total_tests: number;
+    all_tags: string[];
+    files: AutomationScanFile[];
+}
+
+export interface AutomationScanFile {
+    file: string;
+    full_path: string;
+    suite: string;
+    tests: AutomationScanTest[];
+    skipped_tests: string[];
+}
+
+export interface AutomationScanTest {
+    name: string;
+    full_name: string;
+    tags: string[];
+}
+
+export interface AutomationRunStats {
+    total: number;
+    passed: number;
+    failed: number;
+    skipped: number;
+    timedout: number;
+    executed_at: string;
+}
+
+export interface TestEnvironment {
+    id: number;
+    project_id: number;
+    name: string;
+    base_url: string | null;
+    variables: Record<string, string> | null;
+    workers: number;
+    retries: number;
+    browser: 'chromium' | 'firefox' | 'webkit';
+    headed: boolean;
+    timeout: number;
+    description: string | null;
+    is_default: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TestRunTemplate {
+    id: number;
+    project_id: number;
+    name: string;
+    description: string | null;
+    environment_id: number | null;
+    environment?: { id: number; name: string } | null;
+    tags: string[] | null;
+    tag_mode: 'or' | 'and';
+    file_pattern: string | null;
+    options: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+}

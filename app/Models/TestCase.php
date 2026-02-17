@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -27,6 +28,10 @@ class TestCase extends Model
         'tags',
         'order',
         'created_by',
+        'playwright_file',
+        'playwright_test_name',
+        'is_automated',
+        'last_automated_run',
     ];
 
     protected function casts(): array
@@ -34,6 +39,8 @@ class TestCase extends Model
         return [
             'steps' => 'array',
             'tags' => 'array',
+            'is_automated' => 'boolean',
+            'last_automated_run' => 'datetime',
         ];
     }
 
@@ -60,5 +67,30 @@ class TestCase extends Model
     public function attachments(): MorphMany
     {
         return $this->morphMany(Attachment::class, 'attachable');
+    }
+
+    /**
+     * Get the project features linked to this test case.
+     */
+    public function projectFeatures(): BelongsToMany
+    {
+        return $this->belongsToMany(ProjectFeature::class, 'feature_test_case', 'test_case_id', 'feature_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get all automation test results for this test case.
+     */
+    public function automationResults(): HasMany
+    {
+        return $this->hasMany(AutomationTestResult::class);
+    }
+
+    /**
+     * Get the latest automation test result.
+     */
+    public function latestAutomationResult(): HasOne
+    {
+        return $this->hasOne(AutomationTestResult::class)->latestOfMany('executed_at');
     }
 }

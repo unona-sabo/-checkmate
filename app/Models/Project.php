@@ -17,7 +17,16 @@ class Project extends Model
         'workspace_id',
         'name',
         'order',
+        'automation_tests_path',
+        'automation_config',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'automation_config' => 'array',
+        ];
+    }
 
     /**
      * Get the user that owns the project.
@@ -145,6 +154,30 @@ class Project extends Model
     public function releases(): HasMany
     {
         return $this->hasMany(Release::class);
+    }
+
+    /**
+     * Get all automation test results for the project.
+     */
+    public function automationTestResults(): HasMany
+    {
+        return $this->hasMany(AutomationTestResult::class);
+    }
+
+    /**
+     * Get all test environments for the project.
+     */
+    public function testEnvironments(): HasMany
+    {
+        return $this->hasMany(TestEnvironment::class);
+    }
+
+    /**
+     * Get all test run templates for the project.
+     */
+    public function testRunTemplates(): HasMany
+    {
+        return $this->hasMany(TestRunTemplate::class);
     }
 
     /**

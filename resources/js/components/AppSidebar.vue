@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, FolderOpen, Component, ClipboardList, Layers, Play, ChevronRight, Bug, Palette, Rocket, BarChart3, Database, FileText, StickyNote } from 'lucide-vue-next';
+import { LayoutGrid, FolderOpen, Component, ClipboardList, Layers, Play, ChevronRight, Bug, Palette, Drama, Rocket, BarChart3, Database, FileText, StickyNote } from 'lucide-vue-next';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.vue';
@@ -55,6 +55,7 @@ const projectSubItems = computed(() => {
         { title: 'Test Runs', href: `/projects/${projectId}/test-runs`, icon: Play },
         { title: 'Bugreports', href: `/projects/${projectId}/bugreports`, icon: Bug },
         { title: 'Design', href: `/projects/${projectId}/design`, icon: Palette },
+        { title: 'Automation', href: `/projects/${projectId}/automation`, icon: Drama },
         { title: 'Releases', href: `/projects/${projectId}/releases`, icon: Rocket },
         { title: 'Test Coverage', href: `/projects/${projectId}/test-coverage`, icon: BarChart3 },
         { title: 'Test Data', href: `/projects/${projectId}/test-data`, icon: Database },

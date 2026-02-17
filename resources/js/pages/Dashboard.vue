@@ -25,6 +25,7 @@ import {
     ExternalLink,
     FolderTree,
     Palette,
+    Drama,
     Rocket,
     BarChart3,
 } from 'lucide-vue-next';
@@ -49,6 +50,7 @@ const sectionIcons: Record<string, typeof ClipboardList> = {
     'test-runs': Play,
     bugreports: Bug,
     design: Palette,
+    automation: Drama,
     releases: Rocket,
     'test-coverage': BarChart3,
     'test-data': Database,

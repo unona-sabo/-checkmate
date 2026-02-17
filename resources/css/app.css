@@ -325,6 +325,41 @@
     background: var(--checkmate-primary, #1e3a8a);
 }
 
+/* Sidebar scrollbar - subtle, blends with background */
+[data-sidebar="content"] {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar {
+    width: 3px;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.dark [data-sidebar="content"] {
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.dark [data-sidebar="content"]::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dark [data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 /* Progress bar gradient */
 .progress-gradient {
     background: linear-gradient(90deg, var(--checkmate-primary, #1e3a8a) 0%, var(--checkmate-accent, #fde047) 100%);

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BugreportController;
 use App\Http\Controllers\ChecklistController;
 use App\Http\Controllers\DesignLinkController;
@@ -11,8 +12,10 @@ use App\Http\Controllers\ReleaseController;
 use App\Http\Controllers\TestCaseController;
 use App\Http\Controllers\TestCoverageController;
 use App\Http\Controllers\TestDataController;
+use App\Http\Controllers\TestEnvironmentController;
 use App\Http\Controllers\TestRunCaseController;
 use App\Http\Controllers\TestRunController;
+use App\Http\Controllers\TestRunTemplateController;
 use App\Http\Controllers\TestSuiteController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
@@ -134,6 +137,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('design', [DesignLinkController::class, 'store'])->name('store');
         Route::put('design/{designLink}', [DesignLinkController::class, 'update'])->name('update');
         Route::delete('design/{designLink}', [DesignLinkController::class, 'destroy'])->name('destroy');
+    });
+
+    // Automation / Playwright Integration (nested under projects)
+    Route::prefix('projects/{project}')->name('automation.')->group(function () {
+        Route::get('automation', [AutomationController::class, 'index'])->name('index');
+        Route::put('automation/config', [AutomationController::class, 'updateConfig'])->name('update-config');
+        Route::get('automation/scan', [AutomationController::class, 'scan'])->name('scan');
+        Route::post('automation/run', [AutomationController::class, 'run'])->name('run');
+        Route::post('automation/import-results', [AutomationController::class, 'importResults'])->name('import-results');
+        Route::post('automation/link-test-case', [AutomationController::class, 'linkTestCase'])->name('link-test-case');
+        Route::post('automation/unlink-test-case', [AutomationController::class, 'unlinkTestCase'])->name('unlink-test-case');
+        Route::delete('automation/clear-results', [AutomationController::class, 'clearResults'])->name('clear-results');
+
+        // Environments
+        Route::post('automation/environments', [TestEnvironmentController::class, 'store'])->name('environments.store');
+        Route::put('automation/environments/{environment}', [TestEnvironmentController::class, 'update'])->name('environments.update');
+        Route::delete('automation/environments/{environment}', [TestEnvironmentController::class, 'destroy'])->name('environments.destroy');
+
+        // Templates
+        Route::post('automation/templates', [TestRunTemplateController::class, 'store'])->name('templates.store');
+        Route::put('automation/templates/{template}', [TestRunTemplateController::class, 'update'])->name('templates.update');
+        Route::delete('automation/templates/{template}', [TestRunTemplateController::class, 'destroy'])->name('templates.destroy');
     });
 
     // Releases (nested under projects)
