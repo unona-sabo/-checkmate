@@ -10,6 +10,7 @@ use App\Models\FeatureDescription;
 use App\Models\Note;
 use App\Models\TestRun;
 use App\Models\TestSuite;
+use App\Models\TestUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -269,6 +270,32 @@ class HomeController extends Controller
                     'Copy link to clipboard',
                 ],
                 'model' => Bugreport::class,
+            ],
+            'test-data' => [
+                'key' => 'test-data',
+                'title' => 'Test Data',
+                'description' => 'Centralized management of test credentials, user accounts, and payment methods for QA testing across environments.',
+                'features' => [
+                    'Test user accounts with name, email, and encrypted passwords',
+                    'Role-based test user categorization (admin, user, moderator, tester)',
+                    'Environment selection per entry: Develop, Staging, Production',
+                    'Validity status tracking for active and expired test accounts',
+                    'Additional info field for custom key-value metadata per user',
+                    'Tag-based organization for test users and payment methods',
+                    'Payment method management: card, crypto, bank, PayPal, and custom types',
+                    'Type-specific credential fields with encrypted storage',
+                    'Payment system tracking (Stripe, PayPal, Square, Braintree)',
+                    'Copy-to-clipboard for emails, passwords, and credentials',
+                    'Password visibility toggle with eye icon',
+                    'CSV export of filtered test users and payment methods',
+                    'Bulk selection and deletion for both users and payments',
+                    'Search and filter by validity, environment, role, and payment type',
+                    'Creator tracking per test data entry',
+                    'Drag-and-drop row reordering for test users and payment methods',
+                    'Drag-and-drop column reordering with localStorage persistence',
+                    'Column resizing with localStorage persistence',
+                ],
+                'model' => TestUser::class,
             ],
             'design' => [
                 'key' => 'design',

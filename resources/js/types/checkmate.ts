@@ -211,6 +211,43 @@ export interface TestRunCase {
     };
 }
 
+export interface TestUser {
+    id: number;
+    project_id: number;
+    name: string;
+    email: string;
+    password: string | null;
+    role: string | null;
+    environment: 'develop' | 'staging' | 'production' | null;
+    description: string | null;
+    is_valid: boolean;
+    additional_info: Record<string, unknown> | null;
+    tags: string[] | null;
+    order: number;
+    created_by: number | null;
+    creator: { id: number; name: string } | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TestPaymentMethod {
+    id: number;
+    project_id: number;
+    name: string;
+    type: 'card' | 'crypto' | 'bank' | 'paypal' | 'other';
+    system: string | null;
+    credentials: Record<string, string> | null;
+    environment: 'develop' | 'staging' | 'production' | null;
+    is_valid: boolean;
+    description: string | null;
+    tags: string[] | null;
+    order: number;
+    created_by: number | null;
+    creator: { id: number; name: string } | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface ProjectSearchResultItem {
     id: number;
     title: string;

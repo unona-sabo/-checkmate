@@ -8,6 +8,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TestCaseController;
+use App\Http\Controllers\TestDataController;
 use App\Http\Controllers\TestRunCaseController;
 use App\Http\Controllers\TestRunController;
 use App\Http\Controllers\TestSuiteController;
@@ -131,6 +132,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('design', [DesignLinkController::class, 'store'])->name('store');
         Route::put('design/{designLink}', [DesignLinkController::class, 'update'])->name('update');
         Route::delete('design/{designLink}', [DesignLinkController::class, 'destroy'])->name('destroy');
+    });
+
+    // Test Data (nested under projects)
+    Route::prefix('projects/{project}')->name('test-data.')->group(function () {
+        Route::get('test-data', [TestDataController::class, 'index'])->name('index');
+        Route::post('test-data/users', [TestDataController::class, 'storeUser'])->name('users.store');
+        Route::put('test-data/users/{testUser}', [TestDataController::class, 'updateUser'])->name('users.update');
+        Route::delete('test-data/users/{testUser}', [TestDataController::class, 'destroyUser'])->name('users.destroy');
+        Route::delete('test-data/users-bulk', [TestDataController::class, 'bulkDestroyUsers'])->name('users.bulk-destroy');
+        Route::post('test-data/payments', [TestDataController::class, 'storePayment'])->name('payments.store');
+        Route::put('test-data/payments/{testPaymentMethod}', [TestDataController::class, 'updatePayment'])->name('payments.update');
+        Route::delete('test-data/payments/{testPaymentMethod}', [TestDataController::class, 'destroyPayment'])->name('payments.destroy');
+        Route::delete('test-data/payments-bulk', [TestDataController::class, 'bulkDestroyPayments'])->name('payments.bulk-destroy');
+        Route::put('test-data/users-reorder', [TestDataController::class, 'reorderUsers'])->name('users.reorder');
+        Route::put('test-data/payments-reorder', [TestDataController::class, 'reorderPayments'])->name('payments.reorder');
     });
 
     // Documentations (nested under projects)

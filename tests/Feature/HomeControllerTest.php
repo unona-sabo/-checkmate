@@ -15,7 +15,7 @@ test('home page returns sections data for authenticated users', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Dashboard')
-        ->has('sections', 7)
+        ->has('sections', 8)
         ->has('sections.0', fn ($section) => $section
             ->where('key', 'checklists')
             ->where('title', 'Checklists')
@@ -37,14 +37,15 @@ test('home page sections include all six modules', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Dashboard')
-        ->has('sections', 7)
+        ->has('sections', 8)
         ->where('sections.0.key', 'checklists')
         ->where('sections.1.key', 'test-suites')
         ->where('sections.2.key', 'test-runs')
         ->where('sections.3.key', 'bugreports')
-        ->where('sections.4.key', 'design')
-        ->where('sections.5.key', 'documentations')
-        ->where('sections.6.key', 'notes')
+        ->where('sections.4.key', 'test-data')
+        ->where('sections.5.key', 'design')
+        ->where('sections.6.key', 'documentations')
+        ->where('sections.7.key', 'notes')
     );
 });
 
@@ -260,7 +261,7 @@ test('sync endpoint syncs features for all sections', function () {
 
     // Verify features exist for all sections
     $sectionKeys = FeatureDescription::query()->distinct()->pluck('section_key')->sort()->values()->all();
-    expect($sectionKeys)->toBe(['bugreports', 'checklists', 'design', 'documentations', 'notes', 'test-runs', 'test-suites']);
+    expect($sectionKeys)->toBe(['bugreports', 'checklists', 'design', 'documentations', 'notes', 'test-data', 'test-runs', 'test-suites']);
 });
 
 test('sync endpoint requires authentication', function () {
@@ -499,6 +500,7 @@ test('all six section keys return valid show pages', function (string $sectionKe
     'test-suites',
     'test-runs',
     'bugreports',
+    'test-data',
     'design',
     'documentations',
     'notes',

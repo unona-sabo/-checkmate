@@ -83,6 +83,22 @@ class Project extends Model
     }
 
     /**
+     * Get all test users for the project.
+     */
+    public function testUsers(): HasMany
+    {
+        return $this->hasMany(TestUser::class);
+    }
+
+    /**
+     * Get all test payment methods for the project.
+     */
+    public function testPaymentMethods(): HasMany
+    {
+        return $this->hasMany(TestPaymentMethod::class);
+    }
+
+    /**
      * Get all notes for the project.
      */
     public function notes(): HasMany
