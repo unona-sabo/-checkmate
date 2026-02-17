@@ -21,8 +21,10 @@ test('index page renders for authenticated user', function () {
         ->has('project')
         ->has('recentResults')
         ->has('latestRunStats')
-        ->has('environments')
-        ->has('templates')
+        ->loadDeferredProps('sidebar', fn ($page) => $page
+            ->has('environments')
+            ->has('templates')
+        )
     );
 });
 
@@ -41,7 +43,7 @@ test('index shows recent results', function () {
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->has('recentResults', 3)
+        ->has('recentResults.data', 3)
     );
 });
 
@@ -74,8 +76,10 @@ test('index returns environments and templates', function () {
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->has('environments', 1)
-        ->has('templates', 1)
+        ->loadDeferredProps('sidebar', fn ($page) => $page
+            ->has('environments', 1)
+            ->has('templates', 1)
+        )
     );
 });
 

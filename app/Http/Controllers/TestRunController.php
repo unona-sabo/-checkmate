@@ -25,14 +25,13 @@ class TestRunController extends Controller
                 $run->setAttribute('is_paused', $run->isPaused());
             });
 
-        $users = User::query()
-            ->whereIn('id', $project->testRuns()->distinct()->pluck('created_by')->filter())
-            ->get(['id', 'name']);
-
         return Inertia::render('TestRuns/Index', [
             'project' => $project,
             'testRuns' => $testRuns,
-            'users' => $users,
+            'users' => Inertia::defer(fn () => User::query()
+                ->whereIn('id', fn ($q) => $q->select('created_by')->from('test_runs')
+                    ->where('project_id', $project->id)->whereNotNull('created_by')->distinct())
+                ->get(['id', 'name'])),
         ]);
     }
 

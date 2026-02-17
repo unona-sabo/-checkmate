@@ -4,6 +4,11 @@ use App\Models\Checklist;
 use App\Models\FeatureDescription;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
+
+beforeEach(function () {
+    Cache::store('file')->forget('home_sections');
+});
 
 test('home page returns sections data for authenticated users', function () {
     $user = User::factory()->create();

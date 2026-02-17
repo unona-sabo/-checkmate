@@ -101,8 +101,11 @@ test('show page renders with release data', function () {
         ->has('project')
         ->has('release')
         ->has('blockers')
-        ->has('projectFeatures')
-        ->has('projectTestRuns')
+        ->loadDeferredProps('sidebar', fn ($page) => $page
+            ->has('projectFeatures')
+            ->has('projectTestRuns')
+            ->has('workspaceMembers')
+        )
     );
 });
 

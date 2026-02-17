@@ -22,13 +22,17 @@ class ReleaseController extends Controller
         $this->authorize('view', $project);
 
         $releases = $project->releases()
-            ->withCount(['features', 'checklistItems'])
+            ->withCount([
+                'features',
+                'checklistItems',
+                'checklistItems as completed_checklist_items_count' => fn ($q) => $q->where('status', 'completed'),
+            ])
             ->with('latestMetrics')
             ->orderByDesc('created_at')
             ->get()
             ->map(function (Release $release) {
-                $completedItems = $release->checklistItems()->where('status', 'completed')->count();
                 $totalItems = $release->checklist_items_count;
+                $completedItems = $release->completed_checklist_items_count;
 
                 return [
                     ...$release->toArray(),
@@ -82,33 +86,31 @@ class ReleaseController extends Controller
             ->where('status', '!=', 'completed')
             ->count();
 
-        $projectFeatures = $project->features()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name', 'module']);
-
-        $projectTestRuns = $project->testRuns()
-            ->orderByDesc('created_at')
-            ->get(['id', 'name', 'status', 'environment']);
-
-        $workspaceMembers = [];
-        if ($project->workspace_id) {
-            $workspace = $project->workspace;
-            if ($workspace) {
-                $workspaceMembers = $workspace->members()
-                    ->select('users.id', 'users.name', 'users.email')
-                    ->get()
-                    ->toArray();
-            }
-        }
-
         return Inertia::render('Releases/Show', [
             'project' => $project,
             'release' => $release,
             'blockers' => $blockers,
-            'projectFeatures' => $projectFeatures,
-            'projectTestRuns' => $projectTestRuns,
-            'workspaceMembers' => $workspaceMembers,
+            'projectFeatures' => Inertia::defer(fn () => $project->features()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'module']), 'sidebar'),
+            'projectTestRuns' => Inertia::defer(fn () => $project->testRuns()
+                ->orderByDesc('created_at')
+                ->get(['id', 'name', 'status', 'environment']), 'sidebar'),
+            'workspaceMembers' => Inertia::defer(function () use ($project) {
+                if (! $project->workspace_id) {
+                    return [];
+                }
+                $workspace = $project->workspace;
+                if (! $workspace) {
+                    return [];
+                }
+
+                return $workspace->members()
+                    ->select('users.id', 'users.name', 'users.email')
+                    ->get()
+                    ->toArray();
+            }, 'sidebar'),
         ]);
     }
 

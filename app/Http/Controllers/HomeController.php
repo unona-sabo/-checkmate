@@ -16,6 +16,7 @@ use App\Models\TestSuite;
 use App\Models\TestUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,12 +24,12 @@ class HomeController extends Controller
 {
     public function index(): Response
     {
-        $sections = array_values(
+        $sections = Cache::store('file')->remember('home_sections', 300, fn () => array_values(
             array_map(
                 fn (array $config) => $this->buildSection($config['key'], $config['title'], $config['description'], $config['features'], $config['model']),
                 $this->getSectionConfigs(),
             ),
-        );
+        ));
 
         return Inertia::render('Dashboard', [
             'sections' => $sections,
@@ -40,6 +41,8 @@ class HomeController extends Controller
         foreach ($this->getSectionConfigs() as $key => $config) {
             $this->syncFeatures($key, $config['features']);
         }
+
+        Cache::store('file')->forget('home_sections');
 
         return back();
     }
@@ -87,11 +90,13 @@ class HomeController extends Controller
             'section_key' => $section,
             'feature_index' => $maxIndex + 1,
             'title' => $validated['title'],
-            'description' => $validated['description'],
+            'description' => $validated['description'] ?? null,
             'is_custom' => true,
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
         ]);
+
+        Cache::store('file')->forget('home_sections');
 
         return back();
     }
@@ -113,6 +118,8 @@ class HomeController extends Controller
             'updated_by' => $request->user()->id,
         ]);
 
+        Cache::store('file')->forget('home_sections');
+
         return back();
     }
 
@@ -124,6 +131,8 @@ class HomeController extends Controller
         abort_unless($featureDescription->section_key === $section, 404);
 
         $featureDescription->delete();
+
+        Cache::store('file')->forget('home_sections');
 
         return back();
     }

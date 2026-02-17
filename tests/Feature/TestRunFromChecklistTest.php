@@ -148,7 +148,9 @@ test('index page passes users prop', function () {
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
         ->component('TestRuns/Index')
-        ->has('users')
         ->has('testRuns')
+        ->loadDeferredProps(fn ($page) => $page
+            ->has('users')
+        )
     );
 });

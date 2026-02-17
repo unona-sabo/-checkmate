@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, Deferred } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
 import type { Release, ReleaseFeature, ReleaseChecklistItem, ReleaseMetricsSnapshot, ProjectFeature, TestRun } from '@/types/checkmate';
@@ -59,9 +59,9 @@ const props = defineProps<{
     project: Project;
     release: Release;
     blockers: number;
-    projectFeatures: { id: number; name: string; module: string | null }[];
-    projectTestRuns: { id: number; name: string; status: string; environment: string | null }[];
-    workspaceMembers: WorkspaceMember[];
+    projectFeatures?: { id: number; name: string; module: string | null }[];
+    projectTestRuns?: { id: number; name: string; status: string; environment: string | null }[];
+    workspaceMembers?: WorkspaceMember[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -183,7 +183,7 @@ const deleteFeature = (featureId: number) => {
 
 const onProjectFeatureSelect = (val: string) => {
     featureForm.value.feature_id = val;
-    const pf = props.projectFeatures.find((f) => f.id === Number(val));
+    const pf = props.projectFeatures?.find((f) => f.id === Number(val));
     if (pf) {
         featureForm.value.feature_name = pf.name;
     }
@@ -867,7 +867,7 @@ const formatDate = (d: string | null): string => {
                     <DialogDescription>Add a feature to track in this release.</DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4 py-4">
-                    <div v-if="projectFeatures.length">
+                    <div v-if="projectFeatures?.length">
                         <Label>From Project Features</Label>
                         <Select @update:model-value="onProjectFeatureSelect">
                             <SelectTrigger class="mt-1"><SelectValue placeholder="Select a feature (optional)" /></SelectTrigger>
@@ -954,42 +954,49 @@ const formatDate = (d: string | null): string => {
                     </DialogTitle>
                     <DialogDescription>Toggle test runs to link or unlink from this release.</DialogDescription>
                 </DialogHeader>
-                <div class="max-h-96 space-y-1 overflow-y-auto py-4">
-                    <div
-                        v-for="tr in projectTestRuns"
-                        :key="tr.id"
-                        class="flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-muted/30"
-                    >
-                        <div class="flex items-center gap-2">
-                            <Play class="h-4 w-4 text-muted-foreground" />
-                            <span class="text-sm">{{ tr.name }}</span>
-                            <Badge variant="outline" class="text-xs">{{ tr.status }}</Badge>
+                <Deferred data="projectTestRuns">
+                    <template #fallback>
+                        <div class="space-y-2 py-4">
+                            <div v-for="i in 3" :key="i" class="h-10 w-full animate-pulse rounded-md bg-muted" />
                         </div>
-                        <Button
-                            v-if="isTestRunLinked(tr.id)"
-                            variant="outline"
-                            size="sm"
-                            @click="toggleTestRunLink(tr.id)"
-                            class="cursor-pointer border-emerald-500 text-emerald-600 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                    </template>
+                    <div class="max-h-96 space-y-1 overflow-y-auto py-4">
+                        <div
+                            v-for="tr in projectTestRuns"
+                            :key="tr.id"
+                            class="flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-muted/30"
                         >
-                            <Unlink class="mr-1 h-3.5 w-3.5" />
-                            Linked
-                        </Button>
-                        <Button
-                            v-else
-                            variant="outline"
-                            size="sm"
-                            @click="toggleTestRunLink(tr.id)"
-                            class="cursor-pointer"
-                        >
-                            <Link2 class="mr-1 h-3.5 w-3.5" />
-                            Link
-                        </Button>
+                            <div class="flex items-center gap-2">
+                                <Play class="h-4 w-4 text-muted-foreground" />
+                                <span class="text-sm">{{ tr.name }}</span>
+                                <Badge variant="outline" class="text-xs">{{ tr.status }}</Badge>
+                            </div>
+                            <Button
+                                v-if="isTestRunLinked(tr.id)"
+                                variant="outline"
+                                size="sm"
+                                @click="toggleTestRunLink(tr.id)"
+                                class="cursor-pointer border-emerald-500 text-emerald-600 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                            >
+                                <Unlink class="mr-1 h-3.5 w-3.5" />
+                                Linked
+                            </Button>
+                            <Button
+                                v-else
+                                variant="outline"
+                                size="sm"
+                                @click="toggleTestRunLink(tr.id)"
+                                class="cursor-pointer"
+                            >
+                                <Link2 class="mr-1 h-3.5 w-3.5" />
+                                Link
+                            </Button>
+                        </div>
+                        <p v-if="projectTestRuns?.length === 0" class="py-8 text-center text-sm text-muted-foreground">
+                            No test runs available.
+                        </p>
                     </div>
-                    <p v-if="projectTestRuns.length === 0" class="py-8 text-center text-sm text-muted-foreground">
-                        No test runs available.
-                    </p>
-                </div>
+                </Deferred>
                 <DialogFooter>
                     <Button @click="showLinkTestRunDialog = false" class="cursor-pointer">Close</Button>
                 </DialogFooter>

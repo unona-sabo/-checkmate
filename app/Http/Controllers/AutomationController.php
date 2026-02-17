@@ -25,41 +25,37 @@ class AutomationController extends Controller
         $recentResults = $project->automationTestResults()
             ->with('testCase:id,title', 'environment:id,name')
             ->latest('executed_at')
-            ->limit(50)
-            ->get();
+            ->cursorPaginate(50);
 
         // Compute stats from most recent run
         $latestExecutedAt = $project->automationTestResults()->max('executed_at');
         $latestRunStats = [];
         if ($latestExecutedAt) {
-            $latestRun = $project->automationTestResults()
+            $stats = $project->automationTestResults()
                 ->where('executed_at', $latestExecutedAt)
-                ->get();
+                ->selectRaw("COUNT(*) as total, SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) as passed, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed, SUM(CASE WHEN status = 'skipped' THEN 1 ELSE 0 END) as skipped, SUM(CASE WHEN status = 'timedout' THEN 1 ELSE 0 END) as timedout")
+                ->first();
             $latestRunStats = [
-                'total' => $latestRun->count(),
-                'passed' => $latestRun->where('status', 'passed')->count(),
-                'failed' => $latestRun->where('status', 'failed')->count(),
-                'skipped' => $latestRun->where('status', 'skipped')->count(),
-                'timedout' => $latestRun->where('status', 'timedout')->count(),
+                'total' => (int) $stats->total,
+                'passed' => (int) $stats->passed,
+                'failed' => (int) $stats->failed,
+                'skipped' => (int) $stats->skipped,
+                'timedout' => (int) $stats->timedout,
                 'executed_at' => $latestExecutedAt,
             ];
         }
-
-        $environments = $project->testEnvironments()
-            ->orderBy('name')
-            ->get();
-
-        $templates = $project->testRunTemplates()
-            ->with('environment:id,name')
-            ->orderBy('name')
-            ->get();
 
         return Inertia::render('Automation/Index', [
             'project' => $project,
             'recentResults' => $recentResults,
             'latestRunStats' => $latestRunStats,
-            'environments' => $environments,
-            'templates' => $templates,
+            'environments' => Inertia::defer(fn () => $project->testEnvironments()
+                ->orderBy('name')
+                ->get(), 'sidebar'),
+            'templates' => Inertia::defer(fn () => $project->testRunTemplates()
+                ->with('environment:id,name')
+                ->orderBy('name')
+                ->get(), 'sidebar'),
         ]);
     }
 

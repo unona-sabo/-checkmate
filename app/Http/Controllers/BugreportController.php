@@ -22,12 +22,10 @@ class BugreportController extends Controller
             ->latest()
             ->get();
 
-        $users = $project->users()->get(['users.id', 'users.name']);
-
         return Inertia::render('Bugreports/Index', [
             'project' => $project,
             'bugreports' => $bugreports,
-            'users' => $users,
+            'users' => Inertia::defer(fn () => $project->users()->get(['users.id', 'users.name'])),
         ]);
     }
 

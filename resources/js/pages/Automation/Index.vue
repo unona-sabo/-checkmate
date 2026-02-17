@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import axios from 'axios';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, Deferred } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
 import type {
@@ -11,6 +11,7 @@ import type {
     AutomationRunStats,
     TestEnvironment,
     TestRunTemplate,
+    CursorPagination,
 } from '@/types/checkmate';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,10 +63,10 @@ import RestrictedAction from '@/components/RestrictedAction.vue';
 
 const props = defineProps<{
     project: Project & { automation_tests_path?: string | null };
-    recentResults: AutomationTestResult[];
+    recentResults: CursorPagination<AutomationTestResult>;
     latestRunStats: AutomationRunStats | Record<string, never>;
-    environments: TestEnvironment[];
-    templates: TestRunTemplate[];
+    environments?: TestEnvironment[];
+    templates?: TestRunTemplate[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -389,12 +390,24 @@ const openLinkDialog = (file: string, testName: string) => {
 // ========== History ==========
 const historySearch = ref('');
 const filteredResults = computed(() => {
-    if (!historySearch.value.trim()) return props.recentResults;
+    if (!historySearch.value.trim()) return props.recentResults.data;
     const q = historySearch.value.toLowerCase();
-    return props.recentResults.filter(
+    return props.recentResults.data.filter(
         (r) => r.test_name.toLowerCase().includes(q) || r.test_file.toLowerCase().includes(q),
     );
 });
+
+const loadingMore = ref(false);
+const loadMore = () => {
+    if (!props.recentResults.next_cursor) return;
+    loadingMore.value = true;
+    router.reload({
+        data: { cursor: props.recentResults.next_cursor },
+        only: ['recentResults'],
+        preserveState: true,
+        onFinish: () => { loadingMore.value = false; },
+    });
+};
 
 // ========== Clear results ==========
 const showClearDialog = ref(false);
@@ -583,26 +596,34 @@ const passRate = computed(() => {
                                     class="mt-1"
                                 />
                             </div>
-                            <div>
-                                <Label>Environment</Label>
-                                <Select v-model="runEnvironmentId">
-                                    <SelectTrigger class="mt-1 cursor-pointer bg-background/60">
-                                        <SelectValue placeholder="Default (no env)" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="" class="cursor-pointer">Default (no env)</SelectItem>
-                                        <SelectItem
-                                            v-for="env in environments"
-                                            :key="env.id"
-                                            :value="String(env.id)"
-                                            class="cursor-pointer"
-                                        >
-                                            {{ env.name }}
-                                            <span v-if="env.is_default" class="text-xs text-muted-foreground ml-1">(default)</span>
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            <Deferred data="environments">
+                                <template #fallback>
+                                    <div>
+                                        <Label>Environment</Label>
+                                        <div class="mt-1 h-9 w-full animate-pulse rounded-md bg-muted" />
+                                    </div>
+                                </template>
+                                <div>
+                                    <Label>Environment</Label>
+                                    <Select v-model="runEnvironmentId">
+                                        <SelectTrigger class="mt-1 cursor-pointer bg-background/60">
+                                            <SelectValue placeholder="Default (no env)" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="" class="cursor-pointer">Default (no env)</SelectItem>
+                                            <SelectItem
+                                                v-for="env in environments"
+                                                :key="env.id"
+                                                :value="String(env.id)"
+                                                class="cursor-pointer"
+                                            >
+                                                {{ env.name }}
+                                                <span v-if="env.is_default" class="text-xs text-muted-foreground ml-1">(default)</span>
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </Deferred>
                         </div>
 
                         <!-- Tags filter -->
@@ -684,7 +705,13 @@ const passRate = computed(() => {
                         </RestrictedAction>
                     </div>
 
-                    <div v-if="templates.length" class="space-y-3">
+                    <Deferred data="templates">
+                        <template #fallback>
+                            <div class="space-y-3">
+                                <div v-for="i in 3" :key="i" class="h-20 w-full animate-pulse rounded-lg bg-muted" />
+                            </div>
+                        </template>
+                    <div v-if="templates?.length" class="space-y-3">
                         <Card v-for="tmpl in templates" :key="tmpl.id" class="transition-colors hover:border-primary">
                             <CardContent class="px-4 py-3">
                                 <div class="flex items-center justify-between">
@@ -750,6 +777,7 @@ const passRate = computed(() => {
                         <BookTemplate class="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                         <p class="text-sm text-muted-foreground">No templates yet. Create one to save test run configurations.</p>
                     </div>
+                    </Deferred>
                 </div>
 
                 <!-- ==================== Environments Tab ==================== -->
@@ -767,7 +795,13 @@ const passRate = computed(() => {
                         </RestrictedAction>
                     </div>
 
-                    <div v-if="environments.length" class="space-y-3">
+                    <Deferred data="environments">
+                        <template #fallback>
+                            <div class="space-y-3">
+                                <div v-for="i in 3" :key="i" class="h-20 w-full animate-pulse rounded-lg bg-muted" />
+                            </div>
+                        </template>
+                    <div v-if="environments?.length" class="space-y-3">
                         <Card v-for="env in environments" :key="env.id" class="transition-colors hover:border-primary">
                             <CardContent class="px-4 py-3">
                                 <div class="flex items-center justify-between">
@@ -812,6 +846,7 @@ const passRate = computed(() => {
                         <Globe class="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                         <p class="text-sm text-muted-foreground">No environments configured. Add one to run tests against different targets.</p>
                     </div>
+                    </Deferred>
                 </div>
 
                 <!-- ==================== Results History Tab ==================== -->
@@ -834,7 +869,7 @@ const passRate = computed(() => {
                         </div>
                         <RestrictedAction>
                             <Button
-                                v-if="recentResults.length"
+                                v-if="recentResults.data.length"
                                 variant="outline"
                                 size="sm"
                                 @click="showClearDialog = true"
@@ -851,6 +886,7 @@ const passRate = computed(() => {
                             v-for="result in filteredResults"
                             :key="result.id"
                             class="flex items-center justify-between rounded-md border px-4 py-2.5 transition-colors hover:bg-muted/50"
+
                         >
                             <div class="flex min-w-0 flex-1 items-center gap-3">
                                 <component
@@ -889,12 +925,24 @@ const passRate = computed(() => {
                                 </span>
                             </div>
                         </div>
+                        <div v-if="recentResults.next_cursor && !historySearch.trim()" class="pt-2 text-center">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                @click="loadMore"
+                                :disabled="loadingMore"
+                                class="cursor-pointer"
+                            >
+                                <Loader2 v-if="loadingMore" class="mr-2 h-3.5 w-3.5 animate-spin" />
+                                Load More
+                            </Button>
+                        </div>
                     </div>
 
                     <div v-else class="py-12 text-center">
                         <History class="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                         <p class="text-sm text-muted-foreground">
-                            {{ recentResults.length ? 'No results match your search' : 'No test results yet. Run tests to see results here.' }}
+                            {{ recentResults.data.length ? 'No results match your search' : 'No test results yet. Run tests to see results here.' }}
                         </p>
                     </div>
                 </div>
@@ -1193,7 +1241,7 @@ const passRate = computed(() => {
                             <SelectContent>
                                 <SelectItem value="" class="cursor-pointer">No environment</SelectItem>
                                 <SelectItem
-                                    v-for="env in environments"
+                                    v-for="env in environments ?? []"
                                     :key="env.id"
                                     :value="String(env.id)"
                                     class="cursor-pointer"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, Deferred } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -17,7 +17,7 @@ import RestrictedAction from '@/components/RestrictedAction.vue';
 const props = defineProps<{
     project: Project;
     testRuns: TestRun[];
-    users: { id: number; name: string }[];
+    users?: { id: number; name: string }[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -371,26 +371,34 @@ const highlight = (text: string): string => {
                             </div>
                         </div>
                         <div class="flex flex-col justify-between">
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
-                                <Select v-model="filterAuthor">
-                                    <SelectTrigger class="h-8 text-xs cursor-pointer" :class="filterAuthor ? 'pr-7' : ''">
-                                        <SelectValue placeholder="All" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem
-                                            v-for="user in users"
-                                            :key="user.id"
-                                            :value="String(user.id)"
-                                        >
-                                            {{ user.name }}
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <button v-if="filterAuthor" @click="filterAuthor = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
+                            <Deferred data="users">
+                                <template #fallback>
+                                    <div>
+                                        <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
+                                        <div class="h-8 w-full animate-pulse rounded-md bg-muted" />
+                                    </div>
+                                </template>
+                                <div class="relative">
+                                    <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
+                                    <Select v-model="filterAuthor">
+                                        <SelectTrigger class="h-8 text-xs cursor-pointer" :class="filterAuthor ? 'pr-7' : ''">
+                                            <SelectValue placeholder="All" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem
+                                                v-for="user in users"
+                                                :key="user.id"
+                                                :value="String(user.id)"
+                                            >
+                                                {{ user.name }}
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <button v-if="filterAuthor" @click="filterAuthor = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                        <X class="h-3 w-3" />
+                                    </button>
+                                </div>
+                            </Deferred>
                             <div class="flex items-end justify-center h-8">
                                 <span class="text-sm text-muted-foreground">
                                     Found <span class="font-semibold text-foreground">{{ filteredTestRuns.length }}</span> {{ filteredTestRuns.length === 1 ? 'run' : 'runs' }}
