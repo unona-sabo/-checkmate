@@ -248,6 +248,83 @@ export interface TestPaymentMethod {
     updated_at: string;
 }
 
+export interface Release {
+    id: number;
+    project_id: number;
+    version: string;
+    name: string;
+    description: string | null;
+    planned_date: string | null;
+    actual_date: string | null;
+    status: 'planning' | 'development' | 'testing' | 'staging' | 'ready' | 'released' | 'cancelled';
+    health: 'green' | 'yellow' | 'red';
+    decision: 'pending' | 'go' | 'no_go' | 'conditional';
+    decision_notes: string | null;
+    metadata: Record<string, unknown> | null;
+    created_by: number | null;
+    creator?: { id: number; name: string } | null;
+    features_count?: number;
+    checklist_items_count?: number;
+    checklist_progress?: number;
+    features?: ReleaseFeature[];
+    checklist_items?: ReleaseChecklistItem[];
+    metrics_snapshots?: ReleaseMetricsSnapshot[];
+    latest_metrics?: ReleaseMetricsSnapshot | null;
+    test_runs?: TestRun[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ReleaseFeature {
+    id: number;
+    release_id: number;
+    feature_id: number | null;
+    feature_name: string;
+    description: string | null;
+    status: 'planned' | 'in_progress' | 'completed' | 'deferred';
+    test_coverage_percentage: number;
+    tests_planned: number;
+    tests_executed: number;
+    tests_passed: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ReleaseChecklistItem {
+    id: number;
+    release_id: number;
+    category: string;
+    title: string;
+    description: string | null;
+    status: 'pending' | 'in_progress' | 'completed' | 'na';
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    is_blocker: boolean;
+    assigned_to: number | null;
+    assignee?: { id: number; name: string } | null;
+    completed_at: string | null;
+    notes: string | null;
+    order: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ReleaseMetricsSnapshot {
+    id: number;
+    release_id: number;
+    test_completion_percentage: number;
+    test_pass_rate: number;
+    total_bugs: number;
+    critical_bugs: number;
+    high_bugs: number;
+    bug_closure_rate: number;
+    regression_pass_rate: number;
+    performance_score: number;
+    security_status: string;
+    snapshot_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface ProjectSearchResultItem {
     id: number;
     title: string;
@@ -318,3 +395,126 @@ export type TestCasePriority = TestCase['priority'];
 export type TestCaseSeverity = TestCase['severity'];
 export type TestCaseType = TestCase['type'];
 export type TestCaseAutomationStatus = TestCase['automation_status'];
+
+export interface ProjectFeature {
+    id: number;
+    project_id: number;
+    name: string;
+    description: string | null;
+    module: string | null;
+    category: string | null;
+    priority: 'critical' | 'high' | 'medium' | 'low';
+    is_active: boolean;
+    test_cases_count?: number;
+    test_cases?: { id: number; title: string; test_suite_id: number; test_suite?: { id: number; name: string } }[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TestCaseSummary {
+    id: number;
+    title: string;
+    test_suite?: { id: number; name: string };
+}
+
+export interface CoverageAnalysis {
+    id: number;
+    project_id: number;
+    analysis_data: AIAnalysisData | null;
+    overall_coverage: number | null;
+    total_features: number | null;
+    covered_features: number | null;
+    total_test_cases: number | null;
+    gaps_count: number | null;
+    analyzed_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AIAnalysisData {
+    summary: string;
+    overall_coverage: number;
+    gaps: AIGap[];
+    well_covered: AIWellCovered[];
+    risks: AIRisk[];
+    recommendations: AIRecommendation[];
+    coverage_by_category: Record<string, number>;
+}
+
+export interface AIGap {
+    id: string;
+    feature: string;
+    description: string;
+    priority: string;
+    category: string;
+    module: string;
+    suggested_test_count: number;
+    reasoning: string;
+}
+
+export interface AIWellCovered {
+    feature: string;
+    module: string;
+    test_count: number;
+    coverage: number;
+    strength: string;
+}
+
+export interface AIRisk {
+    id: string;
+    area: string;
+    level: string;
+    reason: string;
+    impact: string;
+    recommendation: string;
+}
+
+export interface AIRecommendation {
+    priority: number;
+    action: string;
+    benefit: string;
+    effort: string;
+}
+
+export interface CoverageModuleStats {
+    module: string;
+    total_features: number;
+    covered_features: number;
+    test_cases_count: number;
+    coverage_percentage: number;
+}
+
+export interface CoverageStatistics {
+    overall_coverage: number;
+    total_features: number;
+    covered_features: number;
+    uncovered_features: number;
+    total_test_cases: number;
+    gaps_count: number;
+}
+
+export interface CoverageGap {
+    id: number;
+    feature: string;
+    description: string | null;
+    module: string | null;
+    category: string | null;
+    priority: string;
+}
+
+export interface AiGeneratedTestCase {
+    id: number;
+    project_id: number;
+    feature_id: number | null;
+    title: string;
+    preconditions: string | null;
+    test_steps: string[];
+    expected_result: string;
+    priority: string;
+    type: string;
+    is_approved: boolean;
+    approved_by: number | null;
+    approved_at: string | null;
+    created_at: string;
+    updated_at: string;
+}

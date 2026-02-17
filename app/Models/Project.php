@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Project extends Model
 {
@@ -104,6 +105,46 @@ class Project extends Model
     public function notes(): HasMany
     {
         return $this->hasMany(Note::class);
+    }
+
+    /**
+     * Get all project features.
+     */
+    public function features(): HasMany
+    {
+        return $this->hasMany(ProjectFeature::class);
+    }
+
+    /**
+     * Get all coverage analyses for the project.
+     */
+    public function coverageAnalyses(): HasMany
+    {
+        return $this->hasMany(CoverageAnalysis::class);
+    }
+
+    /**
+     * Get the latest coverage analysis.
+     */
+    public function latestCoverageAnalysis(): HasOne
+    {
+        return $this->hasOne(CoverageAnalysis::class)->latestOfMany();
+    }
+
+    /**
+     * Get all AI-generated test cases.
+     */
+    public function aiGeneratedTestCases(): HasMany
+    {
+        return $this->hasMany(AiGeneratedTestCase::class);
+    }
+
+    /**
+     * Get all releases for the project.
+     */
+    public function releases(): HasMany
+    {
+        return $this->hasMany(Release::class);
     }
 
     /**

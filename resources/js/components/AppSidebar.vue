@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, FolderOpen, Component, ClipboardList, Layers, Play, ChevronRight, Bug, Palette, Database, FileText, StickyNote } from 'lucide-vue-next';
-import NavFooter from '@/components/NavFooter.vue';
+import { LayoutGrid, FolderOpen, Component, ClipboardList, Layers, Play, ChevronRight, Bug, Palette, Rocket, BarChart3, Database, FileText, StickyNote } from 'lucide-vue-next';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.vue';
@@ -46,18 +45,6 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Github Repo',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
 
 const projectSubItems = computed(() => {
     if (!currentProject.value) return [];
@@ -68,6 +55,8 @@ const projectSubItems = computed(() => {
         { title: 'Test Runs', href: `/projects/${projectId}/test-runs`, icon: Play },
         { title: 'Bugreports', href: `/projects/${projectId}/bugreports`, icon: Bug },
         { title: 'Design', href: `/projects/${projectId}/design`, icon: Palette },
+        { title: 'Releases', href: `/projects/${projectId}/releases`, icon: Rocket },
+        { title: 'Test Coverage', href: `/projects/${projectId}/test-coverage`, icon: BarChart3 },
         { title: 'Test Data', href: `/projects/${projectId}/test-data`, icon: Database },
         { title: 'Documentations', href: `/projects/${projectId}/documentations`, icon: FileText },
         { title: 'Notes', href: `/projects/${projectId}/notes`, icon: StickyNote },
@@ -120,7 +109,6 @@ const projectSubItems = computed(() => {
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

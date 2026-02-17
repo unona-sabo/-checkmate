@@ -8,6 +8,8 @@ use App\Models\DesignLink;
 use App\Models\Documentation;
 use App\Models\FeatureDescription;
 use App\Models\Note;
+use App\Models\ProjectFeature;
+use App\Models\Release;
 use App\Models\TestRun;
 use App\Models\TestSuite;
 use App\Models\TestUser;
@@ -271,6 +273,63 @@ class HomeController extends Controller
                 ],
                 'model' => Bugreport::class,
             ],
+            'design' => [
+                'key' => 'design',
+                'title' => 'Design',
+                'description' => 'Centralized hub for design resource links — Figma files, prototypes, brand guidelines, and external tools.',
+                'features' => [
+                    'Quick links grid with colored icon cards',
+                    'Support for Figma, Zeplin, InVision, PDF, and custom URLs',
+                    'Category grouping: Figma, Mockups, Assets, Guidelines',
+                    'Inline add, edit, and delete via dialogs',
+                    'Full-text search by title, description, URL, and category',
+                    'Copy link to clipboard',
+                    'Open in new tab with external link indicator',
+                    'Creator tracking per link',
+                ],
+                'model' => DesignLink::class,
+            ],
+            'releases' => [
+                'key' => 'releases',
+                'title' => 'Releases',
+                'description' => 'Plan, track, and manage product releases with go/no-go decisions, feature tracking, quality checklists, and metrics.',
+                'features' => [
+                    'Release lifecycle: planning, development, testing, staging, ready, released',
+                    'Go/no-go decision workflow with conditional approvals',
+                    'Health indicators: green, yellow, red based on metrics',
+                    'Feature tracking with test coverage percentages',
+                    'Quality checklist with 5 categories: testing, security, performance, deployment, documentation',
+                    'Blocker identification and tracking',
+                    'Metrics snapshots with test completion and pass rates',
+                    'Bug count tracking: total, critical, high severity',
+                    'Link test runs to releases for regression tracking',
+                    'Decision tab with auto-recommendation from metrics',
+                    'Planned vs actual release date tracking',
+                    'Release-level notes and metadata',
+                ],
+                'model' => Release::class,
+            ],
+            'test-coverage' => [
+                'key' => 'test-coverage',
+                'title' => 'Test Coverage',
+                'description' => 'AI-powered test coverage analytics with gap detection, intelligent recommendations, and coverage trend tracking.',
+                'features' => [
+                    'Overall coverage percentage with per-module breakdown',
+                    'Project feature management with module and category grouping',
+                    'Feature-to-test-case linking for coverage tracking',
+                    'Auto-matching of test cases to features by title keywords',
+                    'Manual test case linking dialog with search and toggle',
+                    'AI-powered coverage analysis using Claude API',
+                    'Automated coverage gap detection and prioritization',
+                    'AI-generated test case suggestions for uncovered features',
+                    'Coverage by category: functional, UI, API, security, performance',
+                    'Risk assessment with impact analysis and recommendations',
+                    'Coverage history tracking with trend visualization',
+                    'Search and filter project features',
+                    'Priority-based feature organization: critical, high, medium, low',
+                ],
+                'model' => ProjectFeature::class,
+            ],
             'test-data' => [
                 'key' => 'test-data',
                 'title' => 'Test Data',
@@ -296,22 +355,6 @@ class HomeController extends Controller
                     'Column resizing with localStorage persistence',
                 ],
                 'model' => TestUser::class,
-            ],
-            'design' => [
-                'key' => 'design',
-                'title' => 'Design',
-                'description' => 'Centralized hub for design resource links — Figma files, prototypes, brand guidelines, and external tools.',
-                'features' => [
-                    'Quick links grid with colored icon cards',
-                    'Support for Figma, Zeplin, InVision, PDF, and custom URLs',
-                    'Category grouping: Figma, Mockups, Assets, Guidelines',
-                    'Inline add, edit, and delete via dialogs',
-                    'Full-text search by title, description, URL, and category',
-                    'Copy link to clipboard',
-                    'Open in new tab with external link indicator',
-                    'Creator tracking per link',
-                ],
-                'model' => DesignLink::class,
             ],
             'documentations' => [
                 'key' => 'documentations',

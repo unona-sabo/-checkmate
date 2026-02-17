@@ -34,6 +34,9 @@ import {
     ArrowUpDown,
     ArrowUp,
     ArrowDown,
+    Palette,
+    Rocket,
+    BarChart3,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -51,6 +54,10 @@ const sectionIcons: Record<string, typeof ClipboardList> = {
     'test-suites': Layers,
     'test-runs': Play,
     bugreports: Bug,
+    design: Palette,
+    releases: Rocket,
+    'test-coverage': BarChart3,
+    'test-data': Database,
     documentations: FileText,
     notes: StickyNote,
 };

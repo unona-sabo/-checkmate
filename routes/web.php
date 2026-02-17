@@ -7,7 +7,9 @@ use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ReleaseController;
 use App\Http\Controllers\TestCaseController;
+use App\Http\Controllers\TestCoverageController;
 use App\Http\Controllers\TestDataController;
 use App\Http\Controllers\TestRunCaseController;
 use App\Http\Controllers\TestRunController;
@@ -132,6 +134,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('design', [DesignLinkController::class, 'store'])->name('store');
         Route::put('design/{designLink}', [DesignLinkController::class, 'update'])->name('update');
         Route::delete('design/{designLink}', [DesignLinkController::class, 'destroy'])->name('destroy');
+    });
+
+    // Releases (nested under projects)
+    Route::prefix('projects/{project}')->name('releases.')->group(function () {
+        Route::get('releases', [ReleaseController::class, 'index'])->name('index');
+        Route::post('releases', [ReleaseController::class, 'store'])->name('store');
+        Route::get('releases/{release}', [ReleaseController::class, 'show'])->name('show');
+        Route::put('releases/{release}', [ReleaseController::class, 'update'])->name('update');
+        Route::delete('releases/{release}', [ReleaseController::class, 'destroy'])->name('destroy');
+        Route::post('releases/{release}/refresh-metrics', [ReleaseController::class, 'refreshMetrics'])->name('refresh-metrics');
+        Route::post('releases/{release}/features', [ReleaseController::class, 'storeFeature'])->name('features.store');
+        Route::put('releases/{release}/features/{releaseFeature}', [ReleaseController::class, 'updateFeature'])->name('features.update');
+        Route::delete('releases/{release}/features/{releaseFeature}', [ReleaseController::class, 'destroyFeature'])->name('features.destroy');
+        Route::post('releases/{release}/checklist-items', [ReleaseController::class, 'storeChecklistItem'])->name('checklist-items.store');
+        Route::put('releases/{release}/checklist-items/{item}', [ReleaseController::class, 'updateChecklistItem'])->name('checklist-items.update');
+        Route::delete('releases/{release}/checklist-items/{item}', [ReleaseController::class, 'destroyChecklistItem'])->name('checklist-items.destroy');
+        Route::post('releases/{release}/test-runs', [ReleaseController::class, 'linkTestRun'])->name('test-runs.link');
+        Route::delete('releases/{release}/test-runs/{testRun}', [ReleaseController::class, 'unlinkTestRun'])->name('test-runs.unlink');
+    });
+
+    // Test Coverage (nested under projects)
+    Route::prefix('projects/{project}')->name('test-coverage.')->group(function () {
+        Route::get('test-coverage', [TestCoverageController::class, 'index'])->name('index');
+        Route::post('test-coverage/ai-analysis', [TestCoverageController::class, 'runAIAnalysis'])->name('ai-analysis');
+        Route::post('test-coverage/generate-test-cases', [TestCoverageController::class, 'generateTestCases'])->name('generate-test-cases');
+        Route::get('test-coverage/history', [TestCoverageController::class, 'coverageHistory'])->name('history');
+        Route::post('test-coverage/features', [TestCoverageController::class, 'storeFeature'])->name('features.store');
+        Route::put('test-coverage/features/{feature}', [TestCoverageController::class, 'updateFeature'])->name('features.update');
+        Route::delete('test-coverage/features/{feature}', [TestCoverageController::class, 'destroyFeature'])->name('features.destroy');
+        Route::post('test-coverage/features/{feature}/link-test-case', [TestCoverageController::class, 'linkTestCase'])->name('features.link-test-case');
+        Route::delete('test-coverage/features/{feature}/test-cases/{testCase}', [TestCoverageController::class, 'unlinkTestCase'])->name('features.unlink-test-case');
+        Route::post('test-coverage/auto-link-all', [TestCoverageController::class, 'autoLinkAll'])->name('auto-link-all');
+        Route::post('test-coverage/features/{feature}/auto-link', [TestCoverageController::class, 'autoLinkSingle'])->name('features.auto-link');
+        Route::get('test-coverage/test-cases', [TestCoverageController::class, 'getTestCases'])->name('test-cases');
     });
 
     // Test Data (nested under projects)
