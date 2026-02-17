@@ -13,6 +13,7 @@ class TestRunCase extends Model
     protected $fillable = [
         'test_run_id',
         'test_case_id',
+        'title',
         'status',
         'actual_result',
         'time_spent',

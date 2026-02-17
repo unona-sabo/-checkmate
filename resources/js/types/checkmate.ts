@@ -159,6 +159,9 @@ export interface TestRun {
     environment: string | null;
     milestone: string | null;
     status: 'active' | 'completed' | 'archived';
+    source?: string | null;
+    checklist_id?: number | null;
+    checklist?: { id: number; name: string } | null;
     progress: number;
     stats: TestRunStats | null;
     started_at: string | null;
@@ -189,7 +192,8 @@ export interface TestRunStats {
 export interface TestRunCase {
     id: number;
     test_run_id: number;
-    test_case_id: number;
+    test_case_id: number | null;
+    title?: string | null;
     status: 'untested' | 'passed' | 'failed' | 'blocked' | 'skipped' | 'retest';
     actual_result: string | null;
     time_spent: number | null;

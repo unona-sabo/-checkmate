@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import InputError from '@/components/InputError.vue';
 import { Edit, Trash2 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps<{
     project: Project;
@@ -32,6 +32,27 @@ const form = useForm({
     environment: props.testRun.environment || '',
     milestone: props.testRun.milestone || '',
     status: props.testRun.status,
+});
+
+const environmentPresets = ['Develop', 'Staging', 'Production'];
+
+const parseEnvironment = (env: string): { preset: string; notes: string } => {
+    for (const p of environmentPresets) {
+        if (env.startsWith(p)) {
+            const rest = env.slice(p.length).replace(/^\s*[—–\-]\s*/, '').trim();
+            return { preset: p, notes: rest };
+        }
+    }
+    return { preset: '', notes: env };
+};
+
+const parsed = parseEnvironment(props.testRun.environment || '');
+const envPreset = ref(parsed.preset);
+const envNotes = ref(parsed.notes);
+
+watch([envPreset, envNotes], () => {
+    const parts = [envPreset.value, envNotes.value.trim()].filter(Boolean);
+    form.environment = parts.join(' — ');
 });
 
 const showDeleteDialog = ref(false);
@@ -83,24 +104,35 @@ const deleteRun = () => {
                                 />
                             </div>
 
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div class="space-y-2">
-                                    <Label for="environment">Environment</Label>
+                            <div class="space-y-2">
+                                <Label>Environment</Label>
+                                <div class="grid gap-3 md:grid-cols-3">
+                                    <Select v-model="envPreset">
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Develop">Develop</SelectItem>
+                                            <SelectItem value="Staging">Staging</SelectItem>
+                                            <SelectItem value="Production">Production</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <Input
-                                        id="environment"
-                                        v-model="form.environment"
+                                        v-model="envNotes"
                                         type="text"
+                                        placeholder="Devices, browser..."
+                                        class="md:col-span-2"
                                     />
                                 </div>
+                            </div>
 
-                                <div class="space-y-2">
-                                    <Label for="milestone">Milestone</Label>
-                                    <Input
-                                        id="milestone"
-                                        v-model="form.milestone"
-                                        type="text"
-                                    />
-                                </div>
+                            <div class="space-y-2">
+                                <Label for="milestone">Milestone</Label>
+                                <Input
+                                    id="milestone"
+                                    v-model="form.milestone"
+                                    type="text"
+                                />
                             </div>
 
                             <div class="space-y-2">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Bugreport;
 use App\Models\Checklist;
+use App\Models\DesignLink;
 use App\Models\Documentation;
 use App\Models\FeatureDescription;
 use App\Models\Note;
@@ -193,6 +194,7 @@ class HomeController extends Controller
                     'Cross-project row clipboard with smart column mapping',
                     'Bulk actions: create bug report with auto-link back to checklist row',
                     'Bulk actions: create test case with auto-link back to checklist rows',
+                    'Bulk actions: create test run from selected rows',
                 ],
                 'model' => Checklist::class,
             ],
@@ -242,6 +244,8 @@ class HomeController extends Controller
                     'Filter by status and assigned user',
                     'Full-text search with result highlighting',
                     'Copy link to clipboard',
+                    'Create runs from selected checklist rows (each row becomes a check item)',
+                    'Comprehensive filter panel: status, source, environment, author, date ranges, stat ranges',
                 ],
                 'model' => TestRun::class,
             ],
@@ -260,10 +264,27 @@ class HomeController extends Controller
                     'Download links with file size display',
                     'Color-coded severity and priority badges',
                     'Full-text search by title and description with highlighting',
+                    'Filters by status, priority, severity, author, created/updated date ranges',
                     'Create from selected checklist rows with auto-link back',
                     'Copy link to clipboard',
                 ],
                 'model' => Bugreport::class,
+            ],
+            'design' => [
+                'key' => 'design',
+                'title' => 'Design',
+                'description' => 'Centralized hub for design resource links — Figma files, prototypes, brand guidelines, and external tools.',
+                'features' => [
+                    'Quick links grid with colored icon cards',
+                    'Support for Figma, Zeplin, InVision, PDF, and custom URLs',
+                    'Category grouping: Figma, Mockups, Assets, Guidelines',
+                    'Inline add, edit, and delete via dialogs',
+                    'Full-text search by title, description, URL, and category',
+                    'Copy link to clipboard',
+                    'Open in new tab with external link indicator',
+                    'Creator tracking per link',
+                ],
+                'model' => DesignLink::class,
             ],
             'documentations' => [
                 'key' => 'documentations',

@@ -75,6 +75,14 @@ class Project extends Model
     }
 
     /**
+     * Get all design links for the project.
+     */
+    public function designLinks(): HasMany
+    {
+        return $this->hasMany(DesignLink::class);
+    }
+
+    /**
      * Get all notes for the project.
      */
     public function notes(): HasMany

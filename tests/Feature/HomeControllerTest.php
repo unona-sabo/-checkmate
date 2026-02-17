@@ -15,7 +15,7 @@ test('home page returns sections data for authenticated users', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Dashboard')
-        ->has('sections', 6)
+        ->has('sections', 7)
         ->has('sections.0', fn ($section) => $section
             ->where('key', 'checklists')
             ->where('title', 'Checklists')
@@ -37,13 +37,14 @@ test('home page sections include all six modules', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Dashboard')
-        ->has('sections', 6)
+        ->has('sections', 7)
         ->where('sections.0.key', 'checklists')
         ->where('sections.1.key', 'test-suites')
         ->where('sections.2.key', 'test-runs')
         ->where('sections.3.key', 'bugreports')
-        ->where('sections.4.key', 'documentations')
-        ->where('sections.5.key', 'notes')
+        ->where('sections.4.key', 'design')
+        ->where('sections.5.key', 'documentations')
+        ->where('sections.6.key', 'notes')
     );
 });
 
@@ -65,7 +66,7 @@ test('show page returns section data and synced features', function () {
             ->has('latest_created_at')
             ->has('latest_updated_at')
         )
-        ->has('features', 23)
+        ->has('features', 24)
         ->has('features.0', fn ($feature) => $feature
             ->has('id')
             ->has('title')
@@ -259,7 +260,7 @@ test('sync endpoint syncs features for all sections', function () {
 
     // Verify features exist for all sections
     $sectionKeys = FeatureDescription::query()->distinct()->pluck('section_key')->sort()->values()->all();
-    expect($sectionKeys)->toBe(['bugreports', 'checklists', 'documentations', 'notes', 'test-runs', 'test-suites']);
+    expect($sectionKeys)->toBe(['bugreports', 'checklists', 'design', 'documentations', 'notes', 'test-runs', 'test-suites']);
 });
 
 test('sync endpoint requires authentication', function () {
@@ -281,7 +282,7 @@ test('show page syncs config features to database on first visit', function () {
 
     $this->actingAs($user)->get(route('home.show', 'checklists'));
 
-    $this->assertDatabaseCount('feature_descriptions', 23);
+    $this->assertDatabaseCount('feature_descriptions', 24);
     $this->assertDatabaseHas('feature_descriptions', [
         'section_key' => 'checklists',
         'title' => 'Copy link to clipboard',
@@ -295,7 +296,7 @@ test('show page does not duplicate features on repeat visits', function () {
     $this->actingAs($user)->get(route('home.show', 'checklists'));
     $this->actingAs($user)->get(route('home.show', 'checklists'));
 
-    $this->assertDatabaseCount('feature_descriptions', 23);
+    $this->assertDatabaseCount('feature_descriptions', 24);
 });
 
 test('sync preserves existing features when config changes', function () {
@@ -311,8 +312,8 @@ test('sync preserves existing features when config changes', function () {
 
     $this->actingAs($user)->get(route('home.show', 'checklists'));
 
-    // Old feature is preserved (23 config + 1 old)
-    $this->assertDatabaseCount('feature_descriptions', 24);
+    // Old feature is preserved (24 config + 1 old)
+    $this->assertDatabaseCount('feature_descriptions', 25);
     $this->assertDatabaseHas('feature_descriptions', [
         'title' => 'Old feature that was renamed in config',
         'description' => 'User wrote this description',
@@ -415,7 +416,7 @@ test('deleted system features are not re-created by sync', function () {
 
     // First visit syncs features
     $this->actingAs($user)->get(route('home.show', 'checklists'));
-    $this->assertDatabaseCount('feature_descriptions', 23);
+    $this->assertDatabaseCount('feature_descriptions', 24);
 
     // Delete a system feature
     $feature = FeatureDescription::where('section_key', 'checklists')->first();
@@ -424,9 +425,9 @@ test('deleted system features are not re-created by sync', function () {
     // Second visit should not re-create the deleted feature
     $this->actingAs($user)->get(route('home.show', 'checklists'));
 
-    // Still 22 total (21 active + 1 soft-deleted)
-    $this->assertDatabaseCount('feature_descriptions', 23);
-    expect(FeatureDescription::where('section_key', 'checklists')->count())->toBe(22);
+    // Still 23 total (22 active + 1 soft-deleted)
+    $this->assertDatabaseCount('feature_descriptions', 24);
+    expect(FeatureDescription::where('section_key', 'checklists')->count())->toBe(23);
 });
 
 test('delete returns 404 for wrong section', function () {
@@ -458,7 +459,7 @@ test('sync does not overwrite user-edited non-custom features', function () {
 
     // First visit syncs features
     $this->actingAs($user)->get(route('home.show', 'checklists'));
-    $this->assertDatabaseCount('feature_descriptions', 23);
+    $this->assertDatabaseCount('feature_descriptions', 24);
 
     // User edits a synced feature
     $feature = FeatureDescription::where('section_key', 'checklists')
@@ -498,6 +499,7 @@ test('all six section keys return valid show pages', function (string $sectionKe
     'test-suites',
     'test-runs',
     'bugreports',
+    'design',
     'documentations',
     'notes',
 ]);

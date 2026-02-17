@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BugreportController;
 use App\Http\Controllers\ChecklistController;
+use App\Http\Controllers\DesignLinkController;
 use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NoteController;
@@ -94,6 +95,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('test-runs', [TestRunController::class, 'index'])->name('index');
         Route::get('test-runs/create', [TestRunController::class, 'create'])->name('create');
         Route::post('test-runs', [TestRunController::class, 'store'])->name('store');
+        Route::post('test-runs/from-checklist', [TestRunController::class, 'storeFromChecklist'])->name('store-from-checklist');
         Route::get('test-runs/{testRun}', [TestRunController::class, 'show'])->name('show');
         Route::get('test-runs/{testRun}/edit', [TestRunController::class, 'edit'])->name('edit');
         Route::put('test-runs/{testRun}', [TestRunController::class, 'update'])->name('update');
@@ -121,6 +123,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('bugreports/{bugreport}', [BugreportController::class, 'update'])->name('update');
         Route::delete('bugreports/{bugreport}', [BugreportController::class, 'destroy'])->name('destroy');
         Route::delete('bugreports/{bugreport}/attachments/{attachment}', [BugreportController::class, 'destroyAttachment'])->name('destroy-attachment');
+    });
+
+    // Design Links (nested under projects)
+    Route::prefix('projects/{project}')->name('design-links.')->group(function () {
+        Route::get('design', [DesignLinkController::class, 'index'])->name('index');
+        Route::post('design', [DesignLinkController::class, 'store'])->name('store');
+        Route::put('design/{designLink}', [DesignLinkController::class, 'update'])->name('update');
+        Route::delete('design/{designLink}', [DesignLinkController::class, 'destroy'])->name('destroy');
     });
 
     // Documentations (nested under projects)

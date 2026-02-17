@@ -18,6 +18,8 @@ class TestRun extends Model
         'environment',
         'milestone',
         'status',
+        'source',
+        'checklist_id',
         'progress',
         'stats',
         'started_at',
@@ -52,6 +54,14 @@ class TestRun extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the checklist this test run was created from (if any).
+     */
+    public function checklist(): BelongsTo
+    {
+        return $this->belongsTo(Checklist::class);
     }
 
     /**

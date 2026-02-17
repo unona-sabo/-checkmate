@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, Layers, FileText, Boxes } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 
 const props = defineProps<{
@@ -31,6 +32,14 @@ const form = useForm({
     environment: '',
     milestone: '',
     test_case_ids: [] as number[],
+});
+
+const envPreset = ref('');
+const envNotes = ref('');
+
+watch([envPreset, envNotes], () => {
+    const parts = [envPreset.value, envNotes.value.trim()].filter(Boolean);
+    form.environment = parts.join(' — ');
 });
 
 const expandedSuites = ref<Record<number, boolean>>({});
@@ -139,26 +148,36 @@ const submit = () => {
                                 />
                             </div>
 
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div class="space-y-2">
-                                    <Label for="environment">Environment</Label>
+                            <div class="space-y-2">
+                                <Label>Environment</Label>
+                                <div class="grid gap-3 md:grid-cols-3">
+                                    <Select v-model="envPreset">
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Develop">Develop</SelectItem>
+                                            <SelectItem value="Staging">Staging</SelectItem>
+                                            <SelectItem value="Production">Production</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <Input
-                                        id="environment"
-                                        v-model="form.environment"
+                                        v-model="envNotes"
                                         type="text"
-                                        placeholder="e.g., Staging, Production"
+                                        placeholder="Devices, browser..."
+                                        class="md:col-span-2"
                                     />
                                 </div>
+                            </div>
 
-                                <div class="space-y-2">
-                                    <Label for="milestone">Milestone</Label>
-                                    <Input
-                                        id="milestone"
-                                        v-model="form.milestone"
-                                        type="text"
-                                        placeholder="e.g., v2.0, Sprint 5"
-                                    />
-                                </div>
+                            <div class="space-y-2">
+                                <Label for="milestone">Milestone</Label>
+                                <Input
+                                    id="milestone"
+                                    v-model="form.milestone"
+                                    type="text"
+                                    placeholder="e.g., v2.0, Sprint 5"
+                                />
                             </div>
 
                             <!-- Test Case Selection -->

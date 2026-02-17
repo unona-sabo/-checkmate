@@ -192,7 +192,7 @@ const liveElapsed = computed((): number | null => {
 const groupedCases = computed(() => {
     const groups: Record<string, TestRunCase[]> = {};
     props.testRun.test_run_cases?.forEach(trc => {
-        const suiteName = trc.test_case?.test_suite?.name || 'Unknown Suite';
+        const suiteName = trc.test_case?.test_suite?.name || props.testRun.checklist?.name || 'Checks';
         if (!groups[suiteName]) {
             groups[suiteName] = [];
         }
@@ -210,6 +210,7 @@ const filteredGroupedCases = computed(() => {
     for (const [suiteName, cases] of Object.entries(groupedCases.value)) {
         const matched = cases.filter(trc =>
             trc.test_case?.title?.toLowerCase().includes(query) ||
+            trc.title?.toLowerCase().includes(query) ||
             trc.status.toLowerCase().includes(query) ||
             trc.assigned_user?.name?.toLowerCase().includes(query)
         );
@@ -252,9 +253,9 @@ const highlight = (text: string): string => {
                         <Badge :class="getStatusBadgeColor(testRun.status)" variant="outline">
                             {{ testRun.status }}
                         </Badge>
-                        <span v-if="testRun.environment" class="text-sm text-muted-foreground">
+                        <Badge v-if="testRun.environment" variant="outline" class="bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400">
                             {{ testRun.environment }}
-                        </span>
+                        </Badge>
                         <span v-if="testRun.milestone" class="text-sm text-muted-foreground">
                             {{ testRun.milestone }}
                         </span>
@@ -389,7 +390,7 @@ const highlight = (text: string): string => {
                                     />
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2">
-                                            <p class="text-sm font-medium truncate" v-html="highlight(trc.test_case?.title ?? '')" />
+                                            <p class="text-sm font-medium truncate" v-html="highlight(trc.test_case?.title ?? trc.title ?? '')" />
                                             <Badge :class="getStatusBadgeColor(trc.status)" variant="outline" class="text-[10px] px-1.5 h-4 shrink-0">
                                                 {{ trc.status }}
                                             </Badge>
@@ -459,7 +460,7 @@ const highlight = (text: string): string => {
                 <DialogHeader>
                     <DialogTitle>Update Test Result</DialogTitle>
                     <DialogDescription>
-                        {{ selectedCase?.test_case?.title }}
+                        {{ selectedCase?.test_case?.title ?? selectedCase?.title }}
                     </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4">

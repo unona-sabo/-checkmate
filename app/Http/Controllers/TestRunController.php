@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\TestRun;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,9 +25,14 @@ class TestRunController extends Controller
                 $run->setAttribute('is_paused', $run->isPaused());
             });
 
+        $users = User::query()
+            ->whereIn('id', $project->testRuns()->distinct()->pluck('created_by')->filter())
+            ->get(['id', 'name']);
+
         return Inertia::render('TestRuns/Index', [
             'project' => $project,
             'testRuns' => $testRuns,
+            'users' => $users,
         ]);
     }
 
@@ -64,6 +70,7 @@ class TestRunController extends Controller
             'environment' => $validated['environment'],
             'milestone' => $validated['milestone'],
             'status' => 'active',
+            'source' => 'test-cases',
             'created_by' => auth()->id(),
         ]);
 
@@ -80,6 +87,44 @@ class TestRunController extends Controller
             ->with('success', 'Test run created successfully.');
     }
 
+    public function storeFromChecklist(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'environment' => 'nullable|string|max:255',
+            'milestone' => 'nullable|string|max:255',
+            'checklist_id' => 'required|exists:checklists,id',
+            'titles' => 'required|array|min:1',
+            'titles.*' => 'required|string|max:1000',
+        ]);
+
+        $testRun = $project->testRuns()->create([
+            'name' => $validated['name'],
+            'description' => $validated['description'],
+            'environment' => $validated['environment'],
+            'milestone' => $validated['milestone'],
+            'status' => 'active',
+            'source' => 'checklist',
+            'checklist_id' => $validated['checklist_id'],
+            'created_by' => auth()->id(),
+        ]);
+
+        foreach ($validated['titles'] as $title) {
+            $testRun->testRunCases()->create([
+                'title' => $title,
+                'status' => 'untested',
+            ]);
+        }
+
+        $testRun->updateStats();
+
+        return redirect()->route('test-runs.show', [$project, $testRun])
+            ->with('success', 'Test run created from checklist.');
+    }
+
     public function show(Project $project, TestRun $testRun): Response
     {
         $this->authorize('view', $project);
@@ -88,6 +133,7 @@ class TestRunController extends Controller
             'testRunCases.testCase.testSuite',
             'testRunCases.assignedUser',
             'creator:id,name',
+            'checklist:id,name',
         ]);
 
         $testRun->setAttribute('elapsed_seconds', $testRun->getElapsedSeconds());

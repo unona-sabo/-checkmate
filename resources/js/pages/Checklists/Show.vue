@@ -368,6 +368,10 @@ const filteredDataRowCount = computed(() => {
     return filteredRows.value.filter(r => r.row_type !== 'section_header').length;
 });
 
+const totalDataRowCount = computed(() => {
+    return rows.value.filter(r => r.row_type !== 'section_header').length;
+});
+
 // Rows to actually render (limited for performance)
 const displayRows = computed(() => {
     return filteredRows.value.slice(0, visibleRowCount.value);
@@ -1302,6 +1306,67 @@ const createTestCaseFromSelected = () => {
     router.get(`/projects/${props.project.id}/test-suites/${effectiveTestSuiteId.value}/test-cases/create?${params.toString()}`);
 };
 
+// Create test run from selected rows
+const showTestRunDialog = ref(false);
+const testRunName = ref('');
+const testRunDescription = ref('');
+const testRunEnvPreset = ref('');
+const testRunEnvNotes = ref('');
+const testRunMilestone = ref('');
+const testRunColumnKey = ref('');
+const isCreatingTestRun = ref(false);
+
+const textColumnsForTestRun = computed(() => columns.value.filter(col => col.type === 'text'));
+
+const findCheckColumn = (): string => {
+    const text = textColumnsForTestRun.value;
+    const match = text.find(col =>
+        col.key.toLowerCase() === 'check' ||
+        col.label.toLowerCase() === 'check',
+    ) ?? text.find(col =>
+        col.key.toLowerCase().includes('check') ||
+        col.label.toLowerCase().includes('check'),
+    );
+    return match?.key ?? text[0]?.key ?? '';
+};
+
+const openTestRunDialog = () => {
+    testRunName.value = `${props.checklist.name} Test Run`;
+    testRunDescription.value = '';
+    testRunEnvPreset.value = '';
+    testRunEnvNotes.value = '';
+    testRunMilestone.value = '';
+    testRunColumnKey.value = findCheckColumn();
+    showTestRunDialog.value = true;
+};
+
+const createTestRunFromSelected = () => {
+    if (isCreatingTestRun.value || !testRunColumnKey.value) return;
+
+    const titles = selectedRows.value.map(row => {
+        const val = row.data[testRunColumnKey.value];
+        return typeof val === 'string' ? val.trim() : '';
+    }).filter(t => t.length > 0);
+
+    if (titles.length === 0) return;
+
+    isCreatingTestRun.value = true;
+    const envParts = [testRunEnvPreset.value, testRunEnvNotes.value.trim()].filter(Boolean);
+    router.post(`/projects/${props.project.id}/test-runs/from-checklist`, {
+        name: testRunName.value,
+        description: testRunDescription.value || null,
+        environment: envParts.join(' — ') || null,
+        milestone: testRunMilestone.value || null,
+        checklist_id: props.checklist.id,
+        titles,
+    }, {
+        onFinish: () => {
+            isCreatingTestRun.value = false;
+            showTestRunDialog.value = false;
+        },
+    });
+};
+
 // Check if row has any content (non-empty text fields)
 const rowHasContent = (row: ExtendedChecklistRow, checkboxColumnKey: string): boolean => {
     return Object.entries(row.data).some(([key, value]) => {
@@ -1538,6 +1603,9 @@ onMounted(() => {
                 <span v-if="isSearchActive && filteredDataRowCount > 0" class="text-xs text-muted-foreground whitespace-nowrap">
                     {{ filteredDataRowCount }} found — click to navigate
                 </span>
+                <span v-else-if="activeFilterCount > 0" class="text-xs text-muted-foreground whitespace-nowrap">
+                    {{ filteredDataRowCount }} {{ filteredDataRowCount === 1 ? 'row' : 'rows' }} found
+                </span>
                 <div class="flex items-center gap-1.5 ml-auto">
                     <!-- Undo last save -->
                     <RestrictedAction>
@@ -1604,7 +1672,7 @@ onMounted(() => {
                                     <Layers class="h-4 w-4 mr-2" />
                                     Create Test Case
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem @click="openTestRunDialog">
                                     <Play class="h-4 w-4 mr-2" />
                                     Create Test Run
                                 </DropdownMenuItem>
@@ -1957,7 +2025,7 @@ onMounted(() => {
                         <!-- Results count -->
                         <div class="flex items-end pb-1 ml-auto">
                             <span class="text-sm text-muted-foreground">
-                                Found <span class="font-semibold text-foreground">{{ filteredDataRowCount }}</span> {{ filteredDataRowCount === 1 ? 'item' : 'items' }}
+                                Found <span class="font-semibold text-foreground">{{ filteredDataRowCount }}</span> of {{ totalDataRowCount }} {{ totalDataRowCount === 1 ? 'row' : 'rows' }}
                             </span>
                         </div>
                     </div>
@@ -2614,6 +2682,77 @@ onMounted(() => {
                         <Button @click="createTestCaseFromSelected" :disabled="!testCaseTargetSuiteId" class="gap-2">
                             <Layers class="h-4 w-4" />
                             Create Test Case
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Create Test Run Dialog -->
+            <Dialog v-model:open="showTestRunDialog">
+                <DialogContent class="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <Play class="h-5 w-5 text-primary" />
+                            Create Test Run
+                        </DialogTitle>
+                        <DialogDescription>
+                            Create a test run from {{ selectedRows.length }} selected row{{ selectedRows.length !== 1 ? 's' : '' }}. Each row becomes a check item.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="py-4 space-y-4">
+                        <div class="space-y-2">
+                            <Label for="test-run-column">Source Column</Label>
+                            <Select v-model="testRunColumnKey">
+                                <SelectTrigger id="test-run-column">
+                                    <SelectValue placeholder="Select column..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="col in textColumnsForTestRun"
+                                        :key="col.key"
+                                        :value="col.key"
+                                    >
+                                        {{ col.label }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="test-run-name">Name</Label>
+                            <Input id="test-run-name" v-model="testRunName" placeholder="Test run name..." />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="test-run-description">Description</Label>
+                            <Input id="test-run-description" v-model="testRunDescription" placeholder="Optional description..." />
+                        </div>
+                        <div class="space-y-2">
+                            <Label>Environment</Label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <Select v-model="testRunEnvPreset">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Develop">Develop</SelectItem>
+                                        <SelectItem value="Staging">Staging</SelectItem>
+                                        <SelectItem value="Production">Production</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Input v-model="testRunEnvNotes" placeholder="Devices, browser..." class="col-span-2" />
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="test-run-milestone">Milestone</Label>
+                            <Input id="test-run-milestone" v-model="testRunMilestone" placeholder="e.g. v1.0, Sprint 5..." />
+                        </div>
+                    </div>
+                    <DialogFooter class="flex gap-2 sm:justify-end">
+                        <Button variant="outline" @click="showTestRunDialog = false">
+                            Cancel
+                        </Button>
+                        <Button @click="createTestRunFromSelected" :disabled="!testRunName.trim() || !testRunColumnKey || isCreatingTestRun" class="gap-2">
+                            <Play class="h-4 w-4" />
+                            {{ isCreatingTestRun ? 'Creating...' : 'Create Test Run' }}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
