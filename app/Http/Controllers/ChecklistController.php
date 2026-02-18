@@ -2,6 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Checklist\BulkCreateRowsRequest;
+use App\Http\Requests\Checklist\CopyRowsRequest;
+use App\Http\Requests\Checklist\ReorderChecklistsRequest;
+use App\Http\Requests\Checklist\StoreChecklistNoteRequest;
+use App\Http\Requests\Checklist\StoreChecklistRequest;
+use App\Http\Requests\Checklist\UpdateChecklistRequest;
+use App\Http\Requests\Checklist\UpdateChecklistRowsRequest;
 use App\Models\Checklist;
 use App\Models\Project;
 use Illuminate\Http\Request;
@@ -59,25 +66,11 @@ class ChecklistController extends Controller
         ]);
     }
 
-    public function store(Request $request, Project $project)
+    public function store(StoreChecklistRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'category' => 'nullable|string|max:255',
-            'columns_config' => 'nullable|array',
-            'columns_config.*.key' => 'required|string',
-            'columns_config.*.label' => 'required|string',
-            'columns_config.*.type' => 'required|in:text,checkbox,select,date',
-            'columns_config.*.width' => 'nullable|integer|min:50',
-            'columns_config.*.options' => 'nullable|array',
-            'columns_config.*.options.*.value' => 'required|string',
-            'columns_config.*.options.*.label' => 'required|string',
-            'columns_config.*.options.*.color' => 'nullable|string|max:7',
-            'feature_ids' => 'nullable|array',
-            'feature_ids.*' => 'exists:project_features,id',
-        ]);
+        $validated = $request->validated();
 
         $validated['order'] = ($project->checklists()->max('order') ?? -1) + 1;
 
@@ -132,24 +125,11 @@ class ChecklistController extends Controller
         ]);
     }
 
-    public function update(Request $request, Project $project, Checklist $checklist)
+    public function update(UpdateChecklistRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'columns_config' => 'nullable|array',
-            'columns_config.*.key' => 'required|string',
-            'columns_config.*.label' => 'required|string',
-            'columns_config.*.type' => 'required|in:text,checkbox,select,date',
-            'columns_config.*.width' => 'nullable|integer|min:50',
-            'columns_config.*.options' => 'nullable|array',
-            'columns_config.*.options.*.value' => 'required|string',
-            'columns_config.*.options.*.label' => 'required|string',
-            'columns_config.*.options.*.color' => 'nullable|string|max:7',
-            'feature_ids' => 'nullable|array',
-            'feature_ids.*' => 'exists:project_features,id',
-        ]);
+        $validated = $request->validated();
 
         $checklist->update(collect($validated)->except('feature_ids')->toArray());
         $checklist->projectFeatures()->sync($validated['feature_ids'] ?? []);
@@ -168,16 +148,11 @@ class ChecklistController extends Controller
             ->with('success', 'Checklist deleted successfully.');
     }
 
-    public function reorder(Request $request, Project $project)
+    public function reorder(ReorderChecklistsRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'items' => 'required|array',
-            'items.*.id' => 'required|exists:checklists,id',
-            'items.*.order' => 'required|integer|min:0',
-            'items.*.category' => 'nullable|string|max:255',
-        ]);
+        $validated = $request->validated();
 
         foreach ($validated['items'] as $item) {
             Checklist::where('id', $item['id'])
@@ -191,29 +166,11 @@ class ChecklistController extends Controller
         return back()->with('success', 'Checklists reordered successfully.');
     }
 
-    public function updateRows(Request $request, Project $project, Checklist $checklist)
+    public function updateRows(UpdateChecklistRowsRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'rows' => 'required|array',
-            'rows.*.id' => 'nullable|integer',
-            'rows.*.data' => 'required|array',
-            'rows.*.order' => 'required|integer',
-            'rows.*.row_type' => 'nullable|in:normal,section_header',
-            'rows.*.background_color' => 'nullable|string|max:7',
-            'rows.*.font_color' => 'nullable|string|max:7',
-            'rows.*.font_weight' => 'nullable|in:normal,medium,semibold,bold',
-            'columns_config' => 'nullable|array',
-            'columns_config.*.key' => 'required|string',
-            'columns_config.*.label' => 'required|string',
-            'columns_config.*.type' => 'required|in:text,checkbox,select,date',
-            'columns_config.*.width' => 'nullable|integer|min:50',
-            'columns_config.*.options' => 'nullable|array',
-            'columns_config.*.options.*.value' => 'required|string',
-            'columns_config.*.options.*.label' => 'required|string',
-            'columns_config.*.options.*.color' => 'nullable|string|max:7',
-        ]);
+        $validated = $request->validated();
 
         if (isset($validated['columns_config'])) {
             $checklist->update(['columns_config' => $validated['columns_config']]);
@@ -255,13 +212,11 @@ class ChecklistController extends Controller
         return back()->with('success', 'Checklist rows updated successfully.');
     }
 
-    public function updateNote(Request $request, Project $project, Checklist $checklist)
+    public function updateNote(StoreChecklistNoteRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'content' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $checklist->note()->updateOrCreate(
             ['checklist_id' => $checklist->id],
@@ -271,16 +226,11 @@ class ChecklistController extends Controller
         return back()->with('success', 'Note updated successfully.');
     }
 
-    public function importFromNotes(Request $request, Project $project, Checklist $checklist)
+    public function importFromNotes(BulkCreateRowsRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'notes' => 'required|array',
-            'notes.*' => 'required|string',
-            'column_key' => 'required|string',
-            'section_row_id' => 'nullable|integer|exists:checklist_rows,id',
-        ]);
+        $validated = $request->validated();
 
         $columns = $checklist->columns_config ?? [
             ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
@@ -593,23 +543,11 @@ class ChecklistController extends Controller
     /**
      * Copy rows from the request body into the target checklist.
      */
-    public function copyRows(Request $request, Project $project, Checklist $checklist)
+    public function copyRows(CopyRowsRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'rows' => 'required|array|min:1',
-            'rows.*.data' => 'required|array',
-            'rows.*.row_type' => 'nullable|in:normal,section_header',
-            'rows.*.background_color' => 'nullable|string|max:7',
-            'rows.*.font_color' => 'nullable|string|max:7',
-            'rows.*.font_weight' => 'nullable|in:normal,medium,semibold,bold',
-            'section_row_id' => 'nullable|integer|exists:checklist_rows,id',
-            'source_columns_config' => 'nullable|array',
-            'source_columns_config.*.key' => 'required|string',
-            'source_columns_config.*.label' => 'required|string',
-            'source_columns_config.*.type' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
         $rowCount = count($validated['rows']);
 

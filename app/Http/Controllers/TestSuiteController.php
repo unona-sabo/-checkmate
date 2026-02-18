@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TestSuite\CopySuitesRequest;
+use App\Http\Requests\TestSuite\ReorderTestSuitesRequest;
+use App\Http\Requests\TestSuite\StoreTestSuiteRequest;
+use App\Http\Requests\TestSuite\UpdateTestSuiteRequest;
 use App\Models\Project;
 use App\Models\TestCase;
 use App\Models\TestSuite;
@@ -63,21 +67,11 @@ class TestSuiteController extends Controller
         ]);
     }
 
-    public function store(Request $request, Project $project)
+    public function store(StoreTestSuiteRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'type' => 'nullable|string|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
-            'parent_id' => 'nullable|exists:test_suites,id',
-            'order' => 'nullable|integer',
-            'feature_ids' => 'nullable|array',
-            'feature_ids.*' => 'exists:project_features,id',
-            'test_case_ids' => 'nullable|array',
-            'test_case_ids.*' => 'exists:test_cases,id',
-        ]);
+        $validated = $request->validated();
 
         $testCaseIds = $validated['test_case_ids'] ?? [];
         $featureIds = $validated['feature_ids'] ?? [];
@@ -149,19 +143,11 @@ class TestSuiteController extends Controller
         ]);
     }
 
-    public function update(Request $request, Project $project, TestSuite $testSuite)
+    public function update(UpdateTestSuiteRequest $request, Project $project, TestSuite $testSuite)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'type' => 'nullable|string|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
-            'parent_id' => 'nullable|exists:test_suites,id',
-            'order' => 'nullable|integer',
-            'feature_ids' => 'nullable|array',
-            'feature_ids.*' => 'exists:project_features,id',
-        ]);
+        $validated = $request->validated();
 
         $featureIds = $validated['feature_ids'] ?? [];
         unset($validated['feature_ids']);
@@ -196,11 +182,9 @@ class TestSuiteController extends Controller
         return response()->json($projects);
     }
 
-    public function copySuites(Request $request, Project $project): JsonResponse
+    public function copySuites(CopySuitesRequest $request, Project $project): JsonResponse
     {
-        $validated = $request->validate([
-            'project_id' => 'required|integer|exists:projects,id',
-        ]);
+        $validated = $request->validated();
 
         $targetProject = Project::findOrFail($validated['project_id']);
         $this->authorize('update', $targetProject);
@@ -214,16 +198,11 @@ class TestSuiteController extends Controller
         return response()->json($suites);
     }
 
-    public function reorder(Request $request, Project $project)
+    public function reorder(ReorderTestSuitesRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'suites' => 'required|array',
-            'suites.*.id' => 'required|exists:test_suites,id',
-            'suites.*.order' => 'required|integer',
-            'suites.*.parent_id' => 'nullable|exists:test_suites,id',
-        ]);
+        $validated = $request->validated();
 
         foreach ($validated['suites'] as $suiteData) {
             TestSuite::where('id', $suiteData['id'])->update([

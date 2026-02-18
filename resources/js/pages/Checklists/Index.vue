@@ -29,6 +29,7 @@ import FeatureBadges from '@/components/FeatureBadges.vue';
 import { Input } from '@/components/ui/input';
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { useSearch } from '@/composables/useSearch';
 
 interface NoteDraft {
     id: string;
@@ -60,7 +61,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const DRAFT_STORAGE_KEY = `checklist-note-draft-${props.project.id}`;
 const COLLAPSED_KEY = `checklist-categories-collapsed-${props.project.id}`;
 
-const searchQuery = ref('');
+const { searchQuery, highlight } = useSearch();
 const filterFeature = ref('');
 
 // Local ordering state — reflects server data, mutated by drag
@@ -385,16 +386,6 @@ const commitRenameCategory = () => {
     }
     localChecklists.value = list;
     saveReorder();
-};
-
-// Search + highlight
-const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const highlight = (text: string): string => {
-    const safe = escapeHtml(text);
-    if (!searchQuery.value.trim()) return safe;
-    const query = escapeRegExp(searchQuery.value.trim());
-    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
 };
 
 // Note / Draft functionality (multiple drafts)

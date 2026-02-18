@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TestCoverage\AttachChecklistRequest;
+use App\Http\Requests\TestCoverage\AttachTestCaseRequest;
+use App\Http\Requests\TestCoverage\StoreCoverageFeatureRequest;
+use App\Http\Requests\TestCoverage\StoreCoverageGapRequest;
+use App\Http\Requests\TestCoverage\UpdateCoverageFeatureRequest;
 use App\Models\AiGeneratedTestCase;
 use App\Models\Project;
 use App\Models\ProjectFeature;
@@ -9,7 +14,6 @@ use App\Services\ClaudeAIService;
 use App\Services\CoverageCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -122,18 +126,11 @@ class TestCoverageController extends Controller
         ]);
     }
 
-    public function generateTestCases(Request $request, Project $project): JsonResponse
+    public function generateTestCases(StoreCoverageGapRequest $request, Project $project): JsonResponse
     {
         $this->authorize('update', $project);
 
-        $gap = $request->validate([
-            'id' => 'required|string',
-            'feature' => 'required|string',
-            'description' => 'required|string',
-            'module' => 'nullable|string',
-            'category' => 'nullable|string',
-            'priority' => 'required|string',
-        ]);
+        $gap = $request->validated();
 
         $generatedCases = $this->aiService->generateTestCases($gap);
 
@@ -176,18 +173,11 @@ class TestCoverageController extends Controller
         return response()->json($history);
     }
 
-    public function storeFeature(Request $request, Project $project): RedirectResponse
+    public function storeFeature(StoreCoverageFeatureRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'module' => 'nullable|array',
-            'module.*' => 'string|max:100',
-            'category' => 'nullable|string|max:100',
-            'priority' => 'required|in:critical,high,medium,low',
-        ]);
+        $validated = $request->validated();
 
         $feature = $project->features()->create($validated);
 
@@ -196,21 +186,13 @@ class TestCoverageController extends Controller
         return back();
     }
 
-    public function updateFeature(Request $request, Project $project, int $featureId): RedirectResponse
+    public function updateFeature(UpdateCoverageFeatureRequest $request, Project $project, int $featureId): RedirectResponse
     {
         $this->authorize('update', $project);
 
         $feature = $project->features()->findOrFail($featureId);
 
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'module' => 'nullable|array',
-            'module.*' => 'string|max:100',
-            'category' => 'nullable|string|max:100',
-            'priority' => 'sometimes|in:critical,high,medium,low',
-            'is_active' => 'sometimes|boolean',
-        ]);
+        $validated = $request->validated();
 
         $feature->update($validated);
 
@@ -227,15 +209,13 @@ class TestCoverageController extends Controller
         return back();
     }
 
-    public function linkTestCase(Request $request, Project $project, int $featureId): RedirectResponse
+    public function linkTestCase(AttachTestCaseRequest $request, Project $project, int $featureId): RedirectResponse
     {
         $this->authorize('update', $project);
 
         $feature = $project->features()->findOrFail($featureId);
 
-        $validated = $request->validate([
-            'test_case_id' => 'required|exists:test_cases,id',
-        ]);
+        $validated = $request->validated();
 
         $projectTestCaseIds = $this->getProjectTestCaseIds($project);
 
@@ -258,15 +238,13 @@ class TestCoverageController extends Controller
         return back();
     }
 
-    public function linkChecklist(Request $request, Project $project, int $featureId): RedirectResponse
+    public function linkChecklist(AttachChecklistRequest $request, Project $project, int $featureId): RedirectResponse
     {
         $this->authorize('update', $project);
 
         $feature = $project->features()->findOrFail($featureId);
 
-        $validated = $request->validate([
-            'checklist_id' => 'required|exists:checklists,id',
-        ]);
+        $validated = $request->validated();
 
         $projectChecklistIds = $project->checklists()->pluck('id')->map(fn ($id) => (int) $id)->toArray();
 

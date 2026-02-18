@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Note\UpsertNoteRequest;
 use App\Models\Documentation;
 use App\Models\Note;
 use App\Models\Project;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class NoteController extends Controller
@@ -15,6 +15,8 @@ class NoteController extends Controller
      */
     public function index(Project $project)
     {
+        $this->authorize('view', $project);
+
         $notes = $project->notes()
             ->with('documentation')
             ->orderBy('updated_at', 'desc')
@@ -31,6 +33,8 @@ class NoteController extends Controller
      */
     public function create(Project $project)
     {
+        $this->authorize('update', $project);
+
         $documentations = $project->documentations()
             ->orderBy('title')
             ->get(['id', 'title', 'category']);
@@ -44,14 +48,11 @@ class NoteController extends Controller
     /**
      * Store a newly created note in storage.
      */
-    public function store(Request $request, Project $project)
+    public function store(UpsertNoteRequest $request, Project $project)
     {
-        $validated = $request->validate([
-            'title' => 'nullable|string|max:255',
-            'content' => 'nullable|string',
-            'documentation_id' => 'nullable|exists:documentations,id',
-            'is_draft' => 'boolean',
-        ]);
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
 
         $project->notes()->create($validated);
 
@@ -64,6 +65,8 @@ class NoteController extends Controller
      */
     public function show(Project $project, Note $note)
     {
+        $this->authorize('view', $project);
+
         $note->load('documentation');
 
         $documentations = $project->documentations()
@@ -80,14 +83,11 @@ class NoteController extends Controller
     /**
      * Update the specified note in storage.
      */
-    public function update(Request $request, Project $project, Note $note)
+    public function update(UpsertNoteRequest $request, Project $project, Note $note)
     {
-        $validated = $request->validate([
-            'title' => 'nullable|string|max:255',
-            'content' => 'nullable|string',
-            'documentation_id' => 'nullable|exists:documentations,id',
-            'is_draft' => 'boolean',
-        ]);
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
 
         $note->update($validated);
 
@@ -100,6 +100,8 @@ class NoteController extends Controller
      */
     public function destroy(Project $project, Note $note)
     {
+        $this->authorize('update', $project);
+
         $note->delete();
 
         return redirect()->route('projects.notes.index', $project)
@@ -111,7 +113,9 @@ class NoteController extends Controller
      */
     public function publish(Project $project, Note $note)
     {
-        if (!$note->documentation_id) {
+        $this->authorize('update', $project);
+
+        if (! $note->documentation_id) {
             return redirect()->back()
                 ->with('error', 'Please select a documentation to publish to.');
         }
@@ -120,7 +124,7 @@ class NoteController extends Controller
 
         // Append note content to documentation
         $newContent = $documentation->content
-            ? $documentation->content . "\n\n" . $note->content
+            ? $documentation->content."\n\n".$note->content
             : $note->content;
 
         $documentation->update(['content' => $newContent]);

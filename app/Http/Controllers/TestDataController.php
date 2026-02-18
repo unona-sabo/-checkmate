@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TestData\BulkDeleteIdsRequest;
+use App\Http\Requests\TestData\UpsertPaymentMethodRequest;
+use App\Http\Requests\TestData\UpsertTestUserRequest;
 use App\Models\Project;
 use App\Models\TestPaymentMethod;
 use App\Models\TestUser;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,22 +37,11 @@ class TestDataController extends Controller
         ]);
     }
 
-    public function storeUser(Request $request, Project $project): RedirectResponse
+    public function storeUser(UpsertTestUserRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255',
-            'password' => 'nullable|string|max:1000',
-            'role' => 'nullable|string|max:100',
-            'environment' => 'nullable|string|in:develop,staging,production',
-            'description' => 'nullable|string|max:2000',
-            'is_valid' => 'boolean',
-            'additional_info' => 'nullable|array',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:100',
-        ]);
+        $validated = $request->validated();
 
         $project->testUsers()->create([
             ...$validated,
@@ -61,22 +52,11 @@ class TestDataController extends Controller
         return back()->with('success', 'Test user created successfully.');
     }
 
-    public function updateUser(Request $request, Project $project, TestUser $testUser): RedirectResponse
+    public function updateUser(UpsertTestUserRequest $request, Project $project, TestUser $testUser): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255',
-            'password' => 'nullable|string|max:1000',
-            'role' => 'nullable|string|max:100',
-            'environment' => 'nullable|string|in:develop,staging,production',
-            'description' => 'nullable|string|max:2000',
-            'is_valid' => 'boolean',
-            'additional_info' => 'nullable|array',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:100',
-        ]);
+        $validated = $request->validated();
 
         $testUser->update($validated);
 
@@ -92,35 +72,22 @@ class TestDataController extends Controller
         return back()->with('success', 'Test user deleted successfully.');
     }
 
-    public function bulkDestroyUsers(Request $request, Project $project): RedirectResponse
+    public function bulkDestroyUsers(BulkDeleteIdsRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'integer',
-        ]);
+        $validated = $request->validated();
 
         $project->testUsers()->whereIn('id', $validated['ids'])->delete();
 
         return back()->with('success', 'Test users deleted successfully.');
     }
 
-    public function storePayment(Request $request, Project $project): RedirectResponse
+    public function storePayment(UpsertPaymentMethodRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|string|in:card,crypto,bank,paypal,other',
-            'system' => 'nullable|string|max:255',
-            'credentials' => 'nullable|array',
-            'environment' => 'nullable|string|in:develop,staging,production',
-            'is_valid' => 'boolean',
-            'description' => 'nullable|string|max:2000',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:100',
-        ]);
+        $validated = $request->validated();
 
         $project->testPaymentMethods()->create([
             ...$validated,
@@ -131,21 +98,11 @@ class TestDataController extends Controller
         return back()->with('success', 'Payment method created successfully.');
     }
 
-    public function updatePayment(Request $request, Project $project, TestPaymentMethod $testPaymentMethod): RedirectResponse
+    public function updatePayment(UpsertPaymentMethodRequest $request, Project $project, TestPaymentMethod $testPaymentMethod): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|string|in:card,crypto,bank,paypal,other',
-            'system' => 'nullable|string|max:255',
-            'credentials' => 'nullable|array',
-            'environment' => 'nullable|string|in:develop,staging,production',
-            'is_valid' => 'boolean',
-            'description' => 'nullable|string|max:2000',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:100',
-        ]);
+        $validated = $request->validated();
 
         $testPaymentMethod->update($validated);
 
@@ -161,28 +118,22 @@ class TestDataController extends Controller
         return back()->with('success', 'Payment method deleted successfully.');
     }
 
-    public function bulkDestroyPayments(Request $request, Project $project): RedirectResponse
+    public function bulkDestroyPayments(BulkDeleteIdsRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'integer',
-        ]);
+        $validated = $request->validated();
 
         $project->testPaymentMethods()->whereIn('id', $validated['ids'])->delete();
 
         return back()->with('success', 'Payment methods deleted successfully.');
     }
 
-    public function reorderUsers(Request $request, Project $project): RedirectResponse
+    public function reorderUsers(BulkDeleteIdsRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'integer',
-        ]);
+        $validated = $request->validated();
 
         foreach ($validated['ids'] as $index => $id) {
             $project->testUsers()->where('id', $id)->update(['order' => $index]);
@@ -191,14 +142,11 @@ class TestDataController extends Controller
         return back();
     }
 
-    public function reorderPayments(Request $request, Project $project): RedirectResponse
+    public function reorderPayments(BulkDeleteIdsRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'integer',
-        ]);
+        $validated = $request->validated();
 
         foreach ($validated['ids'] as $index => $id) {
             $project->testPaymentMethods()->where('id', $id)->update(['order' => $index]);

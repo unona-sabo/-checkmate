@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TestCase\BulkDeleteTestCasesRequest;
+use App\Http\Requests\TestCase\BulkUpdateTestCasesRequest;
+use App\Http\Requests\TestCase\MoveTestCasesRequest;
+use App\Http\Requests\TestCase\ReorderTestCasesRequest;
+use App\Http\Requests\TestCase\StoreTestCaseNoteRequest;
+use App\Http\Requests\TestCase\StoreTestCaseRequest;
+use App\Http\Requests\TestCase\UpdateTestCaseRequest;
 use App\Models\Attachment;
 use App\Models\ChecklistRow;
 use App\Models\Project;
 use App\Models\TestCase;
 use App\Models\TestSuite;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,31 +35,11 @@ class TestCaseController extends Controller
         ]);
     }
 
-    public function store(Request $request, Project $project, TestSuite $testSuite)
+    public function store(StoreTestCaseRequest $request, Project $project, TestSuite $testSuite)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'preconditions' => 'nullable|string',
-            'steps' => 'nullable|array',
-            'steps.*.action' => 'required|string',
-            'steps.*.expected' => 'nullable|string',
-            'expected_result' => 'nullable|string',
-            'priority' => 'required|in:low,medium,high,critical',
-            'severity' => 'required|in:trivial,minor,major,critical,blocker',
-            'type' => 'required|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
-            'automation_status' => 'required|in:not_automated,to_be_automated,automated',
-            'tags' => 'nullable|array',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
-            'checklist_id' => 'nullable|integer|exists:checklists,id',
-            'checklist_row_ids' => 'nullable|string',
-            'checklist_link_column' => 'nullable|string|max:255',
-            'feature_ids' => 'nullable|array',
-            'feature_ids.*' => 'exists:project_features,id',
-        ]);
+        $validated = $request->validated();
 
         $checklistFields = ['checklist_id', 'checklist_row_ids', 'checklist_link_column'];
 
@@ -116,28 +102,11 @@ class TestCaseController extends Controller
         ]);
     }
 
-    public function update(Request $request, Project $project, TestSuite $testSuite, TestCase $testCase)
+    public function update(UpdateTestCaseRequest $request, Project $project, TestSuite $testSuite, TestCase $testCase)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'preconditions' => 'nullable|string',
-            'steps' => 'nullable|array',
-            'steps.*.action' => 'required|string',
-            'steps.*.expected' => 'nullable|string',
-            'expected_result' => 'nullable|string',
-            'priority' => 'required|in:low,medium,high,critical',
-            'severity' => 'required|in:trivial,minor,major,critical,blocker',
-            'type' => 'required|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
-            'automation_status' => 'required|in:not_automated,to_be_automated,automated',
-            'tags' => 'nullable|array',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
-            'feature_ids' => 'nullable|array',
-            'feature_ids.*' => 'exists:project_features,id',
-        ]);
+        $validated = $request->validated();
 
         $testCase->update(collect($validated)->except(['attachments', 'feature_ids'])->toArray());
         $testCase->projectFeatures()->sync($validated['feature_ids'] ?? []);
@@ -183,13 +152,11 @@ class TestCaseController extends Controller
         return back()->with('success', 'Attachment deleted successfully.');
     }
 
-    public function updateNote(Request $request, Project $project, TestSuite $testSuite, TestCase $testCase)
+    public function updateNote(StoreTestCaseNoteRequest $request, Project $project, TestSuite $testSuite, TestCase $testCase)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'content' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $testCase->note()->updateOrCreate(
             ['test_case_id' => $testCase->id],
@@ -201,16 +168,11 @@ class TestCaseController extends Controller
         return back()->with('success', 'Note updated successfully.');
     }
 
-    public function reorder(Request $request, Project $project, TestSuite $testSuite)
+    public function reorder(ReorderTestCasesRequest $request, Project $project, TestSuite $testSuite)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'cases' => 'required|array',
-            'cases.*.id' => 'required|exists:test_cases,id',
-            'cases.*.order' => 'required|integer',
-            'cases.*.test_suite_id' => 'nullable|exists:test_suites,id',
-        ]);
+        $validated = $request->validated();
 
         foreach ($validated['cases'] as $caseData) {
             $updateData = ['order' => $caseData['order']];
@@ -223,14 +185,11 @@ class TestCaseController extends Controller
         return back()->with('success', 'Test cases reordered successfully.');
     }
 
-    public function bulkDestroy(Request $request, Project $project)
+    public function bulkDestroy(BulkDeleteTestCasesRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'test_case_ids' => 'required|array|min:1',
-            'test_case_ids.*' => 'exists:test_cases,id',
-        ]);
+        $validated = $request->validated();
 
         $projectSuiteIds = $project->testSuites()->pluck('id');
 
@@ -249,19 +208,11 @@ class TestCaseController extends Controller
         return back()->with('success', $testCases->count().' test case(s) deleted.');
     }
 
-    public function bulkCopy(Request $request, Project $project)
+    public function bulkCopy(MoveTestCasesRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'test_case_ids' => 'required|array|min:1',
-            'test_case_ids.*' => 'exists:test_cases,id',
-            'target_suite_id' => 'required|exists:test_suites,id',
-            'target_project_id' => 'nullable|integer|exists:projects,id',
-            'copy_attachments' => 'boolean',
-            'copy_features' => 'boolean',
-            'copy_notes' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
         $copyAttachments = $validated['copy_attachments'] ?? false;
         $copyFeatures = $validated['copy_features'] ?? false;
@@ -348,16 +299,11 @@ class TestCaseController extends Controller
         return back()->with('success', $testCases->count().' test case(s) copied.');
     }
 
-    public function reorderAcrossSuites(Request $request, Project $project)
+    public function reorderAcrossSuites(BulkUpdateTestCasesRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'cases' => 'required|array',
-            'cases.*.id' => 'required|exists:test_cases,id',
-            'cases.*.order' => 'required|integer',
-            'cases.*.test_suite_id' => 'required|exists:test_suites,id',
-        ]);
+        $validated = $request->validated();
 
         foreach ($validated['cases'] as $caseData) {
             TestCase::where('id', $caseData['id'])->update([

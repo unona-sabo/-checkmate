@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { useSearch } from '@/composables/useSearch';
+import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { home } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -14,7 +15,6 @@ import {
     FileText,
     StickyNote,
     Search,
-    RefreshCw,
     CheckCircle2,
     User,
     Calendar,
@@ -41,8 +41,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const searchQuery = ref('');
-const isRefreshing = ref(false);
+const { searchQuery, highlight } = useSearch();
 
 const sectionIcons: Record<string, typeof ClipboardList> = {
     checklists: ClipboardList,
@@ -56,15 +55,6 @@ const sectionIcons: Record<string, typeof ClipboardList> = {
     'test-data': Database,
     documentations: FileText,
     notes: StickyNote,
-};
-
-const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const highlight = (text: string): string => {
-    const safe = escapeHtml(text);
-    if (!searchQuery.value.trim()) return safe;
-    const query = escapeRegExp(searchQuery.value.trim());
-    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
 };
 
 const filteredSections = computed(() => {
@@ -85,16 +75,6 @@ function scrollToSection(key: string): void {
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-}
-
-function refreshData(): void {
-    isRefreshing.value = true;
-    router.post('/home/sync', {}, {
-        preserveScroll: true,
-        onFinish: () => {
-            isRefreshing.value = false;
-        },
-    });
 }
 
 function formatDate(dateString: string | null): string {
@@ -153,15 +133,7 @@ function formatDateTime(dateString: string | null): string {
                                 <FolderTree class="h-4 w-4 text-primary" />
                                 <span>Sections</span>
                             </div>
-                            <button
-                                @click="refreshData"
-                                :disabled="isRefreshing"
-                                class="mb-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer disabled:opacity-50"
-                            >
-                                <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': isRefreshing }" />
-                                {{ isRefreshing ? 'Syncing...' : 'Sync Features' }}
-                            </button>
-                            <div class="relative mt-2">
+                            <div class="relative">
                                 <Search class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     v-model="searchQuery"

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TestRunCase\BulkUpdateTestRunCasesRequest;
+use App\Http\Requests\TestRunCase\UpdateTestRunCaseRequest;
 use App\Models\Project;
 use App\Models\TestRun;
 use App\Models\TestRunCase;
@@ -9,18 +11,11 @@ use Illuminate\Http\Request;
 
 class TestRunCaseController extends Controller
 {
-    public function update(Request $request, Project $project, TestRun $testRun, TestRunCase $testRunCase)
+    public function update(UpdateTestRunCaseRequest $request, Project $project, TestRun $testRun, TestRunCase $testRunCase)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'status' => 'required|in:untested,passed,failed,blocked,skipped,retest',
-            'actual_result' => 'nullable|string',
-            'time_spent' => 'nullable|integer|min:0',
-            'clickup_link' => 'nullable|url|max:255',
-            'qase_link' => 'nullable|url|max:255',
-            'assigned_to' => 'nullable|exists:users,id',
-        ]);
+        $validated = $request->validated();
 
         if ($validated['status'] !== 'untested' && $testRunCase->status === 'untested') {
             $validated['tested_at'] = now();
@@ -38,16 +33,11 @@ class TestRunCaseController extends Controller
         return back()->with('success', 'Test case result updated.');
     }
 
-    public function bulkUpdate(Request $request, Project $project, TestRun $testRun)
+    public function bulkUpdate(BulkUpdateTestRunCasesRequest $request, Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'test_run_case_ids' => 'required|array|min:1',
-            'test_run_case_ids.*' => 'exists:test_run_cases,id',
-            'status' => 'nullable|in:untested,passed,failed,blocked,skipped,retest',
-            'assigned_to' => 'nullable|exists:users,id',
-        ]);
+        $validated = $request->validated();
 
         $updateData = [];
 

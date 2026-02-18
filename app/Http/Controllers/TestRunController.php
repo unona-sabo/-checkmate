@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TestRun\StoreTestRunFromChecklistRequest;
+use App\Http\Requests\TestRun\StoreTestRunRequest;
+use App\Http\Requests\TestRun\UpdateTestRunRequest;
 use App\Models\Project;
 use App\Models\TestRun;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,19 +52,11 @@ class TestRunController extends Controller
         ]);
     }
 
-    public function store(Request $request, Project $project)
+    public function store(StoreTestRunRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'environment' => 'nullable|string|max:255',
-            'milestone' => 'nullable|string|max:255',
-            'priority' => 'nullable|string|in:low,medium,high,critical',
-            'test_case_ids' => 'required|array|min:1',
-            'test_case_ids.*' => 'exists:test_cases,id',
-        ]);
+        $validated = $request->validated();
 
         $testRun = $project->testRuns()->create([
             'name' => $validated['name'],
@@ -88,20 +82,11 @@ class TestRunController extends Controller
             ->with('success', 'Test run created successfully.');
     }
 
-    public function storeFromChecklist(Request $request, Project $project)
+    public function storeFromChecklist(StoreTestRunFromChecklistRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'environment' => 'nullable|string|max:255',
-            'milestone' => 'nullable|string|max:255',
-            'priority' => 'nullable|string|in:low,medium,high,critical',
-            'checklist_id' => 'required|exists:checklists,id',
-            'titles' => 'required|array|min:1',
-            'titles.*' => 'required|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
         $testRun = $project->testRuns()->create([
             'name' => $validated['name'],
@@ -158,18 +143,11 @@ class TestRunController extends Controller
         ]);
     }
 
-    public function update(Request $request, Project $project, TestRun $testRun)
+    public function update(UpdateTestRunRequest $request, Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'environment' => 'nullable|string|max:255',
-            'milestone' => 'nullable|string|max:255',
-            'priority' => 'nullable|string|in:low,medium,high,critical',
-            'status' => 'required|in:active,completed,archived',
-        ]);
+        $validated = $request->validated();
 
         if ($validated['status'] === 'completed' && $testRun->status !== 'completed') {
             $validated['completed_at'] = now();

@@ -17,6 +17,7 @@ import {
 } from 'lucide-vue-next';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { useSearch } from '@/composables/useSearch';
 import { testResultVariant } from '@/lib/badge-variants';
 
 const props = defineProps<{
@@ -191,7 +192,7 @@ const groupedCases = computed(() => {
     return groups;
 });
 
-const searchQuery = ref('');
+const { searchQuery, highlight } = useSearch();
 
 const filteredGroupedCases = computed(() => {
     if (!searchQuery.value.trim()) return groupedCases.value;
@@ -211,14 +212,6 @@ const filteredGroupedCases = computed(() => {
     return filtered;
 });
 
-const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const highlight = (text: string): string => {
-    const safe = escapeHtml(text);
-    if (!searchQuery.value.trim()) return safe;
-    const query = escapeRegExp(searchQuery.value.trim());
-    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
-};
 </script>
 
 <template>

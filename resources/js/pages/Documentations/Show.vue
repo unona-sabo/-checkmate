@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { FileText, Edit, Trash2, ChevronRight, Download, Paperclip, FolderTree, ExternalLink, Plus, Search, X, Link2, Check } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { useSearch, escapeRegExp } from '@/composables/useSearch';
 
 interface Documentation {
     id: number;
@@ -60,9 +61,7 @@ const copyLink = () => {
     setTimeout(() => { copied.value = false; }, 2000);
 };
 
-const searchQuery = ref('');
-
-const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const { searchQuery } = useSearch();
 
 const filterChildren = (children: Documentation[]): Documentation[] => {
     if (!searchQuery.value.trim()) return children;

@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Documentation\ReorderDocumentationsRequest;
+use App\Http\Requests\Documentation\StoreDocImageRequest;
+use App\Http\Requests\Documentation\StoreDocumentationRequest;
+use App\Http\Requests\Documentation\UpdateDocumentationRequest;
 use App\Models\Attachment;
 use App\Models\Documentation;
 use App\Models\Project;
@@ -52,18 +56,11 @@ class DocumentationController extends Controller
         ]);
     }
 
-    public function store(Request $request, Project $project)
+    public function store(StoreDocumentationRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'nullable|string',
-            'category' => 'nullable|string|max:255',
-            'parent_id' => 'nullable|exists:documentations,id',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
-        ]);
+        $validated = $request->validated();
 
         $maxOrder = $project->documentations()
             ->where('parent_id', $validated['parent_id'] ?? null)
@@ -129,18 +126,11 @@ class DocumentationController extends Controller
         ]);
     }
 
-    public function update(Request $request, Project $project, Documentation $documentation)
+    public function update(UpdateDocumentationRequest $request, Project $project, Documentation $documentation)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'nullable|string',
-            'category' => 'nullable|string|max:255',
-            'parent_id' => 'nullable|exists:documentations,id',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
-        ]);
+        $validated = $request->validated();
 
         $documentation->update(
             collect($validated)->except('attachments')->toArray()
@@ -186,13 +176,11 @@ class DocumentationController extends Controller
         return back()->with('success', 'Attachment deleted.');
     }
 
-    public function uploadImage(Request $request, Project $project, Documentation $documentation)
+    public function uploadImage(StoreDocImageRequest $request, Project $project, Documentation $documentation)
     {
         $this->authorize('update', $project);
 
-        $request->validate([
-            'image' => 'required|image|max:10240',
-        ]);
+        $request->validated();
 
         $path = $request->file('image')->store('attachments/documentations/images', 'public');
 
@@ -208,13 +196,11 @@ class DocumentationController extends Controller
         ]);
     }
 
-    public function uploadNewImage(Request $request, Project $project)
+    public function uploadNewImage(StoreDocImageRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $request->validate([
-            'image' => 'required|image|max:10240',
-        ]);
+        $request->validated();
 
         $path = $request->file('image')->store('attachments/documentations/images', 'public');
 
@@ -223,15 +209,11 @@ class DocumentationController extends Controller
         ]);
     }
 
-    public function reorder(Request $request, Project $project)
+    public function reorder(ReorderDocumentationsRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'items' => 'required|array',
-            'items.*.id' => 'required|exists:documentations,id',
-            'items.*.order' => 'required|integer|min:0',
-        ]);
+        $validated = $request->validated();
 
         foreach ($validated['items'] as $item) {
             Documentation::where('id', $item['id'])->update(['order' => $item['order']]);

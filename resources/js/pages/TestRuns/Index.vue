@@ -2,6 +2,7 @@
 import { Head, Link, Deferred } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { useSearch } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestRun } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,7 +37,7 @@ const getStatusIcon = (status: string) => {
     }
 };
 
-const searchQuery = ref('');
+const { searchQuery, highlight } = useSearch();
 
 // Filters
 const showFilters = ref(false);
@@ -193,14 +194,6 @@ const resumeRun = (run: TestRun) => {
     router.post(`/projects/${props.project.id}/test-runs/${run.id}/resume`, {}, { preserveScroll: true });
 };
 
-const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const highlight = (text: string): string => {
-    const safe = escapeHtml(text);
-    if (!searchQuery.value.trim()) return safe;
-    const query = escapeRegExp(searchQuery.value.trim());
-    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
-};
 </script>
 
 <template>

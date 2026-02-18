@@ -42,6 +42,11 @@ import { usePage } from '@inertiajs/vue3';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
 import { useCanEdit } from '@/composables/useCanEdit';
+import { useSearch } from '@/composables/useSearch';
+import { useChecklistClipboard, type ClipboardData } from '@/composables/useChecklistClipboard';
+import { useChecklistFilters } from '@/composables/useChecklistFilters';
+import { useChecklistDragDrop } from '@/composables/useChecklistDragDrop';
+import { useLocalStorageDraft } from '@/composables/useLocalStorageDraft';
 
 const { canEdit } = useCanEdit();
 
@@ -68,43 +73,17 @@ interface ExtendedColumnConfig extends ColumnConfig {
 }
 
 const copied = ref(false);
-const copiedRows = ref(false);
 
-// Internal clipboard (localStorage)
-const CLIPBOARD_KEY = 'checkmate-row-clipboard';
-
-interface ClipboardData {
-    rows: Array<{
-        data: Record<string, unknown>;
-        row_type: string;
-        background_color: string | null;
-        font_color: string | null;
-        font_weight: string;
-    }>;
-    source_columns_config: ColumnConfig[];
-    source_checklist_name: string;
-    timestamp: number;
-}
-
-const clipboardData = ref<ClipboardData | null>(null);
-
-const loadClipboard = () => {
-    try {
-        const saved = localStorage.getItem(CLIPBOARD_KEY);
-        if (saved) {
-            clipboardData.value = JSON.parse(saved);
-        }
-    } catch (e) {
-        clipboardData.value = null;
-    }
-};
-
-const clearClipboard = () => {
-    localStorage.removeItem(CLIPBOARD_KEY);
-    clipboardData.value = null;
-};
-
-const hasClipboardRows = computed(() => clipboardData.value !== null && clipboardData.value.rows.length > 0);
+const {
+    clipboardData,
+    copiedRows,
+    hasClipboardRows,
+    loadClipboard,
+    clearClipboard,
+    saveToClipboard,
+    getClipboardBackup,
+    restoreClipboard,
+} = useChecklistClipboard();
 
 const titleStart = computed(() => {
     const words = props.checklist.name.split(' ');
@@ -263,254 +242,63 @@ const dismissSaveError = () => {
 };
 
 // Search state
-const searchQuery = ref('');
-const scrollContainerRef = ref<HTMLElement | null>(null);
-const highlightedRowId = ref<number | null>(null);
+const { searchQuery, isSearchActive } = useSearch();
 
-// Progressive rendering - show rows in batches for better performance
-const INITIAL_ROWS = 50;
-const LOAD_MORE_COUNT = 50;
-const visibleRowCount = ref(INITIAL_ROWS);
+const {
+    scrollContainerRef,
+    highlightedRowId,
+    visibleRowCount,
+    showFilters,
+    filterValues,
+    filterUpdatedFrom,
+    filterUpdatedTo,
+    activeFilterCount,
+    clearFilters,
+    filteredRows,
+    filteredDataRowCount,
+    totalDataRowCount,
+    displayRows,
+    hasMoreRows,
+    totalRowCount,
+    loadMoreRows,
+    showAllRows,
+    navigateToRow: _navigateToRow,
+    canDragRows,
+    INITIAL_ROWS,
+    LOAD_MORE_COUNT,
+} = useChecklistFilters(rows, searchQuery);
 
-const isRowMatch = (row: ExtendedChecklistRow, query: string): boolean => {
-    return Object.values(row.data).some(value => {
-        if (typeof value === 'string') {
-            return value.toLowerCase().includes(query);
-        }
-        return false;
-    });
-};
-
-// Filters
-const showFilters = ref(false);
-const filterValues = ref<Record<string, string>>({});
-const filterUpdatedFrom = ref('');
-const filterUpdatedTo = ref('');
-
-const activeFilterCount = computed(() => {
-    const selectCount = Object.values(filterValues.value).filter(v => v !== '').length;
-    return selectCount + (filterUpdatedFrom.value ? 1 : 0) + (filterUpdatedTo.value ? 1 : 0);
-});
-
-const clearFilters = () => {
-    filterValues.value = {};
-    filterUpdatedFrom.value = '';
-    filterUpdatedTo.value = '';
-};
-
-const filteredRows = computed(() => {
-    const allRows = rows.value;
-    const query = searchQuery.value.trim().toLowerCase();
-    const hasFilters = activeFilterCount.value > 0;
-
-    if (!query && !hasFilters) return allRows;
-
-    // Filter only data rows (not section headers)
-    let dataRows = allRows.filter(row => row.row_type !== 'section_header');
-
-    if (query) {
-        dataRows = dataRows.filter(row => isRowMatch(row, query));
-    }
-
-    if (hasFilters) {
-        dataRows = dataRows.filter(row => {
-            // Select column filters
-            const matchesSelects = Object.entries(filterValues.value).every(([key, value]) => {
-                if (!value) return true;
-                return row.data[key] === value;
-            });
-            if (!matchesSelects) return false;
-
-            // Date range filters (compare date-only strings YYYY-MM-DD)
-            const rowDate = row.updated_at ? row.updated_at.slice(0, 10) : '';
-            if (filterUpdatedFrom.value && rowDate < filterUpdatedFrom.value) return false;
-            if (filterUpdatedTo.value && rowDate > filterUpdatedTo.value) return false;
-
-            return true;
-        });
-    }
-
-    // Re-insert section headers that have matching data rows below them
-    const matchedIds = new Set(dataRows.map(r => r.id));
-    const headersWithMatches = new Set<number>();
-    let currentHeader: ExtendedChecklistRow | null = null;
-
-    for (const row of allRows) {
-        if (row.row_type === 'section_header') {
-            currentHeader = row;
-        } else if (matchedIds.has(row.id) && currentHeader) {
-            headersWithMatches.add(currentHeader.id);
-        }
-    }
-
-    // Build final list preserving original order
-    const result: ExtendedChecklistRow[] = [];
-    currentHeader = null;
-    let headerAdded = false;
-
-    for (const row of allRows) {
-        if (row.row_type === 'section_header') {
-            currentHeader = row;
-            headerAdded = false;
-        } else if (matchedIds.has(row.id)) {
-            if (currentHeader && !headerAdded && headersWithMatches.has(currentHeader.id)) {
-                result.push(currentHeader);
-                headerAdded = true;
-            }
-            result.push(row);
-        }
-    }
-
-    return result;
-});
-
-// Count of matched data rows (excluding section headers)
-const filteredDataRowCount = computed(() => {
-    return filteredRows.value.filter(r => r.row_type !== 'section_header').length;
-});
-
-const totalDataRowCount = computed(() => {
-    return rows.value.filter(r => r.row_type !== 'section_header').length;
-});
-
-// Rows to actually render (limited for performance)
-const displayRows = computed(() => {
-    return filteredRows.value.slice(0, visibleRowCount.value);
-});
-
-const hasMoreRows = computed(() => {
-    return visibleRowCount.value < filteredRows.value.length;
-});
-
-const totalRowCount = computed(() => {
-    return filteredRows.value.length;
-});
-
-const loadMoreRows = () => {
-    visibleRowCount.value += LOAD_MORE_COUNT;
-};
-
-const showAllRows = () => {
-    visibleRowCount.value = totalRowCount.value;
-};
-
-// Navigate to row: clear search, show full table, scroll to row
-let highlightTimer: ReturnType<typeof setTimeout> | null = null;
-let isNavigating = false;
-
-const navigateToRow = (row: ExtendedChecklistRow) => {
-    if (!searchQuery.value.trim()) return;
-
-    const rowId = row.id;
-
-    // Determine how many rows need to be visible so the target row is rendered
-    const rowIndex = rows.value.findIndex(r => r.id === rowId);
-    const requiredCount = rowIndex >= 0 ? rowIndex + LOAD_MORE_COUNT : visibleRowCount.value;
-
-    // Skip the watcher reset while navigating — reset flag in nextTick
-    // because Vue 3 watch callbacks are async (flush: 'pre')
-    isNavigating = true;
-    searchQuery.value = '';
-    visibleRowCount.value = Math.max(requiredCount, INITIAL_ROWS);
-
-    // Wait for Vue to update the DOM, then for the browser to paint new rows
-    nextTick(() => {
-        isNavigating = false;
-        resizeAllTextareas();
-
-        // requestAnimationFrame ensures the browser has painted new rows
-        // before we add the highlight class (so transition-all animates in)
-        requestAnimationFrame(() => {
-            if (highlightTimer) clearTimeout(highlightTimer);
-            highlightedRowId.value = rowId;
-            highlightTimer = setTimeout(() => {
-                highlightedRowId.value = null;
-            }, 2500);
-
-            nextTick(() => {
-                const container = scrollContainerRef.value;
-                if (!container) return;
-                const targetRow = container.querySelector(`tr[data-row-id="${rowId}"]`) as HTMLElement;
-                if (targetRow) {
-                    targetRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                }
-            });
-        });
-    });
-};
-
-const isSearchActive = computed(() => searchQuery.value.trim().length > 0);
-
-watch(searchQuery, () => {
-    if (isNavigating) return;
-    visibleRowCount.value = INITIAL_ROWS;
-});
+const navigateToRow = (row: ExtendedChecklistRow) => _navigateToRow(row, resizeAllTextareas);
 
 // Resize textareas when visible rows change (load more, show all, search)
 watch(visibleRowCount, () => {
     resizeAllTextareas();
 });
 
-// Drag-and-drop only allowed when showing all rows and not searching
-const canDragRows = computed(() => !searchQuery.value.trim() && !hasMoreRows.value && activeFilterCount.value === 0);
-
 // Note dialog state
 const showNoteDialog = ref(false);
 const noteContent = ref('');
 const isImporting = ref(false);
 const selectedChecklistId = ref<number>(props.checklist.id);
-const hasDraft = ref(false);
-
-// Draft storage
-const DRAFT_STORAGE_KEY = `checklist-note-draft-${props.checklist.id}`;
-
 interface NoteDraft {
     content: string;
     selectedChecklistId: number;
     selectedColumnKey: string;
 }
 
-const loadDraft = () => {
-    try {
-        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
-        if (saved) {
-            const draft: NoteDraft = JSON.parse(saved);
-            if (draft.content && draft.content.trim()) {
-                hasDraft.value = true;
-            }
-        }
-    } catch (e) {
-        console.error('Failed to load draft:', e);
-    }
-};
+const {
+    hasDraft,
+    saveDraft: _saveDraft,
+    deleteDraft,
+    getDraft,
+} = useLocalStorageDraft<NoteDraft>(`checklist-note-draft-${props.checklist.id}`);
 
 const saveDraft = () => {
-    if (!noteContent.value.trim()) {
-        deleteDraft();
-        return;
-    }
-
-    const draft: NoteDraft = {
+    _saveDraft({
         content: noteContent.value,
         selectedChecklistId: selectedChecklistId.value,
         selectedColumnKey: selectedColumnKey.value,
-    };
-
-    try {
-        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
-        hasDraft.value = true;
-    } catch (e) {
-        console.error('Failed to save draft:', e);
-    }
-};
-
-const deleteDraft = () => {
-    try {
-        localStorage.removeItem(DRAFT_STORAGE_KEY);
-        hasDraft.value = false;
-    } catch (e) {
-        console.error('Failed to delete draft:', e);
-    }
+    });
 };
 
 const clearNotes = () => {
@@ -519,16 +307,11 @@ const clearNotes = () => {
 };
 
 const openDraft = () => {
-    try {
-        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
-        if (saved) {
-            const draft: NoteDraft = JSON.parse(saved);
-            noteContent.value = draft.content;
-            selectedChecklistId.value = draft.selectedChecklistId;
-            selectedColumnKey.value = draft.selectedColumnKey;
-        }
-    } catch (e) {
-        console.error('Failed to open draft:', e);
+    const draft = getDraft();
+    if (draft) {
+        noteContent.value = draft.content;
+        selectedChecklistId.value = draft.selectedChecklistId;
+        selectedColumnKey.value = draft.selectedColumnKey;
     }
 };
 
@@ -626,128 +409,25 @@ const importNotes = () => {
 };
 
 
-// Drag and drop for rows
-const draggedRowIndex = ref<number | null>(null);
-const dragOverRowIndex = ref<number | null>(null);
-
-const onRowDragStart = (index: number, event: DragEvent) => {
-    draggedRowIndex.value = index;
-    if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', index.toString());
-    }
-};
-
-const onRowDragOver = (index: number, event: DragEvent) => {
-    event.preventDefault();
-    if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'move';
-    }
-    dragOverRowIndex.value = index;
-};
-
-const onRowDragLeave = () => {
-    dragOverRowIndex.value = null;
-};
-
-const onRowDrop = (index: number, event: DragEvent) => {
-    event.preventDefault();
-    if (draggedRowIndex.value !== null && draggedRowIndex.value !== index) {
-        const draggedRow = rows.value[draggedRowIndex.value];
-        rows.value.splice(draggedRowIndex.value, 1);
-        rows.value.splice(index, 0, draggedRow);
-        hasContentChanges.value = true;
-    }
-    draggedRowIndex.value = null;
-    dragOverRowIndex.value = null;
-};
-
-const onRowDragEnd = () => {
-    draggedRowIndex.value = null;
-    dragOverRowIndex.value = null;
-};
-
-// Drag and drop for columns
-const draggedColIndex = ref<number | null>(null);
-const dragOverColIndex = ref<number | null>(null);
-
-const onColDragStart = (index: number, event: DragEvent) => {
-    draggedColIndex.value = index;
-    if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', index.toString());
-    }
-};
-
-const onColDragOver = (index: number, event: DragEvent) => {
-    event.preventDefault();
-    if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'move';
-    }
-    dragOverColIndex.value = index;
-};
-
-const onColDragLeave = () => {
-    dragOverColIndex.value = null;
-};
-
-const onColDrop = (visibleIndex: number, event: DragEvent) => {
-    event.preventDefault();
-    if (draggedColIndex.value !== null && draggedColIndex.value !== visibleIndex) {
-        // Map visible indices to actual indices in the full columns array
-        const draggedKey = visibleColumns.value[draggedColIndex.value]?.key;
-        const targetKey = visibleColumns.value[visibleIndex]?.key;
-        const actualFrom = columns.value.findIndex(c => c.key === draggedKey);
-        const actualTo = columns.value.findIndex(c => c.key === targetKey);
-
-        if (actualFrom !== -1 && actualTo !== -1 && actualFrom !== actualTo) {
-            const draggedCol = columns.value[actualFrom];
-            columns.value.splice(actualFrom, 1);
-            columns.value.splice(actualTo, 0, draggedCol);
-            hasContentChanges.value = true;
-        }
-    }
-    draggedColIndex.value = null;
-    dragOverColIndex.value = null;
-};
-
-const onColDragEnd = () => {
-    draggedColIndex.value = null;
-    dragOverColIndex.value = null;
-};
-
-// Column resize
-const resizingCol = ref<number | null>(null);
-const resizeStartX = ref(0);
-const resizeStartWidth = ref(0);
-
-const startResize = (visibleIndex: number, event: MouseEvent) => {
-    // Map visible index to actual index in the full columns array
-    const colKey = visibleColumns.value[visibleIndex]?.key;
-    const actualIndex = columns.value.findIndex(c => c.key === colKey);
-    if (actualIndex === -1) return;
-    resizingCol.value = actualIndex;
-    resizeStartX.value = event.clientX;
-    resizeStartWidth.value = columns.value[actualIndex].width || 150;
-    document.addEventListener('mousemove', onResize);
-    document.addEventListener('mouseup', stopResize);
-};
-
-const onResize = (event: MouseEvent) => {
-    if (resizingCol.value === null) return;
-    const diff = event.clientX - resizeStartX.value;
-    const newWidth = Math.max(50, resizeStartWidth.value + diff);
-    columns.value[resizingCol.value].width = newWidth;
-};
-
-const stopResize = () => {
-    if (resizingCol.value !== null) {
-        hasContentChanges.value = true;
-    }
-    resizingCol.value = null;
-    document.removeEventListener('mousemove', onResize);
-    document.removeEventListener('mouseup', stopResize);
-};
+// Drag and drop + column resize
+const {
+    draggedRowIndex,
+    dragOverRowIndex,
+    onRowDragStart,
+    onRowDragOver,
+    onRowDragLeave,
+    onRowDrop,
+    onRowDragEnd,
+    draggedColIndex,
+    dragOverColIndex,
+    onColDragStart,
+    onColDragOver,
+    onColDragLeave,
+    onColDrop,
+    onColDragEnd,
+    resizingCol,
+    startResize,
+} = useChecklistDragDrop(rows, columns, visibleColumns, hasContentChanges);
 
 const predefinedColors = [
     { name: 'Red', value: '#fee2e2', text: '#dc2626' },
@@ -1111,7 +791,7 @@ const copyToChecklist = () => {
 const copyRowsToClipboard = () => {
     if (selectedRows.value.length === 0) return;
 
-    const payload: ClipboardData = {
+    saveToClipboard({
         rows: selectedRows.value.map(row => ({
             data: { ...row.data },
             row_type: row.row_type || 'normal',
@@ -1122,16 +802,7 @@ const copyRowsToClipboard = () => {
         source_columns_config: columns.value.map(c => ({ key: c.key, label: c.label, type: c.type, options: c.options })),
         source_checklist_name: props.checklist.name,
         timestamp: Date.now(),
-    };
-
-    try {
-        localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(payload));
-        clipboardData.value = payload;
-        copiedRows.value = true;
-        setTimeout(() => { copiedRows.value = false; }, 2000);
-    } catch (e) {
-        console.error('Failed to save to clipboard:', e);
-    }
+    });
 };
 
 // Paste rows dialog state
@@ -1168,7 +839,7 @@ const pasteRows = () => {
     };
 
     // Clear localStorage before POST so the re-rendered component won't reload it
-    const backup = localStorage.getItem(CLIPBOARD_KEY);
+    const backup = getClipboardBackup();
     clearClipboard();
 
     router.post(
@@ -1179,8 +850,7 @@ const pasteRows = () => {
             onError: () => {
                 // Restore clipboard on error
                 if (backup) {
-                    localStorage.setItem(CLIPBOARD_KEY, backup);
-                    loadClipboard();
+                    restoreClipboard(backup);
                 }
                 isPasting.value = false;
             },
@@ -1552,7 +1222,6 @@ const exportChecklist = () => {
 onMounted(() => {
     loadHiddenColumns();
     resizeAllTextareas();
-    loadDraft();
     loadClipboard();
 });
 

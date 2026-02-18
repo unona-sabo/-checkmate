@@ -3,21 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Enums\WorkspaceRole;
+use App\Http\Requests\WorkspaceMember\StoreWorkspaceMemberRequest;
+use App\Http\Requests\WorkspaceMember\UpdateWorkspaceMemberRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 
 class WorkspaceMemberController extends Controller
 {
-    public function store(Request $request)
+    public function store(StoreWorkspaceMemberRequest $request)
     {
         $workspace = $request->attributes->get('workspace');
 
         $this->authorize('manageMembers', $workspace);
 
-        $validated = $request->validate([
-            'email' => 'required|email|exists:users,email',
-            'role' => 'required|string|in:admin,member,viewer',
-        ]);
+        $validated = $request->validated();
 
         $user = User::where('email', $validated['email'])->first();
 
@@ -30,15 +29,13 @@ class WorkspaceMemberController extends Controller
         return back()->with('success', "{$user->name} has been added to the workspace.");
     }
 
-    public function update(Request $request, int $memberId)
+    public function update(UpdateWorkspaceMemberRequest $request, int $memberId)
     {
         $workspace = $request->attributes->get('workspace');
 
         $this->authorize('manageMembers', $workspace);
 
-        $validated = $request->validate([
-            'role' => 'required|string|in:admin,member,viewer',
-        ]);
+        $validated = $request->validated();
 
         $member = $workspace->members()->where('users.id', $memberId)->first();
 
@@ -73,10 +70,9 @@ class WorkspaceMemberController extends Controller
 
         $workspace->members()->detach($memberId);
 
-        $user = User::find($memberId);
-        if ($user && $user->current_workspace_id === $workspace->id) {
-            $otherWorkspace = $user->workspaces()->first();
-            $user->update(['current_workspace_id' => $otherWorkspace?->id]);
+        if ($member->current_workspace_id === $workspace->id) {
+            $otherWorkspace = $member->workspaces()->first();
+            $member->update(['current_workspace_id' => $otherWorkspace?->id]);
         }
 
         return back()->with('success', 'Member removed from workspace.');

@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Automation\LinkAutomationTestCaseRequest;
+use App\Http\Requests\Automation\StoreAutomationResultsRequest;
+use App\Http\Requests\Automation\UnlinkAutomationTestCaseRequest;
+use App\Http\Requests\Automation\UpdateAutomationConfigRequest;
 use App\Models\Project;
 use App\Services\PlaywrightRunner;
 use App\Services\PlaywrightScanner;
@@ -59,13 +63,11 @@ class AutomationController extends Controller
         ]);
     }
 
-    public function updateConfig(Request $request, Project $project): RedirectResponse
+    public function updateConfig(UpdateAutomationConfigRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'automation_tests_path' => 'required|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $project->update($validated);
 
@@ -114,13 +116,11 @@ class AutomationController extends Controller
         }
     }
 
-    public function importResults(Request $request, Project $project): JsonResponse
+    public function importResults(StoreAutomationResultsRequest $request, Project $project): JsonResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'results' => 'required|array',
-        ]);
+        $validated = $request->validated();
 
         try {
             $imported = $this->runner->importResults($project, $validated['results']);
@@ -134,15 +134,11 @@ class AutomationController extends Controller
         }
     }
 
-    public function linkTestCase(Request $request, Project $project): RedirectResponse
+    public function linkTestCase(LinkAutomationTestCaseRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'test_case_id' => 'required|exists:test_cases,id',
-            'playwright_file' => 'required|string',
-            'playwright_test_name' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
         $testCase = \App\Models\TestCase::findOrFail($validated['test_case_id']);
         $testCase->update([
@@ -154,13 +150,11 @@ class AutomationController extends Controller
         return back();
     }
 
-    public function unlinkTestCase(Request $request, Project $project): RedirectResponse
+    public function unlinkTestCase(UnlinkAutomationTestCaseRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'test_case_id' => 'required|exists:test_cases,id',
-        ]);
+        $validated = $request->validated();
 
         $testCase = \App\Models\TestCase::findOrFail($validated['test_case_id']);
         $testCase->update([

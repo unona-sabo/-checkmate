@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\WorkspaceRole;
+use App\Http\Requests\Workspace\StoreWorkspaceRequest;
+use App\Http\Requests\Workspace\SwitchWorkspaceRequest;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -31,11 +33,9 @@ class WorkspaceController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreWorkspaceRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-        ]);
+        $validated = $request->validated();
 
         $slug = Str::slug($validated['name']);
         $baseSlug = $slug;
@@ -59,15 +59,13 @@ class WorkspaceController extends Controller
             ->with('success', 'Workspace created successfully.');
     }
 
-    public function update(Request $request)
+    public function update(StoreWorkspaceRequest $request)
     {
         $workspace = $request->attributes->get('workspace');
 
         $this->authorize('update', $workspace);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-        ]);
+        $validated = $request->validated();
 
         $workspace->update($validated);
 
@@ -80,16 +78,15 @@ class WorkspaceController extends Controller
 
         $this->authorize('delete', $workspace);
 
-        $memberIds = $workspace->members()->pluck('users.id');
+        $affectedMembers = \App\Models\User::whereIn('id', $workspace->members()->pluck('users.id'))
+            ->where('current_workspace_id', $workspace->id)
+            ->get();
 
-        foreach ($memberIds as $memberId) {
-            $user = \App\Models\User::find($memberId);
-            if ($user && $user->current_workspace_id === $workspace->id) {
-                $otherWorkspace = $user->workspaces()
-                    ->where('workspaces.id', '!=', $workspace->id)
-                    ->first();
-                $user->update(['current_workspace_id' => $otherWorkspace?->id]);
-            }
+        foreach ($affectedMembers as $user) {
+            $otherWorkspace = $user->workspaces()
+                ->where('workspaces.id', '!=', $workspace->id)
+                ->first();
+            $user->update(['current_workspace_id' => $otherWorkspace?->id]);
         }
 
         $workspace->delete();
@@ -98,11 +95,9 @@ class WorkspaceController extends Controller
             ->with('success', 'Workspace deleted successfully.');
     }
 
-    public function switchWorkspace(Request $request)
+    public function switchWorkspace(SwitchWorkspaceRequest $request)
     {
-        $validated = $request->validate([
-            'workspace_id' => 'required|exists:workspaces,id',
-        ]);
+        $validated = $request->validated();
 
         $user = auth()->user();
         $workspace = Workspace::findOrFail($validated['workspace_id']);

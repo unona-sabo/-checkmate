@@ -38,6 +38,7 @@ import FeatureBadges from '@/components/FeatureBadges.vue';
 import FeatureSelector from '@/components/FeatureSelector.vue';
 import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
 import { ref, computed, onMounted, watch } from 'vue';
+import { useSearch } from '@/composables/useSearch';
 
 const props = defineProps<{
     project: Project;
@@ -433,7 +434,7 @@ const localTotalTestCases = computed(() => {
 });
 
 // Search
-const searchQuery = ref('');
+const { searchQuery, highlight } = useSearch();
 
 // Filters
 const showFilters = ref(false);
@@ -509,15 +510,6 @@ const filteredFlatSuites = computed(() => {
 const filteredTestCaseCount = computed(() => {
     return filteredFlatSuites.value.reduce((acc, s) => acc + s.testCases.length, 0);
 });
-
-const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const highlight = (text: string): string => {
-    const safe = escapeHtml(text);
-    if (!searchQuery.value.trim()) return safe;
-    const query = escapeRegExp(searchQuery.value.trim());
-    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
-};
 
 // === Action Dialogs ===
 

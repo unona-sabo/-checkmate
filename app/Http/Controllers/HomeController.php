@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Home\UpsertFeatureDescriptionRequest;
 use App\Models\AutomationTestResult;
 use App\Models\Bugreport;
 use App\Models\Checklist;
@@ -15,7 +16,6 @@ use App\Models\TestRun;
 use App\Models\TestSuite;
 use App\Models\TestUser;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,27 +24,24 @@ class HomeController extends Controller
 {
     public function index(): Response
     {
-        $sections = Cache::store('file')->remember('home_sections', 300, fn () => array_values(
-            array_map(
-                fn (array $config) => $this->buildSection($config['key'], $config['title'], $config['description'], $config['features'], $config['model']),
-                $this->getSectionConfigs(),
-            ),
-        ));
+        $configs = $this->getSectionConfigs();
+
+        $sections = Cache::store('file')->remember('home_sections', 300, function () use ($configs) {
+            foreach ($configs as $key => $config) {
+                $this->syncFeatures($key, $config['features']);
+            }
+
+            return array_values(
+                array_map(
+                    fn (array $config) => $this->buildSection($config['key'], $config['title'], $config['description'], $config['features'], $config['model']),
+                    $configs,
+                ),
+            );
+        });
 
         return Inertia::render('Dashboard', [
             'sections' => $sections,
         ]);
-    }
-
-    public function sync(): RedirectResponse
-    {
-        foreach ($this->getSectionConfigs() as $key => $config) {
-            $this->syncFeatures($key, $config['features']);
-        }
-
-        Cache::store('file')->forget('home_sections');
-
-        return back();
     }
 
     public function show(string $section): Response
@@ -71,16 +68,13 @@ class HomeController extends Controller
         ]);
     }
 
-    public function storeFeature(Request $request, string $section): RedirectResponse
+    public function storeFeature(UpsertFeatureDescriptionRequest $request, string $section): RedirectResponse
     {
         $configs = $this->getSectionConfigs();
 
         abort_unless(isset($configs[$section]), 404);
 
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:500'],
-            'description' => ['nullable', 'string', 'max:10000'],
-        ]);
+        $validated = $request->validated();
 
         $maxIndex = FeatureDescription::query()
             ->where('section_key', $section)
@@ -101,17 +95,14 @@ class HomeController extends Controller
         return back();
     }
 
-    public function updateFeature(Request $request, string $section, FeatureDescription $featureDescription): RedirectResponse
+    public function updateFeature(UpsertFeatureDescriptionRequest $request, string $section, FeatureDescription $featureDescription): RedirectResponse
     {
         $configs = $this->getSectionConfigs();
 
         abort_unless(isset($configs[$section]), 404);
         abort_unless($featureDescription->section_key === $section, 404);
 
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:500'],
-            'description' => ['nullable', 'string', 'max:10000'],
-        ]);
+        $validated = $request->validated();
 
         $featureDescription->update([
             ...$validated,

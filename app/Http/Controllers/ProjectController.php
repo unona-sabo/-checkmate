@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Project\ReorderProjectsRequest;
+use App\Http\Requests\Project\SearchProjectRequest;
+use App\Http\Requests\Project\StoreProjectRequest;
+use App\Http\Requests\Project\UpdateProjectRequest;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,13 +33,9 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function reorder(Request $request)
+    public function reorder(ReorderProjectsRequest $request)
     {
-        $validated = $request->validate([
-            'projects' => 'required|array',
-            'projects.*.id' => 'required|exists:projects,id',
-            'projects.*.order' => 'required|integer',
-        ]);
+        $validated = $request->validated();
 
         $workspace = $request->attributes->get('workspace');
 
@@ -57,13 +57,11 @@ class ProjectController extends Controller
         return Inertia::render('Projects/Create');
     }
 
-    public function store(Request $request)
+    public function store(StoreProjectRequest $request)
     {
         $this->authorize('create', Project::class);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-        ]);
+        $validated = $request->validated();
 
         $workspace = $request->attributes->get('workspace');
 
@@ -76,13 +74,11 @@ class ProjectController extends Controller
             ->with('success', 'Project created successfully.');
     }
 
-    public function search(Request $request, Project $project): JsonResponse
+    public function search(SearchProjectRequest $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
 
-        $validated = $request->validate([
-            'q' => 'required|string|min:2|max:100',
-        ]);
+        $validated = $request->validated();
 
         $term = '%'.$validated['q'].'%';
         $results = [];
@@ -274,13 +270,11 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function update(Request $request, Project $project)
+    public function update(UpdateProjectRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-        ]);
+        $validated = $request->validated();
 
         $project->update($validated);
 

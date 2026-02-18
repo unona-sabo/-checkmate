@@ -2,6 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Release\LinkTestRunRequest;
+use App\Http\Requests\Release\StoreReleaseChecklistItemRequest;
+use App\Http\Requests\Release\StoreReleaseFeatureRequest;
+use App\Http\Requests\Release\StoreReleaseRequest;
+use App\Http\Requests\Release\UpdateReleaseChecklistItemRequest;
+use App\Http\Requests\Release\UpdateReleaseFeatureRequest;
+use App\Http\Requests\Release\UpdateReleaseRequest;
 use App\Models\Project;
 use App\Models\Release;
 use App\Models\ReleaseChecklistItem;
@@ -9,7 +16,6 @@ use App\Models\ReleaseFeature;
 use App\Models\TestRun;
 use App\Services\ReleaseMetricsCalculator;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -46,16 +52,11 @@ class ReleaseController extends Controller
         ]);
     }
 
-    public function store(Request $request, Project $project): RedirectResponse
+    public function store(StoreReleaseRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'version' => ['required', 'string', 'max:50'],
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'planned_date' => ['nullable', 'date'],
-        ]);
+        $validated = $request->validated();
 
         $release = $project->releases()->create([
             ...$validated,
@@ -128,22 +129,12 @@ class ReleaseController extends Controller
         ]);
     }
 
-    public function update(Request $request, Project $project, Release $release): RedirectResponse
+    public function update(UpdateReleaseRequest $request, Project $project, Release $release): RedirectResponse
     {
         $this->authorize('update', $project);
         abort_unless($release->project_id === $project->id, 404);
 
-        $validated = $request->validate([
-            'version' => ['sometimes', 'string', 'max:50'],
-            'name' => ['sometimes', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'planned_date' => ['nullable', 'date'],
-            'actual_date' => ['nullable', 'date'],
-            'status' => ['sometimes', 'string', 'max:30'],
-            'health' => ['sometimes', 'string', 'max:10'],
-            'decision' => ['sometimes', 'string', 'max:30'],
-            'decision_notes' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         $release->update($validated);
 
@@ -173,38 +164,25 @@ class ReleaseController extends Controller
         return back();
     }
 
-    public function storeFeature(Request $request, Project $project, Release $release): RedirectResponse
+    public function storeFeature(StoreReleaseFeatureRequest $request, Project $project, Release $release): RedirectResponse
     {
         $this->authorize('update', $project);
         abort_unless($release->project_id === $project->id, 404);
 
-        $validated = $request->validate([
-            'feature_id' => ['nullable', 'exists:project_features,id'],
-            'feature_name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'status' => ['sometimes', 'string', 'max:30'],
-        ]);
+        $validated = $request->validated();
 
         $release->features()->create($validated);
 
         return back();
     }
 
-    public function updateFeature(Request $request, Project $project, Release $release, ReleaseFeature $releaseFeature): RedirectResponse
+    public function updateFeature(UpdateReleaseFeatureRequest $request, Project $project, Release $release, ReleaseFeature $releaseFeature): RedirectResponse
     {
         $this->authorize('update', $project);
         abort_unless($release->project_id === $project->id, 404);
         abort_unless($releaseFeature->release_id === $release->id, 404);
 
-        $validated = $request->validate([
-            'feature_name' => ['sometimes', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'status' => ['sometimes', 'string', 'max:30'],
-            'test_coverage_percentage' => ['sometimes', 'integer', 'min:0', 'max:100'],
-            'tests_planned' => ['sometimes', 'integer', 'min:0'],
-            'tests_executed' => ['sometimes', 'integer', 'min:0'],
-            'tests_passed' => ['sometimes', 'integer', 'min:0'],
-        ]);
+        $validated = $request->validated();
 
         $releaseFeature->update($validated);
 
@@ -222,18 +200,12 @@ class ReleaseController extends Controller
         return back();
     }
 
-    public function storeChecklistItem(Request $request, Project $project, Release $release): RedirectResponse
+    public function storeChecklistItem(StoreReleaseChecklistItemRequest $request, Project $project, Release $release): RedirectResponse
     {
         $this->authorize('update', $project);
         abort_unless($release->project_id === $project->id, 404);
 
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'string', 'max:30'],
-            'description' => ['nullable', 'string'],
-            'priority' => ['sometimes', 'string', 'max:20'],
-            'is_blocker' => ['sometimes', 'boolean'],
-        ]);
+        $validated = $request->validated();
 
         $maxOrder = $release->checklistItems()
             ->where('category', $validated['category'])
@@ -247,22 +219,13 @@ class ReleaseController extends Controller
         return back();
     }
 
-    public function updateChecklistItem(Request $request, Project $project, Release $release, ReleaseChecklistItem $item): RedirectResponse
+    public function updateChecklistItem(UpdateReleaseChecklistItemRequest $request, Project $project, Release $release, ReleaseChecklistItem $item): RedirectResponse
     {
         $this->authorize('update', $project);
         abort_unless($release->project_id === $project->id, 404);
         abort_unless($item->release_id === $release->id, 404);
 
-        $validated = $request->validate([
-            'title' => ['sometimes', 'string', 'max:255'],
-            'category' => ['sometimes', 'string', 'max:30'],
-            'description' => ['nullable', 'string'],
-            'status' => ['sometimes', 'string', 'max:20'],
-            'priority' => ['sometimes', 'string', 'max:20'],
-            'assigned_to' => ['nullable', 'exists:users,id'],
-            'notes' => ['nullable', 'string'],
-            'is_blocker' => ['sometimes', 'boolean'],
-        ]);
+        $validated = $request->validated();
 
         if (isset($validated['status']) && $validated['status'] === 'completed') {
             $validated['completed_at'] = now();
@@ -286,14 +249,12 @@ class ReleaseController extends Controller
         return back();
     }
 
-    public function linkTestRun(Request $request, Project $project, Release $release): RedirectResponse
+    public function linkTestRun(LinkTestRunRequest $request, Project $project, Release $release): RedirectResponse
     {
         $this->authorize('update', $project);
         abort_unless($release->project_id === $project->id, 404);
 
-        $validated = $request->validate([
-            'test_run_id' => ['required', 'exists:test_runs,id'],
-        ]);
+        $validated = $request->validated();
 
         $testRun = TestRun::findOrFail($validated['test_run_id']);
         abort_unless($testRun->project_id === $project->id, 422);

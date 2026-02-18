@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Bugreport\StoreBugreportRequest;
+use App\Http\Requests\Bugreport\UpdateBugreportRequest;
 use App\Models\Attachment;
 use App\Models\Bugreport;
 use App\Models\ChecklistRow;
 use App\Models\Project;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -46,29 +47,11 @@ class BugreportController extends Controller
         ]);
     }
 
-    public function store(Request $request, Project $project)
+    public function store(StoreBugreportRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'steps_to_reproduce' => 'nullable|string',
-            'expected_result' => 'nullable|string',
-            'actual_result' => 'nullable|string',
-            'severity' => 'required|in:critical,major,minor,trivial',
-            'priority' => 'required|in:high,medium,low',
-            'status' => 'required|in:new,open,in_progress,resolved,closed,reopened',
-            'environment' => 'nullable|string',
-            'assigned_to' => 'nullable|exists:users,id',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
-            'checklist_id' => 'nullable|integer|exists:checklists,id',
-            'checklist_row_ids' => 'nullable|string',
-            'checklist_link_column' => 'nullable|string|max:255',
-            'feature_ids' => 'nullable|array',
-            'feature_ids.*' => 'exists:project_features,id',
-        ]);
+        $validated = $request->validated();
 
         $validated['reported_by'] = auth()->id();
 
@@ -130,26 +113,11 @@ class BugreportController extends Controller
         ]);
     }
 
-    public function update(Request $request, Project $project, Bugreport $bugreport)
+    public function update(UpdateBugreportRequest $request, Project $project, Bugreport $bugreport)
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'steps_to_reproduce' => 'nullable|string',
-            'expected_result' => 'nullable|string',
-            'actual_result' => 'nullable|string',
-            'severity' => 'required|in:critical,major,minor,trivial',
-            'priority' => 'required|in:high,medium,low',
-            'status' => 'required|in:new,open,in_progress,resolved,closed,reopened',
-            'environment' => 'nullable|string',
-            'assigned_to' => 'nullable|exists:users,id',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
-            'feature_ids' => 'nullable|array',
-            'feature_ids.*' => 'exists:project_features,id',
-        ]);
+        $validated = $request->validated();
 
         $bugreport->update(collect($validated)->except(['attachments', 'feature_ids'])->toArray());
         $bugreport->projectFeatures()->sync($validated['feature_ids'] ?? []);

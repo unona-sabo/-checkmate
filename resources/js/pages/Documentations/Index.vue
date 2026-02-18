@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { FileText, Plus, Search, X, FolderTree, ExternalLink, ChevronRight } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { useSearch } from '@/composables/useSearch';
 
 interface Documentation {
     id: number;
@@ -30,7 +31,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Documentations', href: `/projects/${props.project.id}/documentations` },
 ];
 
-const searchQuery = ref('');
+const { searchQuery, highlight } = useSearch();
 
 const filterDocs = (docs: Documentation[]): Documentation[] => {
     if (!searchQuery.value.trim()) return docs;
@@ -46,16 +47,6 @@ const filterDocs = (docs: Documentation[]): Documentation[] => {
 const filteredDocs = computed(() => filterDocs(props.documentations));
 
 const filteredChildren = (children: Documentation[]): Documentation[] => filterDocs(children);
-
-const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-const highlight = (text: string): string => {
-    const safe = escapeHtml(text);
-    if (!searchQuery.value.trim()) return safe;
-    const query = escapeRegExp(searchQuery.value.trim());
-    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
-};
 
 const highlightDescription = (content: string): string => {
     const plain = content.replace(/<[^>]*>/g, '').substring(0, 200) + '...';

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ref, computed } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { severityVariant, bugStatusVariant } from '@/lib/badge-variants';
+import { useSearch } from '@/composables/useSearch';
 
 interface Bugreport {
     id: number;
@@ -38,7 +39,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Bugreports', href: `/projects/${props.project.id}/bugreports` },
 ];
 
-const searchQuery = ref('');
+const { searchQuery, highlight } = useSearch();
 
 // Filters
 const showFilters = ref(false);
@@ -94,14 +95,6 @@ const filteredBugreports = computed(() => {
     });
 });
 
-const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const highlight = (text: string): string => {
-    const safe = escapeHtml(text);
-    if (!searchQuery.value.trim()) return safe;
-    const query = escapeRegExp(searchQuery.value.trim());
-    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
-};
 </script>
 
 <template>

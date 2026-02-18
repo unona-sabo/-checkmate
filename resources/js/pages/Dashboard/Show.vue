@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useSearch } from '@/composables/useSearch';
 import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { home } from '@/routes';
@@ -65,16 +66,7 @@ const sectionIcons: Record<string, typeof ClipboardList> = {
 };
 
 // Search
-const searchQuery = ref('');
-
-const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const highlight = (text: string): string => {
-    const safe = escapeHtml(text);
-    if (!searchQuery.value.trim()) return safe;
-    const query = escapeRegExp(searchQuery.value.trim());
-    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
-};
+const { searchQuery, highlight } = useSearch();
 
 // Sort
 const sortDirection = ref<'asc' | 'desc'>('asc');

@@ -32,7 +32,6 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('home', [HomeController::class, 'index'])->name('home');
-    Route::post('home/sync', [HomeController::class, 'sync'])->name('home.sync');
     Route::get('home/{section}', [HomeController::class, 'show'])->name('home.show');
     Route::post('home/{section}/features', [HomeController::class, 'storeFeature'])->name('home.store-feature');
     Route::put('home/{section}/features/{featureDescription}', [HomeController::class, 'updateFeature'])->name('home.update-feature');

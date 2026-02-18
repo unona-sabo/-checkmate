@@ -145,8 +145,10 @@ test('section dates come from feature descriptions', function () {
 
     FeatureDescription::factory()->create([
         'section_key' => 'checklists',
-        'created_at' => '2026-01-10 10:00:00',
-        'updated_at' => '2026-02-15 14:00:00',
+        'feature_index' => 900,
+        'updated_by' => $user->id,
+        'created_at' => '2020-01-01 00:00:00',
+        'updated_at' => '2099-12-31 23:59:59',
     ]);
 
     $response = $this->actingAs($user)->get(route('home'));
@@ -154,8 +156,8 @@ test('section dates come from feature descriptions', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->where('sections.0.key', 'checklists')
-        ->where('sections.0.latest_created_at', '2026-01-10T10:00:00.000000Z')
-        ->where('sections.0.latest_updated_at', '2026-02-15T14:00:00.000000Z')
+        ->where('sections.0.latest_created_at', '2020-01-01T00:00:00.000000Z')
+        ->where('sections.0.latest_updated_at', '2099-12-31T23:59:59.000000Z')
     );
 });
 
@@ -208,6 +210,7 @@ test('home page shows edited feature titles from database', function () {
         'section_key' => 'checklists',
         'feature_index' => 0,
         'title' => 'Edited feature title',
+        'updated_by' => $user->id,
     ]);
 
     $response = $this->actingAs($user)->get(route('home'));
@@ -224,26 +227,28 @@ test('home page excludes deleted features', function () {
 
     FeatureDescription::factory()->create([
         'section_key' => 'checklists',
-        'feature_index' => 0,
-        'title' => 'Active feature',
+        'feature_index' => 900,
+        'title' => 'Active custom feature',
+        'updated_by' => $user->id,
     ]);
 
     FeatureDescription::factory()->create([
         'section_key' => 'checklists',
-        'feature_index' => 1,
-        'title' => 'Deleted feature',
+        'feature_index' => 901,
+        'title' => 'Deleted custom feature',
         'deleted_at' => now(),
     ]);
 
     $response = $this->actingAs($user)->get(route('home'));
 
     $response->assertOk();
-    $response->assertInertia(fn ($page) => $page
-        ->where('sections.0.features', ['Active feature'])
-    );
+
+    $features = $response->original->getData()['page']['props']['sections'][0]['features'];
+    expect($features)->toContain('Active custom feature');
+    expect($features)->not->toContain('Deleted custom feature');
 });
 
-test('home page falls back to config features when no db records exist', function () {
+test('home page syncs and displays config features on first load', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get(route('home'));
@@ -255,25 +260,18 @@ test('home page falls back to config features when no db records exist', functio
     );
 });
 
-test('sync endpoint syncs features for all sections', function () {
+test('home page auto-syncs features for all sections on first load', function () {
     $user = User::factory()->create();
 
     $this->assertDatabaseCount('feature_descriptions', 0);
 
-    $response = $this->actingAs($user)->post(route('home.sync'));
+    $this->actingAs($user)->get(route('home'));
 
-    $response->assertRedirect();
-
-    // All 11 sections synced: 26 + 20 + 20 + 14 + 8 + 14 + 14 + 16 + 18 + 12 + 12 = 174
     expect(FeatureDescription::count())->toBeGreaterThan(0);
 
     // Verify features exist for all sections
     $sectionKeys = FeatureDescription::query()->distinct()->pluck('section_key')->sort()->values()->all();
     expect($sectionKeys)->toBe(['automation', 'bugreports', 'checklists', 'design', 'documentations', 'notes', 'releases', 'test-coverage', 'test-data', 'test-runs', 'test-suites']);
-});
-
-test('sync endpoint requires authentication', function () {
-    $this->post(route('home.sync'))->assertRedirect(route('login'));
 });
 
 test('show page returns 404 for invalid section', function () {

@@ -13,15 +13,6 @@ test('home page populates cache on visit', function () {
     expect(Cache::store('file')->has('home_sections'))->toBeTrue();
 });
 
-test('sync invalidates home cache', function () {
-    $user = User::factory()->create();
-    Cache::store('file')->put('home_sections', ['cached'], 300);
-
-    $this->actingAs($user)->post(route('home.sync'));
-
-    expect(Cache::store('file')->has('home_sections'))->toBeFalse();
-});
-
 test('store feature invalidates home cache', function () {
     $user = User::factory()->create();
     Cache::store('file')->put('home_sections', ['stale_cached_value'], 300);

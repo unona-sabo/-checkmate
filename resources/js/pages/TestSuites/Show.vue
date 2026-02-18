@@ -14,6 +14,7 @@ import RestrictedAction from '@/components/RestrictedAction.vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
 import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
 import { ref, computed } from 'vue';
+import { useSearch } from '@/composables/useSearch';
 
 const props = defineProps<{
     project: Project;
@@ -105,7 +106,7 @@ const totalTestCases = computed(() => {
 const isSaving = ref(false);
 
 // Search
-const searchQuery = ref('');
+const { searchQuery, highlight } = useSearch();
 
 const filteredSections = computed(() => {
     if (!searchQuery.value.trim()) return suiteSections.value;
@@ -117,15 +118,6 @@ const filteredSections = computed(() => {
         }))
         .filter(section => section.testCases.length > 0 || section.name.toLowerCase().includes(query));
 });
-
-const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const highlight = (text: string): string => {
-    const safe = escapeHtml(text);
-    if (!searchQuery.value.trim()) return safe;
-    const query = escapeRegExp(searchQuery.value.trim());
-    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
-};
 
 // Drag and drop state per section
 const dragState = ref<{

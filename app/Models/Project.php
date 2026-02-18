@@ -185,6 +185,10 @@ class Project extends Model
      */
     public function users()
     {
-        return User::query();
+        if ($this->workspace_id) {
+            return $this->workspace->members();
+        }
+
+        return User::where('id', $this->user_id);
     }
 }
