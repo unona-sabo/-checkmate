@@ -264,7 +264,7 @@ test('sync endpoint syncs features for all sections', function () {
 
     $response->assertRedirect();
 
-    // All 11 sections synced: 26 + 18 + 20 + 14 + 8 + 14 + 14 + 16 + 18 + 12 + 12 = 172
+    // All 11 sections synced: 26 + 20 + 20 + 14 + 8 + 14 + 14 + 16 + 18 + 12 + 12 = 174
     expect(FeatureDescription::count())->toBeGreaterThan(0);
 
     // Verify features exist for all sections

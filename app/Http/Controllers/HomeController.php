@@ -236,6 +236,8 @@ class HomeController extends Controller
                     'Feature linking per test case with inline quick-create',
                     'Filter test cases by linked feature on index page',
                     'Feature linking per test suite with inline quick-create',
+                    'Cross-project bulk copy with attachments, features, and notes',
+                    'Bulk group selected test cases into new subcategory',
                 ],
                 'model' => TestSuite::class,
             ],

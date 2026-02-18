@@ -83,6 +83,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('test-suites/reorder-cases', [TestCaseController::class, 'reorderAcrossSuites'])->name('reorder-cases');
         Route::post('test-suites/bulk-delete-cases', [TestCaseController::class, 'bulkDestroy'])->name('bulk-destroy-cases');
         Route::post('test-suites/bulk-copy-cases', [TestCaseController::class, 'bulkCopy'])->name('bulk-copy-cases');
+        Route::get('test-suites/copy-projects', [TestSuiteController::class, 'copyProjects'])->name('copy-projects');
+        Route::get('test-suites/copy-suites', [TestSuiteController::class, 'copySuites'])->name('copy-suites');
         Route::get('test-suites/{testSuite}', [TestSuiteController::class, 'show'])->name('show');
         Route::get('test-suites/{testSuite}/edit', [TestSuiteController::class, 'edit'])->name('edit');
         Route::put('test-suites/{testSuite}', [TestSuiteController::class, 'update'])->name('update');

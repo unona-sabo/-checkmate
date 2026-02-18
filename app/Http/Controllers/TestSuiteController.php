@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -73,10 +75,13 @@ class TestSuiteController extends Controller
             'order' => 'nullable|integer',
             'feature_ids' => 'nullable|array',
             'feature_ids.*' => 'exists:project_features,id',
+            'test_case_ids' => 'nullable|array',
+            'test_case_ids.*' => 'exists:test_cases,id',
         ]);
 
+        $testCaseIds = $validated['test_case_ids'] ?? [];
         $featureIds = $validated['feature_ids'] ?? [];
-        unset($validated['feature_ids']);
+        unset($validated['feature_ids'], $validated['test_case_ids']);
 
         $maxOrder = $project->testSuites()
             ->where('parent_id', $validated['parent_id'] ?? null)
@@ -86,6 +91,23 @@ class TestSuiteController extends Controller
 
         $testSuite = $project->testSuites()->create($validated);
         $testSuite->projectFeatures()->sync($featureIds);
+
+        if ($testCaseIds) {
+            $projectSuiteIds = $project->testSuites()->pluck('id');
+
+            TestCase::whereIn('id', $testCaseIds)
+                ->whereIn('test_suite_id', $projectSuiteIds)
+                ->update(['test_suite_id' => $testSuite->id]);
+
+            // Re-order sequentially
+            TestCase::where('test_suite_id', $testSuite->id)
+                ->orderBy('order')
+                ->get()
+                ->each(fn (TestCase $tc, int $i) => $tc->update(['order' => $i + 1]));
+
+            return redirect()->route('test-suites.index', $project)
+                ->with('success', 'Test suite created and test cases moved successfully.');
+        }
 
         return redirect()->route('test-suites.show', [$project, $testSuite])
             ->with('success', 'Test suite created successfully.');
@@ -159,6 +181,37 @@ class TestSuiteController extends Controller
 
         return redirect()->route('test-suites.index', $project)
             ->with('success', 'Test suite deleted successfully.');
+    }
+
+    public function copyProjects(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $workspace = $request->attributes->get('workspace');
+
+        $projects = $workspace
+            ? $workspace->projects()->select('id', 'name')->orderBy('name')->get()
+            : $request->user()->projects()->select('id', 'name')->orderBy('name')->get();
+
+        return response()->json($projects);
+    }
+
+    public function copySuites(Request $request, Project $project): JsonResponse
+    {
+        $validated = $request->validate([
+            'project_id' => 'required|integer|exists:projects,id',
+        ]);
+
+        $targetProject = Project::findOrFail($validated['project_id']);
+        $this->authorize('update', $targetProject);
+
+        $suites = $targetProject->testSuites()
+            ->whereNull('parent_id')
+            ->with('children:id,parent_id,name')
+            ->orderBy('name')
+            ->get(['id', 'project_id', 'parent_id', 'name']);
+
+        return response()->json($suites);
     }
 
     public function reorder(Request $request, Project $project)

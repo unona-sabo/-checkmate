@@ -4,7 +4,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite, type TestCase } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil, Filter } from 'lucide-vue-next';
+import { Plus, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil, Filter, Loader2 } from 'lucide-vue-next';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
     DropdownMenu,
@@ -34,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
+import FeatureSelector from '@/components/FeatureSelector.vue';
 import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
 import { ref, computed, onMounted, watch } from 'vue';
 
@@ -574,12 +576,25 @@ const createTestRun = () => {
 
 // Copy to Test Suite dialog
 const showCopyDialog = ref(false);
+const copyTargetProjectId = ref('');
 const copyTargetSuiteId = ref('');
 const isCopying = ref(false);
+const copyAttachments = ref(true);
+const copyFeatures = ref(true);
+const copyNotes = ref(true);
+const availableProjects = ref<{ id: number; name: string }[]>([]);
+const availableSuites = ref<{ id: number; name: string; children?: { id: number; name: string }[] }[]>([]);
+const loadingProjects = ref(false);
+const loadingSuites = ref(false);
+
+const isCrossProject = computed(() => {
+    return copyTargetProjectId.value && Number(copyTargetProjectId.value) !== props.project.id;
+});
 
 const allSuiteOptions = computed(() => {
     const options: { id: number; name: string; label: string }[] = [];
-    props.testSuites.forEach(suite => {
+    const source = isCrossProject.value ? availableSuites.value : props.testSuites;
+    source.forEach(suite => {
         options.push({ id: suite.id, name: suite.name, label: suite.name });
         suite.children?.forEach(child => {
             options.push({ id: child.id, name: child.name, label: `${suite.name} / ${child.name}` });
@@ -589,9 +604,40 @@ const allSuiteOptions = computed(() => {
 });
 
 const openCopyDialog = () => {
+    copyTargetProjectId.value = String(props.project.id);
     copyTargetSuiteId.value = '';
+    copyAttachments.value = true;
+    copyFeatures.value = true;
+    copyNotes.value = true;
+    availableSuites.value = [];
     showCopyDialog.value = true;
+
+    loadingProjects.value = true;
+    fetch(`/projects/${props.project.id}/test-suites/copy-projects`, {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    })
+        .then(res => res.json())
+        .then(data => { availableProjects.value = data; })
+        .finally(() => { loadingProjects.value = false; });
 };
+
+watch(copyTargetProjectId, (newVal) => {
+    copyTargetSuiteId.value = '';
+    if (!newVal) return;
+
+    if (Number(newVal) === props.project.id) {
+        availableSuites.value = [];
+        return;
+    }
+
+    loadingSuites.value = true;
+    fetch(`/projects/${props.project.id}/test-suites/copy-suites?project_id=${newVal}`, {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    })
+        .then(res => res.json())
+        .then(data => { availableSuites.value = data; })
+        .finally(() => { loadingSuites.value = false; });
+});
 
 const copyToSuite = () => {
     if (!copyTargetSuiteId.value || selectedTestCaseIds.value.length === 0) return;
@@ -600,6 +646,10 @@ const copyToSuite = () => {
     router.post(`/projects/${props.project.id}/test-suites/bulk-copy-cases`, {
         test_case_ids: selectedTestCaseIds.value,
         target_suite_id: Number(copyTargetSuiteId.value),
+        target_project_id: isCrossProject.value ? Number(copyTargetProjectId.value) : null,
+        copy_attachments: copyAttachments.value,
+        copy_features: copyFeatures.value,
+        copy_notes: copyNotes.value,
     }, {
         preserveState: false,
         onSuccess: () => {
@@ -644,13 +694,33 @@ const deleteTestCases = () => {
 const showSubcategoryDialog = ref(false);
 const subcategoryParentId = ref('');
 const subcategoryName = ref('');
+const subcategoryDescription = ref('');
 const subcategoryType = ref('functional');
+const subcategoryFeatureIds = ref<number[]>([]);
 const isCreatingSubcategory = ref(false);
 
 const openSubcategoryDialog = () => {
-    subcategoryParentId.value = '';
     subcategoryName.value = '';
+    subcategoryDescription.value = '';
     subcategoryType.value = 'functional';
+    subcategoryFeatureIds.value = [];
+
+    // Auto-detect parent suite from first selected test case
+    const firstId = selectedTestCaseIds.value[0];
+    let detectedParentId = '';
+    if (firstId) {
+        for (const suite of props.testSuites) {
+            if (suite.test_cases?.some(tc => tc.id === firstId)) {
+                detectedParentId = String(suite.id);
+                break;
+            }
+            if (suite.children?.some(child => child.test_cases?.some(tc => tc.id === firstId))) {
+                detectedParentId = String(suite.id);
+                break;
+            }
+        }
+    }
+    subcategoryParentId.value = detectedParentId;
     showSubcategoryDialog.value = true;
 };
 
@@ -660,13 +730,17 @@ const createSubcategory = () => {
 
     router.post(`/projects/${props.project.id}/test-suites`, {
         name: subcategoryName.value.trim(),
+        description: subcategoryDescription.value || null,
         type: subcategoryType.value,
         parent_id: Number(subcategoryParentId.value),
+        feature_ids: subcategoryFeatureIds.value,
+        test_case_ids: selectedTestCaseIds.value,
     }, {
         preserveState: false,
         onSuccess: () => {
             showSubcategoryDialog.value = false;
             isCreatingSubcategory.value = false;
+            selectedTestCaseIds.value = [];
         },
         onError: () => {
             isCreatingSubcategory.value = false;
@@ -1604,7 +1678,7 @@ onMounted(() => {
 
         <!-- Copy to Test Suite Dialog -->
         <Dialog v-model:open="showCopyDialog">
-            <DialogContent class="max-w-sm">
+            <DialogContent class="max-w-md">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <Copy class="h-5 w-5 text-primary" />
@@ -1616,8 +1690,29 @@ onMounted(() => {
                 </DialogHeader>
                 <div class="py-4 space-y-4">
                     <div class="space-y-2">
+                        <Label>Destination Project</Label>
+                        <Select v-model="copyTargetProjectId" :disabled="loadingProjects">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select project..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="p in availableProjects"
+                                    :key="p.id"
+                                    :value="String(p.id)"
+                                >
+                                    {{ p.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div class="space-y-2">
                         <Label>Target Suite</Label>
-                        <Select v-model="copyTargetSuiteId">
+                        <div v-if="loadingSuites" class="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                            <Loader2 class="h-4 w-4 animate-spin" />
+                            Loading suites...
+                        </div>
+                        <Select v-else v-model="copyTargetSuiteId" :disabled="!copyTargetProjectId">
                             <SelectTrigger>
                                 <SelectValue placeholder="Select suite..." />
                             </SelectTrigger>
@@ -1631,6 +1726,24 @@ onMounted(() => {
                                 </SelectItem>
                             </SelectContent>
                         </Select>
+                    </div>
+                    <div class="space-y-3 pt-2 border-t">
+                        <Label class="text-sm font-medium">Copy Options</Label>
+                        <div class="flex items-center gap-2">
+                            <Checkbox id="copy-attachments" :checked="copyAttachments" @update:checked="copyAttachments = $event" />
+                            <label for="copy-attachments" class="text-sm cursor-pointer">Copy attachments</label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <Checkbox id="copy-features" :checked="copyFeatures" @update:checked="copyFeatures = $event" />
+                            <label for="copy-features" class="text-sm cursor-pointer">
+                                Copy feature links
+                                <span v-if="isCrossProject" class="text-muted-foreground">(matched by name)</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <Checkbox id="copy-notes" :checked="copyNotes" @update:checked="copyNotes = $event" />
+                            <label for="copy-notes" class="text-sm cursor-pointer">Copy notes</label>
+                        </div>
                     </div>
                 </div>
                 <DialogFooter class="flex gap-2 sm:justify-end">
@@ -1649,21 +1762,17 @@ onMounted(() => {
         <Dialog v-model:open="showDeleteDialog">
             <DialogContent class="max-w-sm">
                 <DialogHeader>
-                    <DialogTitle class="flex items-center gap-2 text-destructive">
-                        <Trash2 class="h-5 w-5" />
-                        Delete Test Cases
-                    </DialogTitle>
+                    <DialogTitle>Delete Test Cases?</DialogTitle>
                     <DialogDescription>
-                        Delete {{ selectedTestCaseIds.length }} test case{{ selectedTestCaseIds.length !== 1 ? 's' : '' }}? This action cannot be undone.
+                        Are you sure you want to delete {{ selectedTestCaseIds.length }} test case{{ selectedTestCaseIds.length !== 1 ? 's' : '' }}? This action cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
-                <DialogFooter class="flex gap-2 sm:justify-end pt-4">
-                    <Button variant="outline" @click="showDeleteDialog = false">
-                        Cancel
+                <DialogFooter class="flex gap-4 sm:justify-end">
+                    <Button variant="secondary" @click="showDeleteDialog = false" class="flex-1 sm:flex-none">
+                        No
                     </Button>
-                    <Button variant="destructive" @click="deleteTestCases" :disabled="isDeleting" class="gap-2">
-                        <Trash2 class="h-4 w-4" />
-                        {{ isDeleting ? 'Deleting...' : 'Delete' }}
+                    <Button variant="destructive" @click="deleteTestCases" :disabled="isDeleting" class="flex-1 sm:flex-none">
+                        {{ isDeleting ? 'Deleting...' : 'Yes' }}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -1671,17 +1780,17 @@ onMounted(() => {
 
         <!-- Create Subcategory Dialog -->
         <Dialog v-model:open="showSubcategoryDialog">
-            <DialogContent class="max-w-sm">
+            <DialogContent class="max-w-lg">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <FolderPlus class="h-5 w-5 text-primary" />
-                        Create Subcategory
+                        Group into Subcategory
                     </DialogTitle>
                     <DialogDescription>
-                        Create a new subcategory under an existing test suite.
+                        Create a new subcategory and move {{ selectedTestCaseIds.length }} selected test case{{ selectedTestCaseIds.length === 1 ? '' : 's' }} into it.
                     </DialogDescription>
                 </DialogHeader>
-                <div class="py-4 space-y-4">
+                <div class="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
                     <div class="space-y-2">
                         <Label>Parent Suite</Label>
                         <Select v-model="subcategoryParentId">
@@ -1704,6 +1813,10 @@ onMounted(() => {
                         <Input id="sub-name" v-model="subcategoryName" placeholder="Subcategory name..." />
                     </div>
                     <div class="space-y-2">
+                        <Label for="sub-description">Description</Label>
+                        <Textarea id="sub-description" v-model="subcategoryDescription" placeholder="Optional description..." rows="2" />
+                    </div>
+                    <div class="space-y-2">
                         <Label>Type</Label>
                         <Select v-model="subcategoryType">
                             <SelectTrigger>
@@ -1722,6 +1835,12 @@ onMounted(() => {
                             </SelectContent>
                         </Select>
                     </div>
+                    <FeatureSelector
+                        v-if="availableFeatures.length"
+                        :features="availableFeatures"
+                        v-model="subcategoryFeatureIds"
+                        :project-id="project.id"
+                    />
                 </div>
                 <DialogFooter class="flex gap-2 sm:justify-end">
                     <Button variant="outline" @click="showSubcategoryDialog = false">
@@ -1729,7 +1848,7 @@ onMounted(() => {
                     </Button>
                     <Button @click="createSubcategory" :disabled="!subcategoryParentId || !subcategoryName.trim() || isCreatingSubcategory" class="gap-2">
                         <FolderPlus class="h-4 w-4" />
-                        {{ isCreatingSubcategory ? 'Creating...' : 'Create' }}
+                        {{ isCreatingSubcategory ? 'Creating...' : 'Create & Move' }}
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -257,20 +257,48 @@ class TestCaseController extends Controller
             'test_case_ids' => 'required|array|min:1',
             'test_case_ids.*' => 'exists:test_cases,id',
             'target_suite_id' => 'required|exists:test_suites,id',
+            'target_project_id' => 'nullable|integer|exists:projects,id',
+            'copy_attachments' => 'boolean',
+            'copy_features' => 'boolean',
+            'copy_notes' => 'boolean',
         ]);
+
+        $copyAttachments = $validated['copy_attachments'] ?? false;
+        $copyFeatures = $validated['copy_features'] ?? false;
+        $copyNotes = $validated['copy_notes'] ?? false;
+
+        $targetProjectId = $validated['target_project_id'] ?? $project->id;
+        $isCrossProject = $targetProjectId !== $project->id;
+
+        if ($isCrossProject) {
+            $targetProject = Project::findOrFail($targetProjectId);
+            $this->authorize('update', $targetProject);
+            $targetSuiteIds = $targetProject->testSuites()->pluck('id');
+        } else {
+            $targetSuiteIds = $project->testSuites()->pluck('id');
+        }
+
+        if (! $targetSuiteIds->contains($validated['target_suite_id'])) {
+            return back()->withErrors(['target_suite_id' => 'Target suite does not belong to the target project.']);
+        }
 
         $projectSuiteIds = $project->testSuites()->pluck('id');
 
-        if (! $projectSuiteIds->contains($validated['target_suite_id'])) {
-            return back()->withErrors(['target_suite_id' => 'Target suite does not belong to this project.']);
-        }
-
         $testCases = TestCase::whereIn('id', $validated['test_case_ids'])
             ->whereIn('test_suite_id', $projectSuiteIds)
+            ->with(['attachments', 'projectFeatures', 'note'])
             ->orderBy('order')
             ->get();
 
         $maxOrder = TestCase::where('test_suite_id', $validated['target_suite_id'])->max('order') ?? 0;
+
+        $targetFeatureMap = null;
+        if ($copyFeatures && $isCrossProject) {
+            $targetFeatureMap = Project::findOrFail($targetProjectId)
+                ->features()
+                ->where('is_active', true)
+                ->pluck('id', 'name');
+        }
 
         foreach ($testCases as $testCase) {
             $maxOrder++;
@@ -279,6 +307,42 @@ class TestCaseController extends Controller
             $replica->order = $maxOrder;
             $replica->created_by = auth()->id();
             $replica->save();
+
+            if ($copyAttachments && $testCase->attachments->isNotEmpty()) {
+                foreach ($testCase->attachments as $attachment) {
+                    if (Storage::disk('public')->exists($attachment->stored_path)) {
+                        $extension = pathinfo($attachment->stored_path, PATHINFO_EXTENSION);
+                        $newPath = 'attachments/test-cases/'.uniqid().'.'.$extension;
+                        Storage::disk('public')->copy($attachment->stored_path, $newPath);
+
+                        $replica->attachments()->create([
+                            'original_filename' => $attachment->original_filename,
+                            'stored_path' => $newPath,
+                            'mime_type' => $attachment->mime_type,
+                            'size' => $attachment->size,
+                        ]);
+                    }
+                }
+            }
+
+            if ($copyFeatures && $testCase->projectFeatures->isNotEmpty()) {
+                if ($isCrossProject && $targetFeatureMap) {
+                    $matchedIds = $testCase->projectFeatures
+                        ->map(fn ($f) => $targetFeatureMap->get($f->name))
+                        ->filter()
+                        ->values()
+                        ->all();
+                    if ($matchedIds) {
+                        $replica->projectFeatures()->sync($matchedIds);
+                    }
+                } else {
+                    $replica->projectFeatures()->sync($testCase->projectFeatures->pluck('id'));
+                }
+            }
+
+            if ($copyNotes && $testCase->note) {
+                $replica->note()->create(['content' => $testCase->note->content]);
+            }
         }
 
         return back()->with('success', $testCases->count().' test case(s) copied.');
