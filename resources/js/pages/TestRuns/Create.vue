@@ -29,6 +29,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const form = useForm({
     name: '',
     description: '',
+    priority: '' as string,
     environment: '',
     milestone: '',
     test_case_ids: [] as number[],
@@ -146,6 +147,22 @@ const submit = () => {
                                     placeholder="Describe the purpose of this test run..."
                                     rows="2"
                                 />
+                            </div>
+
+                            <div class="space-y-2">
+                                <Label>Priority</Label>
+                                <Select v-model="form.priority">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select priority..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="low">Low</SelectItem>
+                                        <SelectItem value="medium">Medium</SelectItem>
+                                        <SelectItem value="high">High</SelectItem>
+                                        <SelectItem value="critical">Critical</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError :message="form.errors.priority" />
                             </div>
 
                             <div class="space-y-2">

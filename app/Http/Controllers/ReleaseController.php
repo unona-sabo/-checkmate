@@ -81,15 +81,29 @@ class ReleaseController extends Controller
             'creator:id,name',
         ]);
 
+        // Auto-refresh metrics on every page load
+        $snapshot = $this->metricsCalculator->createSnapshot($release);
+        $health = $this->metricsCalculator->determineHealth($snapshot->toArray());
+        $release->update(['health' => $health]);
+        $release->setRelation('latestMetrics', $snapshot);
+
         $blockers = $release->checklistItems
             ->where('is_blocker', true)
             ->where('status', '!=', 'completed')
             ->count();
 
+        $snapshotArray = $snapshot->toArray();
+        $liveMetrics = [
+            'readiness' => $this->metricsCalculator->calculateReadinessScore($release, $snapshotArray),
+            'blockers_and_risks' => $this->metricsCalculator->getBlockersAndRisks($release, $snapshotArray),
+            'comparison' => $this->metricsCalculator->compareWithPreviousRelease($release, $snapshotArray),
+        ];
+
         return Inertia::render('Releases/Show', [
             'project' => $project,
             'release' => $release,
             'blockers' => $blockers,
+            'liveMetrics' => $liveMetrics,
             'projectFeatures' => Inertia::defer(fn () => $project->features()
                 ->where('is_active', true)
                 ->orderBy('name')

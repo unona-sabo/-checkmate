@@ -25,6 +25,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Plus, ClipboardList, FileText, StickyNote, Import, Pencil, Trash2, X, Search, GripVertical, ChevronDown, ChevronRight, Tag, FolderOpen } from 'lucide-vue-next';
+import FeatureBadges from '@/components/FeatureBadges.vue';
 import { Input } from '@/components/ui/input';
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -47,6 +48,7 @@ interface CategoryGroup {
 const props = defineProps<{
     project: Project;
     checklists: Checklist[];
+    availableFeatures: { id: number; name: string; module: string[] | null }[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -59,6 +61,7 @@ const DRAFT_STORAGE_KEY = `checklist-note-draft-${props.project.id}`;
 const COLLAPSED_KEY = `checklist-categories-collapsed-${props.project.id}`;
 
 const searchQuery = ref('');
+const filterFeature = ref('');
 
 // Local ordering state — reflects server data, mutated by drag
 const localChecklists = ref<Checklist[]>([...props.checklists]);
@@ -68,13 +71,26 @@ watch(() => props.checklists, (val) => {
 });
 
 const filteredChecklists = computed(() => {
-    if (!searchQuery.value.trim()) {
-        return localChecklists.value;
+    let result = localChecklists.value;
+
+    if (searchQuery.value.trim()) {
+        const query = searchQuery.value.toLowerCase();
+        result = result.filter(checklist =>
+            checklist.name.toLowerCase().includes(query)
+        );
     }
-    const query = searchQuery.value.toLowerCase();
-    return localChecklists.value.filter(checklist =>
-        checklist.name.toLowerCase().includes(query)
-    );
+
+    if (filterFeature.value === '__none__') {
+        result = result.filter(checklist =>
+            !checklist.project_features || checklist.project_features.length === 0
+        );
+    } else if (filterFeature.value) {
+        result = result.filter(checklist =>
+            checklist.project_features?.some(f => String(f.id) === filterFeature.value)
+        );
+    }
+
+    return result;
 });
 
 // Category grouping — order derived from checklist order (not alphabetical)
@@ -630,6 +646,26 @@ const onDialogClose = (open: boolean) => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
+                    <div v-if="availableFeatures.length > 0" class="relative">
+                        <Select v-model="filterFeature">
+                            <SelectTrigger class="h-9 w-44 text-xs" :class="filterFeature ? 'pr-7' : ''">
+                                <SelectValue placeholder="All features" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__none__">No feature</SelectItem>
+                                <SelectItem
+                                    v-for="feature in availableFeatures"
+                                    :key="feature.id"
+                                    :value="String(feature.id)"
+                                >
+                                    {{ feature.module?.length ? `${feature.module.join(', ')} / ` : '' }}{{ feature.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <button v-if="filterFeature" @click="filterFeature = ''" class="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <X class="h-3 w-3" />
+                        </button>
+                    </div>
                     <Dialog v-model:open="showNoteDialog" @update:open="onDialogClose">
                         <RestrictedAction>
                             <DialogTrigger as-child>
@@ -927,9 +963,10 @@ const onDialogClose = (open: boolean) => {
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <div class="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                                             <FileText class="h-4 w-4" />
                                             {{ checklist.rows_count || 0 }} items
+                                            <FeatureBadges v-if="checklist.project_features?.length" :features="checklist.project_features" :max-visible="2" />
                                             <!-- Category pill -->
                                             <RestrictedAction>
                                                 <DropdownMenu v-if="canDrag">
@@ -983,10 +1020,15 @@ const onDialogClose = (open: boolean) => {
                 </div>
 
                 <!-- No results -->
-                <div v-if="filteredChecklists.length === 0 && searchQuery.trim()" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <div v-if="filteredChecklists.length === 0 && (searchQuery.trim() || filterFeature)" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
                     <Search class="h-12 w-12 mb-3" />
                     <p class="font-semibold">No results found</p>
-                    <p class="text-sm max-w-full truncate px-4">No checklists match "{{ searchQuery }}"</p>
+                    <p v-if="searchQuery.trim()" class="text-sm max-w-full truncate px-4">No checklists match "{{ searchQuery }}"</p>
+                    <p v-else class="text-sm">No checklists match the selected filter</p>
+                    <Button v-if="filterFeature" variant="outline" size="sm" class="mt-3 gap-2" @click="filterFeature = ''">
+                        <X class="h-3.5 w-3.5" />
+                        Clear Filter
+                    </Button>
                 </div>
             </div>
 

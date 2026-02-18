@@ -2,6 +2,8 @@
 import { Head, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite, type TestCase, type TestStep, type Attachment } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
+import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +19,7 @@ const props = defineProps<{
     project: Project;
     testSuite: TestSuite;
     testCase: TestCase;
+    features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -40,6 +43,7 @@ const form = useForm({
     type: props.testCase.type,
     automation_status: props.testCase.automation_status,
     tags: props.testCase.tags || [],
+    feature_ids: (props.testCase.project_features ?? []).map(f => f.id),
     attachments: [] as File[],
 });
 
@@ -251,6 +255,13 @@ const deleteTestCase = () => {
                                     </Select>
                                 </div>
                             </div>
+
+                            <!-- Features -->
+                            <FeatureSelector
+                                v-model="form.feature_ids"
+                                :features="features"
+                                :project-id="project.id"
+                            />
 
                             <!-- Existing Attachments -->
                             <div v-if="testCase.attachments?.length" class="space-y-2">

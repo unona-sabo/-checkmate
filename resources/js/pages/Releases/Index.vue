@@ -34,6 +34,7 @@ import {
     Calendar,
 } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { releaseStatusVariant, releaseDecisionVariant } from '@/lib/badge-variants';
 
 const props = defineProps<{
     project: Project;
@@ -117,13 +118,6 @@ const getStatusLabel = (status: string): string => {
     return labels[status] || status;
 };
 
-const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    if (status === 'released') return 'default';
-    if (status === 'cancelled') return 'destructive';
-    if (status === 'ready') return 'default';
-    return 'secondary';
-};
-
 const getHealthColor = (health: string): string => {
     if (health === 'green') return 'bg-emerald-500';
     if (health === 'red') return 'bg-red-500';
@@ -133,13 +127,6 @@ const getHealthColor = (health: string): string => {
 const getDecisionLabel = (d: string): string => {
     const labels: Record<string, string> = { pending: 'Pending', go: 'Go', no_go: 'No-Go', conditional: 'Conditional' };
     return labels[d] || d;
-};
-
-const getDecisionVariant = (d: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    if (d === 'go') return 'default';
-    if (d === 'no_go') return 'destructive';
-    if (d === 'conditional') return 'outline';
-    return 'secondary';
 };
 
 const formatDate = (date: string | null): string => {
@@ -163,7 +150,7 @@ const formatDate = (date: string | null): string => {
                         <p class="text-muted-foreground">Plan, track, and manage product releases</p>
                     </div>
                 </div>
-                <div class="mt-4 flex items-center gap-2">
+                <div class="mt-4 flex items-center justify-end gap-2">
                     <div class="relative">
                         <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
@@ -230,13 +217,13 @@ const formatDate = (date: string | null): string => {
                                         v{{ release.version }}
                                     </Badge>
                                     <h3 class="text-sm font-semibold text-foreground truncate">{{ release.name }}</h3>
-                                    <Badge :variant="getStatusVariant(release.status)" class="text-xs">
+                                    <Badge :variant="releaseStatusVariant(release.status)" class="text-xs">
                                         {{ getStatusLabel(release.status) }}
                                     </Badge>
                                     <div class="flex items-center gap-1.5" :title="`Health: ${release.health}`">
                                         <div class="h-2.5 w-2.5 rounded-full" :class="getHealthColor(release.health)" />
                                     </div>
-                                    <Badge :variant="getDecisionVariant(release.decision)" class="text-xs">
+                                    <Badge :variant="releaseDecisionVariant(release.decision)" class="text-xs">
                                         {{ getDecisionLabel(release.decision) }}
                                     </Badge>
                                 </div>

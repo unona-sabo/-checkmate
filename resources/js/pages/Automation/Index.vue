@@ -60,6 +60,7 @@ import {
     Server,
 } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { automationResultVariant } from '@/lib/badge-variants';
 
 const props = defineProps<{
     project: Project & { automation_tests_path?: string | null };
@@ -451,12 +452,6 @@ const getStatusColor = (status: string): string => {
     if (status === 'failed') return 'text-red-500';
     if (status === 'skipped') return 'text-muted-foreground';
     return 'text-amber-500';
-};
-
-const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    if (status === 'passed') return 'default';
-    if (status === 'failed') return 'destructive';
-    return 'secondary';
 };
 
 const formatDuration = (ms: number): string => {
@@ -914,7 +909,7 @@ const passRate = computed(() => {
                                 </div>
                             </div>
                             <div class="ml-4 flex shrink-0 items-center gap-3">
-                                <Badge :variant="getStatusVariant(result.status)" class="text-xs">
+                                <Badge :variant="automationResultVariant(result.status)" class="text-xs">
                                     {{ result.status }}
                                 </Badge>
                                 <span class="w-16 text-right text-xs text-muted-foreground">

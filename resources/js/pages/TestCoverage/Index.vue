@@ -11,6 +11,7 @@ import type {
     AIGap,
     AIAnalysisData,
     TestCaseSummary,
+    Checklist,
 } from '@/types/checkmate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,9 +58,14 @@ import {
     Wand2,
     Unlink,
     FileText,
+    ClipboardList,
 } from 'lucide-vue-next';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ref, computed, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { priorityVariant } from '@/lib/badge-variants';
+
+const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;
 
 const props = defineProps<{
     project: Project;
@@ -70,6 +76,7 @@ const props = defineProps<{
     gaps: CoverageGap[];
     hasAnthropicKey: boolean;
     allTestCases: TestCaseSummary[];
+    allChecklists: Pick<Checklist, 'id' | 'name'>[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -102,7 +109,7 @@ const showAddFeatureDialog = ref(false);
 const featureForm = ref({
     name: '',
     description: '',
-    module: '',
+    module: [] as string[],
     category: '',
     priority: 'medium' as string,
 });
@@ -111,7 +118,7 @@ const showEditFeatureDialog = ref(false);
 const editForm = ref({
     name: '',
     description: '',
-    module: '',
+    module: [] as string[],
     category: '',
     priority: 'medium' as string,
 });
@@ -125,7 +132,7 @@ const filteredFeatures = computed(() => {
     return props.features.filter(
         (f) =>
             f.name.toLowerCase().includes(q) ||
-            f.module?.toLowerCase().includes(q) ||
+            f.module?.some((m) => m.toLowerCase().includes(q)) ||
             f.category?.toLowerCase().includes(q),
     );
 });
@@ -162,16 +169,6 @@ const getCoverageBg = (coverage: number): string => {
     if (coverage >= 80) return 'bg-emerald-500';
     if (coverage >= 50) return 'bg-amber-500';
     return 'bg-red-500';
-};
-
-const getPriorityVariant = (priority: string) => {
-    const variants: Record<string, 'destructive' | 'warning' | 'default' | 'info' | 'secondary'> = {
-        critical: 'destructive',
-        high: 'warning',
-        medium: 'default',
-        low: 'info',
-    };
-    return variants[priority] || 'secondary';
 };
 
 const formatDate = (date: string | null): string => {
@@ -231,7 +228,7 @@ const addFeature = () => {
         preserveScroll: true,
         onSuccess: () => {
             showAddFeatureDialog.value = false;
-            featureForm.value = { name: '', description: '', module: '', category: '', priority: 'medium' };
+            featureForm.value = { name: '', description: '', module: [], category: '', priority: 'medium' };
         },
     });
 };
@@ -241,7 +238,7 @@ const startEdit = (feature: ProjectFeature) => {
     editForm.value = {
         name: feature.name,
         description: feature.description || '',
-        module: feature.module || '',
+        module: feature.module || [],
         category: feature.category || '',
         priority: feature.priority,
     };
@@ -271,47 +268,122 @@ const toggleExpanded = (featureId: number) => {
     expandedFeatureId.value = expandedFeatureId.value === featureId ? null : featureId;
 };
 
-// Link dialog
-const showLinkDialog = ref(false);
-const linkingFeature = ref<ProjectFeature | null>(null);
-const linkSearch = ref('');
+// Link Test Cases dialog
+const showLinkTestCasesDialog = ref(false);
+const linkingTestCaseFeature = ref<ProjectFeature | null>(null);
+const linkTestCaseSearch = ref('');
+const pendingTestCaseIds = ref(new Set<number>());
+const linkedTestCaseSnapshot = ref(new Set<number>());
 
 const filteredAllTestCases = computed(() => {
-    if (!linkSearch.value) return props.allTestCases;
-    const q = linkSearch.value.toLowerCase();
+    if (!linkTestCaseSearch.value) return props.allTestCases;
+    const q = linkTestCaseSearch.value.toLowerCase();
     return props.allTestCases.filter(
         (tc) => tc.title.toLowerCase().includes(q) || tc.test_suite?.name.toLowerCase().includes(q),
     );
 });
 
-const isLinked = (feature: ProjectFeature, testCaseId: number): boolean => {
-    return feature.test_cases?.some((tc) => tc.id === testCaseId) ?? false;
+const isLinked = (_feature: ProjectFeature, testCaseId: number): boolean => {
+    return linkedTestCaseSnapshot.value.has(testCaseId);
 };
 
-const openLinkDialog = (feature: ProjectFeature) => {
-    linkingFeature.value = feature;
-    linkSearch.value = '';
-    showLinkDialog.value = true;
+const openLinkTestCasesDialog = (feature: ProjectFeature) => {
+    linkingTestCaseFeature.value = feature;
+    linkTestCaseSearch.value = '';
+    linkedTestCaseSnapshot.value = new Set(feature.test_cases?.map((tc) => tc.id) ?? []);
+    showLinkTestCasesDialog.value = true;
 };
 
 const toggleLink = (testCaseId: number) => {
-    if (!linkingFeature.value) return;
-    const feature = linkingFeature.value;
-    if (isLinked(feature, testCaseId)) {
+    if (!linkingTestCaseFeature.value) return;
+    const feature = linkingTestCaseFeature.value;
+    const wasLinked = linkedTestCaseSnapshot.value.has(testCaseId);
+    pendingTestCaseIds.value.add(testCaseId);
+
+    const onFinish = () => {
+        pendingTestCaseIds.value.delete(testCaseId);
+        if (wasLinked) {
+            linkedTestCaseSnapshot.value.delete(testCaseId);
+        } else {
+            linkedTestCaseSnapshot.value.add(testCaseId);
+        }
+    };
+
+    if (wasLinked) {
         router.delete(`/projects/${props.project.id}/test-coverage/features/${feature.id}/test-cases/${testCaseId}`, {
             preserveScroll: true,
+            onFinish,
         });
     } else {
         router.post(
             `/projects/${props.project.id}/test-coverage/features/${feature.id}/link-test-case`,
             { test_case_id: testCaseId },
-            { preserveScroll: true },
+            { preserveScroll: true, onFinish },
         );
     }
 };
 
 const unlinkTestCase = (featureId: number, testCaseId: number) => {
     router.delete(`/projects/${props.project.id}/test-coverage/features/${featureId}/test-cases/${testCaseId}`, {
+        preserveScroll: true,
+    });
+};
+
+// Link Checklists dialog
+const showLinkChecklistsDialog = ref(false);
+const linkingChecklistFeature = ref<ProjectFeature | null>(null);
+const linkChecklistSearch = ref('');
+const pendingChecklistIds = ref(new Set<number>());
+const linkedChecklistSnapshot = ref(new Set<number>());
+
+const filteredAllChecklists = computed(() => {
+    if (!linkChecklistSearch.value) return props.allChecklists;
+    const q = linkChecklistSearch.value.toLowerCase();
+    return props.allChecklists.filter((cl) => cl.name.toLowerCase().includes(q));
+});
+
+const isChecklistLinked = (_feature: ProjectFeature, checklistId: number): boolean => {
+    return linkedChecklistSnapshot.value.has(checklistId);
+};
+
+const openLinkChecklistsDialog = (feature: ProjectFeature) => {
+    linkingChecklistFeature.value = feature;
+    linkChecklistSearch.value = '';
+    linkedChecklistSnapshot.value = new Set(feature.checklists?.map((cl) => cl.id) ?? []);
+    showLinkChecklistsDialog.value = true;
+};
+
+const toggleChecklistLink = (checklistId: number) => {
+    if (!linkingChecklistFeature.value) return;
+    const feature = linkingChecklistFeature.value;
+    const wasLinked = linkedChecklistSnapshot.value.has(checklistId);
+    pendingChecklistIds.value.add(checklistId);
+
+    const onFinish = () => {
+        pendingChecklistIds.value.delete(checklistId);
+        if (wasLinked) {
+            linkedChecklistSnapshot.value.delete(checklistId);
+        } else {
+            linkedChecklistSnapshot.value.add(checklistId);
+        }
+    };
+
+    if (wasLinked) {
+        router.delete(`/projects/${props.project.id}/test-coverage/features/${feature.id}/checklists/${checklistId}`, {
+            preserveScroll: true,
+            onFinish,
+        });
+    } else {
+        router.post(
+            `/projects/${props.project.id}/test-coverage/features/${feature.id}/link-checklist`,
+            { checklist_id: checklistId },
+            { preserveScroll: true, onFinish },
+        );
+    }
+};
+
+const unlinkChecklist = (featureId: number, checklistId: number) => {
+    router.delete(`/projects/${props.project.id}/test-coverage/features/${featureId}/checklists/${checklistId}`, {
         preserveScroll: true,
     });
 };
@@ -330,7 +402,7 @@ const autoLinkAll = () => {
 };
 
 const refreshData = () => {
-    router.reload({ only: ['statistics', 'coverageByModule', 'latestAnalysis', 'features', 'gaps', 'allTestCases'] });
+    router.reload({ only: ['statistics', 'coverageByModule', 'latestAnalysis', 'features', 'gaps', 'allTestCases', 'allChecklists'] });
 };
 </script>
 
@@ -368,7 +440,7 @@ const refreshData = () => {
             </div>
 
             <!-- Statistics Cards -->
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <Card>
                     <CardContent class="flex items-center gap-4 p-5">
                         <div class="rounded-lg bg-primary/10 p-3">
@@ -390,6 +462,17 @@ const refreshData = () => {
                         <div>
                             <p class="text-sm text-muted-foreground">Total Test Cases</p>
                             <p class="text-2xl font-bold text-foreground">{{ statistics.total_test_cases }}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent class="flex items-center gap-4 p-5">
+                        <div class="rounded-lg bg-violet-500/10 p-3">
+                            <ClipboardList class="h-6 w-6 text-violet-500" />
+                        </div>
+                        <div>
+                            <p class="text-sm text-muted-foreground">Total Checklists</p>
+                            <p class="text-2xl font-bold text-foreground">{{ statistics.total_checklists }}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -458,7 +541,7 @@ const refreshData = () => {
                                     <Progress :model-value="mod.coverage_percentage" class="mb-2" />
                                     <div class="flex justify-between text-xs text-muted-foreground">
                                         <span>{{ mod.covered_features }} / {{ mod.total_features }} features</span>
-                                        <span>{{ mod.test_cases_count }} test cases</span>
+                                        <span>{{ mod.test_cases_count }} test cases<span v-if="mod.checklists_count"> · {{ mod.checklists_count }} checklists</span></span>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -501,11 +584,11 @@ const refreshData = () => {
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2">
                                             <span class="font-medium text-foreground">{{ feature.name }}</span>
-                                            <Badge :variant="getPriorityVariant(feature.priority)" class="text-xs uppercase">
+                                            <Badge :variant="priorityVariant(feature.priority)" class="text-xs uppercase">
                                                 {{ feature.priority }}
                                             </Badge>
-                                            <Badge v-if="feature.module" variant="outline" class="text-xs">
-                                                {{ feature.module }}
+                                            <Badge v-for="mod in (feature.module || [])" :key="mod" variant="outline" class="text-xs">
+                                                {{ mod }}
                                             </Badge>
                                             <Badge v-if="feature.category" variant="secondary" class="text-xs">
                                                 {{ feature.category }}
@@ -519,14 +602,14 @@ const refreshData = () => {
                                         <button
                                             @click="toggleExpanded(feature.id)"
                                             class="cursor-pointer text-sm font-medium"
-                                            :class="(feature.test_cases_count ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400 hover:underline' : 'text-muted-foreground'"
+                                            :class="(feature.test_cases_count ?? 0) > 0 || (feature.checklists_count ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400 hover:underline' : 'text-muted-foreground'"
                                         >
                                             <span class="flex items-center gap-1">
                                                 <component
                                                     :is="expandedFeatureId === feature.id ? ChevronDown : ChevronRight"
                                                     class="h-4 w-4"
                                                 />
-                                                {{ feature.test_cases_count ?? 0 }} test cases
+                                                {{ feature.test_cases_count ?? 0 }} test cases<span v-if="(feature.checklists_count ?? 0) > 0"> · {{ feature.checklists_count }} checklists</span>
                                             </span>
                                         </button>
                                         <RestrictedAction>
@@ -535,8 +618,13 @@ const refreshData = () => {
                                             </Button>
                                         </RestrictedAction>
                                         <RestrictedAction>
-                                            <Button variant="ghost" size="sm" @click="openLinkDialog(feature)" class="cursor-pointer" title="Link test cases">
+                                            <Button variant="ghost" size="sm" @click="openLinkTestCasesDialog(feature)" class="cursor-pointer" title="Link test cases">
                                                 <Link2 class="h-4 w-4" />
+                                            </Button>
+                                        </RestrictedAction>
+                                        <RestrictedAction>
+                                            <Button variant="ghost" size="sm" @click="openLinkChecklistsDialog(feature)" class="cursor-pointer" title="Link checklists">
+                                                <ClipboardList class="h-4 w-4" />
                                             </Button>
                                         </RestrictedAction>
                                         <RestrictedAction>
@@ -551,7 +639,7 @@ const refreshData = () => {
                                         </RestrictedAction>
                                     </div>
                                 </div>
-                                <!-- Expanded linked test cases -->
+                                <!-- Expanded linked test cases & checklists -->
                                 <div
                                     v-if="expandedFeatureId === feature.id"
                                     class="rounded-b-lg border border-t-0 bg-muted/20 px-4 py-3"
@@ -582,7 +670,31 @@ const refreshData = () => {
                                             </RestrictedAction>
                                         </div>
                                     </div>
-                                    <p v-else class="text-sm text-muted-foreground">No test cases linked. Use auto-link or link manually.</p>
+                                    <div v-if="feature.checklists && feature.checklists.length > 0" class="space-y-2" :class="{ 'mt-3 border-t pt-3': feature.test_cases && feature.test_cases.length > 0 }">
+                                        <p class="text-xs font-medium text-muted-foreground uppercase">Checklists</p>
+                                        <div
+                                            v-for="cl in feature.checklists"
+                                            :key="cl.id"
+                                            class="flex items-center justify-between rounded border bg-background px-3 py-2"
+                                        >
+                                            <div class="flex items-center gap-2">
+                                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10">
+                                                    <ClipboardList class="h-3.5 w-3.5 text-violet-500" />
+                                                </div>
+                                                <a :href="`/projects/${project.id}/checklists/${cl.id}`" class="text-sm text-foreground hover:underline">{{ cl.name }}</a>
+                                            </div>
+                                            <RestrictedAction>
+                                                <button
+                                                    @click="unlinkChecklist(feature.id, cl.id)"
+                                                    class="cursor-pointer text-muted-foreground hover:text-destructive"
+                                                    title="Unlink checklist"
+                                                >
+                                                    <X class="h-4 w-4" />
+                                                </button>
+                                            </RestrictedAction>
+                                        </div>
+                                    </div>
+                                    <p v-if="(!feature.test_cases || feature.test_cases.length === 0) && (!feature.checklists || feature.checklists.length === 0)" class="text-sm text-muted-foreground">No test cases or checklists linked. Use auto-link or link manually.</p>
                                 </div>
                             </div>
                         </div>
@@ -710,7 +822,7 @@ const refreshData = () => {
                                 >
                                     <div class="mb-2 flex items-center gap-2">
                                         <h4 class="font-bold text-foreground">{{ risk.area }}</h4>
-                                        <Badge :variant="getPriorityVariant(risk.level)" class="uppercase">
+                                        <Badge :variant="priorityVariant(risk.level)" class="uppercase">
                                             {{ risk.level }}
                                         </Badge>
                                     </div>
@@ -757,7 +869,7 @@ const refreshData = () => {
                                 <div class="flex-1">
                                     <div class="mb-2 flex items-center gap-3">
                                         <h4 class="text-lg font-bold text-foreground">{{ gap.feature }}</h4>
-                                        <Badge :variant="getPriorityVariant(gap.priority)" class="uppercase">
+                                        <Badge :variant="priorityVariant(gap.priority)" class="uppercase">
                                             {{ gap.priority }}
                                         </Badge>
                                         <Badge v-if="gap.category" variant="outline">{{ gap.category }}</Badge>
@@ -791,7 +903,7 @@ const refreshData = () => {
                             Uncovered Features ({{ gaps.length }})
                         </h3>
                         <p class="text-sm text-muted-foreground">
-                            These project features have no linked test cases. Run an AI analysis for detailed gap insights.
+                            These project features have no linked test cases or checklists. Run an AI analysis for detailed gap insights.
                         </p>
                         <div
                             v-for="gap in gaps"
@@ -801,10 +913,10 @@ const refreshData = () => {
                             <div>
                                 <div class="flex items-center gap-2">
                                     <span class="font-medium text-foreground">{{ gap.feature }}</span>
-                                    <Badge :variant="getPriorityVariant(gap.priority)" class="text-xs uppercase">
+                                    <Badge :variant="priorityVariant(gap.priority)" class="text-xs uppercase">
                                         {{ gap.priority }}
                                     </Badge>
-                                    <Badge v-if="gap.module" variant="outline" class="text-xs">{{ gap.module }}</Badge>
+                                    <Badge v-for="mod in (gap.module || [])" :key="mod" variant="outline" class="text-xs">{{ mod }}</Badge>
                                 </div>
                                 <p v-if="gap.description" class="mt-1 text-sm text-muted-foreground">{{ gap.description }}</p>
                             </div>
@@ -916,19 +1028,30 @@ const refreshData = () => {
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <Label>Module</Label>
-                            <Select v-model="featureForm.module">
-                                <SelectTrigger class="mt-1">
-                                    <SelectValue placeholder="Select module" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="UI">UI</SelectItem>
-                                    <SelectItem value="API">API</SelectItem>
-                                    <SelectItem value="Backend">Backend</SelectItem>
-                                    <SelectItem value="Database">Database</SelectItem>
-                                    <SelectItem value="Integration">Integration</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div class="flex items-center justify-between">
+                                <Label>Modules</Label>
+                                <div class="flex gap-2 text-xs">
+                                    <button type="button" class="cursor-pointer text-primary hover:underline" @click="featureForm.module = [...MODULE_OPTIONS]">Select All</button>
+                                    <button type="button" class="cursor-pointer text-muted-foreground hover:underline" @click="featureForm.module = []">Clear</button>
+                                </div>
+                            </div>
+                            <div class="mt-1 rounded-md border p-2 space-y-1">
+                                <label v-for="opt in MODULE_OPTIONS" :key="opt" class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-muted/50">
+                                    <Checkbox
+                                        :model-value="featureForm.module.includes(opt)"
+                                        @update:model-value="featureForm.module.includes(opt) ? featureForm.module = featureForm.module.filter(m => m !== opt) : featureForm.module = [...featureForm.module, opt]"
+                                    />
+                                    <span class="text-sm">{{ opt }}</span>
+                                </label>
+                            </div>
+                            <div v-if="featureForm.module.length" class="mt-1.5 flex flex-wrap gap-1">
+                                <Badge v-for="mod in featureForm.module" :key="mod" variant="secondary" class="gap-1 pr-1">
+                                    {{ mod }}
+                                    <button type="button" class="ml-0.5 cursor-pointer rounded-full p-0.5 hover:bg-muted" @click="featureForm.module = featureForm.module.filter(m => m !== mod)">
+                                        <X class="h-3 w-3" />
+                                    </button>
+                                </Badge>
+                            </div>
                         </div>
                         <div>
                             <Label>Category</Label>
@@ -975,19 +1098,30 @@ const refreshData = () => {
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <Label>Module</Label>
-                            <Select v-model="editForm.module">
-                                <SelectTrigger class="mt-1">
-                                    <SelectValue placeholder="Select module" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="UI">UI</SelectItem>
-                                    <SelectItem value="API">API</SelectItem>
-                                    <SelectItem value="Backend">Backend</SelectItem>
-                                    <SelectItem value="Database">Database</SelectItem>
-                                    <SelectItem value="Integration">Integration</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div class="flex items-center justify-between">
+                                <Label>Modules</Label>
+                                <div class="flex gap-2 text-xs">
+                                    <button type="button" class="cursor-pointer text-primary hover:underline" @click="editForm.module = [...MODULE_OPTIONS]">Select All</button>
+                                    <button type="button" class="cursor-pointer text-muted-foreground hover:underline" @click="editForm.module = []">Clear</button>
+                                </div>
+                            </div>
+                            <div class="mt-1 rounded-md border p-2 space-y-1">
+                                <label v-for="opt in MODULE_OPTIONS" :key="opt" class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-muted/50">
+                                    <Checkbox
+                                        :model-value="editForm.module.includes(opt)"
+                                        @update:model-value="editForm.module.includes(opt) ? editForm.module = editForm.module.filter(m => m !== opt) : editForm.module = [...editForm.module, opt]"
+                                    />
+                                    <span class="text-sm">{{ opt }}</span>
+                                </label>
+                            </div>
+                            <div v-if="editForm.module.length" class="mt-1.5 flex flex-wrap gap-1">
+                                <Badge v-for="mod in editForm.module" :key="mod" variant="secondary" class="gap-1 pr-1">
+                                    {{ mod }}
+                                    <button type="button" class="ml-0.5 cursor-pointer rounded-full p-0.5 hover:bg-muted" @click="editForm.module = editForm.module.filter(m => m !== mod)">
+                                        <X class="h-3 w-3" />
+                                    </button>
+                                </Badge>
+                            </div>
                         </div>
                         <div>
                             <Label>Category</Label>
@@ -1017,12 +1151,12 @@ const refreshData = () => {
         </Dialog>
 
         <!-- Link Test Cases Dialog -->
-        <Dialog v-model:open="showLinkDialog">
+        <Dialog v-model:open="showLinkTestCasesDialog">
             <DialogContent class="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <Link2 class="h-5 w-5" />
-                        Link Test Cases to {{ linkingFeature?.name }}
+                        Link Test Cases to {{ linkingTestCaseFeature?.name }}
                     </DialogTitle>
                     <DialogDescription>
                         Search and toggle test cases to link or unlink from this feature.
@@ -1031,10 +1165,10 @@ const refreshData = () => {
                 <div class="space-y-4 py-4">
                     <div class="relative">
                         <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="linkSearch" placeholder="Search test cases..." class="pl-9" />
+                        <Input v-model="linkTestCaseSearch" placeholder="Search test cases..." class="pl-9" />
                         <button
-                            v-if="linkSearch"
-                            @click="linkSearch = ''"
+                            v-if="linkTestCaseSearch"
+                            @click="linkTestCaseSearch = ''"
                             class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                         >
                             <X class="h-4 w-4" />
@@ -1044,23 +1178,35 @@ const refreshData = () => {
                         <div
                             v-for="tc in filteredAllTestCases"
                             :key="tc.id"
-                            class="flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-muted/30"
+                            class="flex items-center justify-between gap-3 rounded border px-3 py-2 transition-colors hover:bg-muted/30"
                         >
-                            <div class="flex items-center gap-2">
+                            <div class="flex min-w-0 items-center gap-2">
                                 <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/50">
                                     <FileText class="h-3.5 w-3.5 text-muted-foreground" />
                                 </div>
-                                <span class="text-sm text-foreground">{{ tc.title }}</span>
-                                <Badge v-if="tc.test_suite" variant="outline" class="text-xs">
-                                    {{ tc.test_suite.name }}
-                                </Badge>
+                                <div class="min-w-0 flex-1">
+                                    <span class="block truncate text-sm text-foreground" :title="tc.title">{{ tc.title }}</span>
+                                    <Badge v-if="tc.test_suite" variant="outline" class="mt-0.5 text-xs">
+                                        {{ tc.test_suite.name }}
+                                    </Badge>
+                                </div>
                             </div>
                             <Button
-                                v-if="linkingFeature && isLinked(linkingFeature, tc.id)"
+                                v-if="pendingTestCaseIds.has(tc.id)"
+                                variant="outline"
+                                size="sm"
+                                disabled
+                                class="shrink-0"
+                            >
+                                <Loader2 class="mr-1 h-3.5 w-3.5 animate-spin" />
+                                Updating...
+                            </Button>
+                            <Button
+                                v-else-if="linkingTestCaseFeature && isLinked(linkingTestCaseFeature, tc.id)"
                                 variant="outline"
                                 size="sm"
                                 @click="toggleLink(tc.id)"
-                                class="cursor-pointer border-emerald-500 text-emerald-600 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                                class="shrink-0 cursor-pointer border-emerald-500 text-emerald-600 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
                             >
                                 <Unlink class="mr-1 h-3.5 w-3.5" />
                                 Linked
@@ -1070,7 +1216,7 @@ const refreshData = () => {
                                 variant="outline"
                                 size="sm"
                                 @click="toggleLink(tc.id)"
-                                class="cursor-pointer"
+                                class="shrink-0 cursor-pointer"
                             >
                                 <Link2 class="mr-1 h-3.5 w-3.5" />
                                 Link
@@ -1082,7 +1228,85 @@ const refreshData = () => {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button @click="showLinkDialog = false" class="cursor-pointer">Close</Button>
+                    <Button @click="showLinkTestCasesDialog = false" class="cursor-pointer">Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Link Checklists Dialog -->
+        <Dialog v-model:open="showLinkChecklistsDialog">
+            <DialogContent class="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <ClipboardList class="h-5 w-5" />
+                        Link Checklists to {{ linkingChecklistFeature?.name }}
+                    </DialogTitle>
+                    <DialogDescription>
+                        Search and toggle checklists to link or unlink from this feature.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4 py-4">
+                    <div class="relative">
+                        <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input v-model="linkChecklistSearch" placeholder="Search checklists..." class="pl-9" />
+                        <button
+                            v-if="linkChecklistSearch"
+                            @click="linkChecklistSearch = ''"
+                            class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
+                    <div class="max-h-96 space-y-1 overflow-y-auto">
+                        <div
+                            v-for="cl in filteredAllChecklists"
+                            :key="cl.id"
+                            class="flex items-center justify-between gap-3 rounded border px-3 py-2 transition-colors hover:bg-muted/30"
+                        >
+                            <div class="flex min-w-0 items-center gap-2">
+                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10">
+                                    <ClipboardList class="h-3.5 w-3.5 text-violet-500" />
+                                </div>
+                                <span class="truncate text-sm text-foreground" :title="cl.name">{{ cl.name }}</span>
+                            </div>
+                            <Button
+                                v-if="pendingChecklistIds.has(cl.id)"
+                                variant="outline"
+                                size="sm"
+                                disabled
+                                class="shrink-0"
+                            >
+                                <Loader2 class="mr-1 h-3.5 w-3.5 animate-spin" />
+                                Updating...
+                            </Button>
+                            <Button
+                                v-else-if="linkingChecklistFeature && isChecklistLinked(linkingChecklistFeature, cl.id)"
+                                variant="outline"
+                                size="sm"
+                                @click="toggleChecklistLink(cl.id)"
+                                class="shrink-0 cursor-pointer border-emerald-500 text-emerald-600 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                            >
+                                <Unlink class="mr-1 h-3.5 w-3.5" />
+                                Linked
+                            </Button>
+                            <Button
+                                v-else
+                                variant="outline"
+                                size="sm"
+                                @click="toggleChecklistLink(cl.id)"
+                                class="shrink-0 cursor-pointer"
+                            >
+                                <Link2 class="mr-1 h-3.5 w-3.5" />
+                                Link
+                            </Button>
+                        </div>
+                        <p v-if="filteredAllChecklists.length === 0" class="py-8 text-center text-sm text-muted-foreground">
+                            No checklists found.
+                        </p>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button @click="showLinkChecklistsDialog = false" class="cursor-pointer">Close</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1107,7 +1331,7 @@ const refreshData = () => {
                     >
                         <div class="mb-2 flex items-center gap-2">
                             <h4 class="font-medium text-foreground">{{ (tc as Record<string, unknown>).title }}</h4>
-                            <Badge :variant="getPriorityVariant(String((tc as Record<string, unknown>).priority || 'medium'))" class="text-xs uppercase">
+                            <Badge :variant="priorityVariant(String((tc as Record<string, unknown>).priority || 'medium'))" class="text-xs uppercase">
                                 {{ (tc as Record<string, unknown>).priority }}
                             </Badge>
                             <Badge variant="outline" class="text-xs uppercase">

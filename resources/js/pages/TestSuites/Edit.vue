@@ -2,6 +2,7 @@
 import { Head, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import InputError from '@/components/InputError.vue';
+import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Edit, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
 
@@ -17,6 +19,7 @@ const props = defineProps<{
     project: Project;
     testSuite: TestSuite;
     parentSuites: Pick<TestSuite, 'id' | 'name'>[];
+    features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -32,6 +35,7 @@ const form = useForm({
     description: props.testSuite.description || '',
     type: props.testSuite.type || 'functional',
     parent_id: props.testSuite.parent_id,
+    feature_ids: (props.testSuite.project_features ?? []).map(f => f.id),
 });
 
 const showDeleteDialog = ref(false);
@@ -104,6 +108,8 @@ const deleteSuite = () => {
                                 </Select>
                                 <InputError :message="form.errors.type" />
                             </div>
+
+                            <FeatureSelector v-model="form.feature_ids" :features="features" :project-id="project.id" />
 
                             <div v-if="parentSuites.length" class="space-y-2">
                                 <Label for="parent">Parent Suite</Label>

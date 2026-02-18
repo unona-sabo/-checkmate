@@ -75,7 +75,7 @@ test('show page returns section data and synced features', function () {
             ->has('latest_created_at')
             ->has('latest_updated_at')
         )
-        ->has('features', 24)
+        ->has('features', 26)
         ->has('features.0', fn ($feature) => $feature
             ->has('id')
             ->has('title')
@@ -264,7 +264,7 @@ test('sync endpoint syncs features for all sections', function () {
 
     $response->assertRedirect();
 
-    // All 6 sections synced: 17 + 15 + 15 + 11 + 11 + 12 = 81
+    // All 11 sections synced: 26 + 18 + 20 + 14 + 8 + 14 + 14 + 16 + 18 + 12 + 12 = 172
     expect(FeatureDescription::count())->toBeGreaterThan(0);
 
     // Verify features exist for all sections
@@ -291,7 +291,7 @@ test('show page syncs config features to database on first visit', function () {
 
     $this->actingAs($user)->get(route('home.show', 'checklists'));
 
-    $this->assertDatabaseCount('feature_descriptions', 24);
+    $this->assertDatabaseCount('feature_descriptions', 26);
     $this->assertDatabaseHas('feature_descriptions', [
         'section_key' => 'checklists',
         'title' => 'Copy link to clipboard',
@@ -305,7 +305,7 @@ test('show page does not duplicate features on repeat visits', function () {
     $this->actingAs($user)->get(route('home.show', 'checklists'));
     $this->actingAs($user)->get(route('home.show', 'checklists'));
 
-    $this->assertDatabaseCount('feature_descriptions', 24);
+    $this->assertDatabaseCount('feature_descriptions', 26);
 });
 
 test('sync preserves existing features when config changes', function () {
@@ -321,8 +321,8 @@ test('sync preserves existing features when config changes', function () {
 
     $this->actingAs($user)->get(route('home.show', 'checklists'));
 
-    // Old feature is preserved (24 config + 1 old)
-    $this->assertDatabaseCount('feature_descriptions', 25);
+    // Old feature is preserved (26 config + 1 old)
+    $this->assertDatabaseCount('feature_descriptions', 27);
     $this->assertDatabaseHas('feature_descriptions', [
         'title' => 'Old feature that was renamed in config',
         'description' => 'User wrote this description',
@@ -425,7 +425,7 @@ test('deleted system features are not re-created by sync', function () {
 
     // First visit syncs features
     $this->actingAs($user)->get(route('home.show', 'checklists'));
-    $this->assertDatabaseCount('feature_descriptions', 24);
+    $this->assertDatabaseCount('feature_descriptions', 26);
 
     // Delete a system feature
     $feature = FeatureDescription::where('section_key', 'checklists')->first();
@@ -434,9 +434,9 @@ test('deleted system features are not re-created by sync', function () {
     // Second visit should not re-create the deleted feature
     $this->actingAs($user)->get(route('home.show', 'checklists'));
 
-    // Still 23 total (22 active + 1 soft-deleted)
-    $this->assertDatabaseCount('feature_descriptions', 24);
-    expect(FeatureDescription::where('section_key', 'checklists')->count())->toBe(23);
+    // Still 26 total (25 active + 1 soft-deleted)
+    $this->assertDatabaseCount('feature_descriptions', 26);
+    expect(FeatureDescription::where('section_key', 'checklists')->count())->toBe(25);
 });
 
 test('delete returns 404 for wrong section', function () {
@@ -468,7 +468,7 @@ test('sync does not overwrite user-edited non-custom features', function () {
 
     // First visit syncs features
     $this->actingAs($user)->get(route('home.show', 'checklists'));
-    $this->assertDatabaseCount('feature_descriptions', 24);
+    $this->assertDatabaseCount('feature_descriptions', 26);
 
     // User edits a synced feature
     $feature = FeatureDescription::where('section_key', 'checklists')

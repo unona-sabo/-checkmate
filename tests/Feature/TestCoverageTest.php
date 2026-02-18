@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Checklist;
 use App\Models\CoverageAnalysis;
 use App\Models\Project;
 use App\Models\ProjectFeature;
@@ -59,7 +60,7 @@ test('store creates a project feature', function () {
     $response = $this->actingAs($user)->post(route('test-coverage.features.store', $project), [
         'name' => 'User Login',
         'description' => 'Users can log in with email and password',
-        'module' => 'UI',
+        'module' => ['UI'],
         'category' => 'Authentication',
         'priority' => 'critical',
     ]);
@@ -69,7 +70,7 @@ test('store creates a project feature', function () {
     $this->assertDatabaseHas('project_features', [
         'project_id' => $project->id,
         'name' => 'User Login',
-        'module' => 'UI',
+        'module' => json_encode(['UI']),
         'category' => 'Authentication',
         'priority' => 'critical',
     ]);
@@ -161,6 +162,43 @@ test('unlink test case from feature', function () {
     ]);
 });
 
+// ===== Feature-Checklist Linking =====
+
+test('link checklist to feature', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id]);
+    $checklist = Checklist::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->post(route('test-coverage.features.link-checklist', [$project, $feature->id]), [
+        'checklist_id' => $checklist->id,
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('feature_checklist', [
+        'feature_id' => $feature->id,
+        'checklist_id' => $checklist->id,
+    ]);
+});
+
+test('unlink checklist from feature', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id]);
+    $checklist = Checklist::factory()->create(['project_id' => $project->id]);
+    $feature->checklists()->attach($checklist->id);
+
+    $response = $this->actingAs($user)->delete(route('test-coverage.features.unlink-checklist', [$project, $feature->id, $checklist->id]));
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseMissing('feature_checklist', [
+        'feature_id' => $feature->id,
+        'checklist_id' => $checklist->id,
+    ]);
+});
+
 // ===== Coverage Calculation =====
 
 test('coverage statistics reflect linked test cases', function () {
@@ -183,6 +221,47 @@ test('coverage statistics reflect linked test cases', function () {
         ->where('statistics.uncovered_features', 1)
         ->where('statistics.overall_coverage', 50)
         ->where('statistics.gaps_count', 1)
+    );
+});
+
+test('coverage statistics count checklist-linked features as covered', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $checklist = Checklist::factory()->create(['project_id' => $project->id]);
+
+    $featureWithChecklist = ProjectFeature::factory()->create(['project_id' => $project->id]);
+    $featureWithChecklist->checklists()->attach($checklist->id);
+
+    ProjectFeature::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->get(route('test-coverage.index', $project));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('statistics.total_features', 2)
+        ->where('statistics.covered_features', 1)
+        ->where('statistics.uncovered_features', 1)
+        ->where('statistics.overall_coverage', 50)
+        ->where('statistics.gaps_count', 1)
+    );
+});
+
+test('gaps exclude features with linked checklists', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $checklist = Checklist::factory()->create(['project_id' => $project->id]);
+
+    $coveredFeature = ProjectFeature::factory()->create(['project_id' => $project->id, 'name' => 'Covered by checklist']);
+    $coveredFeature->checklists()->attach($checklist->id);
+
+    $uncoveredFeature = ProjectFeature::factory()->create(['project_id' => $project->id, 'name' => 'Uncovered feature']);
+
+    $response = $this->actingAs($user)->get(route('test-coverage.index', $project));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('gaps', 1)
+        ->where('gaps.0.feature', 'Uncovered feature')
     );
 });
 
@@ -251,8 +330,8 @@ test('coverage by module groups features correctly', function () {
     $user = User::factory()->create();
     $project = Project::factory()->create(['user_id' => $user->id]);
 
-    ProjectFeature::factory()->count(3)->create(['project_id' => $project->id, 'module' => 'UI']);
-    ProjectFeature::factory()->count(2)->create(['project_id' => $project->id, 'module' => 'API']);
+    ProjectFeature::factory()->count(3)->create(['project_id' => $project->id, 'module' => ['UI']]);
+    ProjectFeature::factory()->count(2)->create(['project_id' => $project->id, 'module' => ['API']]);
 
     $response = $this->actingAs($user)->get(route('test-coverage.index', $project));
 
@@ -435,5 +514,50 @@ test('inactive features are excluded from statistics', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->where('statistics.total_features', 1)
+    );
+});
+
+// ===== Multi-Module =====
+
+test('store feature accepts module as array', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(route('test-coverage.features.store', $project), [
+        'name' => 'Cross-cutting Auth',
+        'module' => ['UI', 'API'],
+        'priority' => 'high',
+    ]);
+
+    $response->assertRedirect();
+
+    $feature = ProjectFeature::where('name', 'Cross-cutting Auth')->first();
+    expect($feature->module)->toBe(['UI', 'API']);
+});
+
+test('coverage by module counts multi-module features in each group', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $testCase = TestCase::factory()->create(['test_suite_id' => $suite->id]);
+
+    $multiFeature = ProjectFeature::factory()->create([
+        'project_id' => $project->id,
+        'module' => ['UI', 'API'],
+    ]);
+    $multiFeature->testCases()->attach($testCase->id);
+
+    $response = $this->actingAs($user)->get(route('test-coverage.index', $project));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('coverageByModule', 2)
+        ->where('coverageByModule.0.module', 'UI')
+        ->where('coverageByModule.0.total_features', 1)
+        ->where('coverageByModule.0.covered_features', 1)
+        ->where('coverageByModule.1.module', 'API')
+        ->where('coverageByModule.1.total_features', 1)
+        ->where('coverageByModule.1.covered_features', 1)
     );
 });

@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Edit, FileText, AlertCircle, ListOrdered, Target, Tag, Paperclip, Download, Trash2, Link2, Check } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
+import { priorityVariant, severityVariant, automationVariant } from '@/lib/badge-variants';
 import { ref, computed } from 'vue';
 
 const props = defineProps<{
@@ -23,36 +25,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: props.testSuite.name, href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}` },
     { title: props.testCase.title, href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}/test-cases/${props.testCase.id}` },
 ];
-
-const getPriorityColor = (priority: string) => {
-    switch (priority) {
-        case 'critical': return 'bg-red-500/10 text-red-500 border-red-500/20';
-        case 'high': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-        case 'medium': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-        case 'low': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-        default: return '';
-    }
-};
-
-const getSeverityColor = (severity: string) => {
-    switch (severity) {
-        case 'blocker': return 'bg-red-500/10 text-red-500 border-red-500/20';
-        case 'critical': return 'bg-red-400/10 text-red-400 border-red-400/20';
-        case 'major': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-        case 'minor': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-        case 'trivial': return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-        default: return '';
-    }
-};
-
-const getAutomationColor = (status: string) => {
-    switch (status) {
-        case 'automated': return 'bg-green-500/10 text-green-500 border-green-500/20';
-        case 'to_be_automated': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-        case 'not_automated': return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-        default: return '';
-    }
-};
 
 const copied = ref(false);
 const showDeleteConfirm = ref(false);
@@ -103,13 +75,16 @@ const formatDate = (date: string): string => {
         <div class="flex h-full flex-1 flex-col gap-[15px] p-6">
             <div class="flex items-start justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight">
-                        <FileText class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
-                            @click="copyLink"
-                            class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
-                            :title="copied ? 'Copied!' : 'Copy link'"
-                        ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
-                    </h1>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <h1 class="text-2xl font-bold tracking-tight">
+                            <FileText class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
+                                @click="copyLink"
+                                class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
+                                :title="copied ? 'Copied!' : 'Copy link'"
+                            ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
+                        </h1>
+                        <FeatureBadges v-if="testCase.project_features?.length" :features="testCase.project_features" :max-visible="3" />
+                    </div>
                 </div>
                 <div class="flex gap-2">
                     <RestrictedAction>
@@ -265,15 +240,15 @@ const formatDate = (date: string): string => {
                         <CardContent class="space-y-3">
                             <div>
                                 <p class="text-xs text-muted-foreground">Priority</p>
-                                <span :class="['px-2 py-1 rounded text-xs font-medium', getPriorityColor(testCase.priority)]">
+                                <Badge :variant="priorityVariant(testCase.priority)" class="mt-1">
                                     {{ testCase.priority }}
-                                </span>
+                                </Badge>
                             </div>
                             <div>
                                 <p class="text-xs text-muted-foreground">Severity</p>
-                                <span :class="['px-2 py-1 rounded text-xs font-medium', getSeverityColor(testCase.severity)]">
+                                <Badge :variant="severityVariant(testCase.severity)" class="mt-1">
                                     {{ testCase.severity }}
-                                </span>
+                                </Badge>
                             </div>
                             <div>
                                 <p class="text-xs text-muted-foreground">Type</p>
@@ -281,9 +256,9 @@ const formatDate = (date: string): string => {
                             </div>
                             <div>
                                 <p class="text-xs text-muted-foreground">Automation</p>
-                                <span :class="['px-2 py-1 rounded text-xs font-medium', getAutomationColor(testCase.automation_status)]">
+                                <Badge :variant="automationVariant(testCase.automation_status)" class="mt-1">
                                     {{ testCase.automation_status.replace(/_/g, ' ') }}
-                                </span>
+                                </Badge>
                             </div>
                             <div>
                                 <p class="text-xs text-muted-foreground">Created</p>

@@ -16,7 +16,7 @@ class ProjectFeatureFactory extends Factory
             'project_id' => Project::factory(),
             'name' => fake()->sentence(3),
             'description' => fake()->optional()->paragraph(),
-            'module' => fake()->randomElement(['UI', 'API', 'Backend', 'Database']),
+            'module' => [fake()->randomElement(['UI', 'API', 'Backend', 'Database'])],
             'category' => fake()->randomElement(['Authentication', 'Payment', 'Admin', 'Dashboard', 'Settings']),
             'priority' => fake()->randomElement(['critical', 'high', 'medium', 'low']),
             'is_active' => true,

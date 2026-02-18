@@ -5,9 +5,11 @@ import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { Bug, Edit, Trash2, Paperclip, Download, Link2, Check } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { severityVariant, bugStatusVariant, priorityVariant } from '@/lib/badge-variants';
 
 interface Bugreport {
     id: number;
@@ -38,37 +40,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Bugreports', href: `/projects/${props.project.id}/bugreports` },
     { title: props.bugreport.title, href: `/projects/${props.project.id}/bugreports/${props.bugreport.id}` },
 ];
-
-const getSeverityColor = (severity: string) => {
-    switch (severity) {
-        case 'critical': return 'bg-red-100 text-red-800';
-        case 'major': return 'bg-orange-100 text-orange-800';
-        case 'minor': return 'bg-yellow-100 text-yellow-800';
-        case 'trivial': return 'bg-gray-100 text-gray-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-};
-
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'new': return 'bg-blue-100 text-blue-800';
-        case 'open': return 'bg-purple-100 text-purple-800';
-        case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-        case 'resolved': return 'bg-green-100 text-green-800';
-        case 'closed': return 'bg-gray-100 text-gray-800';
-        case 'reopened': return 'bg-red-100 text-red-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-};
-
-const getPriorityColor = (priority: string) => {
-    switch (priority) {
-        case 'high': return 'bg-red-100 text-red-800';
-        case 'medium': return 'bg-yellow-100 text-yellow-800';
-        case 'low': return 'bg-green-100 text-green-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-};
 
 const isImage = (mimeType: string): boolean => {
     return mimeType.startsWith('image/');
@@ -256,21 +227,21 @@ const formatDate = (date: string): string => {
                         <CardContent class="space-y-3">
                             <div>
                                 <p class="text-xs text-muted-foreground">Status</p>
-                                <span :class="['px-2 py-1 rounded text-xs font-medium', getStatusColor(bugreport.status)]">
+                                <Badge :variant="bugStatusVariant(bugreport.status)" class="mt-1">
                                     {{ bugreport.status.replace('_', ' ') }}
-                                </span>
+                                </Badge>
                             </div>
                             <div>
                                 <p class="text-xs text-muted-foreground">Severity</p>
-                                <span :class="['px-2 py-1 rounded text-xs font-medium', getSeverityColor(bugreport.severity)]">
+                                <Badge :variant="severityVariant(bugreport.severity)" class="mt-1">
                                     {{ bugreport.severity }}
-                                </span>
+                                </Badge>
                             </div>
                             <div>
                                 <p class="text-xs text-muted-foreground">Priority</p>
-                                <span :class="['px-2 py-1 rounded text-xs font-medium', getPriorityColor(bugreport.priority)]">
+                                <Badge :variant="priorityVariant(bugreport.priority)" class="mt-1">
                                     {{ bugreport.priority }}
-                                </span>
+                                </Badge>
                             </div>
                             <div v-if="bugreport.environment">
                                 <p class="text-xs text-muted-foreground">Environment</p>

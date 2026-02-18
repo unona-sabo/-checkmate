@@ -18,13 +18,18 @@ class ChecklistController extends Controller
 
         $checklists = $project->checklists()
             ->withCount('rows')
-            ->with(['sectionHeaders:id,checklist_id,data,order'])
+            ->with(['sectionHeaders:id,checklist_id,data,order', 'projectFeatures:id,name,module'])
             ->orderBy('order')
             ->get(['id', 'project_id', 'name', 'columns_config', 'order', 'category', 'created_at', 'updated_at']);
+
+        $availableFeatures = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module']);
 
         return Inertia::render('Checklists/Index', [
             'project' => $project,
             'checklists' => $checklists,
+            'availableFeatures' => $availableFeatures,
         ]);
     }
 
@@ -42,10 +47,15 @@ class ChecklistController extends Controller
             ->sort()
             ->values();
 
+        $features = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module', 'priority']);
+
         return Inertia::render('Checklists/Create', [
             'project' => $project,
             'templates' => $templates,
             'categories' => $categories,
+            'features' => $features,
         ]);
     }
 
@@ -65,11 +75,17 @@ class ChecklistController extends Controller
             'columns_config.*.options.*.value' => 'required|string',
             'columns_config.*.options.*.label' => 'required|string',
             'columns_config.*.options.*.color' => 'nullable|string|max:7',
+            'feature_ids' => 'nullable|array',
+            'feature_ids.*' => 'exists:project_features,id',
         ]);
 
         $validated['order'] = ($project->checklists()->max('order') ?? -1) + 1;
 
-        $checklist = $project->checklists()->create($validated);
+        $checklist = $project->checklists()->create(collect($validated)->except('feature_ids')->toArray());
+
+        if (! empty($validated['feature_ids'])) {
+            $checklist->projectFeatures()->sync($validated['feature_ids']);
+        }
 
         return redirect()->route('checklists.show', [$project, $checklist])
             ->with('success', 'Checklist created successfully.');
@@ -79,7 +95,7 @@ class ChecklistController extends Controller
     {
         $this->authorize('view', $project);
 
-        $checklist->load(['rows', 'note']);
+        $checklist->load(['rows', 'note', 'projectFeatures:id,name,module']);
 
         $checklists = $project->checklists()
             ->with(['sectionHeaders:id,checklist_id,data,order'])
@@ -103,9 +119,16 @@ class ChecklistController extends Controller
     {
         $this->authorize('update', $project);
 
+        $checklist->load('projectFeatures:id');
+
+        $features = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module', 'priority']);
+
         return Inertia::render('Checklists/Edit', [
             'project' => $project,
             'checklist' => $checklist,
+            'features' => $features,
         ]);
     }
 
@@ -124,9 +147,12 @@ class ChecklistController extends Controller
             'columns_config.*.options.*.value' => 'required|string',
             'columns_config.*.options.*.label' => 'required|string',
             'columns_config.*.options.*.color' => 'nullable|string|max:7',
+            'feature_ids' => 'nullable|array',
+            'feature_ids.*' => 'exists:project_features,id',
         ]);
 
-        $checklist->update($validated);
+        $checklist->update(collect($validated)->except('feature_ids')->toArray());
+        $checklist->projectFeatures()->sync($validated['feature_ids'] ?? []);
 
         return redirect()->route('checklists.show', [$project, $checklist])
             ->with('success', 'Checklist updated successfully.');

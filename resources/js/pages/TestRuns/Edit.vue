@@ -29,6 +29,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const form = useForm({
     name: props.testRun.name,
     description: props.testRun.description || '',
+    priority: props.testRun.priority || '' as string,
     environment: props.testRun.environment || '',
     milestone: props.testRun.milestone || '',
     status: props.testRun.status,
@@ -102,6 +103,22 @@ const deleteRun = () => {
                                     v-model="form.description"
                                     rows="2"
                                 />
+                            </div>
+
+                            <div class="space-y-2">
+                                <Label>Priority</Label>
+                                <Select v-model="form.priority">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select priority..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="low">Low</SelectItem>
+                                        <SelectItem value="medium">Medium</SelectItem>
+                                        <SelectItem value="high">High</SelectItem>
+                                        <SelectItem value="critical">Critical</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError :message="form.errors.priority" />
                             </div>
 
                             <div class="space-y-2">

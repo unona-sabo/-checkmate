@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Head, router, Deferred } from '@inertiajs/vue3';
+import { ref, computed, watch } from 'vue';
+import { Head, router, Deferred, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
-import type { Release, ReleaseFeature, ReleaseChecklistItem, ReleaseMetricsSnapshot, ProjectFeature, TestRun } from '@/types/checkmate';
+import type { Release, ReleaseFeature, ReleaseChecklistItem, ReleaseMetricsSnapshot, ProjectFeature, TestRun, ReleaseLiveMetrics } from '@/types/checkmate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,8 +46,14 @@ import {
     Save,
     BarChart3,
     Target,
+    Clock,
+    Shield,
+    TrendingUp,
+    TrendingDown,
+    Minus,
 } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { releaseStatusVariant, releaseDecisionVariant } from '@/lib/badge-variants';
 
 interface WorkspaceMember {
     id: number;
@@ -59,7 +65,8 @@ const props = defineProps<{
     project: Project;
     release: Release;
     blockers: number;
-    projectFeatures?: { id: number; name: string; module: string | null }[];
+    liveMetrics: ReleaseLiveMetrics;
+    projectFeatures?: { id: number; name: string; module: string[] | null }[];
     projectTestRuns?: { id: number; name: string; status: string; environment: string | null }[];
     workspaceMembers?: WorkspaceMember[];
 }>();
@@ -90,6 +97,17 @@ const editForm = ref({
     planned_date: props.release.planned_date?.split('T')[0] || '',
     actual_date: props.release.actual_date?.split('T')[0] || '',
     status: props.release.status,
+});
+
+watch(() => props.release, (r) => {
+    editForm.value = {
+        version: r.version,
+        name: r.name,
+        description: r.description || '',
+        planned_date: r.planned_date?.split('T')[0] || '',
+        actual_date: r.actual_date?.split('T')[0] || '',
+        status: r.status,
+    };
 });
 
 const updateRelease = () => {
@@ -361,12 +379,6 @@ const getHealthText = (h: string) => {
     return 'text-amber-600 dark:text-amber-400';
 };
 
-const getStatusVariant = (s: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    if (s === 'released' || s === 'completed') return 'default';
-    if (s === 'cancelled') return 'destructive';
-    return 'secondary';
-};
-
 const getCategoryLabel = (cat: string): string => {
     return cat.charAt(0).toUpperCase() + cat.slice(1);
 };
@@ -384,13 +396,6 @@ const getChecklistStatusColor = (status: string): string => {
     return 'text-muted-foreground';
 };
 
-const getDecisionVariant = (d: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    if (d === 'go') return 'default';
-    if (d === 'no_go') return 'destructive';
-    if (d === 'conditional') return 'outline';
-    return 'secondary';
-};
-
 const getDecisionLabel = (d: string): string => {
     const labels: Record<string, string> = { pending: 'Pending', go: 'Go', no_go: 'No-Go', conditional: 'Conditional' };
     return labels[d] || d;
@@ -399,6 +404,68 @@ const getDecisionLabel = (d: string): string => {
 const formatDate = (d: string | null): string => {
     if (!d) return 'Not set';
     return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+// Live metrics helpers
+const securityBadgeVariant = computed((): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    const s = props.liveMetrics.blockers_and_risks.security_status;
+    if (s === 'passed') return 'default';
+    if (s === 'pending') return 'secondary';
+    if (s === 'in_progress') return 'outline';
+    return 'secondary';
+});
+
+const formatDiff = (val: number): string => {
+    if (val > 0) return `+${val}`;
+    return String(val);
+};
+
+const diffColor = (val: number, invertForBugs = false): string => {
+    const positive = invertForBugs ? val < 0 : val > 0;
+    const negative = invertForBugs ? val > 0 : val < 0;
+    if (positive) return 'text-emerald-600 dark:text-emerald-400';
+    if (negative) return 'text-red-600 dark:text-red-400';
+    return 'text-muted-foreground';
+};
+
+const trendIcon = computed(() => {
+    const trend = props.liveMetrics.comparison?.trend;
+    if (trend === 'better') return TrendingUp;
+    if (trend === 'worse') return TrendingDown;
+    return Minus;
+});
+
+const trendVariant = computed((): 'default' | 'secondary' | 'destructive' => {
+    const trend = props.liveMetrics.comparison?.trend;
+    if (trend === 'better') return 'default';
+    if (trend === 'worse') return 'destructive';
+    return 'secondary';
+});
+
+// Test run progress helpers
+const getTestRunTotal = (tr: TestRun): number => {
+    if (!tr.stats) return 0;
+    return Object.values(tr.stats).reduce((sum: number, v) => sum + (Number(v) || 0), 0);
+};
+
+const getTestRunPassRate = (tr: TestRun): number => {
+    const total = getTestRunTotal(tr);
+    if (total === 0) return 0;
+    return Math.round(((tr.stats?.passed ?? 0) / total) * 100);
+};
+
+const getTestRunPassRateColor = (tr: TestRun): string => {
+    const rate = getTestRunPassRate(tr);
+    if (rate >= 90) return 'text-emerald-600 dark:text-emerald-400';
+    if (rate >= 70) return 'text-amber-600 dark:text-amber-400';
+    return 'text-red-600 dark:text-red-400';
+};
+
+const breakdownLabels: Record<string, string> = {
+    test_completion: 'Test Completion',
+    pass_rate: 'Pass Rate',
+    critical_bugs: 'Critical Bugs',
+    blockers: 'Blockers',
 };
 </script>
 
@@ -415,12 +482,12 @@ const formatDate = (d: string | null): string => {
                         <h1 class="text-2xl font-bold text-foreground">{{ release.name }}</h1>
                     </div>
                     <div class="mt-2 flex items-center gap-3">
-                        <Badge :variant="getStatusVariant(release.status)">{{ release.status }}</Badge>
+                        <Badge :variant="releaseStatusVariant(release.status)">{{ release.status }}</Badge>
                         <div class="flex items-center gap-1.5">
                             <div class="h-3 w-3 rounded-full" :class="getHealthColor(release.health)" />
                             <span class="text-sm font-medium capitalize" :class="getHealthText(release.health)">{{ release.health }}</span>
                         </div>
-                        <Badge :variant="getDecisionVariant(release.decision)">
+                        <Badge :variant="releaseDecisionVariant(release.decision)">
                             {{ getDecisionLabel(release.decision) }}
                         </Badge>
                     </div>
@@ -514,25 +581,112 @@ const formatDate = (d: string | null): string => {
 
                 <!-- Tab: Overview -->
                 <div v-if="activeTab === 'overview'" class="p-6 space-y-6">
-                    <!-- Latest metrics details -->
-                    <div v-if="latestMetrics" class="grid gap-4 md:grid-cols-3">
-                        <div class="rounded-lg border p-4">
-                            <p class="text-sm text-muted-foreground mb-1">Bug Closure Rate</p>
-                            <p class="text-xl font-bold">{{ latestMetrics.bug_closure_rate }}%</p>
+                    <!-- Decision-Support Cards -->
+                    <div class="grid gap-4 md:grid-cols-3">
+                        <!-- Card 1: Release Readiness -->
+                        <div class="rounded-lg border p-4 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <p class="text-sm font-medium text-muted-foreground">Release Readiness</p>
+                                <Badge :variant="liveMetrics.readiness.color === 'green' ? 'default' : liveMetrics.readiness.color === 'red' ? 'destructive' : 'secondary'">
+                                    {{ liveMetrics.readiness.score }}%
+                                </Badge>
+                            </div>
+                            <Progress :model-value="liveMetrics.readiness.score" class="h-2" />
+                            <div class="space-y-1">
+                                <div
+                                    v-for="(item, key) in liveMetrics.readiness.breakdown"
+                                    :key="key"
+                                    class="flex items-center justify-between text-xs"
+                                >
+                                    <span class="text-muted-foreground">{{ breakdownLabels[key] || key }}</span>
+                                    <span class="font-medium">{{ item.weighted }}/{{ item.weight }}</span>
+                                </div>
+                            </div>
+                            <div v-if="liveMetrics.readiness.days_to_deadline !== null" class="flex items-center gap-1.5 text-xs pt-1 border-t">
+                                <Clock class="h-3.5 w-3.5" :class="liveMetrics.readiness.on_track ? 'text-muted-foreground' : 'text-red-500'" />
+                                <span :class="liveMetrics.readiness.on_track ? 'text-muted-foreground' : 'text-red-600 dark:text-red-400 font-medium'">
+                                    {{ liveMetrics.readiness.on_track
+                                        ? `${liveMetrics.readiness.days_to_deadline} days to deadline`
+                                        : `${Math.abs(liveMetrics.readiness.days_to_deadline)} days overdue`
+                                    }}
+                                </span>
+                            </div>
                         </div>
-                        <div class="rounded-lg border p-4">
-                            <p class="text-sm text-muted-foreground mb-1">Regression Pass Rate</p>
-                            <p class="text-xl font-bold">{{ latestMetrics.regression_pass_rate }}%</p>
+
+                        <!-- Card 2: Blockers & Risks -->
+                        <div class="rounded-lg border p-4 space-y-3">
+                            <p class="text-sm font-medium text-muted-foreground">Blockers & Risks</p>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm">Checklist Blockers</span>
+                                    <Badge :variant="liveMetrics.blockers_and_risks.blocker_count > 0 ? 'destructive' : 'default'">
+                                        {{ liveMetrics.blockers_and_risks.blocker_count }}
+                                    </Badge>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm">Critical Bugs</span>
+                                    <Badge :variant="liveMetrics.blockers_and_risks.critical_bugs > 0 ? 'destructive' : 'default'">
+                                        {{ liveMetrics.blockers_and_risks.critical_bugs }}
+                                    </Badge>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-1.5">
+                                        <Shield class="h-4 w-4 text-muted-foreground" />
+                                        <span class="text-sm">Security</span>
+                                    </div>
+                                    <Badge :variant="securityBadgeVariant" class="capitalize">
+                                        {{ liveMetrics.blockers_and_risks.security_status.replace('_', ' ') }}
+                                    </Badge>
+                                </div>
+                            </div>
+                            <div v-if="liveMetrics.blockers_and_risks.risks.length" class="space-y-1 pt-2 border-t">
+                                <div
+                                    v-for="(risk, i) in liveMetrics.blockers_and_risks.risks"
+                                    :key="i"
+                                    class="flex items-start gap-1.5 text-xs"
+                                >
+                                    <AlertTriangle class="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                                    <span class="text-muted-foreground">{{ risk }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="rounded-lg border p-4">
-                            <p class="text-sm text-muted-foreground mb-1">Security Status</p>
-                            <Badge :variant="latestMetrics.security_status === 'passed' ? 'default' : latestMetrics.security_status === 'failed' ? 'destructive' : 'secondary'">
-                                {{ latestMetrics.security_status }}
-                            </Badge>
+
+                        <!-- Card 3: vs Previous Release -->
+                        <div class="rounded-lg border p-4 space-y-3">
+                            <p class="text-sm font-medium text-muted-foreground">vs Previous Release</p>
+                            <template v-if="liveMetrics.comparison">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-xs text-muted-foreground">Compared to v{{ liveMetrics.comparison.previous_version }}</span>
+                                    <Badge :variant="trendVariant" class="capitalize text-xs">
+                                        <component :is="trendIcon" class="mr-1 h-3 w-3" />
+                                        {{ liveMetrics.comparison.trend }}
+                                    </Badge>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-muted-foreground">Pass Rate</span>
+                                        <span class="font-medium" :class="diffColor(liveMetrics.comparison.pass_rate_diff)">
+                                            {{ formatDiff(liveMetrics.comparison.pass_rate_diff) }}%
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-muted-foreground">Open Bugs</span>
+                                        <span class="font-medium" :class="diffColor(liveMetrics.comparison.bugs_diff, true)">
+                                            {{ formatDiff(liveMetrics.comparison.bugs_diff) }}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-muted-foreground">Completion</span>
+                                        <span class="font-medium" :class="diffColor(liveMetrics.comparison.test_completion_diff)">
+                                            {{ formatDiff(liveMetrics.comparison.test_completion_diff) }}%
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+                            <div v-else class="flex items-center justify-center py-4 text-sm text-muted-foreground">
+                                <p>No previous release to compare</p>
+                            </div>
                         </div>
-                    </div>
-                    <div v-else class="py-8 text-center text-muted-foreground">
-                        <p>No metrics snapshots yet. Click "Refresh Metrics" to generate one.</p>
                     </div>
 
                     <!-- Linked Test Runs -->
@@ -550,19 +704,39 @@ const formatDate = (d: string | null): string => {
                             <div
                                 v-for="tr in linkedTestRuns"
                                 :key="tr.id"
-                                class="flex items-center justify-between rounded-lg border p-3"
+                                class="rounded-lg border p-3 transition-colors hover:border-primary"
                             >
-                                <div class="flex items-center gap-3">
-                                    <Play class="h-4 w-4 text-muted-foreground" />
-                                    <span class="font-medium text-sm">{{ tr.name }}</span>
-                                    <Badge :variant="getStatusVariant(tr.status)" class="text-xs">{{ tr.status }}</Badge>
-                                    <span v-if="tr.environment" class="text-xs text-muted-foreground">{{ tr.environment }}</span>
+                                <div class="flex items-center justify-between">
+                                    <Link :href="`/projects/${project.id}/test-runs/${tr.id}`" class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
+                                        <Play class="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <span class="font-medium text-sm truncate">{{ tr.name }}</span>
+                                        <Badge :variant="releaseStatusVariant(tr.status)" class="text-xs shrink-0">{{ tr.status }}</Badge>
+                                        <span v-if="tr.environment" class="text-xs text-muted-foreground shrink-0">{{ tr.environment }}</span>
+                                    </Link>
+                                    <RestrictedAction>
+                                        <Button variant="ghost" size="sm" @click.prevent="toggleTestRunLink(tr.id)" class="cursor-pointer text-muted-foreground hover:text-destructive shrink-0">
+                                            <X class="h-4 w-4" />
+                                        </Button>
+                                    </RestrictedAction>
                                 </div>
-                                <RestrictedAction>
-                                    <Button variant="ghost" size="sm" @click="toggleTestRunLink(tr.id)" class="cursor-pointer text-muted-foreground hover:text-destructive">
-                                        <X class="h-4 w-4" />
-                                    </Button>
-                                </RestrictedAction>
+                                <div v-if="tr.stats && getTestRunTotal(tr) > 0" class="mt-2 space-y-1.5 pl-7">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex-1">
+                                            <Progress :model-value="getTestRunPassRate(tr)" class="h-1.5" />
+                                        </div>
+                                        <span class="text-xs font-medium min-w-[70px] text-right" :class="getTestRunPassRateColor(tr)">
+                                            {{ getTestRunPassRate(tr) }}% ({{ tr.stats.passed ?? 0 }}/{{ getTestRunTotal(tr) }})
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-xs text-muted-foreground">
+                                        <span class="text-emerald-600 dark:text-emerald-400">{{ tr.stats.passed ?? 0 }} passed</span>
+                                        <span v-if="(tr.stats.failed ?? 0) > 0" class="text-red-600 dark:text-red-400">{{ tr.stats.failed }} failed</span>
+                                        <span v-if="(tr.stats.blocked ?? 0) > 0" class="text-amber-600 dark:text-amber-400">{{ tr.stats.blocked }} blocked</span>
+                                        <span v-if="(tr.stats.skipped ?? 0) > 0">{{ tr.stats.skipped }} skipped</span>
+                                        <span v-if="(tr.stats.untested ?? 0) + (tr.stats.retest ?? 0) > 0">{{ (tr.stats.untested ?? 0) + (tr.stats.retest ?? 0) }} remaining</span>
+                                    </div>
+                                </div>
+                                <p v-else-if="!tr.stats || getTestRunTotal(tr) === 0" class="mt-1.5 pl-7 text-xs text-muted-foreground italic">No tests executed yet</p>
                             </div>
                         </div>
                         <p v-else class="text-sm text-muted-foreground">No test runs linked yet.</p>
@@ -602,7 +776,7 @@ const formatDate = (d: string | null): string => {
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="font-medium">{{ f.feature_name }}</span>
-                                    <Badge :variant="getStatusVariant(f.status)" class="text-xs">{{ f.status }}</Badge>
+                                    <Badge :variant="releaseStatusVariant(f.status)" class="text-xs">{{ f.status }}</Badge>
                                 </div>
                                 <p v-if="f.description" class="text-sm text-muted-foreground mb-2">{{ f.description }}</p>
                                 <div class="flex items-center gap-4 text-xs text-muted-foreground">
@@ -730,7 +904,7 @@ const formatDate = (d: string | null): string => {
                         </CardHeader>
                         <CardContent>
                             <div class="flex items-center gap-3 mb-2">
-                                <Badge :variant="getDecisionVariant(autoRecommendation.decision)" class="text-sm">
+                                <Badge :variant="releaseDecisionVariant(autoRecommendation.decision)" class="text-sm">
                                     {{ getDecisionLabel(autoRecommendation.decision) }}
                                 </Badge>
                             </div>

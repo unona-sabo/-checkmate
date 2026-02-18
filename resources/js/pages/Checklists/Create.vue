@@ -2,6 +2,8 @@
 import { Head, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type ColumnConfig, type Checklist, type SelectOption } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
+import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +17,7 @@ const props = defineProps<{
     project: Project;
     templates: Checklist[];
     categories: string[];
+    features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -50,6 +53,7 @@ const form = useForm({
     name: '',
     category: defaultCategory as string | null,
     columns_config: [...defaultColumns] as ColumnConfig[],
+    feature_ids: [] as number[],
 });
 
 // Apply template when selected
@@ -205,6 +209,13 @@ const submit = () => {
                                 </div>
                                 <InputError :message="form.errors.category" />
                             </div>
+
+                            <!-- Features -->
+                            <FeatureSelector
+                                v-model="form.feature_ids"
+                                :features="features"
+                                :project-id="project.id"
+                            />
 
                             <div class="space-y-3">
                                 <div class="flex items-center justify-between">

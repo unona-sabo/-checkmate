@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Project;
-use Illuminate\Support\Facades\DB;
 
 class CoverageCalculator
 {
@@ -17,45 +16,58 @@ class CoverageCalculator
 
         $coveredFeatures = $project->features()
             ->where('is_active', true)
-            ->whereHas('testCases')
+            ->where(fn ($q) => $q->whereHas('testCases')->orWhereHas('checklists'))
             ->count();
 
         return (int) round(($coveredFeatures / $totalFeatures) * 100);
     }
 
     /**
-     * @return list<array{module: string, total_features: int, covered_features: int, test_cases_count: int, coverage_percentage: int}>
+     * @return list<array{module: string, total_features: int, covered_features: int, test_cases_count: int, checklists_count: int, coverage_percentage: int}>
      */
     public function getCoverageByModule(Project $project): array
     {
-        $modules = $project->features()
+        $features = $project->features()
             ->where('is_active', true)
-            ->select('module', DB::raw('count(*) as total'))
-            ->groupBy('module')
+            ->withCount(['testCases', 'checklists'])
             ->get();
+
+        /** @var array<string, array{total: int, covered: int, test_cases: int, checklists: int}> $moduleStats */
+        $moduleStats = [];
+
+        foreach ($features as $feature) {
+            $modules = $feature->module ?? [];
+            if ($modules === []) {
+                $modules = ['Uncategorized'];
+            }
+
+            $isCovered = ($feature->test_cases_count > 0) || ($feature->checklists_count > 0);
+
+            foreach ($modules as $mod) {
+                if (! isset($moduleStats[$mod])) {
+                    $moduleStats[$mod] = ['total' => 0, 'covered' => 0, 'test_cases' => 0, 'checklists' => 0];
+                }
+
+                $moduleStats[$mod]['total']++;
+                if ($isCovered) {
+                    $moduleStats[$mod]['covered']++;
+                }
+                $moduleStats[$mod]['test_cases'] += $feature->test_cases_count;
+                $moduleStats[$mod]['checklists'] += $feature->checklists_count;
+            }
+        }
 
         $coverage = [];
 
-        foreach ($modules as $module) {
-            $covered = $project->features()
-                ->where('module', $module->module)
-                ->where('is_active', true)
-                ->whereHas('testCases')
-                ->count();
-
-            $testCasesCount = $project->features()
-                ->where('module', $module->module)
-                ->withCount('testCases')
-                ->get()
-                ->sum('test_cases_count');
-
+        foreach ($moduleStats as $module => $stats) {
             $coverage[] = [
-                'module' => $module->module ?? 'Uncategorized',
-                'total_features' => $module->total,
-                'covered_features' => $covered,
-                'test_cases_count' => $testCasesCount,
-                'coverage_percentage' => $module->total > 0
-                    ? (int) round(($covered / $module->total) * 100)
+                'module' => $module,
+                'total_features' => $stats['total'],
+                'covered_features' => $stats['covered'],
+                'test_cases_count' => $stats['test_cases'],
+                'checklists_count' => $stats['checklists'],
+                'coverage_percentage' => $stats['total'] > 0
+                    ? (int) round(($stats['covered'] / $stats['total']) * 100)
                     : 0,
             ];
         }
@@ -64,13 +76,14 @@ class CoverageCalculator
     }
 
     /**
-     * @return list<array{id: int, feature: string, description: string|null, module: string|null, category: string|null, priority: string}>
+     * @return list<array{id: int, feature: string, description: string|null, module: list<string>|null, category: string|null, priority: string}>
      */
     public function getGaps(Project $project): array
     {
         return $project->features()
             ->where('is_active', true)
             ->doesntHave('testCases')
+            ->doesntHave('checklists')
             ->get()
             ->map(fn ($feature) => [
                 'id' => $feature->id,
@@ -84,14 +97,14 @@ class CoverageCalculator
     }
 
     /**
-     * @return array{overall_coverage: int, total_features: int, covered_features: int, uncovered_features: int, total_test_cases: int, gaps_count: int}
+     * @return array{overall_coverage: int, total_features: int, covered_features: int, uncovered_features: int, total_test_cases: int, total_checklists: int, gaps_count: int}
      */
     public function getStatistics(Project $project): array
     {
         $totalFeatures = $project->features()->where('is_active', true)->count();
         $coveredFeatures = $project->features()
             ->where('is_active', true)
-            ->whereHas('testCases')
+            ->where(fn ($q) => $q->whereHas('testCases')->orWhereHas('checklists'))
             ->count();
 
         $totalTestCases = $project->testSuites()
@@ -99,12 +112,15 @@ class CoverageCalculator
             ->get()
             ->sum('test_cases_count');
 
+        $totalChecklists = $project->checklists()->count();
+
         return [
             'overall_coverage' => $this->calculateOverallCoverage($project),
             'total_features' => $totalFeatures,
             'covered_features' => $coveredFeatures,
             'uncovered_features' => $totalFeatures - $coveredFeatures,
             'total_test_cases' => $totalTestCases,
+            'total_checklists' => $totalChecklists,
             'gaps_count' => count($this->getGaps($project)),
         ];
     }

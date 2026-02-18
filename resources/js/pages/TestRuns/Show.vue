@@ -17,6 +17,7 @@ import {
 } from 'lucide-vue-next';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { testResultVariant } from '@/lib/badge-variants';
 
 const props = defineProps<{
     project: Project;
@@ -85,17 +86,6 @@ const getStatusColor = (status: string) => {
         case 'skipped': return 'text-purple-500';
         case 'retest': return 'text-blue-500';
         default: return 'text-gray-400';
-    }
-};
-
-const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-        case 'passed': return 'bg-green-500/10 text-green-500 border-green-500/20';
-        case 'failed': return 'bg-red-500/10 text-red-500 border-red-500/20';
-        case 'blocked': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-        case 'skipped': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
-        case 'retest': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-        default: return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
     }
 };
 
@@ -250,10 +240,10 @@ const highlight = (text: string): string => {
                         {{ testRun.description }}
                     </p>
                     <div class="mt-2 flex items-center gap-3">
-                        <Badge :class="getStatusBadgeColor(testRun.status)" variant="outline">
+                        <Badge :variant="testResultVariant(testRun.status)">
                             {{ testRun.status }}
                         </Badge>
-                        <Badge v-if="testRun.environment" variant="outline" class="bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400">
+                        <Badge v-if="testRun.environment" variant="blue">
                             {{ testRun.environment }}
                         </Badge>
                         <span v-if="testRun.milestone" class="text-sm text-muted-foreground">
@@ -391,7 +381,7 @@ const highlight = (text: string): string => {
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2">
                                             <p class="text-sm font-medium truncate" v-html="highlight(trc.test_case?.title ?? trc.title ?? '')" />
-                                            <Badge :class="getStatusBadgeColor(trc.status)" variant="outline" class="text-[10px] px-1.5 h-4 shrink-0">
+                                            <Badge :variant="testResultVariant(trc.status)" class="text-[10px] px-1.5 h-4 shrink-0">
                                                 {{ trc.status }}
                                             </Badge>
                                             <span v-if="trc.assigned_user" class="flex items-center gap-1 text-xs text-muted-foreground shrink-0">

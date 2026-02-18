@@ -1,12 +1,15 @@
 <?php
 
+use App\Models\Bugreport;
 use App\Models\Project;
 use App\Models\Release;
 use App\Models\ReleaseChecklistItem;
 use App\Models\ReleaseFeature;
+use App\Models\ReleaseMetricsSnapshot;
 use App\Models\TestRun;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\ReleaseMetricsCalculator;
 
 // ===== Index =====
 
@@ -101,6 +104,11 @@ test('show page renders with release data', function () {
         ->has('project')
         ->has('release')
         ->has('blockers')
+        ->has('liveMetrics', fn ($metrics) => $metrics
+            ->has('readiness')
+            ->has('blockers_and_risks')
+            ->has('comparison')
+        )
         ->loadDeferredProps('sidebar', fn ($page) => $page
             ->has('projectFeatures')
             ->has('projectTestRuns')
@@ -389,4 +397,177 @@ test('viewer cannot delete releases', function () {
     $response = $this->actingAs($viewer)->deleteJson(route('releases.destroy', [$project, $release]));
 
     $response->assertForbidden();
+});
+
+// ===== Metrics Calculator =====
+
+test('metrics calculator scopes bugs to release timeframe', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $release = Release::factory()->create([
+        'project_id' => $project->id,
+        'created_by' => $user->id,
+        'created_at' => now()->subDays(5),
+    ]);
+
+    // Bug before release — should NOT be counted
+    Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'status' => 'open',
+        'severity' => 'critical',
+        'created_at' => now()->subDays(10),
+    ]);
+
+    // Bug after release — should be counted
+    Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'status' => 'open',
+        'severity' => 'critical',
+        'created_at' => now()->subDays(2),
+    ]);
+
+    $calculator = app(ReleaseMetricsCalculator::class);
+    $metrics = $calculator->calculate($release);
+
+    expect($metrics['total_bugs'])->toBe(1)
+        ->and($metrics['critical_bugs'])->toBe(1);
+});
+
+test('metrics calculator computes security status from checklist items', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    // No security items → not_applicable
+    $release1 = Release::factory()->create(['project_id' => $project->id, 'created_by' => $user->id]);
+    $calculator = app(ReleaseMetricsCalculator::class);
+    $metrics1 = $calculator->calculate($release1);
+    expect($metrics1['security_status'])->toBe('not_applicable');
+
+    // All completed → passed
+    $release2 = Release::factory()->create(['project_id' => $project->id, 'created_by' => $user->id]);
+    ReleaseChecklistItem::factory()->create(['release_id' => $release2->id, 'category' => 'security', 'status' => 'completed']);
+    ReleaseChecklistItem::factory()->create(['release_id' => $release2->id, 'category' => 'security', 'status' => 'na']);
+    $metrics2 = $calculator->calculate($release2);
+    expect($metrics2['security_status'])->toBe('passed');
+
+    // In progress → in_progress
+    $release3 = Release::factory()->create(['project_id' => $project->id, 'created_by' => $user->id]);
+    ReleaseChecklistItem::factory()->create(['release_id' => $release3->id, 'category' => 'security', 'status' => 'in_progress']);
+    ReleaseChecklistItem::factory()->create(['release_id' => $release3->id, 'category' => 'security', 'status' => 'pending']);
+    $metrics3 = $calculator->calculate($release3);
+    expect($metrics3['security_status'])->toBe('in_progress');
+
+    // All pending → pending
+    $release4 = Release::factory()->create(['project_id' => $project->id, 'created_by' => $user->id]);
+    ReleaseChecklistItem::factory()->create(['release_id' => $release4->id, 'category' => 'security', 'status' => 'pending']);
+    $metrics4 = $calculator->calculate($release4);
+    expect($metrics4['security_status'])->toBe('pending');
+});
+
+test('metrics calculator computes performance score from checklist items', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    // No perf items → 0
+    $release1 = Release::factory()->create(['project_id' => $project->id, 'created_by' => $user->id]);
+    $calculator = app(ReleaseMetricsCalculator::class);
+    $metrics1 = $calculator->calculate($release1);
+    expect($metrics1['performance_score'])->toBe(0);
+
+    // 2 of 3 actionable completed → 67%
+    $release2 = Release::factory()->create(['project_id' => $project->id, 'created_by' => $user->id]);
+    ReleaseChecklistItem::factory()->create(['release_id' => $release2->id, 'category' => 'performance', 'status' => 'completed']);
+    ReleaseChecklistItem::factory()->create(['release_id' => $release2->id, 'category' => 'performance', 'status' => 'completed']);
+    ReleaseChecklistItem::factory()->create(['release_id' => $release2->id, 'category' => 'performance', 'status' => 'pending']);
+    ReleaseChecklistItem::factory()->create(['release_id' => $release2->id, 'category' => 'performance', 'status' => 'na']);
+    $metrics2 = $calculator->calculate($release2);
+    expect($metrics2['performance_score'])->toBe(67);
+});
+
+test('readiness score calculates weighted components', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $release = Release::factory()->create([
+        'project_id' => $project->id,
+        'created_by' => $user->id,
+        'planned_date' => now()->addDays(10),
+    ]);
+
+    $snapshot = [
+        'test_completion_percentage' => 100,
+        'test_pass_rate' => 100,
+        'critical_bugs' => 0,
+        'total_bugs' => 0,
+    ];
+
+    $calculator = app(ReleaseMetricsCalculator::class);
+    $result = $calculator->calculateReadinessScore($release, $snapshot);
+
+    expect($result['score'])->toBe(100)
+        ->and($result['color'])->toBe('green')
+        ->and($result['on_track'])->toBeTrue()
+        ->and($result['days_to_deadline'])->toBe(10)
+        ->and($result['breakdown'])->toHaveKeys(['test_completion', 'pass_rate', 'critical_bugs', 'blockers']);
+});
+
+test('comparison returns null when no previous release', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $release = Release::factory()->create(['project_id' => $project->id, 'created_by' => $user->id]);
+
+    $calculator = app(ReleaseMetricsCalculator::class);
+    $result = $calculator->compareWithPreviousRelease($release, [
+        'test_pass_rate' => 90,
+        'total_bugs' => 2,
+        'test_completion_percentage' => 80,
+    ]);
+
+    expect($result)->toBeNull();
+});
+
+test('comparison returns diff when previous release exists', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    // Previous release with snapshot
+    $previousRelease = Release::factory()->create([
+        'project_id' => $project->id,
+        'created_by' => $user->id,
+        'status' => 'released',
+        'version' => '1.0.0',
+    ]);
+    ReleaseMetricsSnapshot::create([
+        'release_id' => $previousRelease->id,
+        'test_completion_percentage' => 80,
+        'test_pass_rate' => 85,
+        'total_bugs' => 5,
+        'critical_bugs' => 1,
+        'high_bugs' => 2,
+        'bug_closure_rate' => 50,
+        'regression_pass_rate' => 85,
+        'performance_score' => 60,
+        'security_status' => 'passed',
+        'snapshot_at' => now(),
+    ]);
+
+    // Current release
+    $currentRelease = Release::factory()->create([
+        'project_id' => $project->id,
+        'created_by' => $user->id,
+        'version' => '2.0.0',
+    ]);
+
+    $calculator = app(ReleaseMetricsCalculator::class);
+    $result = $calculator->compareWithPreviousRelease($currentRelease, [
+        'test_pass_rate' => 95,
+        'total_bugs' => 2,
+        'test_completion_percentage' => 90,
+    ]);
+
+    expect($result)->not->toBeNull()
+        ->and($result['previous_version'])->toBe('1.0.0')
+        ->and($result['pass_rate_diff'])->toBe(10)
+        ->and($result['bugs_diff'])->toBe(-3)
+        ->and($result['test_completion_diff'])->toBe(10)
+        ->and($result['trend'])->toBe('better');
 });

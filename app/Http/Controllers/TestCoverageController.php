@@ -31,8 +31,8 @@ class TestCoverageController extends Controller
 
         $features = $project->features()
             ->where('is_active', true)
-            ->withCount('testCases')
-            ->with('testCases:id,title,test_suite_id', 'testCases.testSuite:id,name')
+            ->withCount(['testCases', 'checklists'])
+            ->with('testCases:id,title,test_suite_id', 'testCases.testSuite:id,name', 'checklists:id,name')
             ->orderBy('module')
             ->orderBy('priority')
             ->get();
@@ -49,6 +49,11 @@ class TestCoverageController extends Controller
             ]))
             ->values();
 
+        $allChecklists = $project->checklists()
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('TestCoverage/Index', [
             'project' => $project,
             'statistics' => $stats,
@@ -58,6 +63,7 @@ class TestCoverageController extends Controller
             'gaps' => $gaps,
             'hasAnthropicKey' => ! empty(config('services.anthropic.api_key')),
             'allTestCases' => $allTestCases,
+            'allChecklists' => $allChecklists,
         ]);
     }
 
@@ -177,7 +183,8 @@ class TestCoverageController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'module' => 'nullable|string|max:100',
+            'module' => 'nullable|array',
+            'module.*' => 'string|max:100',
             'category' => 'nullable|string|max:100',
             'priority' => 'required|in:critical,high,medium,low',
         ]);
@@ -198,7 +205,8 @@ class TestCoverageController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'module' => 'nullable|string|max:100',
+            'module' => 'nullable|array',
+            'module.*' => 'string|max:100',
             'category' => 'nullable|string|max:100',
             'priority' => 'sometimes|in:critical,high,medium,low',
             'is_active' => 'sometimes|boolean',
@@ -246,6 +254,37 @@ class TestCoverageController extends Controller
 
         $feature = $project->features()->findOrFail($featureId);
         $feature->testCases()->detach($testCaseId);
+
+        return back();
+    }
+
+    public function linkChecklist(Request $request, Project $project, int $featureId): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $feature = $project->features()->findOrFail($featureId);
+
+        $validated = $request->validate([
+            'checklist_id' => 'required|exists:checklists,id',
+        ]);
+
+        $projectChecklistIds = $project->checklists()->pluck('id')->map(fn ($id) => (int) $id)->toArray();
+
+        if (! in_array((int) $validated['checklist_id'], $projectChecklistIds, true)) {
+            abort(422, 'Checklist does not belong to this project.');
+        }
+
+        $feature->checklists()->syncWithoutDetaching([$validated['checklist_id']]);
+
+        return back();
+    }
+
+    public function unlinkChecklist(Project $project, int $featureId, int $checklistId): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $feature = $project->features()->findOrFail($featureId);
+        $feature->checklists()->detach($checklistId);
 
         return back();
     }

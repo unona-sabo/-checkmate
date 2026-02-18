@@ -22,6 +22,28 @@ export const badgeVariants = cva(
           "border-transparent bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-900",
         info:
           "border-transparent bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
+        red:
+          "border-transparent bg-red-500/15 text-red-600 dark:text-red-400",
+        orange:
+          "border-transparent bg-orange-500/15 text-orange-600 dark:text-orange-400",
+        amber:
+          "border-transparent bg-amber-500/15 text-amber-600 dark:text-amber-400",
+        emerald:
+          "border-transparent bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+        blue:
+          "border-transparent bg-blue-500/15 text-blue-600 dark:text-blue-400",
+        purple:
+          "border-transparent bg-purple-500/15 text-purple-600 dark:text-purple-400",
+        gray:
+          "border-transparent bg-gray-500/15 text-gray-600 dark:text-gray-400",
+        cyan:
+          "border-transparent bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
+        rose:
+          "border-transparent bg-rose-500/15 text-rose-600 dark:text-rose-400",
+        pink:
+          "border-transparent bg-pink-500/15 text-pink-600 dark:text-pink-400",
+        feature:
+          "border-transparent bg-blue-500/10 text-blue-700 dark:text-blue-400",
       },
     },
     defaultVariants: {

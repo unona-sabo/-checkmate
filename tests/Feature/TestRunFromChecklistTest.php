@@ -132,6 +132,92 @@ test('show page renders with checklist-sourced cases', function () {
     );
 });
 
+test('store from test cases accepts and persists priority', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = \App\Models\TestSuite::factory()->create(['project_id' => $project->id]);
+    $testCase = \App\Models\TestCase::factory()->create(['test_suite_id' => $suite->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-runs.store', $project),
+        [
+            'name' => 'Priority Test Run',
+            'description' => 'Testing priority',
+            'environment' => 'Staging',
+            'milestone' => 'v2.0',
+            'priority' => 'high',
+            'test_case_ids' => [$testCase->id],
+        ]
+    );
+
+    $response->assertRedirect();
+
+    $testRun = TestRun::where('name', 'Priority Test Run')->first();
+    expect($testRun)->not->toBeNull();
+    expect($testRun->priority)->toBe('high');
+});
+
+test('store from checklist accepts and persists priority', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $checklist = Checklist::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-runs.store-from-checklist', $project),
+        [
+            'name' => 'Priority Checklist Run',
+            'priority' => 'critical',
+            'checklist_id' => $checklist->id,
+            'titles' => ['Item 1'],
+        ]
+    );
+
+    $response->assertRedirect();
+
+    $testRun = TestRun::where('name', 'Priority Checklist Run')->first();
+    expect($testRun)->not->toBeNull();
+    expect($testRun->priority)->toBe('critical');
+});
+
+test('store accepts null priority', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = \App\Models\TestSuite::factory()->create(['project_id' => $project->id]);
+    $testCase = \App\Models\TestCase::factory()->create(['test_suite_id' => $suite->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-runs.store', $project),
+        [
+            'name' => 'No Priority Run',
+            'test_case_ids' => [$testCase->id],
+        ]
+    );
+
+    $response->assertRedirect();
+
+    $testRun = TestRun::where('name', 'No Priority Run')->first();
+    expect($testRun)->not->toBeNull();
+    expect($testRun->priority)->toBeNull();
+});
+
+test('store rejects invalid priority value', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = \App\Models\TestSuite::factory()->create(['project_id' => $project->id]);
+    $testCase = \App\Models\TestCase::factory()->create(['test_suite_id' => $suite->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-runs.store', $project),
+        [
+            'name' => 'Bad Priority Run',
+            'priority' => 'urgent',
+            'test_case_ids' => [$testCase->id],
+        ]
+    );
+
+    $response->assertSessionHasErrors('priority');
+});
+
 test('index page passes users prop', function () {
     $user = User::factory()->create();
     $project = Project::factory()->create(['user_id' => $user->id]);

@@ -28,6 +28,7 @@ export interface Bugreport {
     priority: 'critical' | 'high' | 'medium' | 'low';
     created_at: string;
     updated_at: string;
+    project_features?: { id: number }[];
 }
 
 export interface Documentation {
@@ -72,6 +73,7 @@ export interface Checklist {
     rows?: ChecklistRow[];
     section_headers?: Pick<ChecklistRow, 'id' | 'checklist_id' | 'data' | 'order'>[];
     note?: ChecklistNote;
+    project_features?: { id: number; name?: string; module?: string[] | null }[];
 }
 
 export interface SelectOption {
@@ -123,6 +125,7 @@ export interface TestSuite {
     parent?: TestSuite;
     children?: TestSuite[];
     test_cases?: TestCase[];
+    project_features?: { id: number; name?: string; module?: string[] | null }[];
 }
 
 export interface TestCase {
@@ -146,6 +149,7 @@ export interface TestCase {
     creator?: { id: number; name: string };
     note?: TestCaseNote;
     attachments?: Attachment[];
+    project_features?: { id: number; name?: string; module?: string[] | null }[];
 }
 
 export interface TestStep {
@@ -168,6 +172,7 @@ export interface TestRun {
     description: string | null;
     environment: string | null;
     milestone: string | null;
+    priority: 'low' | 'medium' | 'high' | 'critical' | null;
     status: 'active' | 'completed' | 'archived';
     source?: string | null;
     checklist_id?: number | null;
@@ -335,6 +340,35 @@ export interface ReleaseMetricsSnapshot {
     updated_at: string;
 }
 
+export interface ReleaseReadiness {
+    score: number;
+    color: 'green' | 'yellow' | 'red';
+    days_to_deadline: number | null;
+    on_track: boolean;
+    breakdown: Record<string, { weight: number; value: number; weighted: number }>;
+}
+
+export interface ReleaseBlockersAndRisks {
+    blocker_count: number;
+    critical_bugs: number;
+    security_status: string;
+    risks: string[];
+}
+
+export interface ReleaseComparison {
+    previous_version: string;
+    pass_rate_diff: number;
+    bugs_diff: number;
+    test_completion_diff: number;
+    trend: 'better' | 'same' | 'worse';
+}
+
+export interface ReleaseLiveMetrics {
+    readiness: ReleaseReadiness;
+    blockers_and_risks: ReleaseBlockersAndRisks;
+    comparison: ReleaseComparison | null;
+}
+
 export interface ProjectSearchResultItem {
     id: number;
     title: string;
@@ -411,12 +445,14 @@ export interface ProjectFeature {
     project_id: number;
     name: string;
     description: string | null;
-    module: string | null;
+    module: string[] | null;
     category: string | null;
     priority: 'critical' | 'high' | 'medium' | 'low';
     is_active: boolean;
     test_cases_count?: number;
+    checklists_count?: number;
     test_cases?: { id: number; title: string; test_suite_id: number; test_suite?: { id: number; name: string } }[];
+    checklists?: { id: number; name: string }[];
     created_at: string;
     updated_at: string;
 }
@@ -491,6 +527,7 @@ export interface CoverageModuleStats {
     total_features: number;
     covered_features: number;
     test_cases_count: number;
+    checklists_count: number;
     coverage_percentage: number;
 }
 
@@ -500,6 +537,7 @@ export interface CoverageStatistics {
     covered_features: number;
     uncovered_features: number;
     total_test_cases: number;
+    total_checklists: number;
     gaps_count: number;
 }
 
@@ -507,7 +545,7 @@ export interface CoverageGap {
     id: number;
     feature: string;
     description: string | null;
-    module: string | null;
+    module: string[] | null;
     category: string | null;
     priority: string;
 }

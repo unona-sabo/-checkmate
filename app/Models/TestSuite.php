@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TestSuite extends Model
@@ -50,5 +51,14 @@ class TestSuite extends Model
     public function testCases(): HasMany
     {
         return $this->hasMany(TestCase::class)->orderBy('order');
+    }
+
+    /**
+     * Get the project features linked to this test suite.
+     */
+    public function projectFeatures(): BelongsToMany
+    {
+        return $this->belongsToMany(ProjectFeature::class, 'feature_test_suite', 'test_suite_id', 'feature_id')
+            ->withTimestamps();
     }
 }

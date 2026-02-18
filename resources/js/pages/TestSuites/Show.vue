@@ -11,6 +11,8 @@ import {
 } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
+import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
 import { ref, computed } from 'vue';
 
 const props = defineProps<{
@@ -49,30 +51,6 @@ const copyLink = () => {
     document.body.removeChild(textArea);
     copied.value = true;
     setTimeout(() => { copied.value = false; }, 2000);
-};
-
-const getPriorityColor = (priority: string) => {
-    switch (priority) {
-        case 'critical': return 'bg-red-500/10 text-red-500 border-red-500/20';
-        case 'high': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-        case 'medium': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-        case 'low': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-        default: return '';
-    }
-};
-
-const getTypeColor = (type: string) => {
-    switch (type) {
-        case 'functional': return 'bg-blue-500/10 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800';
-        case 'smoke': return 'bg-orange-500/10 text-orange-600 border-orange-200 dark:text-orange-400 dark:border-orange-800';
-        case 'regression': return 'bg-red-500/10 text-red-600 border-red-200 dark:text-red-400 dark:border-red-800';
-        case 'integration': return 'bg-purple-500/10 text-purple-600 border-purple-200 dark:text-purple-400 dark:border-purple-800';
-        case 'acceptance': return 'bg-green-500/10 text-green-600 border-green-200 dark:text-green-400 dark:border-green-800';
-        case 'performance': return 'bg-cyan-500/10 text-cyan-600 border-cyan-200 dark:text-cyan-400 dark:border-cyan-800';
-        case 'security': return 'bg-rose-500/10 text-rose-600 border-rose-200 dark:text-rose-400 dark:border-rose-800';
-        case 'usability': return 'bg-pink-500/10 text-pink-600 border-pink-200 dark:text-pink-400 dark:border-pink-800';
-        default: return 'bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800';
-    }
 };
 
 const getTypeIcon = (type: string) => {
@@ -227,14 +205,17 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight">
-                        <Boxes v-if="testSuite.parent_id" class="inline-block h-6 w-6 align-text-top text-yellow-500 mr-2" />
-                        <Layers v-else class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
-                            @click="copyLink"
-                            class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
-                            :title="copied ? 'Copied!' : 'Copy link'"
-                        ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
-                    </h1>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <h1 class="text-2xl font-bold tracking-tight">
+                            <Boxes v-if="testSuite.parent_id" class="inline-block h-6 w-6 align-text-top text-yellow-500 mr-2" />
+                            <Layers v-else class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
+                                @click="copyLink"
+                                class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
+                                :title="copied ? 'Copied!' : 'Copy link'"
+                            ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
+                        </h1>
+                        <FeatureBadges v-if="testSuite.project_features?.length" :features="testSuite.project_features" :max-visible="3" />
+                    </div>
                     <div v-if="testSuite.parent" class="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                         <span>in</span>
                         <Link
@@ -354,7 +335,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                             <Badge variant="secondary" class="shrink-0 text-xs font-normal bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800">
                                 {{ section.testCases.length }} {{ section.testCases.length === 1 ? 'case' : 'cases' }}
                             </Badge>
-                            <Badge variant="outline" :class="getTypeColor(section.type)" class="shrink-0 text-xs font-normal">
+                            <Badge :variant="testTypeVariant(section.type)" class="shrink-0 text-xs font-normal">
                                 {{ section.type }}
                             </Badge>
                         </div>
@@ -399,7 +380,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                                 <p class="text-sm font-normal truncate group-hover:text-primary transition-colors" v-html="highlight(testCase.title)" />
                             </div>
                             <div class="flex items-center gap-2 shrink-0 ml-4">
-                                <Badge :class="getPriorityColor(testCase.priority)" variant="outline" class="text-[10px] px-1.5 h-4 font-medium">
+                                <Badge :variant="priorityVariant(testCase.priority)" class="text-[10px] px-1.5 h-4 font-medium">
                                     {{ testCase.priority }}
                                 </Badge>
                                 <Badge variant="secondary" class="text-[10px] px-1.5 h-4 font-normal">
@@ -444,7 +425,7 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
                                     <p class="text-xs text-muted-foreground">Subcategory</p>
                                 </div>
                                 <Badge variant="secondary" class="shrink-0 text-xs font-normal bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800">0 cases</Badge>
-                                <Badge variant="outline" :class="getTypeColor(child.type)" class="shrink-0 text-xs font-normal">{{ child.type }}</Badge>
+                                <Badge :variant="testTypeVariant(child.type)" class="shrink-0 text-xs font-normal">{{ child.type }}</Badge>
                             </div>
                             <RestrictedAction>
                                 <Link :href="`/projects/${project.id}/test-suites/${child.id}/test-cases/create`" @click.stop class="shrink-0">

@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Play, CheckCircle2, Archive, Search, X, Calendar, User, Pause, Timer, Filter } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { priorityVariant, testRunStatusVariant } from '@/lib/badge-variants';
 
 const props = defineProps<{
     project: Project;
@@ -25,15 +26,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Test Runs', href: `/projects/${props.project.id}/test-runs` },
 ];
-
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'active': return 'bg-green-500/10 text-green-500 border-green-500/20';
-        case 'completed': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-        case 'archived': return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-        default: return '';
-    }
-};
 
 const getStatusIcon = (status: string) => {
     switch (status) {
@@ -50,6 +42,7 @@ const searchQuery = ref('');
 const showFilters = ref(false);
 const filterStatus = ref('');
 const filterSource = ref('');
+const filterPriority = ref('');
 const filterEnvironment = ref('');
 const filterAuthor = ref('');
 const filterCreatedFrom = ref('');
@@ -64,7 +57,7 @@ const filterTotalMin = ref('');
 const filterTotalMax = ref('');
 
 const allFilters = [
-    filterStatus, filterSource, filterEnvironment, filterAuthor,
+    filterStatus, filterSource, filterPriority, filterEnvironment, filterAuthor,
     filterCreatedFrom, filterCreatedTo, filterCompletedFrom, filterCompletedTo,
     filterPassedMin, filterPassedMax, filterFailedMin, filterFailedMax,
     filterTotalMin, filterTotalMax,
@@ -105,6 +98,9 @@ const filteredTestRuns = computed(() => {
 
         // Source filter
         if (filterSource.value && run.source !== filterSource.value) return false;
+
+        // Priority filter
+        if (filterPriority.value && run.priority !== filterPriority.value) return false;
 
         // Environment filter
         if (filterEnvironment.value && run.environment !== filterEnvironment.value) return false;
@@ -288,7 +284,7 @@ const highlight = (text: string): string => {
                             </button>
                         </div>
                     </div>
-                    <!-- Row 1: Status, Source, Environment -->
+                    <!-- Row 1: Status, Source, Priority -->
                     <div class="grid grid-cols-3 gap-x-3 gap-y-2.5">
                         <div class="relative">
                             <Label class="text-[11px] text-muted-foreground mb-1 block">Status</Label>
@@ -322,6 +318,26 @@ const highlight = (text: string): string => {
                             </button>
                         </div>
                         <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Priority</Label>
+                            <Select v-model="filterPriority">
+                                <SelectTrigger class="h-8 text-xs cursor-pointer" :class="filterPriority ? 'pr-7' : ''">
+                                    <SelectValue placeholder="All" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="low">Low</SelectItem>
+                                    <SelectItem value="medium">Medium</SelectItem>
+                                    <SelectItem value="high">High</SelectItem>
+                                    <SelectItem value="critical">Critical</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <button v-if="filterPriority" @click="filterPriority = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Row 2: Environment, Created From, Completed From -->
+                    <div class="grid grid-cols-3 gap-x-3 gap-y-2.5 mt-2.5">
+                        <div class="relative">
                             <Label class="text-[11px] text-muted-foreground mb-1 block">Environment</Label>
                             <Select v-model="filterEnvironment">
                                 <SelectTrigger class="h-8 text-xs cursor-pointer" :class="filterEnvironment ? 'pr-7' : ''">
@@ -335,78 +351,67 @@ const highlight = (text: string): string => {
                                 <X class="h-3 w-3" />
                             </button>
                         </div>
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Created From</Label>
+                            <Input v-model="filterCreatedFrom" type="date" class="h-8 text-xs" :class="filterCreatedFrom ? 'pr-7' : ''" />
+                            <button v-if="filterCreatedFrom" @click="filterCreatedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Completed From</Label>
+                            <Input v-model="filterCompletedFrom" type="date" class="h-8 text-xs" :class="filterCompletedFrom ? 'pr-7' : ''" />
+                            <button v-if="filterCompletedFrom" @click="filterCompletedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
                     </div>
-                    <!-- Row 2: Created, Completed, Author + count -->
+                    <!-- Row 3: Author, Created To, Completed To -->
                     <div class="grid grid-cols-3 gap-x-3 gap-y-2.5 mt-2.5">
-                        <div class="space-y-2.5">
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Created From</Label>
-                                <Input v-model="filterCreatedFrom" type="date" class="h-8 text-xs" :class="filterCreatedFrom ? 'pr-7' : ''" />
-                                <button v-if="filterCreatedFrom" @click="filterCreatedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Created To</Label>
-                                <Input v-model="filterCreatedTo" type="date" class="h-8 text-xs" :class="filterCreatedTo ? 'pr-7' : ''" />
-                                <button v-if="filterCreatedTo" @click="filterCreatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
-                        </div>
-                        <div class="space-y-2.5">
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Completed From</Label>
-                                <Input v-model="filterCompletedFrom" type="date" class="h-8 text-xs" :class="filterCompletedFrom ? 'pr-7' : ''" />
-                                <button v-if="filterCompletedFrom" @click="filterCompletedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Completed To</Label>
-                                <Input v-model="filterCompletedTo" type="date" class="h-8 text-xs" :class="filterCompletedTo ? 'pr-7' : ''" />
-                                <button v-if="filterCompletedTo" @click="filterCompletedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
-                        </div>
-                        <div class="flex flex-col justify-between">
-                            <Deferred data="users">
-                                <template #fallback>
-                                    <div>
-                                        <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
-                                        <div class="h-8 w-full animate-pulse rounded-md bg-muted" />
-                                    </div>
-                                </template>
-                                <div class="relative">
+                        <Deferred data="users">
+                            <template #fallback>
+                                <div>
                                     <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
-                                    <Select v-model="filterAuthor">
-                                        <SelectTrigger class="h-8 text-xs cursor-pointer" :class="filterAuthor ? 'pr-7' : ''">
-                                            <SelectValue placeholder="All" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem
-                                                v-for="user in users"
-                                                :key="user.id"
-                                                :value="String(user.id)"
-                                            >
-                                                {{ user.name }}
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <button v-if="filterAuthor" @click="filterAuthor = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                        <X class="h-3 w-3" />
-                                    </button>
+                                    <div class="h-8 w-full animate-pulse rounded-md bg-muted" />
                                 </div>
-                            </Deferred>
-                            <div class="flex items-end justify-center h-8">
-                                <span class="text-sm text-muted-foreground">
-                                    Found <span class="font-semibold text-foreground">{{ filteredTestRuns.length }}</span> {{ filteredTestRuns.length === 1 ? 'run' : 'runs' }}
-                                </span>
+                            </template>
+                            <div class="relative">
+                                <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
+                                <Select v-model="filterAuthor">
+                                    <SelectTrigger class="h-8 text-xs cursor-pointer" :class="filterAuthor ? 'pr-7' : ''">
+                                        <SelectValue placeholder="All" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="user in users"
+                                            :key="user.id"
+                                            :value="String(user.id)"
+                                        >
+                                            {{ user.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <button v-if="filterAuthor" @click="filterAuthor = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                    <X class="h-3 w-3" />
+                                </button>
                             </div>
+                        </Deferred>
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Created To</Label>
+                            <Input v-model="filterCreatedTo" type="date" class="h-8 text-xs" :class="filterCreatedTo ? 'pr-7' : ''" />
+                            <button v-if="filterCreatedTo" @click="filterCreatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Completed To</Label>
+                            <Input v-model="filterCompletedTo" type="date" class="h-8 text-xs" :class="filterCompletedTo ? 'pr-7' : ''" />
+                            <button v-if="filterCompletedTo" @click="filterCompletedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
                         </div>
                     </div>
-                    <!-- Row 3: Passed, Failed, Total Checks -->
+                    <!-- Row 4: Passed, Failed, Total Checks -->
                     <div class="grid grid-cols-3 gap-x-3 gap-y-2.5 mt-2.5">
                         <div>
                             <Label class="text-[11px] text-muted-foreground mb-1 block">Passed</Label>
@@ -429,6 +434,12 @@ const highlight = (text: string): string => {
                                 <Input v-model="filterTotalMax" type="number" min="0" placeholder="Max" class="h-8 text-xs" />
                             </div>
                         </div>
+                    </div>
+                    <!-- Footer: Results count -->
+                    <div class="flex justify-end mt-3">
+                        <span class="text-sm text-muted-foreground">
+                            Found <span class="font-semibold text-foreground">{{ filteredTestRuns.length }}</span> {{ filteredTestRuns.length === 1 ? 'run' : 'runs' }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -474,14 +485,17 @@ const highlight = (text: string): string => {
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2">
                                             <h3 class="text-sm font-semibold truncate" v-html="highlight(run.name)" />
-                                            <Badge :class="getStatusColor(run.status)" variant="outline" class="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                                            <Badge :variant="testRunStatusVariant(run.status)" class="text-[10px] px-1.5 py-0 h-4 shrink-0">
                                                 {{ run.status }}
                                             </Badge>
-                                            <Badge v-if="run.source === 'test-cases'" variant="outline" class="text-[10px] px-1.5 py-0 h-4 shrink-0 bg-cyan-500/10 text-cyan-500 border-cyan-500/20">
+                                            <Badge v-if="run.source === 'test-cases'" variant="cyan" class="text-[10px] px-1.5 py-0 h-4 shrink-0">
                                                 test cases
                                             </Badge>
-                                            <Badge v-else-if="run.source === 'checklist'" variant="outline" class="text-[10px] px-1.5 py-0 h-4 shrink-0 bg-purple-500/10 text-purple-500 border-purple-500/20">
+                                            <Badge v-else-if="run.source === 'checklist'" variant="purple" class="text-[10px] px-1.5 py-0 h-4 shrink-0">
                                                 checklist
+                                            </Badge>
+                                            <Badge v-if="run.priority" :variant="priorityVariant(run.priority)" class="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                                                {{ run.priority }}
                                             </Badge>
                                         </div>
                                         <div class="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">

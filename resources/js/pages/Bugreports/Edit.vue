@@ -2,6 +2,8 @@
 import { Head, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
+import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,12 +32,14 @@ interface Bugreport {
     environment: string | null;
     assigned_to: number | null;
     attachments?: Attachment[];
+    project_features?: { id: number }[];
 }
 
 const props = defineProps<{
     project: Project;
     bugreport: Bugreport;
     users: User[];
+    features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -58,6 +62,7 @@ const form = useForm({
     status: props.bugreport.status,
     environment: props.bugreport.environment || '',
     assigned_to: props.bugreport.assigned_to,
+    feature_ids: (props.bugreport.project_features ?? []).map(f => f.id),
     attachments: [] as File[],
 });
 
@@ -234,6 +239,13 @@ const submit = () => {
                                 />
                                 <InputError :message="form.errors.environment" />
                             </div>
+
+                            <!-- Features -->
+                            <FeatureSelector
+                                v-model="form.feature_ids"
+                                :features="features"
+                                :project-id="project.id"
+                            />
 
                             <!-- Existing Attachments -->
                             <div v-if="bugreport.attachments?.length" class="space-y-2">

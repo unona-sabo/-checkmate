@@ -40,6 +40,7 @@ import {
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
 import { useCanEdit } from '@/composables/useCanEdit';
 
 const { canEdit } = useCanEdit();
@@ -1313,6 +1314,7 @@ const testRunDescription = ref('');
 const testRunEnvPreset = ref('');
 const testRunEnvNotes = ref('');
 const testRunMilestone = ref('');
+const testRunPriority = ref('');
 const testRunColumnKey = ref('');
 const isCreatingTestRun = ref(false);
 
@@ -1336,6 +1338,7 @@ const openTestRunDialog = () => {
     testRunEnvPreset.value = '';
     testRunEnvNotes.value = '';
     testRunMilestone.value = '';
+    testRunPriority.value = '';
     testRunColumnKey.value = findCheckColumn();
     showTestRunDialog.value = true;
 };
@@ -1355,6 +1358,7 @@ const createTestRunFromSelected = () => {
     router.post(`/projects/${props.project.id}/test-runs/from-checklist`, {
         name: testRunName.value,
         description: testRunDescription.value || null,
+        priority: testRunPriority.value || null,
         environment: envParts.join(' — ') || null,
         milestone: testRunMilestone.value || null,
         checklist_id: props.checklist.id,
@@ -1559,7 +1563,7 @@ onMounted(() => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
-            <div>
+            <div class="flex items-center gap-3 flex-wrap">
                 <h1 class="text-2xl font-bold tracking-tight">
                     <ClipboardList class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
                         @click="copyLink"
@@ -1567,6 +1571,7 @@ onMounted(() => {
                         :title="copied ? 'Copied!' : 'Copy link'"
                     ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
                 </h1>
+                <FeatureBadges v-if="checklist.project_features?.length" :features="checklist.project_features" :max-visible="3" />
             </div>
             <div class="flex items-center gap-2 flex-wrap">
                 <div class="relative">
@@ -2724,6 +2729,20 @@ onMounted(() => {
                         <div class="space-y-2">
                             <Label for="test-run-description">Description</Label>
                             <Input id="test-run-description" v-model="testRunDescription" placeholder="Optional description..." />
+                        </div>
+                        <div class="space-y-2">
+                            <Label>Priority</Label>
+                            <Select v-model="testRunPriority">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select priority..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="low">Low</SelectItem>
+                                    <SelectItem value="medium">Medium</SelectItem>
+                                    <SelectItem value="high">High</SelectItem>
+                                    <SelectItem value="critical">Critical</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div class="space-y-2">
                             <Label>Environment</Label>

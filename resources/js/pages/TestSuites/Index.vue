@@ -33,12 +33,15 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
+import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
 import { ref, computed, onMounted, watch } from 'vue';
 
 const props = defineProps<{
     project: Project;
     testSuites: TestSuite[];
     users: { id: number; name: string }[];
+    availableFeatures: { id: number; name: string; module: string[] | null }[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -56,6 +59,7 @@ interface FlatSuite {
     type: string;
     parentName?: string;
     testCases: TestCase[];
+    projectFeatures?: { id: number; name?: string; module?: string[] | null }[];
 }
 
 const flatSuites = computed<FlatSuite[]>(() => {
@@ -69,6 +73,7 @@ const flatSuites = computed<FlatSuite[]>(() => {
                 name: suite.name,
                 type: suite.type,
                 testCases: suite.test_cases,
+                projectFeatures: suite.project_features,
             });
         }
 
@@ -81,6 +86,7 @@ const flatSuites = computed<FlatSuite[]>(() => {
                     type: child.type,
                     parentName: suite.name,
                     testCases: child.test_cases,
+                    projectFeatures: child.project_features,
                 });
             }
         });
@@ -226,30 +232,6 @@ const toggleTestCaseSelection = (testCaseId: number) => {
         selectedTestCaseIds.value = selectedTestCaseIds.value.filter(id => id !== testCaseId);
     } else {
         selectedTestCaseIds.value = [...selectedTestCaseIds.value, testCaseId];
-    }
-};
-
-const getPriorityColor = (priority: string) => {
-    switch (priority) {
-        case 'critical': return 'bg-red-500/10 text-red-600 border-red-200 dark:text-red-400 dark:border-red-800';
-        case 'high': return 'bg-orange-500/10 text-orange-600 border-orange-200 dark:text-orange-400 dark:border-orange-800';
-        case 'medium': return 'bg-yellow-500/10 text-yellow-600 border-yellow-200 dark:text-yellow-400 dark:border-yellow-800';
-        case 'low': return 'bg-blue-500/10 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800';
-        default: return '';
-    }
-};
-
-const getTypeColor = (type: string) => {
-    switch (type) {
-        case 'functional': return 'bg-blue-500/10 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800';
-        case 'smoke': return 'bg-orange-500/10 text-orange-600 border-orange-200 dark:text-orange-400 dark:border-orange-800';
-        case 'regression': return 'bg-red-500/10 text-red-600 border-red-200 dark:text-red-400 dark:border-red-800';
-        case 'integration': return 'bg-purple-500/10 text-purple-600 border-purple-200 dark:text-purple-400 dark:border-purple-800';
-        case 'acceptance': return 'bg-green-500/10 text-green-600 border-green-200 dark:text-green-400 dark:border-green-800';
-        case 'performance': return 'bg-cyan-500/10 text-cyan-600 border-cyan-200 dark:text-cyan-400 dark:border-cyan-800';
-        case 'security': return 'bg-rose-500/10 text-rose-600 border-rose-200 dark:text-rose-400 dark:border-rose-800';
-        case 'usability': return 'bg-pink-500/10 text-pink-600 border-pink-200 dark:text-pink-400 dark:border-pink-800';
-        default: return 'bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800';
     }
 };
 
@@ -425,6 +407,7 @@ const localFlatSuites = computed<FlatSuite[]>(() => {
             name: suite.name,
             type: suite.type,
             testCases: suite.test_cases || [],
+            projectFeatures: suite.project_features,
         });
 
         // Add all child suites (even without test cases)
@@ -435,6 +418,7 @@ const localFlatSuites = computed<FlatSuite[]>(() => {
                 type: child.type,
                 parentName: suite.name,
                 testCases: child.test_cases || [],
+                projectFeatures: child.project_features,
             });
         });
     });
@@ -456,13 +440,14 @@ const filterPriority = ref('');
 const filterSeverity = ref('');
 const filterAutomation = ref('');
 const filterAuthor = ref('');
+const filterFeature = ref('');
 const filterCreatedFrom = ref('');
 const filterCreatedTo = ref('');
 const filterUpdatedFrom = ref('');
 const filterUpdatedTo = ref('');
 
 const activeFilterCount = computed(() => {
-    return [filterType, filterPriority, filterSeverity, filterAutomation, filterAuthor, filterCreatedFrom, filterCreatedTo, filterUpdatedFrom, filterUpdatedTo]
+    return [filterType, filterPriority, filterSeverity, filterAutomation, filterAuthor, filterFeature, filterCreatedFrom, filterCreatedTo, filterUpdatedFrom, filterUpdatedTo]
         .filter(f => f.value !== '').length;
 });
 
@@ -472,6 +457,7 @@ const clearFilters = () => {
     filterSeverity.value = '';
     filterAutomation.value = '';
     filterAuthor.value = '';
+    filterFeature.value = '';
     filterCreatedFrom.value = '';
     filterCreatedTo.value = '';
     filterUpdatedFrom.value = '';
@@ -501,6 +487,12 @@ const filteredFlatSuites = computed(() => {
                 if (filterAutomation.value && tc.automation_status !== filterAutomation.value) return false;
                 // Author filter
                 if (filterAuthor.value && String(tc.created_by) !== filterAuthor.value) return false;
+                // Feature filter
+                if (filterFeature.value === '__none__') {
+                    if (tc.project_features && tc.project_features.length > 0) return false;
+                } else if (filterFeature.value) {
+                    if (!tc.project_features?.some(f => String(f.id) === filterFeature.value)) return false;
+                }
                 // Date filters
                 if (filterCreatedFrom.value && tc.created_at < filterCreatedFrom.value) return false;
                 if (filterCreatedTo.value && tc.created_at.slice(0, 10) > filterCreatedTo.value) return false;
@@ -523,6 +515,163 @@ const highlight = (text: string): string => {
     if (!searchQuery.value.trim()) return safe;
     const query = escapeRegExp(searchQuery.value.trim());
     return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+};
+
+// === Action Dialogs ===
+
+// Create Test Run dialog
+const showTestRunDialog = ref(false);
+const testRunName = ref('');
+const testRunDescription = ref('');
+const testRunPriority = ref('');
+const testRunEnvPreset = ref('');
+const testRunEnvNotes = ref('');
+const testRunMilestone = ref('');
+const isCreatingTestRun = ref(false);
+
+const openTestRunDialog = () => {
+    // Pre-fill name based on first selected suite
+    const firstSelectedId = selectedTestCaseIds.value[0];
+    let suiteName = '';
+    for (const suite of localFlatSuites.value) {
+        if (suite.testCases.some(tc => tc.id === firstSelectedId)) {
+            suiteName = suite.name;
+            break;
+        }
+    }
+    testRunName.value = suiteName ? `${suiteName} Test Run` : 'Test Run';
+    testRunDescription.value = '';
+    testRunPriority.value = '';
+    testRunEnvPreset.value = '';
+    testRunEnvNotes.value = '';
+    testRunMilestone.value = '';
+    showTestRunDialog.value = true;
+};
+
+const createTestRun = () => {
+    if (!testRunName.value.trim() || selectedTestCaseIds.value.length === 0) return;
+    isCreatingTestRun.value = true;
+
+    const environment = [testRunEnvPreset.value, testRunEnvNotes.value].filter(Boolean).join(' - ') || null;
+
+    router.post(`/projects/${props.project.id}/test-runs`, {
+        name: testRunName.value.trim(),
+        description: testRunDescription.value || null,
+        priority: testRunPriority.value || null,
+        environment,
+        milestone: testRunMilestone.value || null,
+        test_case_ids: selectedTestCaseIds.value,
+    }, {
+        onSuccess: () => {
+            showTestRunDialog.value = false;
+            isCreatingTestRun.value = false;
+        },
+        onError: () => {
+            isCreatingTestRun.value = false;
+        },
+    });
+};
+
+// Copy to Test Suite dialog
+const showCopyDialog = ref(false);
+const copyTargetSuiteId = ref('');
+const isCopying = ref(false);
+
+const allSuiteOptions = computed(() => {
+    const options: { id: number; name: string; label: string }[] = [];
+    props.testSuites.forEach(suite => {
+        options.push({ id: suite.id, name: suite.name, label: suite.name });
+        suite.children?.forEach(child => {
+            options.push({ id: child.id, name: child.name, label: `${suite.name} / ${child.name}` });
+        });
+    });
+    return options;
+});
+
+const openCopyDialog = () => {
+    copyTargetSuiteId.value = '';
+    showCopyDialog.value = true;
+};
+
+const copyToSuite = () => {
+    if (!copyTargetSuiteId.value || selectedTestCaseIds.value.length === 0) return;
+    isCopying.value = true;
+
+    router.post(`/projects/${props.project.id}/test-suites/bulk-copy-cases`, {
+        test_case_ids: selectedTestCaseIds.value,
+        target_suite_id: Number(copyTargetSuiteId.value),
+    }, {
+        preserveState: false,
+        onSuccess: () => {
+            showCopyDialog.value = false;
+            selectedTestCaseIds.value = [];
+            isCopying.value = false;
+        },
+        onError: () => {
+            isCopying.value = false;
+        },
+    });
+};
+
+// Delete Test Cases dialog
+const showDeleteDialog = ref(false);
+const isDeleting = ref(false);
+
+const openDeleteDialog = () => {
+    showDeleteDialog.value = true;
+};
+
+const deleteTestCases = () => {
+    if (selectedTestCaseIds.value.length === 0) return;
+    isDeleting.value = true;
+
+    router.post(`/projects/${props.project.id}/test-suites/bulk-delete-cases`, {
+        test_case_ids: selectedTestCaseIds.value,
+    }, {
+        preserveState: false,
+        onSuccess: () => {
+            showDeleteDialog.value = false;
+            selectedTestCaseIds.value = [];
+            isDeleting.value = false;
+        },
+        onError: () => {
+            isDeleting.value = false;
+        },
+    });
+};
+
+// Create Subcategory dialog
+const showSubcategoryDialog = ref(false);
+const subcategoryParentId = ref('');
+const subcategoryName = ref('');
+const subcategoryType = ref('functional');
+const isCreatingSubcategory = ref(false);
+
+const openSubcategoryDialog = () => {
+    subcategoryParentId.value = '';
+    subcategoryName.value = '';
+    subcategoryType.value = 'functional';
+    showSubcategoryDialog.value = true;
+};
+
+const createSubcategory = () => {
+    if (!subcategoryParentId.value || !subcategoryName.value.trim()) return;
+    isCreatingSubcategory.value = true;
+
+    router.post(`/projects/${props.project.id}/test-suites`, {
+        name: subcategoryName.value.trim(),
+        type: subcategoryType.value,
+        parent_id: Number(subcategoryParentId.value),
+    }, {
+        preserveState: false,
+        onSuccess: () => {
+            showSubcategoryDialog.value = false;
+            isCreatingSubcategory.value = false;
+        },
+        onError: () => {
+            isCreatingSubcategory.value = false;
+        },
+    });
 };
 
 // Note dialog state
@@ -763,20 +912,20 @@ onMounted(() => {
                                     <DropdownMenuContent align="start">
                                         <DropdownMenuLabel>Selected Test Cases</DropdownMenuLabel>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem>
+                                        <DropdownMenuItem class="cursor-pointer" @click="openTestRunDialog">
                                             <Play class="h-4 w-4 mr-2" />
                                             Create Test Run
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem>
+                                        <DropdownMenuItem class="cursor-pointer" @click="openCopyDialog">
                                             <Copy class="h-4 w-4 mr-2" />
                                             Copy to Test Suite
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem>
+                                        <DropdownMenuItem class="cursor-pointer" @click="openSubcategoryDialog">
                                             <FolderPlus class="h-4 w-4 mr-2" />
                                             Create Subcategory
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem class="text-destructive focus:text-destructive">
+                                        <DropdownMenuItem class="text-destructive focus:text-destructive cursor-pointer" @click="openDeleteDialog">
                                             <Trash2 class="h-4 w-4 mr-2" />
                                             Delete Test Cases
                                         </DropdownMenuItem>
@@ -1184,6 +1333,28 @@ onMounted(() => {
                                     <X class="h-3 w-3" />
                                 </button>
                             </div>
+                            <!-- Feature -->
+                            <div class="relative">
+                                <Label class="text-[11px] text-muted-foreground mb-1 block">Feature</Label>
+                                <Select v-model="filterFeature">
+                                    <SelectTrigger class="h-8 text-xs" :class="filterFeature ? 'pr-7' : ''">
+                                        <SelectValue placeholder="All" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__none__">No feature</SelectItem>
+                                        <SelectItem
+                                            v-for="feature in availableFeatures"
+                                            :key="feature.id"
+                                            :value="String(feature.id)"
+                                        >
+                                            {{ feature.module?.length ? `${feature.module.join(', ')} / ` : '' }}{{ feature.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <button v-if="filterFeature" @click="filterFeature = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                    <X class="h-3 w-3" />
+                                </button>
+                            </div>
                             <!-- Dates: 2x2 grid spanning 2 columns -->
                             <div class="col-span-2 grid grid-cols-2 gap-x-3 gap-y-2.5">
                                 <!-- Created From -->
@@ -1290,9 +1461,10 @@ onMounted(() => {
                                     <Badge variant="secondary" :class="suite.parentName ? 'text-[11px] ml-1' : 'text-xs ml-2'" class="shrink-0 font-normal bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800">
                                         {{ getFlatSuiteTotalTestCases(suite) }} {{ getFlatSuiteTotalTestCases(suite) === 1 ? 'case' : 'cases' }}
                                     </Badge>
-                                    <Badge variant="outline" :class="[suite.parentName ? 'text-[11px]' : 'text-xs', getTypeColor(suite.type)]" class="shrink-0 font-normal">
+                                    <Badge :variant="testTypeVariant(suite.type)" :class="[suite.parentName ? 'text-[11px]' : 'text-xs']" class="shrink-0 font-normal">
                                         {{ suite.type }}
                                     </Badge>
+                                    <FeatureBadges v-if="suite.projectFeatures?.length" :features="suite.projectFeatures" :max-visible="2" />
                                 </div>
                                 <RestrictedAction>
                                     <Link :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/create`" @click.stop class="shrink-0">
@@ -1345,7 +1517,8 @@ onMounted(() => {
                                         <p class="text-sm font-normal truncate group-hover:text-primary transition-colors" v-html="highlight(testCase.title)" />
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0 ml-4">
-                                        <Badge :class="getPriorityColor(testCase.priority)" variant="outline" class="text-[10px] px-1.5 h-4 font-medium">
+                                        <FeatureBadges v-if="testCase.project_features?.length" :features="testCase.project_features" :max-visible="2" />
+                                        <Badge :variant="priorityVariant(testCase.priority)" class="text-[10px] px-1.5 h-4 font-medium">
                                             {{ testCase.priority }}
                                         </Badge>
                                         <Badge variant="secondary" class="text-[10px] px-1.5 h-4 font-normal">
@@ -1361,6 +1534,206 @@ onMounted(() => {
                 </div>
             </div>
         </div>
+        <!-- Create Test Run Dialog -->
+        <Dialog v-model:open="showTestRunDialog">
+            <DialogContent class="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Play class="h-5 w-5 text-primary" />
+                        Create Test Run
+                    </DialogTitle>
+                    <DialogDescription>
+                        Create a test run from {{ selectedTestCaseIds.length }} selected test case{{ selectedTestCaseIds.length !== 1 ? 's' : '' }}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="py-4 space-y-4">
+                    <div class="space-y-2">
+                        <Label for="tr-name">Name</Label>
+                        <Input id="tr-name" v-model="testRunName" placeholder="Test run name..." />
+                    </div>
+                    <div class="space-y-2">
+                        <Label for="tr-description">Description</Label>
+                        <Input id="tr-description" v-model="testRunDescription" placeholder="Optional description..." />
+                    </div>
+                    <div class="space-y-2">
+                        <Label>Priority</Label>
+                        <Select v-model="testRunPriority">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select priority..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="critical">Critical</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div class="space-y-2">
+                        <Label>Environment</Label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <Select v-model="testRunEnvPreset">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Develop">Develop</SelectItem>
+                                    <SelectItem value="Staging">Staging</SelectItem>
+                                    <SelectItem value="Production">Production</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Input v-model="testRunEnvNotes" placeholder="Devices, browser..." class="col-span-2" />
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <Label for="tr-milestone">Milestone</Label>
+                        <Input id="tr-milestone" v-model="testRunMilestone" placeholder="e.g. v1.0, Sprint 5..." />
+                    </div>
+                </div>
+                <DialogFooter class="flex gap-2 sm:justify-end">
+                    <Button variant="outline" @click="showTestRunDialog = false">
+                        Cancel
+                    </Button>
+                    <Button @click="createTestRun" :disabled="!testRunName.trim() || isCreatingTestRun" class="gap-2">
+                        <Play class="h-4 w-4" />
+                        {{ isCreatingTestRun ? 'Creating...' : 'Create Test Run' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Copy to Test Suite Dialog -->
+        <Dialog v-model:open="showCopyDialog">
+            <DialogContent class="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Copy class="h-5 w-5 text-primary" />
+                        Copy to Test Suite
+                    </DialogTitle>
+                    <DialogDescription>
+                        Copy {{ selectedTestCaseIds.length }} test case{{ selectedTestCaseIds.length !== 1 ? 's' : '' }} to another suite.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="py-4 space-y-4">
+                    <div class="space-y-2">
+                        <Label>Target Suite</Label>
+                        <Select v-model="copyTargetSuiteId">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select suite..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="suite in allSuiteOptions"
+                                    :key="suite.id"
+                                    :value="String(suite.id)"
+                                >
+                                    {{ suite.label }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter class="flex gap-2 sm:justify-end">
+                    <Button variant="outline" @click="showCopyDialog = false">
+                        Cancel
+                    </Button>
+                    <Button @click="copyToSuite" :disabled="!copyTargetSuiteId || isCopying" class="gap-2">
+                        <Copy class="h-4 w-4" />
+                        {{ isCopying ? 'Copying...' : 'Copy' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Delete Test Cases Dialog -->
+        <Dialog v-model:open="showDeleteDialog">
+            <DialogContent class="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2 text-destructive">
+                        <Trash2 class="h-5 w-5" />
+                        Delete Test Cases
+                    </DialogTitle>
+                    <DialogDescription>
+                        Delete {{ selectedTestCaseIds.length }} test case{{ selectedTestCaseIds.length !== 1 ? 's' : '' }}? This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="flex gap-2 sm:justify-end pt-4">
+                    <Button variant="outline" @click="showDeleteDialog = false">
+                        Cancel
+                    </Button>
+                    <Button variant="destructive" @click="deleteTestCases" :disabled="isDeleting" class="gap-2">
+                        <Trash2 class="h-4 w-4" />
+                        {{ isDeleting ? 'Deleting...' : 'Delete' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Create Subcategory Dialog -->
+        <Dialog v-model:open="showSubcategoryDialog">
+            <DialogContent class="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <FolderPlus class="h-5 w-5 text-primary" />
+                        Create Subcategory
+                    </DialogTitle>
+                    <DialogDescription>
+                        Create a new subcategory under an existing test suite.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="py-4 space-y-4">
+                    <div class="space-y-2">
+                        <Label>Parent Suite</Label>
+                        <Select v-model="subcategoryParentId">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select parent suite..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="suite in parentSuiteOptions"
+                                    :key="suite.id"
+                                    :value="String(suite.id)"
+                                >
+                                    {{ suite.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div class="space-y-2">
+                        <Label for="sub-name">Name</Label>
+                        <Input id="sub-name" v-model="subcategoryName" placeholder="Subcategory name..." />
+                    </div>
+                    <div class="space-y-2">
+                        <Label>Type</Label>
+                        <Select v-model="subcategoryType">
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="functional">Functional</SelectItem>
+                                <SelectItem value="smoke">Smoke</SelectItem>
+                                <SelectItem value="regression">Regression</SelectItem>
+                                <SelectItem value="integration">Integration</SelectItem>
+                                <SelectItem value="acceptance">Acceptance</SelectItem>
+                                <SelectItem value="performance">Performance</SelectItem>
+                                <SelectItem value="security">Security</SelectItem>
+                                <SelectItem value="usability">Usability</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter class="flex gap-2 sm:justify-end">
+                    <Button variant="outline" @click="showSubcategoryDialog = false">
+                        Cancel
+                    </Button>
+                    <Button @click="createSubcategory" :disabled="!subcategoryParentId || !subcategoryName.trim() || isCreatingSubcategory" class="gap-2">
+                        <FolderPlus class="h-4 w-4" />
+                        {{ isCreatingSubcategory ? 'Creating...' : 'Create' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>
 

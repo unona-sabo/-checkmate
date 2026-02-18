@@ -2,6 +2,8 @@
 import { Head, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Checklist, type ColumnConfig, type SelectOption } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
+import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +17,7 @@ import { ref, watch } from 'vue';
 const props = defineProps<{
     project: Project;
     checklist: Checklist;
+    features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -31,6 +34,7 @@ const form = useForm({
         { key: 'item', label: 'Item', type: 'text' as const },
         { key: 'status', label: 'Status', type: 'checkbox' as const },
     ] as ColumnConfig[],
+    feature_ids: (props.checklist.project_features ?? []).map(f => f.id),
 });
 
 const showDeleteDialog = ref(false);
@@ -132,6 +136,13 @@ const deleteChecklist = () => {
                                 />
                                 <InputError :message="form.errors.name" />
                             </div>
+
+                            <!-- Features -->
+                            <FeatureSelector
+                                v-model="form.feature_ids"
+                                :features="features"
+                                :project-id="project.id"
+                            />
 
                             <div class="space-y-3">
                                 <div class="flex items-center justify-between">

@@ -17,6 +17,7 @@ class TestRun extends Model
         'description',
         'environment',
         'milestone',
+        'priority',
         'status',
         'source',
         'checklist_id',

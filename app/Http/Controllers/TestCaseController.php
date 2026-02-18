@@ -18,9 +18,14 @@ class TestCaseController extends Controller
     {
         $this->authorize('update', $project);
 
+        $features = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module', 'priority']);
+
         return Inertia::render('TestCases/Create', [
             'project' => $project,
             'testSuite' => $testSuite,
+            'features' => $features,
         ]);
     }
 
@@ -46,6 +51,8 @@ class TestCaseController extends Controller
             'checklist_id' => 'nullable|integer|exists:checklists,id',
             'checklist_row_ids' => 'nullable|string',
             'checklist_link_column' => 'nullable|string|max:255',
+            'feature_ids' => 'nullable|array',
+            'feature_ids.*' => 'exists:project_features,id',
         ]);
 
         $checklistFields = ['checklist_id', 'checklist_row_ids', 'checklist_link_column'];
@@ -54,7 +61,11 @@ class TestCaseController extends Controller
         $validated['order'] = $maxOrder + 1;
         $validated['created_by'] = auth()->id();
 
-        $testCase = $testSuite->testCases()->create(collect($validated)->except(['attachments', ...$checklistFields])->toArray());
+        $testCase = $testSuite->testCases()->create(collect($validated)->except(['attachments', 'feature_ids', ...$checklistFields])->toArray());
+
+        if (! empty($validated['feature_ids'])) {
+            $testCase->projectFeatures()->sync($validated['feature_ids']);
+        }
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
@@ -78,7 +89,7 @@ class TestCaseController extends Controller
     {
         $this->authorize('view', $project);
 
-        $testCase->load(['note', 'attachments']);
+        $testCase->load(['note', 'attachments', 'projectFeatures:id,name,module']);
 
         return Inertia::render('TestCases/Show', [
             'project' => $project,
@@ -91,12 +102,17 @@ class TestCaseController extends Controller
     {
         $this->authorize('update', $project);
 
-        $testCase->load('attachments');
+        $testCase->load(['attachments', 'projectFeatures:id']);
+
+        $features = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module', 'priority']);
 
         return Inertia::render('TestCases/Edit', [
             'project' => $project,
             'testSuite' => $testSuite,
             'testCase' => $testCase,
+            'features' => $features,
         ]);
     }
 
@@ -119,9 +135,12 @@ class TestCaseController extends Controller
             'tags' => 'nullable|array',
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
+            'feature_ids' => 'nullable|array',
+            'feature_ids.*' => 'exists:project_features,id',
         ]);
 
-        $testCase->update(collect($validated)->except('attachments')->toArray());
+        $testCase->update(collect($validated)->except(['attachments', 'feature_ids'])->toArray());
+        $testCase->projectFeatures()->sync($validated['feature_ids'] ?? []);
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
@@ -202,6 +221,67 @@ class TestCaseController extends Controller
         }
 
         return back()->with('success', 'Test cases reordered successfully.');
+    }
+
+    public function bulkDestroy(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'test_case_ids' => 'required|array|min:1',
+            'test_case_ids.*' => 'exists:test_cases,id',
+        ]);
+
+        $projectSuiteIds = $project->testSuites()->pluck('id');
+
+        $testCases = TestCase::whereIn('id', $validated['test_case_ids'])
+            ->whereIn('test_suite_id', $projectSuiteIds)
+            ->with('attachments')
+            ->get();
+
+        foreach ($testCases as $testCase) {
+            foreach ($testCase->attachments as $attachment) {
+                Storage::disk('public')->delete($attachment->stored_path);
+            }
+            $testCase->delete();
+        }
+
+        return back()->with('success', $testCases->count().' test case(s) deleted.');
+    }
+
+    public function bulkCopy(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'test_case_ids' => 'required|array|min:1',
+            'test_case_ids.*' => 'exists:test_cases,id',
+            'target_suite_id' => 'required|exists:test_suites,id',
+        ]);
+
+        $projectSuiteIds = $project->testSuites()->pluck('id');
+
+        if (! $projectSuiteIds->contains($validated['target_suite_id'])) {
+            return back()->withErrors(['target_suite_id' => 'Target suite does not belong to this project.']);
+        }
+
+        $testCases = TestCase::whereIn('id', $validated['test_case_ids'])
+            ->whereIn('test_suite_id', $projectSuiteIds)
+            ->orderBy('order')
+            ->get();
+
+        $maxOrder = TestCase::where('test_suite_id', $validated['target_suite_id'])->max('order') ?? 0;
+
+        foreach ($testCases as $testCase) {
+            $maxOrder++;
+            $replica = $testCase->replicate(['id', 'created_at', 'updated_at']);
+            $replica->test_suite_id = $validated['target_suite_id'];
+            $replica->order = $maxOrder;
+            $replica->created_by = auth()->id();
+            $replica->save();
+        }
+
+        return back()->with('success', $testCases->count().' test case(s) copied.');
     }
 
     public function reorderAcrossSuites(Request $request, Project $project)

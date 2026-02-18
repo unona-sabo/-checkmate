@@ -35,9 +35,14 @@ class BugreportController extends Controller
 
         $users = $project->users()->get(['users.id', 'users.name']);
 
+        $features = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module', 'priority']);
+
         return Inertia::render('Bugreports/Create', [
             'project' => $project,
             'users' => $users,
+            'features' => $features,
         ]);
     }
 
@@ -61,14 +66,20 @@ class BugreportController extends Controller
             'checklist_id' => 'nullable|integer|exists:checklists,id',
             'checklist_row_ids' => 'nullable|string',
             'checklist_link_column' => 'nullable|string|max:255',
+            'feature_ids' => 'nullable|array',
+            'feature_ids.*' => 'exists:project_features,id',
         ]);
 
         $validated['reported_by'] = auth()->id();
 
         $checklistFields = ['checklist_id', 'checklist_row_ids', 'checklist_link_column'];
         $bugreport = $project->bugreports()->create(
-            collect($validated)->except(['attachments', ...$checklistFields])->toArray()
+            collect($validated)->except(['attachments', 'feature_ids', ...$checklistFields])->toArray()
         );
+
+        if (! empty($validated['feature_ids'])) {
+            $bugreport->projectFeatures()->sync($validated['feature_ids']);
+        }
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
@@ -105,12 +116,17 @@ class BugreportController extends Controller
         $this->authorize('update', $project);
 
         $users = $project->users()->get(['users.id', 'users.name']);
-        $bugreport->load('attachments');
+        $bugreport->load(['attachments', 'projectFeatures:id']);
+
+        $features = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module', 'priority']);
 
         return Inertia::render('Bugreports/Edit', [
             'project' => $project,
             'bugreport' => $bugreport,
             'users' => $users,
+            'features' => $features,
         ]);
     }
 
@@ -131,9 +147,12 @@ class BugreportController extends Controller
             'assigned_to' => 'nullable|exists:users,id',
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
+            'feature_ids' => 'nullable|array',
+            'feature_ids.*' => 'exists:project_features,id',
         ]);
 
-        $bugreport->update(collect($validated)->except('attachments')->toArray());
+        $bugreport->update(collect($validated)->except(['attachments', 'feature_ids'])->toArray());
+        $bugreport->projectFeatures()->sync($validated['feature_ids'] ?? []);
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {

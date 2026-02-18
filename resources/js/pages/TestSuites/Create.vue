@@ -2,6 +2,7 @@
 import { Head, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,11 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
+import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Layers, Boxes } from 'lucide-vue-next';
 
 const props = defineProps<{
     project: Project;
     parentSuites: Pick<TestSuite, 'id' | 'name'>[];
+    features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
 }>();
 
 // Get parent_id from URL query params
@@ -33,6 +36,7 @@ const form = useForm({
     description: '',
     type: 'functional',
     parent_id: preselectedParentId,
+    feature_ids: [] as number[],
 });
 
 const submit = () => {
@@ -107,6 +111,8 @@ const submit = () => {
                                 </Select>
                                 <InputError :message="form.errors.type" />
                             </div>
+
+                            <FeatureSelector v-model="form.feature_ids" :features="features" :project-id="project.id" />
 
                             <div v-if="parentSuites.length" class="space-y-2">
                                 <Label for="parent">Parent Suite (optional)</Label>

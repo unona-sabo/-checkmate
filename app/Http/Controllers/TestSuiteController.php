@@ -18,8 +18,10 @@ class TestSuiteController extends Controller
         $testSuites = $project->testSuites()
             ->whereNull('parent_id')
             ->with([
-                'children.testCases' => fn ($q) => $q->with('creator:id,name')->orderBy('order'),
-                'testCases' => fn ($q) => $q->with('creator:id,name')->orderBy('order'),
+                'projectFeatures:id,name,module',
+                'children.testCases' => fn ($q) => $q->with(['creator:id,name', 'projectFeatures:id,name,module'])->orderBy('order'),
+                'children.projectFeatures:id,name,module',
+                'testCases' => fn ($q) => $q->with(['creator:id,name', 'projectFeatures:id,name,module'])->orderBy('order'),
             ])
             ->withCount('testCases')
             ->orderBy('order')
@@ -27,10 +29,15 @@ class TestSuiteController extends Controller
 
         $users = User::query()->select('id', 'name')->orderBy('name')->get();
 
+        $availableFeatures = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module']);
+
         return Inertia::render('TestSuites/Index', [
             'project' => $project,
             'testSuites' => $testSuites,
             'users' => $users,
+            'availableFeatures' => $availableFeatures,
         ]);
     }
 
@@ -43,9 +50,14 @@ class TestSuiteController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $features = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module', 'priority']);
+
         return Inertia::render('TestSuites/Create', [
             'project' => $project,
             'parentSuites' => $parentSuites,
+            'features' => $features,
         ]);
     }
 
@@ -59,7 +71,12 @@ class TestSuiteController extends Controller
             'type' => 'nullable|string|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
             'parent_id' => 'nullable|exists:test_suites,id',
             'order' => 'nullable|integer',
+            'feature_ids' => 'nullable|array',
+            'feature_ids.*' => 'exists:project_features,id',
         ]);
+
+        $featureIds = $validated['feature_ids'] ?? [];
+        unset($validated['feature_ids']);
 
         $maxOrder = $project->testSuites()
             ->where('parent_id', $validated['parent_id'] ?? null)
@@ -68,6 +85,7 @@ class TestSuiteController extends Controller
         $validated['order'] = $validated['order'] ?? ($maxOrder + 1);
 
         $testSuite = $project->testSuites()->create($validated);
+        $testSuite->projectFeatures()->sync($featureIds);
 
         return redirect()->route('test-suites.show', [$project, $testSuite])
             ->with('success', 'Test suite created successfully.');
@@ -77,7 +95,7 @@ class TestSuiteController extends Controller
     {
         $this->authorize('view', $project);
 
-        $testSuite->load(['children.testCases', 'testCases.note', 'parent']);
+        $testSuite->load(['children.testCases', 'testCases.note', 'parent', 'projectFeatures:id,name,module']);
 
         return Inertia::render('TestSuites/Show', [
             'project' => $project,
@@ -89,16 +107,23 @@ class TestSuiteController extends Controller
     {
         $this->authorize('update', $project);
 
+        $testSuite->load('projectFeatures:id');
+
         $parentSuites = $project->testSuites()
             ->whereNull('parent_id')
             ->where('id', '!=', $testSuite->id)
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $features = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module', 'priority']);
+
         return Inertia::render('TestSuites/Edit', [
             'project' => $project,
             'testSuite' => $testSuite,
             'parentSuites' => $parentSuites,
+            'features' => $features,
         ]);
     }
 
@@ -112,9 +137,15 @@ class TestSuiteController extends Controller
             'type' => 'nullable|string|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
             'parent_id' => 'nullable|exists:test_suites,id',
             'order' => 'nullable|integer',
+            'feature_ids' => 'nullable|array',
+            'feature_ids.*' => 'exists:project_features,id',
         ]);
 
+        $featureIds = $validated['feature_ids'] ?? [];
+        unset($validated['feature_ids']);
+
         $testSuite->update($validated);
+        $testSuite->projectFeatures()->sync($featureIds);
 
         return redirect()->route('test-suites.show', [$project, $testSuite])
             ->with('success', 'Test suite updated successfully.');

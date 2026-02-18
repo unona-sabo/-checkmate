@@ -59,15 +59,17 @@ class TestRunController extends Controller
             'description' => 'nullable|string',
             'environment' => 'nullable|string|max:255',
             'milestone' => 'nullable|string|max:255',
+            'priority' => 'nullable|string|in:low,medium,high,critical',
             'test_case_ids' => 'required|array|min:1',
             'test_case_ids.*' => 'exists:test_cases,id',
         ]);
 
         $testRun = $project->testRuns()->create([
             'name' => $validated['name'],
-            'description' => $validated['description'],
-            'environment' => $validated['environment'],
-            'milestone' => $validated['milestone'],
+            'description' => $validated['description'] ?? null,
+            'environment' => $validated['environment'] ?? null,
+            'milestone' => $validated['milestone'] ?? null,
+            'priority' => $validated['priority'] ?? null,
             'status' => 'active',
             'source' => 'test-cases',
             'created_by' => auth()->id(),
@@ -95,6 +97,7 @@ class TestRunController extends Controller
             'description' => 'nullable|string',
             'environment' => 'nullable|string|max:255',
             'milestone' => 'nullable|string|max:255',
+            'priority' => 'nullable|string|in:low,medium,high,critical',
             'checklist_id' => 'required|exists:checklists,id',
             'titles' => 'required|array|min:1',
             'titles.*' => 'required|string|max:1000',
@@ -102,9 +105,10 @@ class TestRunController extends Controller
 
         $testRun = $project->testRuns()->create([
             'name' => $validated['name'],
-            'description' => $validated['description'],
-            'environment' => $validated['environment'],
-            'milestone' => $validated['milestone'],
+            'description' => $validated['description'] ?? null,
+            'environment' => $validated['environment'] ?? null,
+            'milestone' => $validated['milestone'] ?? null,
+            'priority' => $validated['priority'] ?? null,
             'status' => 'active',
             'source' => 'checklist',
             'checklist_id' => $validated['checklist_id'],
@@ -163,6 +167,7 @@ class TestRunController extends Controller
             'description' => 'nullable|string',
             'environment' => 'nullable|string|max:255',
             'milestone' => 'nullable|string|max:255',
+            'priority' => 'nullable|string|in:low,medium,high,critical',
             'status' => 'required|in:active,completed,archived',
         ]);
 

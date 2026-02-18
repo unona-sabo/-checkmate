@@ -2,6 +2,8 @@
 import { Head, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite, type TestStep } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
+import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +17,7 @@ import { ref } from 'vue';
 const props = defineProps<{
     project: Project;
     testSuite: TestSuite;
+    features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -49,6 +52,7 @@ const form = useForm({
     type: 'functional' as const,
     automation_status: 'not_automated' as const,
     tags: [] as string[],
+    feature_ids: [] as number[],
     attachments: [] as File[],
     checklist_id: urlParams.get('checklist_id') || null as string | null,
     checklist_row_ids: urlParams.get('checklist_row_ids') || null as string | null,
@@ -265,6 +269,13 @@ const submit = () => {
                                     </Select>
                                 </div>
                             </div>
+
+                            <!-- Features -->
+                            <FeatureSelector
+                                v-model="form.feature_ids"
+                                :features="features"
+                                :project-id="project.id"
+                            />
 
                             <!-- Attachments -->
                             <div class="space-y-2">

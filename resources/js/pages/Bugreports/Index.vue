@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ref, computed } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { severityVariant, bugStatusVariant } from '@/lib/badge-variants';
 
 interface Bugreport {
     id: number;
@@ -92,28 +93,6 @@ const filteredBugreports = computed(() => {
         return true;
     });
 });
-
-const getSeverityColor = (severity: string) => {
-    switch (severity) {
-        case 'critical': return 'bg-red-100 text-red-800';
-        case 'major': return 'bg-orange-100 text-orange-800';
-        case 'minor': return 'bg-yellow-100 text-yellow-800';
-        case 'trivial': return 'bg-gray-100 text-gray-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-};
-
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'new': return 'bg-blue-100 text-blue-800';
-        case 'open': return 'bg-purple-100 text-purple-800';
-        case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-        case 'resolved': return 'bg-green-100 text-green-800';
-        case 'closed': return 'bg-gray-100 text-gray-800';
-        case 'reopened': return 'bg-red-100 text-red-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-};
 
 const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const escapeHtml = (str: string): string => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -368,12 +347,12 @@ const highlight = (text: string): string => {
                                     <div class="flex items-center gap-2">
                                         <Bug class="h-4 w-4 text-primary shrink-0" />
                                         <h3 class="text-base font-semibold truncate" v-html="highlight(bug.title)" />
-                                        <span :class="['px-1.5 py-0 rounded text-[10px] font-medium h-4 inline-flex items-center shrink-0', getSeverityColor(bug.severity)]">
+                                        <Badge :variant="severityVariant(bug.severity)" class="text-[10px] px-1.5 h-4 shrink-0">
                                             {{ bug.severity }}
-                                        </span>
-                                        <span :class="['px-1.5 py-0 rounded text-[10px] font-medium h-4 inline-flex items-center shrink-0', getStatusColor(bug.status)]">
+                                        </Badge>
+                                        <Badge :variant="bugStatusVariant(bug.status)" class="text-[10px] px-1.5 h-4 shrink-0">
                                             {{ bug.status.replace('_', ' ') }}
-                                        </span>
+                                        </Badge>
                                     </div>
                                     <div class="flex items-center gap-3 text-xs text-muted-foreground mt-2">
                                         <span v-if="bug.reporter">{{ bug.reporter.name }}</span>

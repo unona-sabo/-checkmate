@@ -8,6 +8,7 @@ use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectFeatureController;
 use App\Http\Controllers\ReleaseController;
 use App\Http\Controllers\TestCaseController;
 use App\Http\Controllers\TestCoverageController;
@@ -52,6 +53,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('projects/{project}/search', [ProjectController::class, 'search'])->name('projects.search');
     Route::resource('projects', ProjectController::class);
 
+    // Project Features (JSON endpoint for quick-create)
+    Route::post('projects/{project}/features', [ProjectFeatureController::class, 'store'])->name('project-features.store');
+
     // Checklists (nested under projects)
     Route::prefix('projects/{project}')->name('checklists.')->group(function () {
         Route::get('checklists', [ChecklistController::class, 'index'])->name('index');
@@ -77,6 +81,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('test-suites', [TestSuiteController::class, 'store'])->name('store');
         Route::post('test-suites/reorder', [TestSuiteController::class, 'reorder'])->name('reorder');
         Route::post('test-suites/reorder-cases', [TestCaseController::class, 'reorderAcrossSuites'])->name('reorder-cases');
+        Route::post('test-suites/bulk-delete-cases', [TestCaseController::class, 'bulkDestroy'])->name('bulk-destroy-cases');
+        Route::post('test-suites/bulk-copy-cases', [TestCaseController::class, 'bulkCopy'])->name('bulk-copy-cases');
         Route::get('test-suites/{testSuite}', [TestSuiteController::class, 'show'])->name('show');
         Route::get('test-suites/{testSuite}/edit', [TestSuiteController::class, 'edit'])->name('edit');
         Route::put('test-suites/{testSuite}', [TestSuiteController::class, 'update'])->name('update');
@@ -190,6 +196,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('test-coverage/features/{feature}', [TestCoverageController::class, 'destroyFeature'])->name('features.destroy');
         Route::post('test-coverage/features/{feature}/link-test-case', [TestCoverageController::class, 'linkTestCase'])->name('features.link-test-case');
         Route::delete('test-coverage/features/{feature}/test-cases/{testCase}', [TestCoverageController::class, 'unlinkTestCase'])->name('features.unlink-test-case');
+        Route::post('test-coverage/features/{feature}/link-checklist', [TestCoverageController::class, 'linkChecklist'])->name('features.link-checklist');
+        Route::delete('test-coverage/features/{feature}/checklists/{checklist}', [TestCoverageController::class, 'unlinkChecklist'])->name('features.unlink-checklist');
         Route::post('test-coverage/auto-link-all', [TestCoverageController::class, 'autoLinkAll'])->name('auto-link-all');
         Route::post('test-coverage/features/{feature}/auto-link', [TestCoverageController::class, 'autoLinkSingle'])->name('features.auto-link');
         Route::get('test-coverage/test-cases', [TestCoverageController::class, 'getTestCases'])->name('test-cases');
