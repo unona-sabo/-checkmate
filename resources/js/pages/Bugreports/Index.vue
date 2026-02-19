@@ -5,12 +5,13 @@ import { type BreadcrumbItem, type Project } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bug, Plus, Search, X, Filter } from 'lucide-vue-next';
+import { Bug, Plus, Search, X, Filter, Tag } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ref, computed } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
 import { severityVariant, bugStatusVariant } from '@/lib/badge-variants';
 import { useSearch } from '@/composables/useSearch';
 
@@ -23,6 +24,7 @@ interface Bugreport {
     status: 'new' | 'open' | 'in_progress' | 'resolved' | 'closed' | 'reopened';
     reporter: { id: number; name: string } | null;
     assignee: { id: number; name: string } | null;
+    project_features?: { id: number; name?: string; module?: string[] | null }[];
     created_at: string;
     updated_at: string;
 }
@@ -30,6 +32,7 @@ interface Bugreport {
 const props = defineProps<{
     project: Project;
     bugreports: Bugreport[];
+    availableFeatures: { id: number; name: string; module: string[] | null }[];
     users?: { id: number; name: string }[];
 }>();
 
@@ -47,13 +50,14 @@ const filterStatus = ref('');
 const filterPriority = ref('');
 const filterSeverity = ref('');
 const filterAuthor = ref('');
+const filterFeature = ref('');
 const filterCreatedFrom = ref('');
 const filterCreatedTo = ref('');
 const filterUpdatedFrom = ref('');
 const filterUpdatedTo = ref('');
 
 const activeFilterCount = computed(() => {
-    return [filterStatus, filterPriority, filterSeverity, filterAuthor, filterCreatedFrom, filterCreatedTo, filterUpdatedFrom, filterUpdatedTo]
+    return [filterStatus, filterPriority, filterSeverity, filterAuthor, filterFeature, filterCreatedFrom, filterCreatedTo, filterUpdatedFrom, filterUpdatedTo]
         .filter(f => f.value !== '').length;
 });
 
@@ -62,6 +66,7 @@ const clearFilters = () => {
     filterPriority.value = '';
     filterSeverity.value = '';
     filterAuthor.value = '';
+    filterFeature.value = '';
     filterCreatedFrom.value = '';
     filterCreatedTo.value = '';
     filterUpdatedFrom.value = '';
@@ -86,6 +91,12 @@ const filteredBugreports = computed(() => {
         if (filterSeverity.value && bug.severity !== filterSeverity.value) return false;
         // Author filter
         if (filterAuthor.value && String(bug.reporter?.id) !== filterAuthor.value) return false;
+        // Feature filter
+        if (filterFeature.value === '__none__') {
+            if (bug.project_features && bug.project_features.length > 0) return false;
+        } else if (filterFeature.value) {
+            if (!bug.project_features?.some(f => String(f.id) === filterFeature.value)) return false;
+        }
         // Date filters
         if (filterCreatedFrom.value && bug.created_at < filterCreatedFrom.value) return false;
         if (filterCreatedTo.value && bug.created_at.slice(0, 10) > filterCreatedTo.value) return false;
@@ -265,41 +276,62 @@ const filteredBugreports = computed(() => {
                                 </button>
                             </div>
                         </div>
-                        <!-- Author + Results count -->
-                        <div class="flex flex-col justify-between">
-                            <Deferred data="users">
-                                <template #fallback>
-                                    <div>
-                                        <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
-                                        <div class="h-8 w-full animate-pulse rounded-md bg-muted" />
-                                    </div>
-                                </template>
-                                <div class="relative">
+                        <!-- Feature -->
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Feature</Label>
+                            <Select v-model="filterFeature">
+                                <SelectTrigger class="h-8 text-xs cursor-pointer" :class="filterFeature ? 'pr-7' : ''">
+                                    <SelectValue placeholder="All" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__none__">No feature</SelectItem>
+                                    <SelectItem
+                                        v-for="feature in availableFeatures"
+                                        :key="feature.id"
+                                        :value="String(feature.id)"
+                                    >
+                                        {{ feature.module?.length ? `${feature.module.join(', ')} / ` : '' }}{{ feature.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <button v-if="filterFeature" @click="filterFeature = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <!-- Author -->
+                        <Deferred data="users">
+                            <template #fallback>
+                                <div>
                                     <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
-                                    <Select v-model="filterAuthor">
-                                        <SelectTrigger class="h-8 text-xs cursor-pointer" :class="filterAuthor ? 'pr-7' : ''">
-                                            <SelectValue placeholder="All" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem
-                                                v-for="user in users"
-                                                :key="user.id"
-                                                :value="String(user.id)"
-                                            >
-                                                {{ user.name }}
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <button v-if="filterAuthor" @click="filterAuthor = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                        <X class="h-3 w-3" />
-                                    </button>
+                                    <div class="h-8 w-full animate-pulse rounded-md bg-muted" />
                                 </div>
-                            </Deferred>
-                            <div class="flex items-end justify-center h-8">
-                                <span class="text-sm text-muted-foreground">
-                                    Found <span class="font-semibold text-foreground">{{ filteredBugreports.length }}</span> {{ filteredBugreports.length === 1 ? 'bug' : 'bugs' }}
-                                </span>
+                            </template>
+                            <div class="relative">
+                                <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
+                                <Select v-model="filterAuthor">
+                                    <SelectTrigger class="h-8 text-xs cursor-pointer" :class="filterAuthor ? 'pr-7' : ''">
+                                        <SelectValue placeholder="All" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="user in users"
+                                            :key="user.id"
+                                            :value="String(user.id)"
+                                        >
+                                            {{ user.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <button v-if="filterAuthor" @click="filterAuthor = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                    <X class="h-3 w-3" />
+                                </button>
                             </div>
+                        </Deferred>
+                        <!-- Results count -->
+                        <div class="flex items-end justify-center h-8">
+                            <span class="text-sm text-muted-foreground">
+                                Found <span class="font-semibold text-foreground">{{ filteredBugreports.length }}</span> {{ filteredBugreports.length === 1 ? 'bug' : 'bugs' }}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -346,6 +378,7 @@ const filteredBugreports = computed(() => {
                                         <Badge :variant="bugStatusVariant(bug.status)" class="text-[10px] px-1.5 h-4 shrink-0">
                                             {{ bug.status.replace('_', ' ') }}
                                         </Badge>
+                                        <FeatureBadges v-if="bug.project_features?.length" :features="bug.project_features" :max-visible="2" />
                                     </div>
                                     <div class="flex items-center gap-3 text-xs text-muted-foreground mt-2">
                                         <span v-if="bug.reporter">{{ bug.reporter.name }}</span>

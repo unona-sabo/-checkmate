@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, FolderOpen, Component, ClipboardList, Layers, Play, ChevronRight, Bug, Palette, Drama, Rocket, BarChart3, Database, FileText, StickyNote, Sparkles } from 'lucide-vue-next';
+import { LayoutGrid, FolderOpen, Component, ClipboardList, Layers, Play, Bug, Palette, Drama, Rocket, BarChart3, Database, FileText, StickyNote, Sparkles } from 'lucide-vue-next';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.vue';
@@ -14,9 +14,6 @@ import {
     SidebarMenuItem,
     SidebarGroup,
     SidebarGroupLabel,
-    SidebarMenuSub,
-    SidebarMenuSubItem,
-    SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import { home } from '@/routes';
 import { type NavItem, type Project } from '@/types';
@@ -25,7 +22,7 @@ import { computed } from 'vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 
 const page = usePage();
-const { isCurrentUrl } = useCurrentUrl();
+const { isCurrentUrl, isCurrentUrlPrefix } = useCurrentUrl();
 
 const currentProject = computed(() => {
     const props = page.props as Record<string, unknown>;
@@ -85,26 +82,27 @@ const projectSubItems = computed(() => {
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             as-child
-                            :is-active="isCurrentUrl(`/projects/${currentProject.id}`)"
+                            :is-active="isCurrentUrlPrefix(`/projects/${currentProject.id}`)"
+                            :tooltip="currentProject.name"
                         >
                             <Link :href="`/projects/${currentProject.id}`" class="font-semibold">
                                 <FolderOpen class="h-4 w-4" />
                                 <span class="truncate">{{ currentProject.name }}</span>
                             </Link>
                         </SidebarMenuButton>
-                        <SidebarMenuSub>
-                            <SidebarMenuSubItem v-for="item in projectSubItems" :key="item.href">
-                                <SidebarMenuSubButton
-                                    as-child
-                                    :is-active="isCurrentUrl(item.href)"
-                                >
-                                    <Link :href="item.href">
-                                        <component :is="item.icon" class="h-4 w-4" />
-                                        <span>{{ item.title }}</span>
-                                    </Link>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                        </SidebarMenuSub>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem v-for="item in projectSubItems" :key="item.href">
+                        <SidebarMenuButton
+                            as-child
+                            size="sm"
+                            :is-active="isCurrentUrlPrefix(item.href)"
+                            :tooltip="item.title"
+                        >
+                            <Link :href="item.href" class="group-data-[collapsible=icon]:pl-0 pl-4">
+                                <component :is="item.icon" class="h-4 w-4" />
+                                <span>{{ item.title }}</span>
+                            </Link>
+                        </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarGroup>

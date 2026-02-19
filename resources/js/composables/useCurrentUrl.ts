@@ -10,6 +10,9 @@ export type UseCurrentUrlReturn = {
         urlToCheck: NonNullable<InertiaLinkProps['href']>,
         currentUrl?: string,
     ) => boolean;
+    isCurrentUrlPrefix: (
+        urlToCheck: NonNullable<InertiaLinkProps['href']>,
+    ) => boolean;
     whenCurrentUrl: <T, F = null>(
         urlToCheck: NonNullable<InertiaLinkProps['href']>,
         ifTrue: T,
@@ -43,6 +46,24 @@ export function useCurrentUrl(): UseCurrentUrlReturn {
         }
     }
 
+    function isCurrentUrlPrefix(
+        urlToCheck: NonNullable<InertiaLinkProps['href']>,
+    ) {
+        const current = currentUrlReactive.value;
+        const urlString = toUrl(urlToCheck);
+        let pathname = urlString;
+
+        if (urlString.startsWith('http')) {
+            try {
+                pathname = new URL(urlString).pathname;
+            } catch {
+                return false;
+            }
+        }
+
+        return current === pathname || current.startsWith(pathname + '/');
+    }
+
     function whenCurrentUrl(
         urlToCheck: NonNullable<InertiaLinkProps['href']>,
         ifTrue: any,
@@ -54,6 +75,7 @@ export function useCurrentUrl(): UseCurrentUrlReturn {
     return {
         currentUrl: readonly(currentUrlReactive),
         isCurrentUrl,
+        isCurrentUrlPrefix,
         whenCurrentUrl,
     };
 }

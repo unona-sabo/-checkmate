@@ -2,6 +2,7 @@
 
 use App\Models\Bugreport;
 use App\Models\Project;
+use App\Models\ProjectFeature;
 use App\Models\User;
 use App\Models\Workspace;
 
@@ -20,6 +21,37 @@ test('index page renders with bugreports for authenticated user', function () {
         ->component('Bugreports/Index')
         ->has('project')
         ->has('bugreports', 3)
+        ->has('availableFeatures')
+    );
+});
+
+test('index page includes linked features on bugreports and available features for filtering', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $feature = ProjectFeature::factory()->create([
+        'project_id' => $project->id,
+        'is_active' => true,
+    ]);
+    $bugreport = Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'reported_by' => $user->id,
+    ]);
+    $bugreport->projectFeatures()->attach($feature->id);
+
+    $response = $this->actingAs($user)->get(route('bugreports.index', $project));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Bugreports/Index')
+        ->has('bugreports', 1, fn ($bug) => $bug
+            ->has('project_features', 1)
+            ->etc()
+        )
+        ->has('availableFeatures', 1, fn ($f) => $f
+            ->where('id', $feature->id)
+            ->where('name', $feature->name)
+            ->etc()
+        )
     );
 });
 

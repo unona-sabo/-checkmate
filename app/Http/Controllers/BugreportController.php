@@ -19,13 +19,16 @@ class BugreportController extends Controller
         $this->authorize('view', $project);
 
         $bugreports = $project->bugreports()
-            ->with(['reporter', 'assignee'])
+            ->with(['reporter', 'assignee', 'projectFeatures:id,name,module'])
             ->latest()
             ->get();
 
         return Inertia::render('Bugreports/Index', [
             'project' => $project,
             'bugreports' => $bugreports,
+            'availableFeatures' => $project->features()->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'module']),
             'users' => Inertia::defer(fn () => $project->users()->get(['users.id', 'users.name'])),
         ]);
     }
