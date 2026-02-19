@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AIGeneratorController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BugreportController;
 use App\Http\Controllers\ChecklistController;
@@ -232,6 +233,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('documentations/{documentation}/attachments/{attachment}', [DocumentationController::class, 'destroyAttachment'])->name('destroy-attachment');
         Route::post('documentations/{documentation}/upload-image', [DocumentationController::class, 'uploadImage'])->name('upload-image');
         Route::post('documentations/upload-image', [DocumentationController::class, 'uploadNewImage'])->name('upload-new-image');
+    });
+
+    // AI Generator (nested under projects)
+    Route::prefix('projects/{project}')->name('ai-generator.')->group(function () {
+        Route::get('ai-generator', [AIGeneratorController::class, 'index'])->name('index');
+        Route::post('ai-generator/generate', [AIGeneratorController::class, 'generate'])->name('generate');
+        Route::post('ai-generator/save', [AIGeneratorController::class, 'save'])->name('save');
     });
 
     // Notes (nested under projects)

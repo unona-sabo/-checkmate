@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Home\UpsertFeatureDescriptionRequest;
+use App\Models\AiGeneration;
 use App\Models\AutomationTestResult;
 use App\Models\Bugreport;
 use App\Models\Checklist;
@@ -365,6 +366,26 @@ class HomeController extends Controller
                     'Multi-module assignment for cross-cutting features',
                 ],
                 'model' => ProjectFeature::class,
+            ],
+            'ai-generator' => [
+                'key' => 'ai-generator',
+                'title' => 'AI Generator',
+                'description' => 'AI-powered test case generation from documentation, files, or screenshots with review workflow and direct import to test suites.',
+                'features' => [
+                    'Generate test cases from pasted text documentation or requirements',
+                    'Generate test cases from uploaded TXT and Markdown files',
+                    'Generate test cases from uploaded screenshot images',
+                    'Multi-provider support: Google Gemini and Anthropic Claude',
+                    'Configurable number of test cases per generation (1-20)',
+                    'Client-side review and approval flow before import',
+                    'Inline editing of generated test cases before import',
+                    'Approve all / reject all bulk actions',
+                    'Import approved test cases into existing or new test suites',
+                    'Steps automatically converted to structured test step format',
+                    'Priority and type assignment per generated test case',
+                    'Generation usage tracking and analytics',
+                ],
+                'model' => AiGeneration::class,
             ],
             'test-data' => [
                 'key' => 'test-data',

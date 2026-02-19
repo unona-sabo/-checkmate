@@ -651,3 +651,28 @@ export interface TestRunTemplate {
     created_at: string;
     updated_at: string;
 }
+
+export interface AIGeneratedTestCaseInput {
+    title: string;
+    description: string;
+    preconditions: string;
+    steps: string;
+    expected_result: string;
+    priority: 'critical' | 'high' | 'medium' | 'low';
+    severity: 'blocker' | 'critical' | 'major' | 'minor' | 'trivial';
+    type: 'functional' | 'smoke' | 'regression' | 'integration' | 'acceptance' | 'performance' | 'security' | 'usability' | 'exploratory' | 'other';
+    automation_status: 'not_automated' | 'automated' | 'in_progress' | 'cannot_automate';
+    approved?: boolean;
+    editing?: boolean;
+}
+
+export interface AIGenerationOptions {
+    input_type: 'text' | 'file' | 'image';
+    text?: string;
+    file?: File;
+    image?: File;
+    count: number;
+    provider?: string;
+}
+
+export type AIProvider = 'gemini' | 'claude';

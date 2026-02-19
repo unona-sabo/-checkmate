@@ -39,4 +39,13 @@ return [
         'api_key' => env('ANTHROPIC_API_KEY'),
     ],
 
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+    ],
+
+    'ai' => [
+        'default_provider' => env('AI_PROVIDER', 'gemini'),
+    ],
+
 ];
