@@ -28,6 +28,7 @@ import {
     Drama,
     Rocket,
     BarChart3,
+    Sparkles,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -52,6 +53,7 @@ const sectionIcons: Record<string, typeof ClipboardList> = {
     automation: Drama,
     releases: Rocket,
     'test-coverage': BarChart3,
+    'ai-generator': Sparkles,
     'test-data': Database,
     documentations: FileText,
     notes: StickyNote,
