@@ -966,10 +966,10 @@ const onDialogClose = (open: boolean) => {
                                                             @click.prevent.stop
                                                             class="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors cursor-pointer"
                                                             :class="checklist.category
-                                                                ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                                                                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/20'
                                                                 : 'bg-muted text-muted-foreground hover:bg-muted/80 opacity-0 group-hover/card:opacity-100'"
                                                         >
-                                                            <Tag class="h-3 w-3" />
+                                                            <FolderOpen class="h-3 w-3" />
                                                             {{ checklist.category || 'Category' }}
                                                         </button>
                                                     </DropdownMenuTrigger>

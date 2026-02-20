@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Edit, FileText, AlertCircle, ListOrdered, Target, Tag, Paperclip, Download, Trash2, Link2, Check } from 'lucide-vue-next';
+import { Edit, FileText, AlertCircle, ListOrdered, Target, Tag, Paperclip, Download, Trash2, Link2, Check, Bug } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
 import { priorityVariant, severityVariant, automationVariant } from '@/lib/badge-variants';
 import { ref, computed } from 'vue';
+import { router } from '@inertiajs/vue3';
 
 const props = defineProps<{
     project: Project;
@@ -66,6 +67,27 @@ const formatFileSize = (bytes: number): string => {
 const formatDate = (date: string): string => {
     return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
+
+const formatStepsToText = (): string => {
+    if (!props.testCase.steps?.length) return '';
+    return props.testCase.steps
+        .map((step, i) => `${i + 1}. ${step.action}${step.expected ? ` (Expected: ${step.expected})` : ''}`)
+        .join('\n');
+};
+
+const navigateToCreateBugreport = () => {
+    const params = new URLSearchParams();
+    if (props.testCase.title) params.set('title', props.testCase.title);
+    if (props.testCase.description) params.set('description', props.testCase.description);
+    const stepsText = formatStepsToText();
+    if (stepsText) params.set('steps_to_reproduce', stepsText);
+    if (props.testCase.expected_result) params.set('expected_result', props.testCase.expected_result);
+    if (props.testCase.priority) params.set('priority', props.testCase.priority);
+    if (props.testCase.severity) params.set('severity', props.testCase.severity);
+    params.set('test_case_id', String(props.testCase.id));
+
+    router.visit(`/projects/${props.project.id}/bugreports/create?${params.toString()}`);
+};
 </script>
 
 <template>
@@ -87,6 +109,10 @@ const formatDate = (date: string): string => {
                     </div>
                 </div>
                 <div class="flex gap-2">
+                    <Button variant="outline" class="gap-2 cursor-pointer" @click="navigateToCreateBugreport">
+                        <Bug class="h-4 w-4" />
+                        Create Bug Report
+                    </Button>
                     <RestrictedAction>
                         <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/edit`">
                             <Button variant="outline" class="gap-2">

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestSuite } from '@/types';
+import { type BreadcrumbItem, type Project, type TestSuite, type Checklist, type ChecklistRow } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,14 +10,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Play, Layers, FileText, Boxes } from 'lucide-vue-next';
+import { Play, Layers, FileText, Boxes, ListChecks } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 
 const props = defineProps<{
     project: Project;
     testSuites: TestSuite[];
+    source?: string;
+    checklists?: Checklist[];
 }>();
+
+const isChecklistMode = computed(() => props.source === 'checklist');
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
@@ -26,6 +30,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Create', href: `/projects/${props.project.id}/test-runs/create` },
 ];
 
+// Test cases form
 const form = useForm({
     name: '',
     description: '',
@@ -35,14 +40,28 @@ const form = useForm({
     test_case_ids: [] as number[],
 });
 
+// Checklist form
+const checklistForm = useForm({
+    name: '',
+    description: '',
+    priority: '' as string,
+    environment: '',
+    milestone: '',
+    checklist_id: null as number | null,
+    titles: [] as string[],
+});
+
 const envPreset = ref('');
 const envNotes = ref('');
 
 watch([envPreset, envNotes], () => {
     const parts = [envPreset.value, envNotes.value.trim()].filter(Boolean);
-    form.environment = parts.join(' — ');
+    const env = parts.join(' — ');
+    form.environment = env;
+    checklistForm.environment = env;
 });
 
+// --- Test Cases mode helpers ---
 const expandedSuites = ref<Record<number, boolean>>({});
 
 const toggleSuite = (suiteId: number) => {
@@ -104,9 +123,73 @@ const deselectAll = () => {
     form.test_case_ids = [];
 };
 
+// --- Checklist mode helpers ---
+const selectedChecklistId = ref('');
+
+const selectedChecklist = computed(() => {
+    if (!selectedChecklistId.value) return null;
+    return props.checklists?.find(c => c.id === Number(selectedChecklistId.value)) ?? null;
+});
+
+const textColumnKey = computed((): string | null => {
+    if (!selectedChecklist.value?.columns_config) return null;
+    const col = selectedChecklist.value.columns_config.find(col => col.type === 'text');
+    return col?.key ?? null;
+});
+
+const checklistRows = computed((): { title: string; row: ChecklistRow }[] => {
+    if (!selectedChecklist.value?.rows || !textColumnKey.value) return [];
+    return selectedChecklist.value.rows
+        .filter(r => r.row_type !== 'section_header')
+        .map(r => ({
+            title: String((r.data as Record<string, unknown>)?.[textColumnKey.value!] ?? ''),
+            row: r,
+        }))
+        .filter(r => r.title.trim() !== '');
+});
+
+const selectedRowTitles = ref<Set<string>>(new Set());
+
+watch(selectedChecklistId, () => {
+    selectedRowTitles.value = new Set();
+    checklistForm.checklist_id = selectedChecklistId.value ? Number(selectedChecklistId.value) : null;
+});
+
+const toggleRowTitle = (title: string) => {
+    const set = new Set(selectedRowTitles.value);
+    if (set.has(title)) {
+        set.delete(title);
+    } else {
+        set.add(title);
+    }
+    selectedRowTitles.value = set;
+};
+
+const selectAllRows = () => {
+    selectedRowTitles.value = new Set(checklistRows.value.map(r => r.title));
+};
+
+const deselectAllRows = () => {
+    selectedRowTitles.value = new Set();
+};
+
+// --- Submit ---
 const submit = () => {
     form.post(`/projects/${props.project.id}/test-runs`);
 };
+
+const submitChecklist = () => {
+    checklistForm.titles = Array.from(selectedRowTitles.value);
+    checklistForm.post(`/projects/${props.project.id}/test-runs/from-checklist`);
+};
+
+const activeForm = computed(() => isChecklistMode.value ? checklistForm : form);
+const isSubmitDisabled = computed(() => {
+    if (isChecklistMode.value) {
+        return checklistForm.processing || !checklistForm.name || !checklistForm.checklist_id || selectedRowTitles.value.size === 0;
+    }
+    return form.processing || !form.name || form.test_case_ids.length === 0;
+});
 </script>
 
 <template>
@@ -122,28 +205,28 @@ const submit = () => {
                             Create Test Run
                         </CardTitle>
                         <CardDescription>
-                            Select test cases to include in this test run.
+                            {{ isChecklistMode ? 'Select checklist rows to include in this test run.' : 'Select test cases to include in this test run.' }}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form @submit.prevent="submit" class="space-y-6">
+                        <form @submit.prevent="isChecklistMode ? submitChecklist() : submit()" class="space-y-6">
                             <div class="space-y-2">
                                 <Label for="name">Run Name</Label>
                                 <Input
                                     id="name"
-                                    v-model="form.name"
+                                    v-model="activeForm.name"
                                     type="text"
                                     placeholder="e.g., Sprint 1 Regression, Release 2.0 Smoke Test"
-                                    :class="{ 'border-destructive': form.errors.name }"
+                                    :class="{ 'border-destructive': activeForm.errors.name }"
                                 />
-                                <InputError :message="form.errors.name" />
+                                <InputError :message="activeForm.errors.name" />
                             </div>
 
                             <div class="space-y-2">
                                 <Label for="description">Description</Label>
                                 <Textarea
                                     id="description"
-                                    v-model="form.description"
+                                    v-model="activeForm.description"
                                     placeholder="Describe the purpose of this test run..."
                                     rows="2"
                                 />
@@ -151,7 +234,7 @@ const submit = () => {
 
                             <div class="space-y-2">
                                 <Label>Priority</Label>
-                                <Select v-model="form.priority">
+                                <Select v-model="activeForm.priority">
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select priority..." />
                                     </SelectTrigger>
@@ -162,7 +245,7 @@ const submit = () => {
                                         <SelectItem value="critical">Critical</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <InputError :message="form.errors.priority" />
+                                <InputError :message="activeForm.errors.priority" />
                             </div>
 
                             <div class="space-y-2">
@@ -191,14 +274,14 @@ const submit = () => {
                                 <Label for="milestone">Milestone</Label>
                                 <Input
                                     id="milestone"
-                                    v-model="form.milestone"
+                                    v-model="activeForm.milestone"
                                     type="text"
                                     placeholder="e.g., v2.0, Sprint 5"
                                 />
                             </div>
 
-                            <!-- Test Case Selection -->
-                            <div class="space-y-3">
+                            <!-- Test Case Selection (default mode) -->
+                            <div v-if="!isChecklistMode" class="space-y-3">
                                 <div class="flex items-center justify-between">
                                     <Label>Select Test Cases</Label>
                                     <div class="flex gap-2">
@@ -287,9 +370,75 @@ const submit = () => {
                                 <InputError :message="form.errors.test_case_ids" />
                             </div>
 
+                            <!-- Checklist Selection (checklist mode) -->
+                            <div v-if="isChecklistMode" class="space-y-3">
+                                <div class="space-y-2">
+                                    <Label>Select Checklist</Label>
+                                    <Select v-model="selectedChecklistId">
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Choose a checklist..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem
+                                                v-for="cl in checklists"
+                                                :key="cl.id"
+                                                :value="String(cl.id)"
+                                            >
+                                                {{ cl.name }}
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError :message="checklistForm.errors.checklist_id" />
+                                </div>
+
+                                <div v-if="selectedChecklist && checklistRows.length > 0" class="space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <Label>Select Rows</Label>
+                                        <div class="flex gap-2">
+                                            <Button type="button" variant="outline" size="sm" @click="selectAllRows">
+                                                Select All
+                                            </Button>
+                                            <Button type="button" variant="outline" size="sm" @click="deselectAllRows">
+                                                Deselect All
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-1 rounded-lg border p-4 max-h-96 overflow-y-auto">
+                                        <div
+                                            v-for="item in checklistRows"
+                                            :key="item.row.id"
+                                            class="flex items-center gap-2 py-1 text-sm"
+                                        >
+                                            <Checkbox
+                                                :model-value="selectedRowTitles.has(item.title)"
+                                                @update:model-value="toggleRowTitle(item.title)"
+                                            />
+                                            <ListChecks class="h-3 w-3 text-muted-foreground" />
+                                            <span>{{ item.title }}</span>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-muted-foreground">
+                                        {{ selectedRowTitles.size }} rows selected
+                                    </p>
+                                    <InputError :message="checklistForm.errors.titles" />
+                                </div>
+
+                                <div v-else-if="selectedChecklist && checklistRows.length === 0" class="rounded-lg border border-dashed p-6 text-center">
+                                    <ListChecks class="mx-auto h-8 w-8 text-muted-foreground" />
+                                    <p class="mt-2 text-sm text-muted-foreground">No rows with text found in this checklist.</p>
+                                </div>
+
+                                <div v-else-if="!checklists?.length" class="rounded-lg border border-dashed p-6 text-center">
+                                    <ListChecks class="mx-auto h-8 w-8 text-muted-foreground" />
+                                    <p class="mt-2 text-sm text-muted-foreground">No checklists found. Create a checklist first.</p>
+                                </div>
+                            </div>
+
                             <div class="flex gap-2">
                                 <RestrictedAction>
-                                    <Button type="submit" variant="cta" :disabled="form.processing || !form.name || form.test_case_ids.length === 0">
+                                    <Button type="submit" variant="cta" :disabled="isSubmitDisabled">
                                         Create Test Run
                                     </Button>
                                 </RestrictedAction>

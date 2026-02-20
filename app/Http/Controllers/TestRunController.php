@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TestRun\AddCasesRequest;
 use App\Http\Requests\TestRun\StoreTestRunFromChecklistRequest;
 use App\Http\Requests\TestRun\StoreTestRunRequest;
 use App\Http\Requests\TestRun\UpdateTestRunRequest;
@@ -41,15 +42,26 @@ class TestRunController extends Controller
     {
         $this->authorize('update', $project);
 
+        $source = request()->query('source', 'test-cases');
+
         $testSuites = $project->testSuites()
             ->whereNull('parent_id')
             ->with(['children.testCases', 'testCases'])
             ->get();
 
-        return Inertia::render('TestRuns/Create', [
+        $props = [
             'project' => $project,
             'testSuites' => $testSuites,
-        ]);
+            'source' => $source,
+        ];
+
+        if ($source === 'checklist') {
+            $props['checklists'] = $project->checklists()
+                ->with('rows')
+                ->get();
+        }
+
+        return Inertia::render('TestRuns/Create', $props);
     }
 
     public function store(StoreTestRunRequest $request, Project $project)
@@ -127,10 +139,23 @@ class TestRunController extends Controller
         $testRun->setAttribute('elapsed_seconds', $testRun->getElapsedSeconds());
         $testRun->setAttribute('is_paused', $testRun->isPaused());
 
-        return Inertia::render('TestRuns/Show', [
+        $props = [
             'project' => $project,
             'testRun' => $testRun,
-        ]);
+        ];
+
+        if ($testRun->source === 'test-cases') {
+            $props['testSuites'] = Inertia::defer(fn () => $project->testSuites()
+                ->whereNull('parent_id')
+                ->with(['children.testCases', 'testCases'])
+                ->get());
+        } elseif ($testRun->source === 'checklist') {
+            $props['checklists'] = Inertia::defer(fn () => $project->checklists()
+                ->with('rows')
+                ->get());
+        }
+
+        return Inertia::render('TestRuns/Show', $props);
     }
 
     public function edit(Project $project, TestRun $testRun): Response
@@ -217,6 +242,53 @@ class TestRunController extends Controller
         $testRun->update(['paused_at' => now()]);
 
         return back()->with('success', 'Test run paused.');
+    }
+
+    public function addCases(AddCasesRequest $request, Project $project, TestRun $testRun)
+    {
+        $this->authorize('update', $project);
+
+        if ($testRun->status !== 'active') {
+            return back()->with('error', 'Can only add cases to active test runs.');
+        }
+
+        $validated = $request->validated();
+        $added = 0;
+
+        if ($testRun->source === 'test-cases') {
+            $existingIds = $testRun->testRunCases()->whereNotNull('test_case_id')->pluck('test_case_id')->toArray();
+
+            foreach ($validated['test_case_ids'] ?? [] as $testCaseId) {
+                if (in_array($testCaseId, $existingIds)) {
+                    continue;
+                }
+
+                $testRun->testRunCases()->create([
+                    'test_case_id' => $testCaseId,
+                    'status' => 'untested',
+                ]);
+                $added++;
+            }
+        } elseif ($testRun->source === 'checklist') {
+            $existingTitles = $testRun->testRunCases()->pluck('title')->toArray();
+
+            foreach ($validated['titles'] ?? [] as $title) {
+                if (in_array($title, $existingTitles)) {
+                    continue;
+                }
+
+                $testRun->testRunCases()->create([
+                    'title' => $title,
+                    'status' => 'untested',
+                ]);
+                $added++;
+            }
+        }
+
+        $testRun->updateStats();
+        $testRun->updateProgress();
+
+        return back()->with('success', "{$added} case(s) added to the test run.");
     }
 
     public function resume(Project $project, TestRun $testRun)

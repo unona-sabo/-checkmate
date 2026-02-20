@@ -1,11 +1,26 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FileText, Edit, Trash2, ChevronRight, Download, Paperclip, FolderTree, ExternalLink, Plus, Search, X, Link2, Check } from 'lucide-vue-next';
+import { Label } from '@/components/ui/label';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { FileText, Edit, Trash2, ChevronRight, Download, Upload, Paperclip, FolderTree, ExternalLink, Plus, Search, X, Link2, Check, FileSpreadsheet } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { useSearch, escapeRegExp } from '@/composables/useSearch';
@@ -121,6 +136,87 @@ const nonImageAttachments = (attachments?: Attachment[]) =>
 
 const imageAttachments = (attachments?: Attachment[]) =>
     attachments?.filter(a => isImage(a.mime_type)) ?? [];
+
+// Delete confirmation
+const showDeleteConfirm = ref(false);
+
+const confirmDelete = () => {
+    router.delete(`/projects/${props.project.id}/documentations/${props.documentation.id}`);
+};
+
+// Import/Export
+const showImportDialog = ref(false);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const importFile = ref<File | null>(null);
+const importError = ref<string | null>(null);
+const isUploading = ref(false);
+
+const exportDoc = () => {
+    window.location.href = `/projects/${props.project.id}/documentations/${props.documentation.id}/export`;
+};
+
+const handleFileSelect = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    importError.value = null;
+
+    if (!file) {
+        importFile.value = null;
+        return;
+    }
+
+    const allowed = ['.json', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt'];
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!allowed.includes(ext)) {
+        importError.value = 'Unsupported format. Allowed: JSON, PDF, DOC, DOCX, XLS, XLSX, CSV, TXT.';
+        importFile.value = null;
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        importError.value = 'File is too large. Maximum size is 5MB.';
+        importFile.value = null;
+        return;
+    }
+
+    importFile.value = file;
+};
+
+const submitImport = () => {
+    if (!importFile.value) return;
+
+    isUploading.value = true;
+    importError.value = null;
+
+    const formData = new FormData();
+    formData.append('file', importFile.value);
+
+    router.post(
+        `/projects/${props.project.id}/documentations/${props.documentation.id}/import`,
+        formData,
+        {
+            forceFormData: true,
+            onSuccess: () => {
+                showImportDialog.value = false;
+                importFile.value = null;
+                isUploading.value = false;
+            },
+            onError: (errors) => {
+                importError.value = errors.file || 'Import failed.';
+                isUploading.value = false;
+            },
+        },
+    );
+};
+
+const closeImportDialog = () => {
+    showImportDialog.value = false;
+    importFile.value = null;
+    importError.value = null;
+    if (fileInputRef.value) {
+        fileInputRef.value.value = '';
+    }
+};
 </script>
 
 <template>
@@ -137,6 +233,26 @@ const imageAttachments = (attachments?: Attachment[]) =>
                     ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
                 </h1>
                 <div class="flex gap-2">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                            <Button variant="outline" class="gap-1.5">
+                                <FileSpreadsheet class="h-4 w-4" />
+                                File
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <RestrictedAction>
+                                <DropdownMenuItem class="cursor-pointer" @click="showImportDialog = true">
+                                    <Download class="h-4 w-4 mr-2" />
+                                    Import
+                                </DropdownMenuItem>
+                            </RestrictedAction>
+                            <DropdownMenuItem class="cursor-pointer" @click="exportDoc">
+                                <Upload class="h-4 w-4 mr-2" />
+                                Export
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <RestrictedAction>
                         <Link :href="`/projects/${project.id}/documentations/${documentation.id}/edit`">
                             <Button variant="outline" class="gap-2">
@@ -146,16 +262,10 @@ const imageAttachments = (attachments?: Attachment[]) =>
                         </Link>
                     </RestrictedAction>
                     <RestrictedAction>
-                        <Link
-                            :href="`/projects/${project.id}/documentations/${documentation.id}`"
-                            method="delete"
-                            as="button"
-                        >
-                            <Button variant="destructive" class="gap-2">
-                                <Trash2 class="h-4 w-4" />
-                                Delete
-                            </Button>
-                        </Link>
+                        <Button variant="destructive" class="gap-2" @click="showDeleteConfirm = true">
+                            <Trash2 class="h-4 w-4" />
+                            Delete
+                        </Button>
                     </RestrictedAction>
                 </div>
             </div>
@@ -375,6 +485,89 @@ const imageAttachments = (attachments?: Attachment[]) =>
                 </div>
             </div>
         </div>
+
+        <!-- Import Dialog -->
+        <Dialog :open="showImportDialog" @update:open="(v: boolean) => { if (!v) closeImportDialog() }">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Download class="h-5 w-5 text-primary" />
+                        Import Documentation
+                    </DialogTitle>
+                    <DialogDescription>
+                        Upload a document file. JSON files are imported as a documentation tree. PDF, DOC, Excel, CSV and TXT are parsed and added as a subcategory of "{{ documentation.title }}".
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="space-y-4 py-4">
+                    <div class="space-y-2">
+                        <Label>File</Label>
+                        <input
+                            ref="fileInputRef"
+                            type="file"
+                            accept=".json,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                            class="hidden"
+                            @change="handleFileSelect"
+                        />
+                        <Button
+                            variant="outline"
+                            class="w-full justify-start gap-2 font-normal cursor-pointer"
+                            @click="fileInputRef?.click()"
+                        >
+                            <Upload class="h-4 w-4 text-muted-foreground" />
+                            <span :class="importFile ? 'text-foreground' : 'text-muted-foreground'">
+                                {{ importFile ? importFile.name : 'Choose file...' }}
+                            </span>
+                        </Button>
+                        <p class="text-xs text-muted-foreground">JSON, PDF, DOC, DOCX, XLS, XLSX, CSV, TXT — max 5MB</p>
+                    </div>
+
+                    <div v-if="importFile" class="rounded-lg border p-3 bg-muted/30">
+                        <p class="text-sm font-medium">{{ importFile.name }}</p>
+                        <p class="text-xs text-muted-foreground">{{ (importFile.size / 1024).toFixed(1) }} KB</p>
+                    </div>
+
+                    <div v-if="importError" class="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+                        <p class="text-sm text-destructive">{{ importError }}</p>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" @click="closeImportDialog">Cancel</Button>
+                    <RestrictedAction>
+                        <Button
+                            @click="submitImport"
+                            :disabled="!importFile || isUploading"
+                            class="gap-2"
+                        >
+                            <Download class="h-4 w-4" />
+                            {{ isUploading ? 'Importing...' : 'Import' }}
+                        </Button>
+                    </RestrictedAction>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        <!-- Delete Confirmation Dialog -->
+        <Dialog v-model:open="showDeleteConfirm">
+            <DialogContent class="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Delete Documentation?</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to delete "{{ documentation.title }}"? This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="flex gap-4 sm:justify-end">
+                    <Button variant="secondary" @click="showDeleteConfirm = false" class="flex-1 sm:flex-none">
+                        Cancel
+                    </Button>
+                    <RestrictedAction>
+                        <Button variant="destructive" @click="confirmDelete" class="flex-1 sm:flex-none">
+                            Delete
+                        </Button>
+                    </RestrictedAction>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>
 

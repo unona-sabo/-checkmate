@@ -18,7 +18,9 @@ import {
     Search,
     X,
     FileText,
+    Rocket,
 } from 'lucide-vue-next';
+import { releaseStatusVariant } from '@/lib/badge-variants';
 import { ref, watch, computed } from 'vue';
 import axios from 'axios';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -76,6 +78,7 @@ const getTypeIcon = (type: string) => {
         case 'test_runs': return Play;
         case 'bugreports': return Bug;
         case 'documentations': return FileText;
+        case 'releases': return Rocket;
         default: return FileText;
     }
 };
@@ -428,6 +431,50 @@ const getBugStatusColor = (status: string) => {
                             No bug reports yet
                         </div>
                         <Link :href="`/projects/${project.id}/bugreports`" class="mt-auto pt-3 block">
+                            <Button variant="outline" size="sm" class="w-full text-sm cursor-pointer">View All</Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+
+                <!-- Releases Section -->
+                <Card class="flex flex-col">
+                    <CardHeader class="p-5 pb-3">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="flex items-center gap-2 text-lg font-semibold">
+                                <Rocket class="h-5 w-5 text-primary" />
+                                Releases
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.releases?.length || 0 }}</span>
+                            </CardTitle>
+                            <RestrictedAction>
+                                <Link :href="`/projects/${project.id}/releases`">
+                                    <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer">
+                                        <Plus class="h-4 w-4" />
+                                    </Button>
+                                </Link>
+                            </RestrictedAction>
+                        </div>
+                    </CardHeader>
+                    <CardContent class="p-5 pt-0 flex flex-col flex-1">
+                        <div v-if="project.releases?.length" class="space-y-1.5">
+                            <Link
+                                v-for="release in project.releases.slice(0, 5)"
+                                :key="release.id"
+                                :href="`/projects/${project.id}/releases/${release.id}`"
+                                class="flex items-center justify-between gap-6 rounded border px-3 py-2 text-sm transition-colors hover:bg-muted/50 cursor-pointer"
+                            >
+                                <span class="font-medium truncate min-w-0">{{ release.version }} — {{ release.name }}</span>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <Badge :variant="releaseStatusVariant(release.status)" class="text-xs px-1.5 py-0 h-5">
+                                        {{ release.status?.replace('_', ' ') }}
+                                    </Badge>
+                                    <ArrowRight class="h-4 w-4 text-muted-foreground" />
+                                </div>
+                            </Link>
+                        </div>
+                        <div v-else class="py-3 text-center text-sm text-muted-foreground">
+                            No releases yet
+                        </div>
+                        <Link :href="`/projects/${project.id}/releases`" class="mt-auto pt-3 block">
                             <Button variant="outline" size="sm" class="w-full text-sm cursor-pointer">View All</Button>
                         </Link>
                     </CardContent>

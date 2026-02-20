@@ -118,6 +118,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('test-runs/{testRun}', [TestRunController::class, 'destroy'])->name('destroy');
         Route::post('test-runs/{testRun}/complete', [TestRunController::class, 'complete'])->name('complete');
         Route::post('test-runs/{testRun}/archive', [TestRunController::class, 'archive'])->name('archive');
+        Route::post('test-runs/{testRun}/add-cases', [TestRunController::class, 'addCases'])->name('add-cases');
         Route::post('test-runs/{testRun}/pause', [TestRunController::class, 'pause'])->name('pause');
         Route::post('test-runs/{testRun}/resume', [TestRunController::class, 'resume'])->name('resume');
     });
@@ -233,6 +234,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('documentations/{documentation}', [DocumentationController::class, 'update'])->name('update');
         Route::delete('documentations/{documentation}', [DocumentationController::class, 'destroy'])->name('destroy');
         Route::delete('documentations/{documentation}/attachments/{attachment}', [DocumentationController::class, 'destroyAttachment'])->name('destroy-attachment');
+        Route::get('documentations/{documentation}/export', [DocumentationController::class, 'export'])->name('export');
+        Route::post('documentations/{documentation}/import', [DocumentationController::class, 'import'])->name('import');
         Route::post('documentations/{documentation}/upload-image', [DocumentationController::class, 'uploadImage'])->name('upload-image');
         Route::post('documentations/upload-image', [DocumentationController::class, 'uploadNewImage'])->name('upload-new-image');
     });

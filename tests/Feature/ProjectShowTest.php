@@ -3,6 +3,7 @@
 use App\Models\Bugreport;
 use App\Models\Documentation;
 use App\Models\Project;
+use App\Models\Release;
 use App\Models\User;
 
 test('project show page loads bugreports and documentations', function () {
@@ -46,6 +47,44 @@ test('project show page limits bugreports to 5', function () {
     $response->assertInertia(fn ($page) => $page
         ->component('Projects/Show')
         ->has('project.bugreports', 5)
+    );
+});
+
+test('project show page loads releases', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    Release::factory()->count(3)->create([
+        'project_id' => $project->id,
+        'created_by' => $user->id,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('projects.show', $project));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Projects/Show')
+        ->has('project.releases', 3)
+        ->has('project.releases.0.version')
+        ->has('project.releases.0.status')
+    );
+});
+
+test('project show page limits releases to 5', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    Release::factory()->count(8)->create([
+        'project_id' => $project->id,
+        'created_by' => $user->id,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('projects.show', $project));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Projects/Show')
+        ->has('project.releases', 5)
     );
 });
 

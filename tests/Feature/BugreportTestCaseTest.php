@@ -2,6 +2,7 @@
 
 use App\Models\Bugreport;
 use App\Models\Project;
+use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -111,6 +112,78 @@ test('test case create page includes bugreport attachments when bugreport_id pro
         ->component('TestCases/Create')
         ->has('bugreportAttachments', 1, fn ($att) => $att
             ->where('original_filename', 'log.txt')
+            ->etc()
+        )
+    );
+});
+
+test('creating bugreport from test case copies attachments', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $testCase = TestCase::factory()->create([
+        'test_suite_id' => $suite->id,
+        'created_by' => $user->id,
+    ]);
+
+    $file = UploadedFile::fake()->image('evidence.png', 200, 200);
+    $storedPath = $file->store('attachments/test-cases', 'public');
+    $testCase->attachments()->create([
+        'original_filename' => 'evidence.png',
+        'stored_path' => $storedPath,
+        'mime_type' => 'image/png',
+        'size' => $file->getSize(),
+    ]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.store', $project),
+        [
+            'title' => 'Bug from test case',
+            'severity' => 'major',
+            'priority' => 'high',
+            'status' => 'new',
+            'test_case_id' => $testCase->id,
+        ]
+    );
+
+    $response->assertRedirect();
+
+    $bugreport = $project->bugreports()->first();
+    expect($bugreport)->not->toBeNull();
+    expect($bugreport->attachments)->toHaveCount(1);
+    expect($bugreport->attachments->first()->original_filename)->toBe('evidence.png');
+
+    $copiedPath = $bugreport->attachments->first()->stored_path;
+    expect($copiedPath)->not->toBe($storedPath);
+    Storage::disk('public')->assertExists($copiedPath);
+});
+
+test('bugreport create page includes test case attachments when test_case_id provided', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $testCase = TestCase::factory()->create([
+        'test_suite_id' => $suite->id,
+        'created_by' => $user->id,
+    ]);
+    $testCase->attachments()->create([
+        'original_filename' => 'debug.log',
+        'stored_path' => 'attachments/test-cases/debug.log',
+        'mime_type' => 'text/plain',
+        'size' => 2048,
+    ]);
+
+    $response = $this->actingAs($user)->get(
+        route('bugreports.create', $project).'?test_case_id='.$testCase->id
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Bugreports/Create')
+        ->has('testCaseAttachments', 1, fn ($att) => $att
+            ->where('original_filename', 'debug.log')
             ->etc()
         )
     );

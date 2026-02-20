@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Plus, Play, CheckCircle2, Archive, Search, X, Calendar, User, Pause, Timer, Filter } from 'lucide-vue-next';
+import { Plus, Play, CheckCircle2, Archive, Search, X, Calendar, User, Pause, Timer, Filter, FileText, ListChecks, ChevronDown } from 'lucide-vue-next';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { priorityVariant, testRunStatusVariant } from '@/lib/badge-variants';
@@ -241,12 +242,29 @@ const resumeRun = (run: TestRun) => {
                         </Badge>
                     </Button>
                     <RestrictedAction>
-                        <Link :href="`/projects/${project.id}/test-runs/create`">
-                            <Button variant="cta" class="gap-2">
-                                <Plus class="h-4 w-4" />
-                                New Test Run
-                            </Button>
-                        </Link>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="cta" class="gap-2 cursor-pointer">
+                                    <Plus class="h-4 w-4" />
+                                    New Test Run
+                                    <ChevronDown class="h-3 w-3 ml-0.5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem as-child class="cursor-pointer">
+                                    <Link :href="`/projects/${project.id}/test-runs/create`" class="flex items-center gap-2">
+                                        <FileText class="h-4 w-4" />
+                                        From Test Cases
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem as-child class="cursor-pointer">
+                                    <Link :href="`/projects/${project.id}/test-runs/create?source=checklist`" class="flex items-center gap-2">
+                                        <ListChecks class="h-4 w-4" />
+                                        From Checklist
+                                    </Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </RestrictedAction>
                 </div>
             </div>

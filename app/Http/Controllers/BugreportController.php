@@ -8,6 +8,7 @@ use App\Models\Attachment;
 use App\Models\Bugreport;
 use App\Models\ChecklistRow;
 use App\Models\Project;
+use App\Models\TestCase;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -43,10 +44,22 @@ class BugreportController extends Controller
             ->orderBy('module')->orderBy('name')
             ->get(['id', 'name', 'module', 'priority']);
 
+        $testCaseAttachments = [];
+        $testCaseId = request()->query('test_case_id');
+        if ($testCaseId) {
+            $testCase = TestCase::with('attachments')
+                ->whereIn('test_suite_id', $project->testSuites()->pluck('id'))
+                ->find($testCaseId);
+            if ($testCase) {
+                $testCaseAttachments = $testCase->attachments;
+            }
+        }
+
         return Inertia::render('Bugreports/Create', [
             'project' => $project,
             'users' => $users,
             'features' => $features,
+            'testCaseAttachments' => $testCaseAttachments,
         ]);
     }
 
@@ -60,7 +73,7 @@ class BugreportController extends Controller
 
         $checklistFields = ['checklist_id', 'checklist_row_ids', 'checklist_link_column'];
         $bugreport = $project->bugreports()->create(
-            collect($validated)->except(['attachments', 'feature_ids', ...$checklistFields])->toArray()
+            collect($validated)->except(['attachments', 'feature_ids', 'test_case_id', ...$checklistFields])->toArray()
         );
 
         if (! empty($validated['feature_ids'])) {
@@ -77,6 +90,10 @@ class BugreportController extends Controller
                     'size' => $file->getSize(),
                 ]);
             }
+        }
+
+        if (! empty($validated['test_case_id'])) {
+            $this->copyTestCaseAttachments($project, $bugreport, (int) $validated['test_case_id']);
         }
 
         $this->linkBugreportToChecklistRow($project, $bugreport, $validated);
@@ -170,6 +187,35 @@ class BugreportController extends Controller
         $attachment->delete();
 
         return back()->with('success', 'Attachment deleted successfully.');
+    }
+
+    /**
+     * Copy attachments from a test case to a bugreport.
+     */
+    private function copyTestCaseAttachments(Project $project, Bugreport $bugreport, int $testCaseId): void
+    {
+        $testCase = TestCase::with('attachments')
+            ->whereIn('test_suite_id', $project->testSuites()->pluck('id'))
+            ->find($testCaseId);
+
+        if (! $testCase) {
+            return;
+        }
+
+        foreach ($testCase->attachments as $attachment) {
+            if (Storage::disk('public')->exists($attachment->stored_path)) {
+                $extension = pathinfo($attachment->stored_path, PATHINFO_EXTENSION);
+                $newPath = 'attachments/bugreports/'.uniqid().'.'.$extension;
+                Storage::disk('public')->copy($attachment->stored_path, $newPath);
+
+                $bugreport->attachments()->create([
+                    'original_filename' => $attachment->original_filename,
+                    'stored_path' => $newPath,
+                    'mime_type' => $attachment->mime_type,
+                    'size' => $attachment->size,
+                ]);
+            }
+        }
     }
 
     /**

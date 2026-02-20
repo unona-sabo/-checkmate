@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, Deferred } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestRun, type TestRunCase } from '@/types';
+import { type BreadcrumbItem, type Project, type TestRun, type TestRunCase, type TestSuite, type Checklist, type ChecklistRow } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,11 +11,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Play, Edit, CheckCircle2, XCircle, AlertTriangle,
-    SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check, Pause, Timer
+    SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check, Pause, Timer, ChevronDown, ChevronUp,
+    Plus, Layers, FileText, Boxes, ListChecks
 } from 'lucide-vue-next';
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { useSearch } from '@/composables/useSearch';
 import { testResultVariant } from '@/lib/badge-variants';
@@ -23,6 +25,8 @@ import { testResultVariant } from '@/lib/badge-variants';
 const props = defineProps<{
     project: Project;
     testRun: TestRun;
+    testSuites?: TestSuite[];
+    checklists?: Checklist[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -192,6 +196,22 @@ const groupedCases = computed(() => {
     return groups;
 });
 
+const expandedCases = ref<Set<number>>(new Set());
+
+const toggleExpanded = (id: number) => {
+    if (expandedCases.value.has(id)) {
+        expandedCases.value.delete(id);
+    } else {
+        expandedCases.value.add(id);
+    }
+};
+
+const hasDetails = (trc: TestRunCase): boolean => {
+    const tc = trc.test_case;
+    if (!tc) return false;
+    return !!(tc.description || tc.preconditions || tc.steps?.length || tc.expected_result);
+};
+
 const { searchQuery, highlight } = useSearch();
 
 const filteredGroupedCases = computed(() => {
@@ -210,6 +230,169 @@ const filteredGroupedCases = computed(() => {
         }
     }
     return filtered;
+});
+
+// --- Add Cases Dialog ---
+const showAddCasesDialog = ref(false);
+const addCasesProcessing = ref(false);
+
+// For test-cases source
+const addCaseIds = ref<number[]>([]);
+
+const existingTestCaseIds = computed(() => {
+    return new Set(
+        props.testRun.test_run_cases
+            ?.filter(trc => trc.test_case_id)
+            .map(trc => trc.test_case_id!) ?? []
+    );
+});
+
+const getAllTestCases = (suite: TestSuite): number[] => {
+    const ids: number[] = [];
+    if (suite.test_cases) {
+        ids.push(...suite.test_cases.map(tc => tc.id));
+    }
+    if (suite.children) {
+        suite.children.forEach(child => {
+            ids.push(...getAllTestCases(child));
+        });
+    }
+    return ids;
+};
+
+const isSuiteSelected = (suite: TestSuite) => {
+    const allIds = getAllTestCases(suite).filter(id => !existingTestCaseIds.value.has(id));
+    return allIds.length > 0 && allIds.every(id => addCaseIds.value.includes(id));
+};
+
+const isSuitePartiallySelected = (suite: TestSuite) => {
+    const allIds = getAllTestCases(suite).filter(id => !existingTestCaseIds.value.has(id));
+    const selectedCount = allIds.filter(id => addCaseIds.value.includes(id)).length;
+    return selectedCount > 0 && selectedCount < allIds.length;
+};
+
+const toggleSuiteSelection = (suite: TestSuite) => {
+    const allIds = getAllTestCases(suite).filter(id => !existingTestCaseIds.value.has(id));
+    if (isSuiteSelected(suite)) {
+        addCaseIds.value = addCaseIds.value.filter(id => !allIds.includes(id));
+    } else {
+        const newIds = allIds.filter(id => !addCaseIds.value.includes(id));
+        addCaseIds.value = [...addCaseIds.value, ...newIds];
+    }
+};
+
+const toggleAddTestCase = (testCaseId: number) => {
+    if (existingTestCaseIds.value.has(testCaseId)) return;
+    const index = addCaseIds.value.indexOf(testCaseId);
+    if (index > -1) {
+        addCaseIds.value = addCaseIds.value.filter(id => id !== testCaseId);
+    } else {
+        addCaseIds.value = [...addCaseIds.value, testCaseId];
+    }
+};
+
+// For checklist source
+const addRowTitles = ref<Set<string>>(new Set());
+const selectedAddChecklistId = ref('');
+
+const existingTitles = computed(() => {
+    return new Set(
+        props.testRun.test_run_cases
+            ?.filter(trc => trc.title)
+            .map(trc => trc.title!) ?? []
+    );
+});
+
+const selectedAddChecklist = computed(() => {
+    if (!selectedAddChecklistId.value) return null;
+    return props.checklists?.find(c => c.id === Number(selectedAddChecklistId.value)) ?? null;
+});
+
+const textColumnKey = computed((): string | null => {
+    if (!selectedAddChecklist.value?.columns_config) return null;
+    const col = selectedAddChecklist.value.columns_config.find(col => col.type === 'text');
+    return col?.key ?? null;
+});
+
+const checklistRows = computed((): { title: string; row: ChecklistRow }[] => {
+    if (!selectedAddChecklist.value?.rows || !textColumnKey.value) return [];
+    return selectedAddChecklist.value.rows
+        .filter(r => r.row_type !== 'section_header')
+        .map(r => ({
+            title: String((r.data as Record<string, unknown>)?.[textColumnKey.value!] ?? ''),
+            row: r,
+        }))
+        .filter(r => r.title.trim() !== '');
+});
+
+const toggleAddRowTitle = (title: string) => {
+    if (existingTitles.value.has(title)) return;
+    const set = new Set(addRowTitles.value);
+    if (set.has(title)) {
+        set.delete(title);
+    } else {
+        set.add(title);
+    }
+    addRowTitles.value = set;
+};
+
+watch(selectedAddChecklistId, () => {
+    addRowTitles.value = new Set();
+});
+
+const selectAllAddRows = () => {
+    const set = new Set(addRowTitles.value);
+    checklistRows.value.forEach(item => {
+        if (!existingTitles.value.has(item.title)) {
+            set.add(item.title);
+        }
+    });
+    addRowTitles.value = set;
+};
+
+const deselectAllAddRows = () => {
+    addRowTitles.value = new Set();
+};
+
+const openAddCasesDialog = () => {
+    addCaseIds.value = [];
+    addRowTitles.value = new Set();
+    selectedAddChecklistId.value = props.testRun.checklist_id ? String(props.testRun.checklist_id) : '';
+    showAddCasesDialog.value = true;
+};
+
+const submitAddCases = () => {
+    addCasesProcessing.value = true;
+
+    const data: Record<string, unknown> = {};
+    if (props.testRun.source === 'test-cases') {
+        data.test_case_ids = addCaseIds.value;
+    } else {
+        data.titles = Array.from(addRowTitles.value);
+    }
+
+    router.post(
+        `/projects/${props.project.id}/test-runs/${props.testRun.id}/add-cases`,
+        data,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showAddCasesDialog.value = false;
+                addCaseIds.value = [];
+                addRowTitles.value = new Set();
+            },
+            onFinish: () => {
+                addCasesProcessing.value = false;
+            },
+        }
+    );
+};
+
+const addCasesCount = computed(() => {
+    if (props.testRun.source === 'test-cases') {
+        return addCaseIds.value.length;
+    }
+    return addRowTitles.value.size;
 });
 
 </script>
@@ -261,6 +444,17 @@ const filteredGroupedCases = computed(() => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
+                    <RestrictedAction>
+                        <Button
+                            v-if="testRun.status === 'active'"
+                            @click="openAddCasesDialog"
+                            variant="outline"
+                            class="gap-2"
+                        >
+                            <Plus class="h-4 w-4" />
+                            Add Cases
+                        </Button>
+                    </RestrictedAction>
                     <RestrictedAction>
                         <Button
                             v-if="testRun.status === 'active' && !testRun.is_paused"
@@ -365,70 +559,108 @@ const filteredGroupedCases = computed(() => {
                             :key="trc.id"
                             class="transition-all hover:border-primary/50"
                         >
-                            <CardContent class="flex items-center justify-between px-4 py-2">
-                                <div class="flex items-center gap-3 flex-1 min-w-0">
-                                    <component
-                                        :is="getStatusIcon(trc.status)"
-                                        :class="['h-4 w-4 shrink-0', getStatusColor(trc.status)]"
-                                    />
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center gap-2">
-                                            <p class="text-sm font-medium truncate" v-html="highlight(trc.test_case?.title ?? trc.title ?? '')" />
-                                            <Badge :variant="testResultVariant(trc.status)" class="text-[10px] px-1.5 h-4 shrink-0">
-                                                {{ trc.status }}
-                                            </Badge>
-                                            <span v-if="trc.assigned_user" class="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                                                <User class="h-3 w-3" />
-                                                {{ trc.assigned_user.name }}
-                                            </span>
-                                            <span v-if="trc.time_spent" class="text-xs text-muted-foreground shrink-0">{{ trc.time_spent }}min</span>
+                            <CardContent class="px-4 py-2">
+                                <div class="flex items-center justify-between">
+                                    <div
+                                        class="flex items-center gap-3 flex-1 min-w-0"
+                                        :class="{ 'cursor-pointer': hasDetails(trc) }"
+                                        @click="hasDetails(trc) && toggleExpanded(trc.id)"
+                                    >
+                                        <component
+                                            :is="getStatusIcon(trc.status)"
+                                            :class="['h-4 w-4 shrink-0', getStatusColor(trc.status)]"
+                                        />
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-2">
+                                                <p class="text-sm font-medium truncate" v-html="highlight(trc.test_case?.title ?? trc.title ?? '')" />
+                                                <Badge :variant="testResultVariant(trc.status)" class="text-[10px] px-1.5 h-4 shrink-0">
+                                                    {{ trc.status }}
+                                                </Badge>
+                                                <span v-if="trc.assigned_user" class="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                                                    <User class="h-3 w-3" />
+                                                    {{ trc.assigned_user.name }}
+                                                </span>
+                                                <span v-if="trc.time_spent" class="text-xs text-muted-foreground shrink-0">{{ trc.time_spent }}min</span>
+                                            </div>
                                         </div>
+                                        <component
+                                            v-if="hasDetails(trc)"
+                                            :is="expandedCases.has(trc.id) ? ChevronUp : ChevronDown"
+                                            class="h-4 w-4 shrink-0 text-muted-foreground"
+                                        />
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0 ml-2">
+                                        <!-- Quick status buttons -->
+                                        <RestrictedAction>
+                                            <div v-if="testRun.status === 'active'" class="flex gap-1">
+                                                <Button
+                                                    size="icon-sm"
+                                                    variant="ghost"
+                                                    class="p-0"
+                                                    :class="{ 'bg-green-500/10': trc.status === 'passed' }"
+                                                    @click="quickStatus(trc, 'passed')"
+                                                    title="Pass"
+                                                >
+                                                    <CheckCircle2 class="h-4 w-4 text-green-500" />
+                                                </Button>
+                                                <Button
+                                                    size="icon-sm"
+                                                    variant="ghost"
+                                                    class="p-0"
+                                                    :class="{ 'bg-red-500/10': trc.status === 'failed' }"
+                                                    @click="quickStatus(trc, 'failed')"
+                                                    title="Fail"
+                                                >
+                                                    <XCircle class="h-4 w-4 text-red-500" />
+                                                </Button>
+                                                <Button
+                                                    size="icon-sm"
+                                                    variant="ghost"
+                                                    class="p-0"
+                                                    @click="openResultDialog(trc)"
+                                                    title="Add Details"
+                                                >
+                                                    <Edit class="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </RestrictedAction>
+                                        <!-- External Links -->
+                                        <a
+                                            v-if="trc.clickup_link"
+                                            :href="trc.clickup_link"
+                                            target="_blank"
+                                            class="text-muted-foreground hover:text-primary cursor-pointer"
+                                        >
+                                            <ExternalLink class="h-4 w-4" />
+                                        </a>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <!-- Quick status buttons -->
-                                    <RestrictedAction>
-                                        <div v-if="testRun.status === 'active'" class="flex gap-1">
-                                            <Button
-                                                size="icon-sm"
-                                                variant="ghost"
-                                                class="p-0"
-                                                :class="{ 'bg-green-500/10': trc.status === 'passed' }"
-                                                @click="quickStatus(trc, 'passed')"
-                                                title="Pass"
-                                            >
-                                                <CheckCircle2 class="h-4 w-4 text-green-500" />
-                                            </Button>
-                                            <Button
-                                                size="icon-sm"
-                                                variant="ghost"
-                                                class="p-0"
-                                                :class="{ 'bg-red-500/10': trc.status === 'failed' }"
-                                                @click="quickStatus(trc, 'failed')"
-                                                title="Fail"
-                                            >
-                                                <XCircle class="h-4 w-4 text-red-500" />
-                                            </Button>
-                                            <Button
-                                                size="icon-sm"
-                                                variant="ghost"
-                                                class="p-0"
-                                                @click="openResultDialog(trc)"
-                                                title="Add Details"
-                                            >
-                                                <Edit class="h-4 w-4" />
-                                            </Button>
+                                <!-- Expanded Details -->
+                                <div v-if="expandedCases.has(trc.id) && trc.test_case" class="mt-2 ml-7 space-y-2 border-t pt-2">
+                                    <div v-if="trc.test_case.description">
+                                        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Description</p>
+                                        <p class="text-sm whitespace-pre-wrap">{{ trc.test_case.description }}</p>
+                                    </div>
+                                    <div v-if="trc.test_case.preconditions">
+                                        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Preconditions</p>
+                                        <p class="text-sm whitespace-pre-wrap">{{ trc.test_case.preconditions }}</p>
+                                    </div>
+                                    <div v-if="trc.test_case.steps?.length" class="space-y-1">
+                                        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Steps</p>
+                                        <div v-for="(step, idx) in trc.test_case.steps" :key="idx" class="flex gap-2 text-sm">
+                                            <span class="shrink-0 text-xs font-medium text-muted-foreground w-5 text-right pt-0.5">{{ idx + 1 }}.</span>
+                                            <div class="min-w-0">
+                                                <p>{{ step.action }}</p>
+                                                <p v-if="step.expected" class="text-xs text-muted-foreground">
+                                                    <span class="text-green-500 font-medium">Expected:</span> {{ step.expected }}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </RestrictedAction>
-                                    <!-- External Links -->
-                                    <a
-                                        v-if="trc.clickup_link"
-                                        :href="trc.clickup_link"
-                                        target="_blank"
-                                        class="text-muted-foreground hover:text-primary cursor-pointer"
-                                    >
-                                        <ExternalLink class="h-4 w-4" />
-                                    </a>
+                                    </div>
+                                    <div v-if="trc.test_case.expected_result">
+                                        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Expected Result</p>
+                                        <p class="text-sm whitespace-pre-wrap">{{ trc.test_case.expected_result }}</p>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
@@ -483,6 +715,172 @@ const filteredGroupedCases = computed(() => {
                     <Button variant="outline" @click="showResultDialog = false">Cancel</Button>
                     <RestrictedAction>
                         <Button @click="saveResult">Save Result</Button>
+                    </RestrictedAction>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Add Cases Dialog -->
+        <Dialog v-model:open="showAddCasesDialog">
+            <DialogContent class="sm:max-w-2xl max-h-[80vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>Add Cases to Test Run</DialogTitle>
+                    <DialogDescription>
+                        {{ testRun.source === 'test-cases' ? 'Select additional test cases to add.' : 'Select additional checklist rows to add.' }}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <!-- Test Cases source -->
+                <Deferred v-if="testRun.source === 'test-cases'" data="testSuites">
+                    <template #fallback>
+                        <div class="space-y-3 py-4">
+                            <div v-for="i in 3" :key="i" class="h-8 animate-pulse rounded-md bg-muted" />
+                        </div>
+                    </template>
+                    <div class="flex-1 overflow-y-auto space-y-2 pr-1">
+                        <div v-if="!testSuites?.length" class="rounded-lg border border-dashed p-6 text-center">
+                            <Layers class="mx-auto h-8 w-8 text-muted-foreground" />
+                            <p class="mt-2 text-sm text-muted-foreground">No test suites found.</p>
+                        </div>
+                        <template v-else v-for="suite in testSuites" :key="suite.id">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2 py-1">
+                                    <Checkbox
+                                        :model-value="isSuitePartiallySelected(suite) ? 'indeterminate' : isSuiteSelected(suite)"
+                                        @update:model-value="toggleSuiteSelection(suite)"
+                                    />
+                                    <Layers class="h-4 w-4 text-primary" />
+                                    <span class="font-medium">{{ suite.name }}</span>
+                                </div>
+                                <div class="ml-6 space-y-0.5">
+                                    <div
+                                        v-for="tc in suite.test_cases"
+                                        :key="tc.id"
+                                        class="flex items-center gap-2 py-0.5 text-sm"
+                                        :class="{ 'opacity-40': existingTestCaseIds.has(tc.id) }"
+                                    >
+                                        <Checkbox
+                                            :model-value="existingTestCaseIds.has(tc.id) || addCaseIds.includes(tc.id)"
+                                            :disabled="existingTestCaseIds.has(tc.id)"
+                                            @update:model-value="toggleAddTestCase(tc.id)"
+                                        />
+                                        <FileText class="h-3 w-3 text-muted-foreground" />
+                                        <span>{{ tc.title }}</span>
+                                        <Badge v-if="existingTestCaseIds.has(tc.id)" variant="secondary" class="text-[10px] px-1.5 h-4">
+                                            already added
+                                        </Badge>
+                                    </div>
+                                    <template v-for="child in suite.children" :key="child.id">
+                                        <div class="ml-4 space-y-0.5">
+                                            <div class="flex items-center gap-2 py-0.5">
+                                                <Checkbox
+                                                    :model-value="isSuitePartiallySelected(child) ? 'indeterminate' : isSuiteSelected(child)"
+                                                    @update:model-value="toggleSuiteSelection(child)"
+                                                />
+                                                <Boxes class="h-3 w-3 text-yellow-500" />
+                                                <span class="font-medium text-sm">{{ child.name }}</span>
+                                            </div>
+                                            <div
+                                                v-for="tc in child.test_cases"
+                                                :key="tc.id"
+                                                class="ml-6 flex items-center gap-2 py-0.5 text-sm"
+                                                :class="{ 'opacity-40': existingTestCaseIds.has(tc.id) }"
+                                            >
+                                                <Checkbox
+                                                    :model-value="existingTestCaseIds.has(tc.id) || addCaseIds.includes(tc.id)"
+                                                    :disabled="existingTestCaseIds.has(tc.id)"
+                                                    @update:model-value="toggleAddTestCase(tc.id)"
+                                                />
+                                                <FileText class="h-3 w-3 text-muted-foreground" />
+                                                <span>{{ tc.title }}</span>
+                                                <Badge v-if="existingTestCaseIds.has(tc.id)" variant="secondary" class="text-[10px] px-1.5 h-4">
+                                                    already added
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </Deferred>
+
+                <!-- Checklist source -->
+                <Deferred v-else-if="testRun.source === 'checklist'" data="checklists">
+                    <template #fallback>
+                        <div class="space-y-3 py-4">
+                            <div v-for="i in 3" :key="i" class="h-8 animate-pulse rounded-md bg-muted" />
+                        </div>
+                    </template>
+                    <div class="flex-1 overflow-y-auto space-y-3 px-0.5">
+                        <div class="space-y-2">
+                            <Label>Select Checklist</Label>
+                            <Select v-model="selectedAddChecklistId">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Choose a checklist..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="cl in checklists"
+                                        :key="cl.id"
+                                        :value="String(cl.id)"
+                                    >
+                                        {{ cl.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <template v-if="selectedAddChecklist">
+                            <div v-if="checklistRows.length > 0" class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <Label>Select Rows</Label>
+                                    <div class="flex gap-2">
+                                        <Button type="button" variant="outline" size="sm" @click="selectAllAddRows">
+                                            Select All
+                                        </Button>
+                                        <Button type="button" variant="outline" size="sm" @click="deselectAllAddRows">
+                                            Deselect All
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <div
+                                        v-for="item in checklistRows"
+                                        :key="item.row.id"
+                                        class="flex items-center gap-2 py-1 text-sm"
+                                        :class="{ 'opacity-40': existingTitles.has(item.title) }"
+                                    >
+                                        <Checkbox
+                                            :model-value="existingTitles.has(item.title) || addRowTitles.has(item.title)"
+                                            :disabled="existingTitles.has(item.title)"
+                                            @update:model-value="toggleAddRowTitle(item.title)"
+                                        />
+                                        <ListChecks class="h-3 w-3 text-muted-foreground" />
+                                        <span>{{ item.title }}</span>
+                                        <Badge v-if="existingTitles.has(item.title)" variant="secondary" class="text-[10px] px-1.5 h-4">
+                                            already added
+                                        </Badge>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="rounded-lg border border-dashed p-6 text-center">
+                                <ListChecks class="mx-auto h-8 w-8 text-muted-foreground" />
+                                <p class="mt-2 text-sm text-muted-foreground">No text rows found in this checklist.</p>
+                            </div>
+                        </template>
+                    </div>
+                </Deferred>
+
+                <DialogFooter class="pt-2">
+                    <p class="text-sm text-muted-foreground mr-auto">
+                        {{ addCasesCount }} new case(s) selected
+                    </p>
+                    <Button variant="outline" @click="showAddCasesDialog = false">Cancel</Button>
+                    <RestrictedAction>
+                        <Button @click="submitAddCases" :disabled="addCasesProcessing || addCasesCount === 0">
+                            Add Cases
+                        </Button>
                     </RestrictedAction>
                 </DialogFooter>
             </DialogContent>

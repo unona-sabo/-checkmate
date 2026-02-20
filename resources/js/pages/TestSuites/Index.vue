@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite, type TestCase } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil, Filter, Loader2, Upload, Download, FileSpreadsheet } from 'lucide-vue-next';
+import { Plus, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil, Filter, Loader2, Upload, Download, FileSpreadsheet, Zap, RotateCcw } from 'lucide-vue-next';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
@@ -39,6 +39,14 @@ import FeatureSelector from '@/components/FeatureSelector.vue';
 import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useSearch } from '@/composables/useSearch';
+
+const getTypeIcon = (type: string) => {
+    switch (type) {
+        case 'smoke': return Zap;
+        case 'regression': return RotateCcw;
+        default: return FileText;
+    }
+};
 
 const props = defineProps<{
     project: Project;
@@ -1734,7 +1742,7 @@ onMounted(() => {
                                             <GripVertical class="h-4 w-4 text-muted-foreground/50" />
                                         </div>
                                         <div class="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
-                                            <FileText class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                            <component :is="getTypeIcon(testCase.type)" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                                         </div>
                                         <p class="text-sm font-normal truncate group-hover:text-primary transition-colors" v-html="highlight(testCase.title)" />
                                     </div>
