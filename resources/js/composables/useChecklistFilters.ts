@@ -72,6 +72,17 @@ export function useChecklistFilters(
         }
 
         const matchedIds = new Set(dataRows.map(r => r.id));
+
+        // Find headers that match the search query directly
+        const matchedHeaderIds = new Set<number>();
+        if (query) {
+            for (const row of allRows) {
+                if (row.row_type === 'section_header' && isRowMatch(row, query)) {
+                    matchedHeaderIds.add(row.id);
+                }
+            }
+        }
+
         const headersWithMatches = new Set<number>();
         let currentHeader: ExtendedChecklistRow | null = null;
 
@@ -91,6 +102,14 @@ export function useChecklistFilters(
             if (row.row_type === 'section_header') {
                 currentHeader = row;
                 headerAdded = false;
+                // If the header itself matches the query, include it and all its rows
+                if (matchedHeaderIds.has(row.id)) {
+                    result.push(row);
+                    headerAdded = true;
+                }
+            } else if (matchedHeaderIds.has(currentHeader?.id ?? -1)) {
+                // Include all rows under a matched header
+                result.push(row);
             } else if (matchedIds.has(row.id)) {
                 if (currentHeader && !headerAdded && headersWithMatches.has(currentHeader.id)) {
                     result.push(currentHeader);

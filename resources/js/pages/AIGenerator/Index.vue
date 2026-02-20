@@ -359,8 +359,8 @@ const severityColors: Record<string, string> = {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                        <Sparkles class="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <Sparkles class="h-5 w-5 text-primary" />
                     </div>
                     <div>
                         <h1 class="text-2xl font-bold">AI Test Case Generator</h1>
@@ -521,7 +521,7 @@ const severityColors: Record<string, string> = {
 - Focus on security testing
 - Include edge cases for empty inputs
 - Cover internationalization scenarios"
-                                    class="mt-1.5 min-h-[80px]"
+                                    class="mt-1.5 min-h-[140px]"
                                 />
                                 <p class="mt-1 text-xs text-muted-foreground">
                                     Optional. Customize what the AI focuses on when generating test cases.

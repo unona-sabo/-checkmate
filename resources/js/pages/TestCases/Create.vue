@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestSuite, type TestStep } from '@/types';
+import { type BreadcrumbItem, type Project, type TestSuite, type TestStep, type Attachment } from '@/types';
 import { type ProjectFeature } from '@/types/checkmate';
 import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,13 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
-import { FileText, Plus, Trash2, Paperclip, X } from 'lucide-vue-next';
+import { FileText, Plus, Trash2, Paperclip, X, Bug } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{
     project: Project;
     testSuite: TestSuite;
     features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
+    bugreportAttachments?: Attachment[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -41,14 +42,27 @@ const parseStepsParam = (): TestStep[] => {
     }
 };
 
+const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
+const validSeverities = ['trivial', 'minor', 'major', 'critical', 'blocker'] as const;
+
+const parsePriority = (): typeof validPriorities[number] => {
+    const raw = urlParams.get('priority');
+    return raw && (validPriorities as readonly string[]).includes(raw) ? raw as typeof validPriorities[number] : 'medium';
+};
+
+const parseSeverity = (): typeof validSeverities[number] => {
+    const raw = urlParams.get('severity');
+    return raw && (validSeverities as readonly string[]).includes(raw) ? raw as typeof validSeverities[number] : 'major';
+};
+
 const form = useForm({
     title: urlParams.get('title') || '',
-    description: '',
-    preconditions: '',
+    description: urlParams.get('description') || '',
+    preconditions: urlParams.get('preconditions') || '',
     steps: parseStepsParam(),
-    expected_result: '',
-    priority: 'medium' as const,
-    severity: 'major' as const,
+    expected_result: urlParams.get('expected_result') || '',
+    priority: parsePriority(),
+    severity: parseSeverity(),
     type: 'functional' as const,
     automation_status: 'not_automated' as const,
     tags: [] as string[],
@@ -57,6 +71,7 @@ const form = useForm({
     checklist_id: urlParams.get('checklist_id') || null as string | null,
     checklist_row_ids: urlParams.get('checklist_row_ids') || null as string | null,
     checklist_link_column: urlParams.get('checklist_link_column') || null as string | null,
+    bugreport_id: urlParams.get('bugreport_id') || null as string | null,
 });
 
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -276,6 +291,22 @@ const submit = () => {
                                 :features="features"
                                 :project-id="project.id"
                             />
+
+                            <!-- Bug Report Attachments -->
+                            <div v-if="bugreportAttachments?.length" class="space-y-2">
+                                <Label class="flex items-center gap-1.5">
+                                    <Bug class="h-3.5 w-3.5" />
+                                    Attachments from Bug Report
+                                </Label>
+                                <p class="text-xs text-muted-foreground">These files will be copied to the new test case.</p>
+                                <div class="space-y-2">
+                                    <div v-for="attachment in bugreportAttachments" :key="attachment.id" class="flex items-center gap-2 rounded-lg border border-dashed p-2">
+                                        <Paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
+                                        <span class="truncate text-sm">{{ attachment.original_filename }}</span>
+                                        <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(attachment.size) }}</span>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- Attachments -->
                             <div class="space-y-2">

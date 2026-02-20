@@ -6,10 +6,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Bug, Edit, Trash2, Paperclip, Download, Link2, Check } from 'lucide-vue-next';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Bug, Edit, Trash2, Paperclip, Download, Link2, Check, FlaskConical } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
+import { router } from '@inertiajs/vue3';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { severityVariant, bugStatusVariant, priorityVariant } from '@/lib/badge-variants';
+
+interface TestSuiteChild {
+    id: number;
+    parent_id: number;
+    name: string;
+}
+
+interface TestSuiteOption {
+    id: number;
+    name: string;
+    children?: TestSuiteChild[];
+}
 
 interface Bugreport {
     id: number;
@@ -32,6 +47,7 @@ interface Bugreport {
 const props = defineProps<{
     project: Project;
     bugreport: Bugreport;
+    testSuites: TestSuiteOption[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -78,6 +94,41 @@ const copyLink = () => {
     setTimeout(() => { copied.value = false; }, 2000);
 };
 
+// Create Test Case dialog
+const showSuitePicker = ref(false);
+const selectedParentSuiteId = ref<string>('');
+const selectedChildSuiteId = ref<string>('');
+
+const selectedParentSuite = computed(() =>
+    props.testSuites.find(s => String(s.id) === selectedParentSuiteId.value),
+);
+
+const childSuites = computed(() => selectedParentSuite.value?.children ?? []);
+
+const parseStepsToReproduceToJson = (steps: string | null): string => {
+    if (!steps) return JSON.stringify([{ action: '', expected: '' }]);
+    const lines = steps.split('\n').map(l => l.replace(/^\d+[\.\)\-]\s*/, '').trim()).filter(Boolean);
+    if (lines.length === 0) return JSON.stringify([{ action: '', expected: '' }]);
+    return JSON.stringify(lines.map(line => ({ action: line, expected: '' })));
+};
+
+const navigateToCreateTestCase = () => {
+    const targetSuiteId = selectedChildSuiteId.value || selectedParentSuiteId.value;
+    if (!targetSuiteId) return;
+
+    const params = new URLSearchParams();
+    if (props.bugreport.title) params.set('title', props.bugreport.title);
+    if (props.bugreport.description) params.set('description', props.bugreport.description);
+    if (props.bugreport.steps_to_reproduce) params.set('steps', parseStepsToReproduceToJson(props.bugreport.steps_to_reproduce));
+    if (props.bugreport.expected_result) params.set('expected_result', props.bugreport.expected_result);
+    if (props.bugreport.priority) params.set('priority', props.bugreport.priority);
+    if (props.bugreport.severity) params.set('severity', props.bugreport.severity);
+    params.set('bugreport_id', String(props.bugreport.id));
+
+    const url = `/projects/${props.project.id}/test-suites/${targetSuiteId}/test-cases/create?${params.toString()}`;
+    router.visit(url);
+};
+
 const formatDate = (date: string): string => {
     return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
@@ -97,6 +148,10 @@ const formatDate = (date: string): string => {
                     ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
                 </h1>
                 <div class="flex gap-2">
+                    <Button v-if="testSuites.length > 0" variant="outline" class="gap-2 cursor-pointer" @click="showSuitePicker = true">
+                        <FlaskConical class="h-4 w-4" />
+                        Create Test Case
+                    </Button>
                     <RestrictedAction>
                         <Link :href="`/projects/${project.id}/bugreports/${bugreport.id}/edit`">
                             <Button variant="outline" class="gap-2">
@@ -291,6 +346,53 @@ const formatDate = (date: string): string => {
                             Yes
                         </Button>
                     </Link>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        <!-- Suite Picker Dialog -->
+        <Dialog v-model:open="showSuitePicker">
+            <DialogContent class="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Create Test Case</DialogTitle>
+                    <DialogDescription>
+                        Choose a test suite for the new test case.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4">
+                    <div class="space-y-2">
+                        <Label>Test Suite</Label>
+                        <Select v-model="selectedParentSuiteId" @update:model-value="selectedChildSuiteId = ''">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a test suite..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="suite in testSuites" :key="suite.id" :value="String(suite.id)">
+                                    {{ suite.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div v-if="childSuites.length > 0" class="space-y-2">
+                        <Label>Subcategory (optional)</Label>
+                        <Select v-model="selectedChildSuiteId">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a subcategory..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="child in childSuites" :key="child.id" :value="String(child.id)">
+                                    {{ child.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter class="flex gap-4 sm:justify-end">
+                    <Button variant="secondary" @click="showSuitePicker = false" class="flex-1 sm:flex-none cursor-pointer">
+                        Cancel
+                    </Button>
+                    <Button :disabled="!selectedParentSuiteId" @click="navigateToCreateTestCase" class="flex-1 sm:flex-none cursor-pointer">
+                        Create
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

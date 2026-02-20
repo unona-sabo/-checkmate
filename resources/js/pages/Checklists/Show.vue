@@ -702,12 +702,12 @@ const checkboxColumnKeys = computed(() => {
     return columns.value.filter(col => col.type === 'checkbox').map(col => col.key);
 });
 
-// Get selected rows (rows with any checkbox checked)
+// Get selected rows (filtered rows with any checkbox checked — respects active filters/search)
 const selectedRows = computed(() => {
     const checkboxKeys = checkboxColumnKeys.value;
     if (checkboxKeys.length === 0) return [];
 
-    return rows.value.filter(row => {
+    return filteredRows.value.filter(row => {
         if (row.row_type === 'section_header') return false;
         return checkboxKeys.some(key => !!row.data[key]);
     });
@@ -1057,9 +1057,10 @@ const rowHasContent = (row: ExtendedChecklistRow, checkboxColumnKey: string): bo
     });
 };
 
-// Get checkbox header state: true, false, or 'indeterminate' (only considers rows with content)
+// Get checkbox header state: true, false, or 'indeterminate' (respects active filters/search)
 const getHeaderCheckboxState = (columnKey: string): boolean | 'indeterminate' => {
-    const rowsWithContent = rows.value.filter(r =>
+    const sourceRows = filteredRows.value;
+    const rowsWithContent = sourceRows.filter(r =>
         r.row_type !== 'section_header' && rowHasContent(r, columnKey)
     );
 
@@ -1072,10 +1073,10 @@ const getHeaderCheckboxState = (columnKey: string): boolean | 'indeterminate' =>
     return 'indeterminate';
 };
 
-// Toggle all checkboxes in a column (only for rows with content)
+// Toggle all checkboxes in a column (only for visible/filtered rows with content)
 const toggleAllCheckboxes = (columnKey: string) => {
-    // Get rows that have content
-    const rowsWithContent = rows.value.filter(r =>
+    const sourceRows = filteredRows.value;
+    const rowsWithContent = sourceRows.filter(r =>
         r.row_type !== 'section_header' && rowHasContent(r, columnKey)
     );
 
@@ -1085,7 +1086,7 @@ const toggleAllCheckboxes = (columnKey: string) => {
     const allChecked = checkedCount === rowsWithContent.length;
     const newValue = !allChecked;
 
-    // Update only rows with content
+    // Update only filtered rows with content
     rowsWithContent.forEach(row => {
         updateCell(row, columnKey, newValue);
     });

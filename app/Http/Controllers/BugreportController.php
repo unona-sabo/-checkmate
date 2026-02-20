@@ -91,9 +91,16 @@ class BugreportController extends Controller
 
         $bugreport->load(['reporter', 'assignee', 'attachments']);
 
+        $testSuites = $project->testSuites()
+            ->whereNull('parent_id')
+            ->with('children:id,parent_id,name')
+            ->orderBy('name')
+            ->get(['id', 'project_id', 'parent_id', 'name']);
+
         return Inertia::render('Bugreports/Show', [
             'project' => $project,
             'bugreport' => $bugreport,
+            'testSuites' => $testSuites,
         ]);
     }
 

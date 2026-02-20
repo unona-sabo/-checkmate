@@ -28,6 +28,7 @@ class StoreTestCaseRequest extends FormRequest
             'checklist_link_column' => 'nullable|string|max:255',
             'feature_ids' => 'nullable|array',
             'feature_ids.*' => 'exists:project_features,id',
+            'bugreport_id' => 'nullable|integer|exists:bugreports,id',
         ];
     }
 }

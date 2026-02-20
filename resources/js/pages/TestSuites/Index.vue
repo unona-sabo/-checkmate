@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite, type TestCase } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil, Filter, Loader2 } from 'lucide-vue-next';
+import { Plus, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil, Filter, Loader2, Upload, Download, FileSpreadsheet } from 'lucide-vue-next';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
@@ -154,10 +154,19 @@ const allTestCaseIds = computed<number[]>(() => {
     return ids;
 });
 
-// Check if all test cases are selected
+// Get filtered (visible) test case IDs — respects search and filters
+const filteredTestCaseIds = computed<number[]>(() => {
+    const ids: number[] = [];
+    filteredFlatSuites.value.forEach(suite => {
+        suite.testCases.forEach(tc => ids.push(tc.id));
+    });
+    return ids;
+});
+
+// Check if all visible test cases are selected
 const isAllSelected = computed(() => {
-    if (allTestCaseIds.value.length === 0) return false;
-    return allTestCaseIds.value.every(id => selectedTestCaseIds.value.includes(id));
+    if (filteredTestCaseIds.value.length === 0) return false;
+    return filteredTestCaseIds.value.every(id => selectedTestCaseIds.value.includes(id));
 });
 
 // Check if some test cases are selected
@@ -165,12 +174,14 @@ const isSomeSelected = computed(() => {
     return selectedTestCaseIds.value.length > 0 && !isAllSelected.value;
 });
 
-// Toggle select all
+// Toggle select all — only affects visible/filtered test cases
 const toggleSelectAll = () => {
     if (isAllSelected.value) {
-        selectedTestCaseIds.value = [];
+        const filteredIds = new Set(filteredTestCaseIds.value);
+        selectedTestCaseIds.value = selectedTestCaseIds.value.filter(id => !filteredIds.has(id));
     } else {
-        selectedTestCaseIds.value = [...allTestCaseIds.value];
+        const newIds = filteredTestCaseIds.value.filter(id => !selectedTestCaseIds.value.includes(id));
+        selectedTestCaseIds.value = [...selectedTestCaseIds.value, ...newIds];
     }
 };
 
@@ -740,6 +751,125 @@ const createSubcategory = () => {
     });
 };
 
+// Import/Export
+const showImportDialog = ref(false);
+const importFile = ref<File | null>(null);
+const importHeaders = ref<string[]>([]);
+const importRows = ref<any[][]>([]);
+const importParentSuiteId = ref<string>('');
+const importSubcategoryId = ref<string>('');
+const isImportingCases = ref(false);
+
+const importSubcategoryOptions = computed(() => {
+    if (!importParentSuiteId.value) return [];
+    const parent = props.testSuites.find(s => s.id === Number(importParentSuiteId.value));
+    return parent?.children?.map(c => ({ id: c.id, name: c.name })) || [];
+});
+
+const importTargetSuiteId = computed(() => importSubcategoryId.value || importParentSuiteId.value);
+
+watch(() => importParentSuiteId.value, () => {
+    importSubcategoryId.value = '';
+});
+
+const fieldAliases: Record<string, string[]> = {
+    'Title': ['title', 'name', 'test case name', 'test name', 'case name'],
+    'Description': ['description', 'summary', 'details'],
+    'Preconditions': ['preconditions', 'pre-conditions', 'prerequisites', 'pre conditions'],
+    'Steps': ['steps', 'test steps', 'steps to reproduce', 'step'],
+    'Expected Result': ['expected result', 'expected', 'expected results', 'expected outcome'],
+    'Priority': ['priority'],
+    'Severity': ['severity'],
+    'Type': ['type', 'test type', 'case type'],
+    'Automation Status': ['automation status', 'automation', 'automated'],
+    'Tags': ['tags', 'labels', 'keywords'],
+};
+
+const getMatchedField = (header: string): string | null => {
+    const normalized = header.toLowerCase().trim();
+    for (const [field, aliases] of Object.entries(fieldAliases)) {
+        if (aliases.includes(normalized)) return field;
+    }
+    return null;
+};
+
+const importFieldMapping = computed(() => {
+    return importHeaders.value.map(h => ({
+        header: h,
+        matchedField: getMatchedField(h),
+    }));
+});
+
+const matchedFieldCount = computed(() => importFieldMapping.value.filter(m => m.matchedField).length);
+
+const onImportFileChange = async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    importFile.value = file;
+    importHeaders.value = [];
+    importRows.value = [];
+
+    try {
+        const XLSX = await import('xlsx');
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        if (json.length < 2) {
+            importHeaders.value = [];
+            importRows.value = [];
+            return;
+        }
+
+        importHeaders.value = (json[0] || []).map(String);
+        importRows.value = json.slice(1).filter(row => row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''));
+    } catch {
+        importHeaders.value = [];
+        importRows.value = [];
+    }
+};
+
+const openImportDialog = () => {
+    importFile.value = null;
+    importHeaders.value = [];
+    importRows.value = [];
+    importParentSuiteId.value = '';
+    importSubcategoryId.value = '';
+    showImportDialog.value = true;
+};
+
+const submitImport = () => {
+    if (!importTargetSuiteId.value || importRows.value.length === 0) return;
+    isImportingCases.value = true;
+
+    router.post(`/projects/${props.project.id}/test-suites/import-cases`, {
+        test_suite_id: Number(importTargetSuiteId.value),
+        headers: importHeaders.value,
+        rows: importRows.value,
+    }, {
+        preserveState: false,
+        onSuccess: () => {
+            showImportDialog.value = false;
+            isImportingCases.value = false;
+        },
+        onError: () => {
+            isImportingCases.value = false;
+        },
+    });
+};
+
+const exportAllCsv = () => {
+    window.location.href = `/projects/${props.project.id}/test-suites/export-cases`;
+};
+
+const exportSelectedCsv = () => {
+    if (selectedTestCaseIds.value.length === 0) return;
+    window.location.href = `/projects/${props.project.id}/test-suites/export-cases?ids=${selectedTestCaseIds.value.join(',')}`;
+};
+
 // Note dialog state
 const showNoteDialog = ref(false);
 const noteContent = ref('');
@@ -964,7 +1094,7 @@ onMounted(() => {
                                 {{ isAllSelected ? 'Deselect All' : 'Select All' }}
                             </button>
                             <span v-if="selectedTestCaseIds.length > 0" class="text-sm text-muted-foreground">
-                                {{ selectedTestCaseIds.length }} of {{ localTotalTestCases }} selected
+                                {{ selectedTestCaseIds.length }} of {{ filteredTestCaseCount }} selected
                             </span>
                             <!-- Actions dropdown when test cases are selected -->
                             <RestrictedAction v-if="selectedTestCaseIds.length > 0">
@@ -1001,6 +1131,32 @@ onMounted(() => {
                         </div>
                         <div v-else></div>
                         <div class="flex items-center gap-2">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger as-child>
+                                    <Button variant="outline" size="sm" class="gap-1.5 text-xs">
+                                        <FileSpreadsheet class="h-3.5 w-3.5" />
+                                        File
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem class="cursor-pointer" @click="openImportDialog">
+                                        <Download class="h-4 w-4 mr-2" />
+                                        Import
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem class="cursor-pointer" @click="exportAllCsv">
+                                        <Upload class="h-4 w-4 mr-2" />
+                                        Export All
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        v-if="selectedTestCaseIds.length > 0"
+                                        class="cursor-pointer"
+                                        @click="exportSelectedCsv"
+                                    >
+                                        <Upload class="h-4 w-4 mr-2" />
+                                        Export Selected ({{ selectedTestCaseIds.length }})
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                             <Button
                                 variant="outline"
                                 class="gap-2 relative"
@@ -1841,6 +1997,118 @@ onMounted(() => {
                     <Button @click="createSubcategory" :disabled="!subcategoryParentId || !subcategoryName.trim() || isCreatingSubcategory" class="gap-2">
                         <FolderPlus class="h-4 w-4" />
                         {{ isCreatingSubcategory ? 'Creating...' : 'Create & Move' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Import Dialog -->
+        <Dialog v-model:open="showImportDialog">
+            <DialogContent class="max-w-2xl max-h-[80vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Upload class="h-5 w-5 text-primary" />
+                        Import Test Cases
+                    </DialogTitle>
+                    <DialogDescription>
+                        Upload a CSV or Excel file to import test cases. Columns will be automatically mapped to CheckMate fields.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4 py-4 overflow-y-auto min-h-0 flex-1">
+                    <div class="space-y-2">
+                        <Label>File</Label>
+                        <input
+                            type="file"
+                            accept=".csv,.xlsx,.xls"
+                            class="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer cursor-pointer"
+                            @change="onImportFileChange"
+                        />
+                    </div>
+
+                    <div v-if="importHeaders.length > 0" class="space-y-4">
+                        <!-- Field mapping preview -->
+                        <div class="rounded-lg border p-4 bg-muted/30 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <Label>Column Mapping</Label>
+                                <span class="text-xs text-muted-foreground">
+                                    {{ matchedFieldCount }} of {{ importHeaders.length }} columns matched
+                                </span>
+                            </div>
+                            <div class="grid gap-1.5">
+                                <div
+                                    v-for="mapping in importFieldMapping"
+                                    :key="mapping.header"
+                                    class="flex items-center gap-2 text-sm"
+                                >
+                                    <span
+                                        class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset"
+                                        :class="mapping.matchedField
+                                            ? 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20'
+                                            : 'bg-muted text-muted-foreground ring-border'"
+                                    >
+                                        {{ mapping.header }}
+                                    </span>
+                                    <span v-if="mapping.matchedField" class="text-muted-foreground">&rarr;</span>
+                                    <span v-if="mapping.matchedField" class="text-sm font-medium">{{ mapping.matchedField }}</span>
+                                    <span v-else class="text-xs text-muted-foreground italic">ignored</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-sm text-muted-foreground">
+                            Found <strong>{{ importRows.length }}</strong> test case(s) to import
+                        </p>
+
+                        <!-- Suite selector -->
+                        <div class="rounded-lg border p-4 bg-muted/30 space-y-3">
+                            <div class="space-y-2">
+                                <Label>Test Suite</Label>
+                                <Select v-model="importParentSuiteId">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select suite..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="suite in parentSuiteOptions"
+                                            :key="suite.id"
+                                            :value="String(suite.id)"
+                                        >
+                                            {{ suite.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Subcategory <span class="text-muted-foreground font-normal">(optional)</span></Label>
+                                <Select v-model="importSubcategoryId" :disabled="!importSubcategoryOptions.length">
+                                    <SelectTrigger>
+                                        <SelectValue :placeholder="importSubcategoryOptions.length ? 'Select subcategory...' : 'No subcategories'" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="sub in importSubcategoryOptions"
+                                            :key="sub.id"
+                                            :value="String(sub.id)"
+                                        >
+                                            {{ sub.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter class="flex gap-2 sm:justify-end">
+                    <Button variant="outline" @click="showImportDialog = false">
+                        Cancel
+                    </Button>
+                    <Button
+                        @click="submitImport"
+                        :disabled="!importTargetSuiteId || importRows.length === 0 || isImportingCases || matchedFieldCount === 0"
+                        class="gap-2"
+                    >
+                        <Upload class="h-4 w-4" />
+                        {{ isImportingCases ? 'Importing...' : `Import ${importRows.length} test case(s)` }}
                     </Button>
                 </DialogFooter>
             </DialogContent>

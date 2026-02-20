@@ -111,11 +111,25 @@ class TestSuiteController extends Controller
     {
         $this->authorize('view', $project);
 
-        $testSuite->load(['children.testCases', 'testCases.note', 'parent', 'projectFeatures:id,name,module']);
+        $testSuite->load([
+            'children.testCases' => fn ($q) => $q->with(['creator:id,name', 'projectFeatures:id,name,module'])->orderBy('order'),
+            'testCases' => fn ($q) => $q->with(['creator:id,name', 'projectFeatures:id,name,module'])->orderBy('order'),
+            'testCases.note',
+            'parent',
+            'projectFeatures:id,name,module',
+        ]);
+
+        $users = User::query()->select('id', 'name')->orderBy('name')->get();
+
+        $availableFeatures = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module']);
 
         return Inertia::render('TestSuites/Show', [
             'project' => $project,
             'testSuite' => $testSuite,
+            'users' => $users,
+            'availableFeatures' => $availableFeatures,
         ]);
     }
 

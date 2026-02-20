@@ -230,6 +230,8 @@ class HomeController extends Controller
                     'Feature linking per test suite with inline quick-create',
                     'Cross-project bulk copy with attachments, features, and notes',
                     'Bulk group selected test cases into new subcategory',
+                    'CSV export of all or selected test cases with UTF-8 BOM support',
+                    'Import test cases from CSV/Excel with auto field mapping and alias support',
                 ],
                 'model' => TestSuite::class,
             ],
