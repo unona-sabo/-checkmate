@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm, usePage, router } from '@inertiajs/vue3';
-import { Trash2, UserPlus } from 'lucide-vue-next';
+import { ArrowRightLeft, Trash2, UserPlus } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -85,6 +85,29 @@ function removeMember() {
         preserveScroll: true,
         onSuccess: () => {
             removingMemberId.value = null;
+        },
+    });
+}
+
+// Transfer ownership
+const transferableMembers = computed(() =>
+    props.members.filter((m) => m.id !== page.props.auth.user.id),
+);
+const transferOwnerId = ref<number | null>(null);
+const showTransferDialog = ref(false);
+
+function confirmTransfer() {
+    if (!transferOwnerId.value) return;
+    showTransferDialog.value = true;
+}
+
+function transferOwnership() {
+    if (!transferOwnerId.value) return;
+    router.put('/workspaces/transfer', { new_owner_id: transferOwnerId.value }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showTransferDialog.value = false;
+            transferOwnerId.value = null;
         },
     });
 }
@@ -220,6 +243,47 @@ const roleColors: Record<string, string> = {
                 </div>
             </div>
 
+            <!-- Transfer Ownership -->
+            <div v-if="isOwner && transferableMembers.length > 0" class="space-y-6">
+                <Heading
+                    variant="small"
+                    title="Transfer Ownership"
+                    description="Transfer this workspace to another member"
+                />
+
+                <div class="flex items-end gap-3">
+                    <div class="flex-1 space-y-1">
+                        <Label for="transfer-owner">New Owner</Label>
+                        <Select
+                            :model-value="transferOwnerId?.toString() ?? ''"
+                            @update:model-value="(val: string) => transferOwnerId = Number(val)"
+                        >
+                            <SelectTrigger id="transfer-owner">
+                                <SelectValue placeholder="Select a member" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="member in transferableMembers"
+                                    :key="member.id"
+                                    :value="member.id.toString()"
+                                >
+                                    {{ member.name }} ({{ member.email }})
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Button
+                        variant="outline"
+                        :disabled="!transferOwnerId"
+                        class="cursor-pointer"
+                        @click="confirmTransfer"
+                    >
+                        <ArrowRightLeft class="mr-2 h-4 w-4" />
+                        Transfer
+                    </Button>
+                </div>
+            </div>
+
             <!-- Danger Zone -->
             <div v-if="isOwner" class="space-y-6">
                 <Heading
@@ -245,6 +309,22 @@ const roleColors: Record<string, string> = {
                 <DialogFooter>
                     <Button variant="outline" @click="removingMemberId = null">Cancel</Button>
                     <Button variant="destructive" @click="removeMember">Remove</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Transfer Ownership Confirmation -->
+        <Dialog v-model:open="showTransferDialog">
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Transfer Ownership</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to transfer ownership of this workspace? You will be demoted to admin and will no longer be able to delete the workspace or transfer ownership.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button variant="outline" @click="showTransferDialog = false">Cancel</Button>
+                    <Button @click="transferOwnership">Transfer Ownership</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

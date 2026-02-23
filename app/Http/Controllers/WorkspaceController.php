@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\WorkspaceRole;
 use App\Http\Requests\Workspace\StoreWorkspaceRequest;
 use App\Http\Requests\Workspace\SwitchWorkspaceRequest;
+use App\Http\Requests\Workspace\TransferOwnershipRequest;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -93,6 +94,28 @@ class WorkspaceController extends Controller
 
         return redirect()->route('projects.index')
             ->with('success', 'Workspace deleted successfully.');
+    }
+
+    public function transferOwnership(TransferOwnershipRequest $request)
+    {
+        $workspace = $request->attributes->get('workspace');
+
+        $this->authorize('delete', $workspace);
+
+        $newOwnerId = $request->validated('new_owner_id');
+
+        if (! $workspace->members()->where('users.id', $newOwnerId)->exists()) {
+            return back()->withErrors(['new_owner_id' => 'The selected user is not a member of this workspace.']);
+        }
+
+        $oldOwnerId = $workspace->owner_id;
+
+        $workspace->update(['owner_id' => $newOwnerId]);
+
+        $workspace->members()->updateExistingPivot($newOwnerId, ['role' => WorkspaceRole::Owner->value]);
+        $workspace->members()->updateExistingPivot($oldOwnerId, ['role' => WorkspaceRole::Admin->value]);
+
+        return back()->with('success', 'Ownership transferred successfully.');
     }
 
     public function switchWorkspace(SwitchWorkspaceRequest $request)
