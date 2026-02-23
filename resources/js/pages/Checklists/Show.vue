@@ -55,6 +55,7 @@ const props = defineProps<{
     checklist: Checklist;
     checklists: Checklist[];
     testSuites: TestSuite[];
+    rows?: ChecklistRow[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -109,15 +110,26 @@ const copyLink = () => {
     setTimeout(() => { copied.value = false; }, 2000);
 };
 
-const rows = ref<ExtendedChecklistRow[]>(
-    props.checklist.rows?.map(r => ({
+const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;
+
+const mapRows = (raw: ChecklistRow[] | undefined): ExtendedChecklistRow[] =>
+    (raw ?? []).map(r => ({
         ...r,
         row_type: r.row_type || 'normal',
         background_color: r.background_color || null,
         font_color: r.font_color || null,
         font_weight: r.font_weight || 'normal',
-    })) || []
-);
+        module: r.module || [],
+    }));
+
+const rows = ref<ExtendedChecklistRow[]>(mapRows(props.rows));
+
+watch(() => props.rows, (newRows) => {
+    if (newRows) {
+        rows.value = mapRows(newRows);
+        resizeAllTextareas();
+    }
+});
 
 const columns = ref<ExtendedColumnConfig[]>(
     (props.checklist.columns_config || [
@@ -252,6 +264,7 @@ const {
     filterValues,
     filterUpdatedFrom,
     filterUpdatedTo,
+    filterModule,
     activeFilterCount,
     clearFilters,
     filteredRows,
@@ -589,6 +602,7 @@ const saveRows = () => {
         background_color: row.background_color,
         font_color: row.font_color,
         font_weight: row.font_weight,
+        module: row.module && row.module.length > 0 ? row.module : null,
     }));
 
     router.put(
@@ -657,6 +671,17 @@ const setFontColor = (row: ExtendedChecklistRow, color: string | null) => {
 
 const setFontWeight = (row: ExtendedChecklistRow, weight: 'normal' | 'medium' | 'semibold' | 'bold') => {
     row.font_weight = weight;
+    hasContentChanges.value = true;
+};
+
+const toggleRowModule = (row: ExtendedChecklistRow, mod: string) => {
+    if (!row.module) row.module = [];
+    const idx = row.module.indexOf(mod);
+    if (idx >= 0) {
+        row.module.splice(idx, 1);
+    } else {
+        row.module.push(mod);
+    }
     hasContentChanges.value = true;
 };
 
@@ -1242,6 +1267,9 @@ onMounted(() => {
                     ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
                 </h1>
                 <FeatureBadges v-if="checklist.project_features?.length" :features="checklist.project_features" :max-visible="3" />
+                <div v-if="checklist.module?.length" class="flex items-center gap-1 flex-wrap">
+                    <Badge v-for="mod in checklist.module" :key="mod" variant="outline" class="text-xs">{{ mod }}</Badge>
+                </div>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
                 <div class="relative">
@@ -1697,6 +1725,22 @@ onMounted(() => {
                                 <X class="h-3 w-3" />
                             </button>
                         </div>
+                        <!-- Module -->
+                        <div class="relative min-w-[130px]">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Module</Label>
+                            <Select v-model="filterModule">
+                                <SelectTrigger class="h-8 text-xs" :class="filterModule ? 'pr-7' : ''">
+                                    <SelectValue placeholder="All" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__none__">No module</SelectItem>
+                                    <SelectItem v-for="mod in MODULE_OPTIONS" :key="mod" :value="mod">{{ mod }}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <button v-if="filterModule" @click="filterModule = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
                         <!-- Results count -->
                         <div class="flex items-end pb-1 ml-auto">
                             <span class="text-sm text-muted-foreground">
@@ -1707,7 +1751,26 @@ onMounted(() => {
                 </div>
             </div>
 
-            <Card>
+            <!-- Skeleton while deferred rows are loading -->
+            <Card v-if="!props.rows">
+                <CardContent class="p-0">
+                    <div class="space-y-0">
+                        <div class="flex items-center gap-2 border-b bg-muted px-3 py-2.5">
+                            <div class="h-4 w-24 animate-pulse rounded bg-muted-foreground/20" />
+                            <div class="h-4 w-32 animate-pulse rounded bg-muted-foreground/20" />
+                            <div class="h-4 w-20 animate-pulse rounded bg-muted-foreground/20" />
+                        </div>
+                        <div v-for="i in 8" :key="i" class="flex items-center gap-2 border-b px-3 py-2.5">
+                            <div class="h-4 w-4 animate-pulse rounded bg-muted-foreground/10" />
+                            <div class="h-4 flex-1 animate-pulse rounded bg-muted-foreground/10" />
+                            <div class="h-4 w-24 animate-pulse rounded bg-muted-foreground/10" />
+                            <div class="h-4 w-16 animate-pulse rounded bg-muted-foreground/10" />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card v-else>
                 <CardContent class="p-0">
                     <div ref="scrollContainerRef" class="overflow-auto max-h-[calc(100vh-220px)]">
                         <table class="w-full border-collapse" style="table-layout: auto;">
@@ -1755,12 +1818,13 @@ onMounted(() => {
                                             <div class="absolute right-1 top-0 bottom-0 w-0.5 group-hover:bg-primary/50 group-active:bg-primary" />
                                         </div>
                                     </th>
+                                    <th class="px-1 py-2"></th>
                                     <th class="w-8 px-1 py-2"></th>
                                     <th class="w-8 px-1 py-2"></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="h-2"><td :colspan="visibleColumns.length + 3"></td></tr>
+                                <tr class="h-2"><td :colspan="visibleColumns.length + 4"></td></tr>
                                 <tr
                                     v-for="(row, index) in displayRows"
                                     :key="row.id"
@@ -1911,6 +1975,18 @@ onMounted(() => {
                                         </td>
                                     </template>
                                     <td class="px-1 py-0.5 align-top">
+                                        <div class="flex items-center gap-1 flex-wrap">
+                                            <Badge
+                                                v-for="mod in (row.module || [])"
+                                                :key="mod"
+                                                variant="outline"
+                                                class="text-[10px] px-1.5 h-4 font-normal whitespace-nowrap"
+                                            >
+                                                {{ mod }}
+                                            </Badge>
+                                        </div>
+                                    </td>
+                                    <td class="px-1 py-0.5 align-top">
                                         <RestrictedAction>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger as-child>
@@ -2038,6 +2114,25 @@ onMounted(() => {
                                                     <Bold class="h-4 w-4 mr-2" />
                                                     <span :class="getFontWeightClass(weight.value)">{{ weight.label }}</span>
                                                 </DropdownMenuItem>
+
+                                                <DropdownMenuSeparator />
+
+                                                <!-- Module -->
+                                                <DropdownMenuLabel>Module</DropdownMenuLabel>
+                                                <div class="px-1 pb-1">
+                                                    <label
+                                                        v-for="mod in MODULE_OPTIONS"
+                                                        :key="mod"
+                                                        class="flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm cursor-pointer hover:bg-accent"
+                                                        @click.stop
+                                                    >
+                                                        <Checkbox
+                                                            :model-value="(row.module || []).includes(mod)"
+                                                            @update:model-value="() => toggleRowModule(row, mod)"
+                                                        />
+                                                        {{ mod }}
+                                                    </label>
+                                                </div>
                                             </DropdownMenuContent>
                                             </DropdownMenu>
                                         </RestrictedAction>
@@ -2056,12 +2151,12 @@ onMounted(() => {
                                     </td>
                                 </tr>
                                 <tr v-if="rows.length === 0">
-                                    <td :colspan="visibleColumns.length + 3" class="p-6 text-center text-muted-foreground text-sm">
+                                    <td :colspan="visibleColumns.length + 4" class="p-6 text-center text-muted-foreground text-sm">
                                         No items yet. Click "Add Row" to add your first item.
                                     </td>
                                 </tr>
                                 <tr v-else-if="(searchQuery.trim() || activeFilterCount > 0) && filteredDataRowCount === 0">
-                                    <td :colspan="visibleColumns.length + 3" class="p-6 text-center text-muted-foreground text-sm">
+                                    <td :colspan="visibleColumns.length + 4" class="p-6 text-center text-muted-foreground text-sm">
                                         <span v-if="searchQuery.trim()" class="inline-block max-w-full truncate align-bottom">No items match "{{ searchQuery }}".</span>
                                         <template v-else>No items match the selected filters.</template>
                                         <Button v-if="activeFilterCount > 0" variant="outline" size="sm" class="mt-2 gap-2 ml-2" @click="clearFilters">

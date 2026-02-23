@@ -21,16 +21,18 @@ export function useChecklistFilters(
     const filterValues = ref<Record<string, string>>({});
     const filterUpdatedFrom = ref('');
     const filterUpdatedTo = ref('');
+    const filterModule = ref('');
 
     const activeFilterCount = computed(() => {
         const selectCount = Object.values(filterValues.value).filter(v => v !== '').length;
-        return selectCount + (filterUpdatedFrom.value ? 1 : 0) + (filterUpdatedTo.value ? 1 : 0);
+        return selectCount + (filterUpdatedFrom.value ? 1 : 0) + (filterUpdatedTo.value ? 1 : 0) + (filterModule.value ? 1 : 0);
     });
 
     const clearFilters = () => {
         filterValues.value = {};
         filterUpdatedFrom.value = '';
         filterUpdatedTo.value = '';
+        filterModule.value = '';
     };
 
     const isRowMatch = (row: ExtendedChecklistRow, query: string): boolean => {
@@ -66,6 +68,14 @@ export function useChecklistFilters(
                 const rowDate = row.updated_at ? row.updated_at.slice(0, 10) : '';
                 if (filterUpdatedFrom.value && rowDate < filterUpdatedFrom.value) return false;
                 if (filterUpdatedTo.value && rowDate > filterUpdatedTo.value) return false;
+
+                if (filterModule.value) {
+                    if (filterModule.value === '__none__') {
+                        if (row.module && row.module.length > 0) return false;
+                    } else {
+                        if (!row.module?.includes(filterModule.value)) return false;
+                    }
+                }
 
                 return true;
             });
@@ -205,6 +215,7 @@ export function useChecklistFilters(
         filterValues,
         filterUpdatedFrom,
         filterUpdatedTo,
+        filterModule,
         activeFilterCount,
         clearFilters,
         filteredRows,

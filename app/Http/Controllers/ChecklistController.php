@@ -88,7 +88,7 @@ class ChecklistController extends Controller
     {
         $this->authorize('view', $project);
 
-        $checklist->load(['rows', 'note', 'projectFeatures:id,name,module']);
+        $checklist->load(['note', 'projectFeatures:id,name,module']);
 
         $checklists = $project->checklists()
             ->with(['sectionHeaders:id,checklist_id,data,order'])
@@ -105,6 +105,7 @@ class ChecklistController extends Controller
             'checklist' => $checklist,
             'checklists' => $checklists,
             'testSuites' => $testSuites,
+            'rows' => Inertia::defer(fn () => $checklist->rows()->orderBy('order')->get()),
         ]);
     }
 
@@ -189,6 +190,7 @@ class ChecklistController extends Controller
                 'background_color' => $rowData['background_color'] ?? null,
                 'font_color' => $rowData['font_color'] ?? null,
                 'font_weight' => $rowData['font_weight'] ?? 'normal',
+                'module' => $rowData['module'] ?? null,
             ];
 
             if (isset($rowData['id'])) {
@@ -366,9 +368,15 @@ class ChecklistController extends Controller
                 $rowData = [];
                 foreach ($columns as $col) {
                     $value = $row->data[$col['key']] ?? '';
-                    // Convert boolean to string for checkboxes, leave empty if not checked
                     if ($col['type'] === 'checkbox') {
                         $value = $value ? 'Yes' : '';
+                    } elseif ($col['type'] === 'select' && $value !== '' && ! empty($col['options'])) {
+                        foreach ($col['options'] as $option) {
+                            if ($option['value'] === $value) {
+                                $value = $option['label'];
+                                break;
+                            }
+                        }
                     }
                     $rowData[] = $value;
                 }
@@ -517,6 +525,13 @@ class ChecklistController extends Controller
 
                 if ($col['type'] === 'checkbox') {
                     $value = in_array(strtolower($value), ['yes', 'true', '1', 'x', '+']);
+                } elseif ($col['type'] === 'select' && $value !== '' && ! empty($col['options'])) {
+                    foreach ($col['options'] as $option) {
+                        if (strcasecmp($option['label'], $value) === 0) {
+                            $value = $option['value'];
+                            break;
+                        }
+                    }
                 }
 
                 $data[$col['key']] = $value;
@@ -682,6 +697,10 @@ class ChecklistController extends Controller
         }
 
         if ($existing->font_weight !== $updateData['font_weight']) {
+            return true;
+        }
+
+        if (($existing->module ?? []) != ($updateData['module'] ?? [])) {
             return true;
         }
 

@@ -17,6 +17,8 @@ class UpdateChecklistRowsRequest extends FormRequest
             'rows.*.background_color' => 'nullable|string|max:7',
             'rows.*.font_color' => 'nullable|string|max:7',
             'rows.*.font_weight' => 'nullable|in:normal,medium,semibold,bold',
+            'rows.*.module' => 'nullable|array',
+            'rows.*.module.*' => 'string|max:50',
             'columns_config' => 'nullable|array',
             'columns_config.*.key' => 'required|string',
             'columns_config.*.label' => 'required|string',

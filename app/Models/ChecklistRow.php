@@ -18,12 +18,14 @@ class ChecklistRow extends Model
         'background_color',
         'font_color',
         'font_weight',
+        'module',
     ];
 
     protected function casts(): array
     {
         return [
             'data' => 'array',
+            'module' => 'array',
         ];
     }
 

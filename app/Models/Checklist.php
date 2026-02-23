@@ -19,12 +19,14 @@ class Checklist extends Model
         'columns_config',
         'order',
         'category',
+        'module',
     ];
 
     protected function casts(): array
     {
         return [
             'columns_config' => 'array',
+            'module' => 'array',
         ];
     }
 

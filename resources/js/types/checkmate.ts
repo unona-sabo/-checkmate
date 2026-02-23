@@ -67,6 +67,7 @@ export interface Checklist {
     columns_config: ColumnConfig[] | null;
     order: number;
     category: string | null;
+    module: string[] | null;
     created_at: string;
     updated_at: string;
     rows_count?: number;
@@ -99,6 +100,7 @@ export interface ChecklistRow {
     background_color: string | null;
     font_color: string | null;
     font_weight: 'normal' | 'medium' | 'semibold' | 'bold';
+    module: string[] | null;
     created_at: string;
     updated_at: string;
 }

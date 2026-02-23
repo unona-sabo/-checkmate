@@ -19,6 +19,8 @@ class UpdateChecklistRequest extends FormRequest
             'columns_config.*.options.*.value' => 'required|string',
             'columns_config.*.options.*.label' => 'required|string',
             'columns_config.*.options.*.color' => 'nullable|string|max:7',
+            'module' => 'nullable|array',
+            'module.*' => 'string|max:50',
             'feature_ids' => 'nullable|array',
             'feature_ids.*' => 'exists:project_features,id',
         ];
