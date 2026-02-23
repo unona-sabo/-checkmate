@@ -12,6 +12,7 @@ class ReorderDocumentationsRequest extends FormRequest
             'items' => 'required|array',
             'items.*.id' => 'required|exists:documentations,id',
             'items.*.order' => 'required|integer|min:0',
+            'items.*.parent_id' => 'nullable|integer',
         ];
     }
 }

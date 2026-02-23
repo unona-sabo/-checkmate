@@ -119,6 +119,46 @@ test('viewer cannot update documentation', function () {
         ->assertForbidden();
 });
 
+test('reorder updates order within same parent', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $doc1 = Documentation::factory()->create(['project_id' => $project->id, 'order' => 0, 'parent_id' => null]);
+    $doc2 = Documentation::factory()->create(['project_id' => $project->id, 'order' => 1, 'parent_id' => null]);
+    $doc3 = Documentation::factory()->create(['project_id' => $project->id, 'order' => 2, 'parent_id' => null]);
+
+    $this->actingAs($user)->post(route('documentations.reorder', $project), [
+        'items' => [
+            ['id' => $doc3->id, 'order' => 0],
+            ['id' => $doc1->id, 'order' => 1],
+            ['id' => $doc2->id, 'order' => 2],
+        ],
+    ])->assertRedirect();
+
+    expect($doc3->fresh()->order)->toBe(0)
+        ->and($doc1->fresh()->order)->toBe(1)
+        ->and($doc2->fresh()->order)->toBe(2);
+});
+
+test('reorder with parent_id change moves document to new parent', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $parent1 = Documentation::factory()->create(['project_id' => $project->id, 'order' => 0, 'parent_id' => null]);
+    $parent2 = Documentation::factory()->create(['project_id' => $project->id, 'order' => 1, 'parent_id' => null]);
+    $child = Documentation::factory()->create(['project_id' => $project->id, 'order' => 0, 'parent_id' => $parent1->id]);
+
+    $this->actingAs($user)->post(route('documentations.reorder', $project), [
+        'items' => [
+            ['id' => $child->id, 'order' => 0, 'parent_id' => $parent2->id],
+        ],
+    ])->assertRedirect();
+
+    $child->refresh();
+    expect($child->parent_id)->toBe($parent2->id)
+        ->and($child->order)->toBe(0);
+});
+
 test('viewer cannot destroy documentation', function () {
     $owner = User::factory()->create();
     $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);

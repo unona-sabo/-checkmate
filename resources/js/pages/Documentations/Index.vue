@@ -4,9 +4,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Plus, Search, X, FolderTree, ExternalLink, ChevronRight } from 'lucide-vue-next';
+import { FileText, Plus, Search, X, FolderTree, ExternalLink, ChevronRight, GripVertical } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { useSearch } from '@/composables/useSearch';
 
@@ -33,6 +33,13 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const { searchQuery, highlight } = useSearch();
 
+// Local state for drag-and-drop
+const localDocs = ref<Documentation[]>([...props.documentations]);
+
+watch(() => props.documentations, (val) => {
+    localDocs.value = [...val];
+});
+
 const filterDocs = (docs: Documentation[]): Documentation[] => {
     if (!searchQuery.value.trim()) return docs;
     const query = searchQuery.value.toLowerCase();
@@ -44,9 +51,161 @@ const filterDocs = (docs: Documentation[]): Documentation[] => {
     });
 };
 
-const filteredDocs = computed(() => filterDocs(props.documentations));
+const filteredDocs = computed(() => filterDocs(localDocs.value));
 
 const filteredChildren = (children: Documentation[]): Documentation[] => filterDocs(children);
+
+// Drag-and-drop
+const canDrag = computed(() => !searchQuery.value.trim());
+const draggedDoc = ref<Documentation | null>(null);
+const dragOverDocId = ref<number | null>(null);
+const isDragging = ref(false);
+
+const onDragStart = (e: DragEvent, doc: Documentation) => {
+    if (!canDrag.value) return;
+    draggedDoc.value = doc;
+    isDragging.value = true;
+    e.dataTransfer!.effectAllowed = 'move';
+    e.dataTransfer!.setData('text/plain', String(doc.id));
+};
+
+const onDragEnd = () => {
+    draggedDoc.value = null;
+    dragOverDocId.value = null;
+    isDragging.value = false;
+};
+
+const onDragOverDoc = (e: DragEvent, targetDoc: Documentation) => {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = 'move';
+    dragOverDocId.value = targetDoc.id;
+};
+
+const onDragLeaveDoc = (e: DragEvent, targetDoc: Documentation) => {
+    if (dragOverDocId.value === targetDoc.id) {
+        dragOverDocId.value = null;
+    }
+};
+
+const onDropOnDoc = (e: DragEvent, targetDoc: Documentation, parentId: number | null) => {
+    e.preventDefault();
+    if (!draggedDoc.value || draggedDoc.value.id === targetDoc.id) {
+        onDragEnd();
+        return;
+    }
+
+    const dragged = draggedDoc.value;
+
+    const isRootDrag = localDocs.value.some(d => d.id === dragged.id);
+
+    if (parentId === null && isRootDrag) {
+        // Root doc dropped on another root doc — reorder among roots
+        const list = [...localDocs.value];
+        const dragIdx = list.findIndex(d => d.id === dragged.id);
+        list.splice(dragIdx, 1);
+        const targetIdx = list.findIndex(d => d.id === targetDoc.id);
+        list.splice(targetIdx, 0, dragged);
+        list.forEach((d, i) => { d.order = i; });
+        localDocs.value = list;
+    } else if (parentId === null && !isRootDrag) {
+        // Child dropped on a root doc — move as child of that root doc
+        for (const doc of localDocs.value) {
+            if (doc.children) {
+                const childIdx = doc.children.findIndex(c => c.id === dragged.id);
+                if (childIdx !== -1) {
+                    doc.children.splice(childIdx, 1);
+                    break;
+                }
+            }
+        }
+        if (!targetDoc.children) targetDoc.children = [];
+        dragged.order = targetDoc.children.length;
+        targetDoc.children.push(dragged);
+    } else {
+        // Target is a child — reorder within parent or move into parent
+        const parentDoc = localDocs.value.find(d => d.id === parentId);
+        if (!parentDoc || !parentDoc.children) { onDragEnd(); return; }
+
+        // Remove dragged from wherever it is
+        const rootIdx = localDocs.value.findIndex(d => d.id === dragged.id);
+        if (rootIdx !== -1) {
+            localDocs.value.splice(rootIdx, 1);
+            localDocs.value.forEach((d, i) => { d.order = i; });
+        } else {
+            for (const doc of localDocs.value) {
+                if (doc.children) {
+                    const childIdx = doc.children.findIndex(c => c.id === dragged.id);
+                    if (childIdx !== -1) {
+                        doc.children.splice(childIdx, 1);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Insert before target in parent's children
+        const targetIdx = parentDoc.children.findIndex(c => c.id === targetDoc.id);
+        parentDoc.children.splice(targetIdx, 0, dragged);
+        parentDoc.children.forEach((c, i) => { c.order = i; });
+    }
+
+    saveReorder();
+    onDragEnd();
+};
+
+const onDropOnParent = (e: DragEvent, parentDoc: Documentation) => {
+    e.preventDefault();
+    if (!draggedDoc.value || draggedDoc.value.id === parentDoc.id) {
+        onDragEnd();
+        return;
+    }
+
+    const dragged = draggedDoc.value;
+
+    // Remove from wherever it currently is
+    const rootIdx = localDocs.value.findIndex(d => d.id === dragged.id);
+    if (rootIdx !== -1) {
+        localDocs.value.splice(rootIdx, 1);
+        localDocs.value.forEach((d, i) => { d.order = i; });
+    } else {
+        for (const doc of localDocs.value) {
+            if (doc.children) {
+                const childIdx = doc.children.findIndex(c => c.id === dragged.id);
+                if (childIdx !== -1) {
+                    doc.children.splice(childIdx, 1);
+                    break;
+                }
+            }
+        }
+    }
+
+    // Add as last child of parentDoc
+    if (!parentDoc.children) parentDoc.children = [];
+    dragged.order = parentDoc.children.length;
+    parentDoc.children.push(dragged);
+
+    saveReorder();
+    onDragEnd();
+};
+
+const saveReorder = () => {
+    const items: { id: number; order: number; parent_id: number | null }[] = [];
+
+    localDocs.value.forEach((doc, i) => {
+        items.push({ id: doc.id, order: i, parent_id: null });
+        if (doc.children) {
+            doc.children.forEach((child, j) => {
+                items.push({ id: child.id, order: j, parent_id: doc.id });
+            });
+        }
+    });
+
+    router.post(
+        `/projects/${props.project.id}/documentations/reorder`,
+        { items },
+        { preserveScroll: true, preserveState: true },
+    );
+};
 
 const highlightDescription = (content: string): string => {
     const plain = content.replace(/<[^>]*>/g, '').substring(0, 200) + '...';
@@ -120,7 +279,26 @@ const highlightDescription = (content: string): string => {
                             <div class="p-2 space-y-0.5 max-h-[calc(100vh-270px)] overflow-y-auto">
                                 <template v-if="filteredDocs.length">
                                     <template v-for="doc in filteredDocs" :key="doc.id">
-                                        <div class="group flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-all duration-150 hover:bg-muted/70">
+                                        <div
+                                            class="group flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-all duration-150 hover:bg-muted/70"
+                                            :class="{
+                                                'opacity-50': isDragging && draggedDoc?.id === doc.id,
+                                                'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === doc.id && draggedDoc?.id !== doc.id,
+                                            }"
+                                            :draggable="canDrag"
+                                            @dragstart="onDragStart($event, doc)"
+                                            @dragend="onDragEnd"
+                                            @dragover="onDragOverDoc($event, doc)"
+                                            @dragleave="onDragLeaveDoc($event, doc)"
+                                            @drop="onDropOnDoc($event, doc, null)"
+                                        >
+                                            <div
+                                                v-if="canDrag"
+                                                class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
+                                                @mousedown.stop
+                                            >
+                                                <GripVertical class="h-3.5 w-3.5 text-muted-foreground" />
+                                            </div>
                                             <Link
                                                 :href="`/projects/${project.id}/documentations/${doc.id}`"
                                                 class="flex items-center gap-2 min-w-0 flex-1"
@@ -139,7 +317,26 @@ const highlightDescription = (content: string): string => {
                                         <!-- Nested children -->
                                         <template v-if="doc.children?.length">
                                             <template v-for="child in filteredChildren(doc.children)" :key="child.id">
-                                                <div class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-4 cursor-pointer transition-all duration-150 hover:bg-muted/70">
+                                                <div
+                                                    class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-4 cursor-pointer transition-all duration-150 hover:bg-muted/70"
+                                                    :class="{
+                                                        'opacity-50': isDragging && draggedDoc?.id === child.id,
+                                                        'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === child.id && draggedDoc?.id !== child.id,
+                                                    }"
+                                                    :draggable="canDrag"
+                                                    @dragstart="onDragStart($event, child)"
+                                                    @dragend="onDragEnd"
+                                                    @dragover="onDragOverDoc($event, child)"
+                                                    @dragleave="onDragLeaveDoc($event, child)"
+                                                    @drop="onDropOnDoc($event, child, doc.id)"
+                                                >
+                                                    <div
+                                                        v-if="canDrag"
+                                                        class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
+                                                        @mousedown.stop
+                                                    >
+                                                        <GripVertical class="h-3 w-3 text-muted-foreground" />
+                                                    </div>
                                                     <Link
                                                         :href="`/projects/${project.id}/documentations/${child.id}`"
                                                         class="flex items-center gap-2 min-w-0 flex-1"

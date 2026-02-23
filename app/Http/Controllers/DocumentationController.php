@@ -340,7 +340,13 @@ class DocumentationController extends Controller
         $validated = $request->validated();
 
         foreach ($validated['items'] as $item) {
-            Documentation::where('id', $item['id'])->update(['order' => $item['order']]);
+            $data = ['order' => $item['order']];
+
+            if (array_key_exists('parent_id', $item)) {
+                $data['parent_id'] = $item['parent_id'];
+            }
+
+            Documentation::where('id', $item['id'])->update($data);
         }
 
         return back()->with('success', 'Order updated successfully.');

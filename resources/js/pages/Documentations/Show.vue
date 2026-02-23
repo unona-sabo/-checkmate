@@ -20,8 +20,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { FileText, Edit, Trash2, ChevronRight, Download, Upload, Paperclip, FolderTree, ExternalLink, Plus, Search, X, Link2, Check, FileSpreadsheet } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { FileText, Edit, Trash2, ChevronRight, Download, Upload, Paperclip, FolderTree, ExternalLink, Plus, Search, X, Link2, Check, FileSpreadsheet, GripVertical } from 'lucide-vue-next';
+import { ref, computed, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { useSearch, escapeRegExp } from '@/composables/useSearch';
 
@@ -89,7 +89,7 @@ const filterChildren = (children: Documentation[]): Documentation[] => {
 };
 
 const filteredChildren = computed(() => {
-    return filterChildren(props.documentation.children ?? []);
+    return filterChildren(localChildren.value);
 });
 
 const filteredGrandchildren = (children: Documentation[]): Documentation[] => {
@@ -217,6 +217,155 @@ const closeImportDialog = () => {
         fileInputRef.value.value = '';
     }
 };
+
+// Drag-and-drop for subcategories
+const localChildren = ref<Documentation[]>([...(props.documentation.children ?? [])]);
+
+watch(() => props.documentation.children, (val) => {
+    localChildren.value = [...(val ?? [])];
+});
+
+const canDrag = computed(() => !searchQuery.value.trim());
+const draggedDoc = ref<Documentation | null>(null);
+const dragOverDocId = ref<number | null>(null);
+const isDragging = ref(false);
+
+const onDragStart = (e: DragEvent, doc: Documentation) => {
+    if (!canDrag.value) return;
+    draggedDoc.value = doc;
+    isDragging.value = true;
+    e.dataTransfer!.effectAllowed = 'move';
+    e.dataTransfer!.setData('text/plain', String(doc.id));
+};
+
+const onDragEnd = () => {
+    draggedDoc.value = null;
+    dragOverDocId.value = null;
+    isDragging.value = false;
+};
+
+const onDragOverDoc = (e: DragEvent, targetDoc: Documentation) => {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = 'move';
+    dragOverDocId.value = targetDoc.id;
+};
+
+const onDragLeaveDoc = (e: DragEvent, targetDoc: Documentation) => {
+    if (dragOverDocId.value === targetDoc.id) {
+        dragOverDocId.value = null;
+    }
+};
+
+const onDropOnChild = (e: DragEvent, targetDoc: Documentation, parentId: number) => {
+    e.preventDefault();
+    if (!draggedDoc.value || draggedDoc.value.id === targetDoc.id) {
+        onDragEnd();
+        return;
+    }
+
+    const dragged = draggedDoc.value;
+
+    // Find and remove dragged from its current location
+    const removeFromList = (list: Documentation[]): boolean => {
+        const idx = list.findIndex(d => d.id === dragged.id);
+        if (idx !== -1) {
+            list.splice(idx, 1);
+            return true;
+        }
+        for (const item of list) {
+            if (item.children && removeFromList(item.children)) return true;
+        }
+        return false;
+    };
+
+    removeFromList(localChildren.value);
+
+    // Find the parent and insert before target
+    const insertBefore = (list: Documentation[], pId: number): boolean => {
+        if (pId === props.documentation.id) {
+            const targetIdx = list.findIndex(d => d.id === targetDoc.id);
+            if (targetIdx !== -1) {
+                list.splice(targetIdx, 0, dragged);
+                list.forEach((d, i) => { d.order = i; });
+                return true;
+            }
+        }
+        for (const item of list) {
+            if (item.id === pId && item.children) {
+                const targetIdx = item.children.findIndex(d => d.id === targetDoc.id);
+                if (targetIdx !== -1) {
+                    item.children.splice(targetIdx, 0, dragged);
+                    item.children.forEach((d, i) => { d.order = i; });
+                    return true;
+                }
+            }
+            if (item.children && insertBefore(item.children, pId)) return true;
+        }
+        return false;
+    };
+
+    insertBefore(localChildren.value, parentId);
+    localChildren.value = [...localChildren.value];
+
+    saveChildReorder();
+    onDragEnd();
+};
+
+const onDropOnParentDoc = (e: DragEvent, parentDoc: Documentation) => {
+    e.preventDefault();
+    if (!draggedDoc.value || draggedDoc.value.id === parentDoc.id) {
+        onDragEnd();
+        return;
+    }
+
+    const dragged = draggedDoc.value;
+
+    // Remove from current location
+    const removeFromList = (list: Documentation[]): boolean => {
+        const idx = list.findIndex(d => d.id === dragged.id);
+        if (idx !== -1) {
+            list.splice(idx, 1);
+            return true;
+        }
+        for (const item of list) {
+            if (item.children && removeFromList(item.children)) return true;
+        }
+        return false;
+    };
+
+    removeFromList(localChildren.value);
+
+    // Add as last child of parentDoc
+    if (!parentDoc.children) parentDoc.children = [];
+    dragged.order = parentDoc.children.length;
+    parentDoc.children.push(dragged);
+
+    localChildren.value = [...localChildren.value];
+
+    saveChildReorder();
+    onDragEnd();
+};
+
+const saveChildReorder = () => {
+    const items: { id: number; order: number; parent_id: number | null }[] = [];
+
+    const collectItems = (list: Documentation[], parentId: number) => {
+        list.forEach((doc, i) => {
+            items.push({ id: doc.id, order: i, parent_id: parentId });
+            if (doc.children) {
+                collectItems(doc.children, doc.id);
+            }
+        });
+    };
+
+    collectItems(localChildren.value, props.documentation.id);
+
+    router.post(
+        `/projects/${props.project.id}/documentations/reorder`,
+        { items },
+        { preserveScroll: true, preserveState: true },
+    );
+};
 </script>
 
 <template>
@@ -308,7 +457,26 @@ const closeImportDialog = () => {
                         <div class="p-2 space-y-0.5 max-h-[calc(100vh-270px)] overflow-y-auto">
                             <template v-if="filteredChildren.length">
                                 <template v-for="child in filteredChildren" :key="child.id">
-                                    <div class="group flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-all duration-150 hover:bg-muted/70">
+                                    <div
+                                        class="group flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-all duration-150 hover:bg-muted/70"
+                                        :class="{
+                                            'opacity-50': isDragging && draggedDoc?.id === child.id,
+                                            'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === child.id && draggedDoc?.id !== child.id,
+                                        }"
+                                        :draggable="canDrag"
+                                        @dragstart="onDragStart($event, child)"
+                                        @dragend="onDragEnd"
+                                        @dragover="onDragOverDoc($event, child)"
+                                        @dragleave="onDragLeaveDoc($event, child)"
+                                        @drop="onDropOnChild($event, child, documentation.id)"
+                                    >
+                                        <div
+                                            v-if="canDrag"
+                                            class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
+                                            @mousedown.stop
+                                        >
+                                            <GripVertical class="h-3.5 w-3.5 text-muted-foreground" />
+                                        </div>
                                         <Link
                                             :href="`/projects/${project.id}/documentations/${child.id}`"
                                             class="flex items-center gap-2 min-w-0 flex-1"
@@ -327,7 +495,26 @@ const closeImportDialog = () => {
                                     <!-- Nested children (level 2) -->
                                     <template v-if="child.children?.length">
                                         <template v-for="grandchild in filteredGrandchildren(child.children)" :key="grandchild.id">
-                                            <div class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-4 cursor-pointer transition-all duration-150 hover:bg-muted/70">
+                                            <div
+                                                class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-4 cursor-pointer transition-all duration-150 hover:bg-muted/70"
+                                                :class="{
+                                                    'opacity-50': isDragging && draggedDoc?.id === grandchild.id,
+                                                    'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === grandchild.id && draggedDoc?.id !== grandchild.id,
+                                                }"
+                                                :draggable="canDrag"
+                                                @dragstart="onDragStart($event, grandchild)"
+                                                @dragend="onDragEnd"
+                                                @dragover="onDragOverDoc($event, grandchild)"
+                                                @dragleave="onDragLeaveDoc($event, grandchild)"
+                                                @drop="onDropOnChild($event, grandchild, child.id)"
+                                            >
+                                                <div
+                                                    v-if="canDrag"
+                                                    class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
+                                                    @mousedown.stop
+                                                >
+                                                    <GripVertical class="h-3 w-3 text-muted-foreground" />
+                                                </div>
                                                 <Link
                                                     :href="`/projects/${project.id}/documentations/${grandchild.id}`"
                                                     class="flex items-center gap-2 min-w-0 flex-1"
@@ -348,7 +535,24 @@ const closeImportDialog = () => {
                                                 v-for="deep in grandchild.children"
                                                 :key="deep.id"
                                                 class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-8 cursor-pointer transition-all duration-150 hover:bg-muted/70"
+                                                :class="{
+                                                    'opacity-50': isDragging && draggedDoc?.id === deep.id,
+                                                    'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === deep.id && draggedDoc?.id !== deep.id,
+                                                }"
+                                                :draggable="canDrag"
+                                                @dragstart="onDragStart($event, deep)"
+                                                @dragend="onDragEnd"
+                                                @dragover="onDragOverDoc($event, deep)"
+                                                @dragleave="onDragLeaveDoc($event, deep)"
+                                                @drop="onDropOnChild($event, deep, grandchild.id)"
                                             >
+                                                <div
+                                                    v-if="canDrag"
+                                                    class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
+                                                    @mousedown.stop
+                                                >
+                                                    <GripVertical class="h-2.5 w-2.5 text-muted-foreground" />
+                                                </div>
                                                 <Link
                                                     :href="`/projects/${project.id}/documentations/${deep.id}`"
                                                     class="flex items-center gap-2 min-w-0 flex-1"
