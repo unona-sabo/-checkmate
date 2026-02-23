@@ -48,6 +48,7 @@ class TestCaseFactory extends Factory
             'priority' => fake()->randomElement($priorities),
             'severity' => fake()->randomElement($severities),
             'type' => fake()->randomElement($types),
+            'module' => null,
             'automation_status' => fake()->randomElement($automationStatuses),
             'tags' => fake()->optional()->randomElements(['smoke', 'regression', 'critical', 'P1', 'P2', 'login', 'security'], 2),
             'order' => fake()->numberBetween(0, 20),

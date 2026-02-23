@@ -280,6 +280,14 @@ const navigateToCreateBugreport = () => {
                                 <p class="text-xs text-muted-foreground">Type</p>
                                 <p class="text-sm font-medium">{{ testCase.type }}</p>
                             </div>
+                            <div v-if="testCase.module?.length">
+                                <p class="text-xs text-muted-foreground">Module</p>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    <Badge v-for="mod in testCase.module" :key="mod" variant="outline">
+                                        {{ mod }}
+                                    </Badge>
+                                </div>
+                            </div>
                             <div>
                                 <p class="text-xs text-muted-foreground">Automation</p>
                                 <Badge :variant="automationVariant(testCase.automation_status)" class="mt-1">

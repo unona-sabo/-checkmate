@@ -17,8 +17,9 @@ class GenerateTestCasesRequest extends FormRequest
             'file' => ['required_if:input_type,file', 'nullable', 'file', 'mimes:txt,md', 'max:2048'],
             'image' => ['required_if:input_type,image', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'count' => ['nullable', 'integer', 'min:1', 'max:20'],
-            'provider' => ['nullable', 'string', 'in:gemini,claude'],
+            'provider' => ['nullable', 'string', 'in:gemini,claude,openai'],
             'custom_prompt' => ['nullable', 'string', 'max:5000'],
+            'language' => ['nullable', 'string', 'max:50'],
         ];
     }
 

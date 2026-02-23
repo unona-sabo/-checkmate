@@ -30,20 +30,22 @@ class CoverageCalculator
         $features = $project->features()
             ->where('is_active', true)
             ->withCount(['testCases', 'checklists'])
+            ->with('testCases:id,module')
             ->get();
 
         /** @var array<string, array{total: int, covered: int, test_cases: int, checklists: int}> $moduleStats */
         $moduleStats = [];
 
         foreach ($features as $feature) {
-            $modules = $feature->module ?? [];
-            if ($modules === []) {
-                $modules = ['Uncategorized'];
+            $featureModules = $feature->module ?? [];
+            if ($featureModules === []) {
+                $featureModules = ['Uncategorized'];
             }
 
             $isCovered = ($feature->test_cases_count > 0) || ($feature->checklists_count > 0);
 
-            foreach ($modules as $mod) {
+            // Initialize feature-level module stats
+            foreach ($featureModules as $mod) {
                 if (! isset($moduleStats[$mod])) {
                     $moduleStats[$mod] = ['total' => 0, 'covered' => 0, 'test_cases' => 0, 'checklists' => 0];
                 }
@@ -52,8 +54,22 @@ class CoverageCalculator
                 if ($isCovered) {
                     $moduleStats[$mod]['covered']++;
                 }
-                $moduleStats[$mod]['test_cases'] += $feature->test_cases_count;
                 $moduleStats[$mod]['checklists'] += $feature->checklists_count;
+            }
+
+            // Count test cases by their own module (fall back to feature modules)
+            foreach ($feature->testCases as $testCase) {
+                $tcModules = $testCase->module ?? [];
+                if ($tcModules === []) {
+                    $tcModules = $featureModules;
+                }
+
+                foreach ($tcModules as $mod) {
+                    if (! isset($moduleStats[$mod])) {
+                        $moduleStats[$mod] = ['total' => 0, 'covered' => 0, 'test_cases' => 0, 'checklists' => 0];
+                    }
+                    $moduleStats[$mod]['test_cases']++;
+                }
             }
         }
 

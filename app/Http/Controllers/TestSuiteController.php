@@ -7,6 +7,7 @@ use App\Http\Requests\TestSuite\ReorderTestSuitesRequest;
 use App\Http\Requests\TestSuite\StoreTestSuiteRequest;
 use App\Http\Requests\TestSuite\UpdateTestSuiteRequest;
 use App\Models\Project;
+use App\Models\ProjectFeature;
 use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Models\User;
@@ -85,6 +86,7 @@ class TestSuiteController extends Controller
 
         $testSuite = $project->testSuites()->create($validated);
         $testSuite->projectFeatures()->sync($featureIds);
+        $this->syncTestCasesToFeatures($testSuite, $featureIds);
 
         if ($testCaseIds) {
             $projectSuiteIds = $project->testSuites()->pluck('id');
@@ -169,6 +171,8 @@ class TestSuiteController extends Controller
         $testSuite->update($validated);
         $testSuite->projectFeatures()->sync($featureIds);
 
+        $this->syncTestCasesToFeatures($testSuite, $featureIds);
+
         return redirect()->route('test-suites.show', [$project, $testSuite])
             ->with('success', 'Test suite updated successfully.');
     }
@@ -226,5 +230,28 @@ class TestSuiteController extends Controller
         }
 
         return back()->with('success', 'Test suites reordered successfully.');
+    }
+
+    /**
+     * Link all test cases in the suite to the given features.
+     *
+     * @param  array<int, int>  $featureIds
+     */
+    private function syncTestCasesToFeatures(TestSuite $testSuite, array $featureIds): void
+    {
+        if ($featureIds === []) {
+            return;
+        }
+
+        $testCaseIds = $testSuite->testCases()->pluck('id')->toArray();
+
+        if ($testCaseIds === []) {
+            return;
+        }
+
+        foreach ($featureIds as $featureId) {
+            $feature = ProjectFeature::query()->find($featureId);
+            $feature?->testCases()->syncWithoutDetaching($testCaseIds);
+        }
     }
 }

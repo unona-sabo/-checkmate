@@ -126,15 +126,72 @@ const editForm = ref({
 // Search
 const featureSearch = ref('');
 
+// Selected feature filter
+const selectedFeatureId = ref<number | null>(null);
+
+const selectedFeature = computed(() => {
+    if (!selectedFeatureId.value) return null;
+    return props.features.find((f) => f.id === selectedFeatureId.value) ?? null;
+});
+
+const selectFeature = (featureId: number) => {
+    selectedFeatureId.value = selectedFeatureId.value === featureId ? null : featureId;
+};
+
+const clearFeatureSelection = () => {
+    selectedFeatureId.value = null;
+};
+
+const displayedCoverageByModule = computed(() => {
+    if (!selectedFeature.value) return props.coverageByModule;
+
+    const f = selectedFeature.value;
+    const isCovered = (f.test_cases_count ?? 0) > 0 || (f.checklists_count ?? 0) > 0;
+
+    // Build module stats from test case modules
+    const moduleMap = new Map<string, { test_cases_count: number; checklists_count: number }>();
+
+    // Seed with feature-level modules
+    const featureModules = f.module?.length ? f.module : ['Uncategorized'];
+    for (const mod of featureModules) {
+        moduleMap.set(mod, { test_cases_count: 0, checklists_count: f.checklists_count ?? 0 });
+    }
+
+    // Count test cases by their own module
+    for (const tc of f.test_cases ?? []) {
+        const tcModules = tc.module?.length ? tc.module : featureModules;
+        for (const mod of tcModules) {
+            const existing = moduleMap.get(mod);
+            if (existing) {
+                existing.test_cases_count++;
+            } else {
+                moduleMap.set(mod, { test_cases_count: 1, checklists_count: 0 });
+            }
+        }
+    }
+
+    return Array.from(moduleMap.entries()).map(([mod, stats]) => ({
+        module: mod,
+        total_features: 1,
+        covered_features: isCovered ? 1 : 0,
+        test_cases_count: stats.test_cases_count,
+        checklists_count: stats.checklists_count,
+        coverage_percentage: isCovered ? 100 : 0,
+    }));
+});
+
 const filteredFeatures = computed(() => {
-    if (!featureSearch.value) return props.features;
-    const q = featureSearch.value.toLowerCase();
-    return props.features.filter(
-        (f) =>
-            f.name.toLowerCase().includes(q) ||
-            f.module?.some((m) => m.toLowerCase().includes(q)) ||
-            f.category?.toLowerCase().includes(q),
-    );
+    let results = props.features;
+    if (featureSearch.value) {
+        const q = featureSearch.value.toLowerCase();
+        results = results.filter(
+            (f) =>
+                f.name.toLowerCase().includes(q) ||
+                f.module?.some((m) => m.toLowerCase().includes(q)) ||
+                f.category?.toLowerCase().includes(q),
+        );
+    }
+    return results;
 });
 
 // Coverage history
@@ -272,15 +329,36 @@ const toggleExpanded = (featureId: number) => {
 const showLinkTestCasesDialog = ref(false);
 const linkingTestCaseFeature = ref<ProjectFeature | null>(null);
 const linkTestCaseSearch = ref('');
+const linkTestCaseSuiteFilter = ref('all');
 const pendingTestCaseIds = ref(new Set<number>());
 const linkedTestCaseSnapshot = ref(new Set<number>());
 
+const availableSuitesForLink = computed(() => {
+    const suiteMap = new Map<number, string>();
+    for (const tc of props.allTestCases) {
+        if (tc.test_suite) {
+            suiteMap.set(tc.test_suite.id, tc.test_suite.name);
+        }
+    }
+    return Array.from(suiteMap, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+});
+
 const filteredAllTestCases = computed(() => {
-    if (!linkTestCaseSearch.value) return props.allTestCases;
-    const q = linkTestCaseSearch.value.toLowerCase();
-    return props.allTestCases.filter(
-        (tc) => tc.title.toLowerCase().includes(q) || tc.test_suite?.name.toLowerCase().includes(q),
-    );
+    let results = props.allTestCases;
+
+    if (linkTestCaseSuiteFilter.value !== 'all') {
+        const suiteId = Number(linkTestCaseSuiteFilter.value);
+        results = results.filter((tc) => tc.test_suite?.id === suiteId);
+    }
+
+    if (linkTestCaseSearch.value) {
+        const q = linkTestCaseSearch.value.toLowerCase();
+        results = results.filter(
+            (tc) => tc.title.toLowerCase().includes(q) || tc.test_suite?.name.toLowerCase().includes(q),
+        );
+    }
+
+    return results;
 });
 
 const isLinked = (_feature: ProjectFeature, testCaseId: number): boolean => {
@@ -290,6 +368,7 @@ const isLinked = (_feature: ProjectFeature, testCaseId: number): boolean => {
 const openLinkTestCasesDialog = (feature: ProjectFeature) => {
     linkingTestCaseFeature.value = feature;
     linkTestCaseSearch.value = '';
+    linkTestCaseSuiteFilter.value = 'all';
     linkedTestCaseSnapshot.value = new Set(feature.test_cases?.map((tc) => tc.id) ?? []);
     showLinkTestCasesDialog.value = true;
 };
@@ -526,11 +605,33 @@ const refreshData = () => {
 
                 <!-- Tab: Overview -->
                 <div v-if="activeTab === 'overview'" class="p-6">
+                    <!-- Selected feature banner -->
+                    <div
+                        v-if="selectedFeature"
+                        class="mb-6 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-4 py-3"
+                    >
+                        <div class="flex items-center gap-3">
+                            <Target class="h-5 w-5 text-primary" />
+                            <div>
+                                <span class="font-medium text-foreground">{{ selectedFeature.name }}</span>
+                                <span class="ml-2 text-sm text-muted-foreground">
+                                    {{ selectedFeature.test_cases_count ?? 0 }} test cases<span v-if="(selectedFeature.checklists_count ?? 0) > 0"> · {{ selectedFeature.checklists_count }} checklists</span>
+                                </span>
+                            </div>
+                        </div>
+                        <Button variant="outline" size="sm" class="cursor-pointer" @click="clearFeatureSelection">
+                            <X class="mr-1 h-3.5 w-3.5" />
+                            Show All
+                        </Button>
+                    </div>
+
                     <!-- Coverage by Module -->
-                    <div v-if="coverageByModule.length > 0" class="mb-8">
-                        <h3 class="mb-4 text-lg font-semibold text-foreground">Coverage by Module</h3>
+                    <div v-if="displayedCoverageByModule.length > 0" class="mb-8">
+                        <h3 class="mb-4 text-lg font-semibold text-foreground">
+                            {{ selectedFeature ? 'Coverage in Feature Modules' : 'Coverage by Module' }}
+                        </h3>
                         <div class="grid gap-4 md:grid-cols-2">
-                            <Card v-for="mod in coverageByModule" :key="mod.module">
+                            <Card v-for="mod in displayedCoverageByModule" :key="mod.module">
                                 <CardContent class="p-5">
                                     <div class="mb-3 flex items-center justify-between">
                                         <h4 class="font-medium text-foreground">{{ mod.module }}</h4>
@@ -579,9 +680,12 @@ const refreshData = () => {
                             <div v-for="feature in filteredFeatures" :key="feature.id">
                                 <div
                                     class="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/30"
-                                    :class="{ 'rounded-b-none border-b-0': expandedFeatureId === feature.id }"
+                                    :class="{
+                                        'rounded-b-none border-b-0': expandedFeatureId === feature.id,
+                                        'border-primary/50 bg-primary/5': selectedFeatureId === feature.id,
+                                    }"
                                 >
-                                    <div class="flex-1">
+                                    <div class="flex-1 cursor-pointer" @click="selectFeature(feature.id)">
                                         <div class="flex items-center gap-2">
                                             <span class="font-medium text-foreground">{{ feature.name }}</span>
                                             <Badge :variant="priorityVariant(feature.priority)" class="text-xs uppercase">
@@ -1159,54 +1263,72 @@ const refreshData = () => {
                         Link Test Cases to {{ linkingTestCaseFeature?.name }}
                     </DialogTitle>
                     <DialogDescription>
-                        Search and toggle test cases to link or unlink from this feature.
+                        Filter by test suite, search and toggle test cases to link or unlink from this feature.
                     </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4 py-4">
-                    <div class="relative">
-                        <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="linkTestCaseSearch" placeholder="Search test cases..." class="pl-9" />
-                        <button
-                            v-if="linkTestCaseSearch"
-                            @click="linkTestCaseSearch = ''"
-                            class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
-                        >
-                            <X class="h-4 w-4" />
-                        </button>
+                    <!-- Suite filter + search -->
+                    <div class="flex gap-3">
+                        <div class="w-48 shrink-0">
+                            <Select v-model="linkTestCaseSuiteFilter">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="All test suites" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All test suites</SelectItem>
+                                    <SelectItem
+                                        v-for="suite in availableSuitesForLink"
+                                        :key="suite.id"
+                                        :value="suite.id.toString()"
+                                    >
+                                        {{ suite.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div class="relative flex-1">
+                            <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input v-model="linkTestCaseSearch" placeholder="Search test cases..." class="pl-9" />
+                            <button
+                                v-if="linkTestCaseSearch"
+                                @click="linkTestCaseSearch = ''"
+                                class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                            >
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
                     <div class="max-h-96 space-y-1 overflow-y-auto">
                         <div
                             v-for="tc in filteredAllTestCases"
                             :key="tc.id"
-                            class="flex items-center justify-between gap-3 rounded border px-3 py-2 transition-colors hover:bg-muted/30"
+                            class="flex items-start gap-3 rounded border px-3 py-2 transition-colors hover:bg-muted/30"
                         >
-                            <div class="flex min-w-0 items-center gap-2">
-                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/50">
-                                    <FileText class="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <span class="block truncate text-sm text-foreground" :title="tc.title">{{ tc.title }}</span>
-                                    <Badge v-if="tc.test_suite" variant="outline" class="mt-0.5 text-xs">
-                                        {{ tc.test_suite.name }}
-                                    </Badge>
-                                </div>
+                            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/50">
+                                <FileText class="h-3.5 w-3.5 text-muted-foreground" />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <span class="text-sm leading-snug text-foreground">{{ tc.title }}</span>
+                                <Badge v-if="tc.test_suite" variant="outline" class="mt-0.5 text-xs">
+                                    {{ tc.test_suite.name }}
+                                </Badge>
                             </div>
                             <Button
                                 v-if="pendingTestCaseIds.has(tc.id)"
                                 variant="outline"
                                 size="sm"
                                 disabled
-                                class="shrink-0"
+                                class="mt-0.5 shrink-0"
                             >
                                 <Loader2 class="mr-1 h-3.5 w-3.5 animate-spin" />
-                                Updating...
+                                ...
                             </Button>
                             <Button
                                 v-else-if="linkingTestCaseFeature && isLinked(linkingTestCaseFeature, tc.id)"
                                 variant="outline"
                                 size="sm"
                                 @click="toggleLink(tc.id)"
-                                class="shrink-0 cursor-pointer border-emerald-500 text-emerald-600 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                                class="mt-0.5 shrink-0 cursor-pointer border-emerald-500 text-emerald-600 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
                             >
                                 <Unlink class="mr-1 h-3.5 w-3.5" />
                                 Linked
@@ -1216,7 +1338,7 @@ const refreshData = () => {
                                 variant="outline"
                                 size="sm"
                                 @click="toggleLink(tc.id)"
-                                class="shrink-0 cursor-pointer"
+                                class="mt-0.5 shrink-0 cursor-pointer"
                             >
                                 <Link2 class="mr-1 h-3.5 w-3.5" />
                                 Link
@@ -1228,7 +1350,10 @@ const refreshData = () => {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button @click="showLinkTestCasesDialog = false" class="cursor-pointer">Close</Button>
+                    <div class="flex w-full items-center justify-between">
+                        <span class="text-sm text-muted-foreground">{{ linkedTestCaseSnapshot.size }} linked</span>
+                        <Button @click="showLinkTestCasesDialog = false" class="cursor-pointer">Close</Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

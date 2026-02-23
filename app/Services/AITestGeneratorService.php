@@ -16,9 +16,11 @@ class AITestGeneratorService
     public function __construct(?string $provider = null)
     {
         $this->provider = $provider ?? config('services.ai.default_provider', 'gemini');
-        $this->model = $this->provider === 'gemini'
-            ? config('services.gemini.model', 'gemini-2.0-flash')
-            : 'claude-sonnet-4-20250514';
+        $this->model = match ($this->provider) {
+            'gemini' => config('services.gemini.model', 'gemini-2.0-flash'),
+            'openai' => config('services.openai.model', 'gpt-4o-mini'),
+            default => 'claude-sonnet-4-20250514',
+        };
     }
 
     /**
@@ -33,6 +35,7 @@ class AITestGeneratorService
 
         return match ($this->provider) {
             'claude' => $this->claudeGenerate($prompt, $options),
+            'openai' => $this->openaiGenerate($prompt, $options),
             default => $this->geminiGenerate([['text' => $prompt]], $options),
         };
     }
@@ -52,6 +55,7 @@ class AITestGeneratorService
 
         return match ($this->provider) {
             'claude' => $this->claudeGenerateWithImage($prompt, $imageData, $mimeType, $options),
+            'openai' => $this->openaiGenerateWithImage($prompt, $imageData, $mimeType, $options),
             default => $this->geminiGenerate([
                 ['text' => $prompt],
                 ['inline_data' => ['mime_type' => $mimeType, 'data' => $imageData]],
@@ -214,6 +218,97 @@ class AITestGeneratorService
 
     /**
      * @param  array<string, mixed>  $options
+     * @return list<array{title: string, description: string, preconditions: string, steps: string, expected_result: string, priority: string, type: string}>
+     *
+     * @throws ConnectionException
+     */
+    private function openaiGenerate(string $prompt, array $options): array
+    {
+        $apiKey = config('services.openai.api_key');
+
+        if (empty($apiKey)) {
+            throw new \RuntimeException('OpenAI API key is not configured. Set OPENAI_API_KEY in your .env file.');
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => "Bearer {$apiKey}",
+            ])->timeout(120)->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $this->model,
+                'messages' => [['role' => 'user', 'content' => $prompt]],
+                'temperature' => 0.7,
+                'max_tokens' => 4096,
+            ]);
+
+            if (! $response->successful()) {
+                $error = $response->json('error.message', 'Unknown error');
+                throw new \RuntimeException('OpenAI API error: '.$error);
+            }
+
+            $data = $response->json();
+            $text = $data['choices'][0]['message']['content'] ?? '';
+
+            return $this->parseTestCases($text);
+
+        } catch (ConnectionException $e) {
+            Log::error('OpenAI API connection error: '.$e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     * @return list<array{title: string, description: string, preconditions: string, steps: string, expected_result: string, priority: string, type: string}>
+     *
+     * @throws ConnectionException
+     */
+    private function openaiGenerateWithImage(string $prompt, string $imageData, string $mimeType, array $options): array
+    {
+        $apiKey = config('services.openai.api_key');
+
+        if (empty($apiKey)) {
+            throw new \RuntimeException('OpenAI API key is not configured. Set OPENAI_API_KEY in your .env file.');
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => "Bearer {$apiKey}",
+            ])->timeout(120)->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $this->model,
+                'messages' => [[
+                    'role' => 'user',
+                    'content' => [
+                        [
+                            'type' => 'image_url',
+                            'image_url' => [
+                                'url' => "data:{$mimeType};base64,{$imageData}",
+                            ],
+                        ],
+                        ['type' => 'text', 'text' => $prompt],
+                    ],
+                ]],
+                'temperature' => 0.7,
+                'max_tokens' => 4096,
+            ]);
+
+            if (! $response->successful()) {
+                $error = $response->json('error.message', 'Unknown error');
+                throw new \RuntimeException('OpenAI API error: '.$error);
+            }
+
+            $data = $response->json();
+            $text = $data['choices'][0]['message']['content'] ?? '';
+
+            return $this->parseTestCases($text);
+
+        } catch (ConnectionException $e) {
+            Log::error('OpenAI API connection error: '.$e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
      */
     private function buildPrompt(string $document, array $options): string
     {
@@ -226,12 +321,16 @@ class AITestGeneratorService
             ? "\n\nADDITIONAL REQUIREMENTS:\n{$options['custom_prompt']}"
             : '';
 
+        $languageInstruction = ! empty($options['language'])
+            ? "\n\nLANGUAGE: Generate all test case content (titles, descriptions, steps, expected results) in {$options['language']}."
+            : '';
+
         return "You are an expert QA engineer creating comprehensive test cases from documentation.
 
 DOCUMENTATION:
 {$document}
 
-Generate test cases that cover the key functionality described. Include positive, negative, and edge case scenarios.{$customPrompt}
+Generate test cases that cover the key functionality described. Include positive, negative, and edge case scenarios.{$customPrompt}{$languageInstruction}
 
 IMPORTANT: Return ONLY valid JSON, no additional text before or after.
 
@@ -278,9 +377,13 @@ FIELD RULES:
             ? "\n\nADDITIONAL REQUIREMENTS:\n{$options['custom_prompt']}"
             : '';
 
+        $languageInstruction = ! empty($options['language'])
+            ? "\n\nLANGUAGE: Generate all test case content (titles, descriptions, steps, expected results) in {$options['language']}."
+            : '';
+
         return "You are an expert QA engineer. Analyze this screenshot/image of a software application and generate detailed test cases based on what you see.
 
-Identify UI elements, workflows, and functionality visible in the image. Generate test cases covering interactions, validations, and edge cases.{$customPrompt}
+Identify UI elements, workflows, and functionality visible in the image. Generate test cases covering interactions, validations, and edge cases.{$customPrompt}{$languageInstruction}
 
 IMPORTANT: Return ONLY valid JSON, no additional text before or after.
 

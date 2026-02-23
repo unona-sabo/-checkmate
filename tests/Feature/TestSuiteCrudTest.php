@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Project;
+use App\Models\ProjectFeature;
+use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Models\User;
 use App\Models\Workspace;
@@ -113,6 +115,92 @@ test('viewer cannot update test suite', function () {
             'description' => 'Should not work',
         ])
         ->assertForbidden();
+});
+
+test('store test case with module saves correctly', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->post(route('test-cases.store', [$project, $suite]), [
+        'title' => 'Module Test',
+        'priority' => 'medium',
+        'severity' => 'major',
+        'type' => 'functional',
+        'automation_status' => 'not_automated',
+        'module' => ['UI', 'API'],
+    ]);
+
+    $response->assertRedirect();
+
+    $tc = TestCase::where('test_suite_id', $suite->id)->where('title', 'Module Test')->first();
+    expect($tc)->not->toBeNull();
+    expect($tc->module)->toBe(['UI', 'API']);
+});
+
+test('test case create page passes suite module in props', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create([
+        'project_id' => $project->id,
+        'module' => ['Backend', 'Database'],
+    ]);
+
+    $response = $this->actingAs($user)->get(route('test-cases.create', [$project, $suite]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('TestCases/Create')
+        ->where('testSuite.module', ['Backend', 'Database'])
+    );
+});
+
+test('update with features links existing test cases to those features', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $testSuite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id]);
+
+    $tc1 = TestCase::factory()->create(['test_suite_id' => $testSuite->id]);
+    $tc2 = TestCase::factory()->create(['test_suite_id' => $testSuite->id]);
+
+    $this->actingAs($user)->put(route('test-suites.update', [$project, $testSuite]), [
+        'name' => $testSuite->name,
+        'feature_ids' => [$feature->id],
+    ]);
+
+    expect($feature->testCases()->pluck('test_cases.id')->toArray())
+        ->toEqualCanonicalizing([$tc1->id, $tc2->id]);
+});
+
+test('store creates test suite with module', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(route('test-suites.store', $project), [
+        'name' => 'API Tests',
+        'module' => ['API', 'Backend'],
+    ]);
+
+    $response->assertRedirect();
+
+    $suite = TestSuite::where('project_id', $project->id)->where('name', 'API Tests')->first();
+    expect($suite)->not->toBeNull();
+    expect($suite->module)->toBe(['API', 'Backend']);
+});
+
+test('update modifies test suite module', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $testSuite = TestSuite::factory()->create(['project_id' => $project->id]);
+
+    $this->actingAs($user)->put(route('test-suites.update', [$project, $testSuite]), [
+        'name' => $testSuite->name,
+        'module' => ['UI', 'Database'],
+    ]);
+
+    $testSuite->refresh();
+    expect($testSuite->module)->toBe(['UI', 'Database']);
 });
 
 test('viewer cannot destroy test suite', function () {

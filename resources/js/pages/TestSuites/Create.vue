@@ -10,8 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
+import { Checkbox } from '@/components/ui/checkbox';
 import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Layers, Boxes } from 'lucide-vue-next';
+
+const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;
 
 const props = defineProps<{
     project: Project;
@@ -35,6 +38,7 @@ const form = useForm({
     name: '',
     description: '',
     type: 'functional',
+    module: [] as string[],
     parent_id: preselectedParentId,
     feature_ids: [] as number[],
 });
@@ -110,6 +114,28 @@ const submit = () => {
                                     </SelectContent>
                                 </Select>
                                 <InputError :message="form.errors.type" />
+                            </div>
+
+                            <!-- Module -->
+                            <div class="space-y-2">
+                                <Label>Module</Label>
+                                <div class="flex items-center gap-4">
+                                    <button type="button" class="text-xs text-primary hover:underline cursor-pointer" @click="form.module = [...MODULE_OPTIONS]">Select All</button>
+                                    <button type="button" class="text-xs text-muted-foreground hover:underline cursor-pointer" @click="form.module = []">Clear</button>
+                                </div>
+                                <div class="flex flex-wrap gap-3">
+                                    <label v-for="opt in MODULE_OPTIONS" :key="opt" class="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                            :model-value="form.module.includes(opt)"
+                                            @update:model-value="(checked: boolean) => {
+                                                if (checked) { form.module.push(opt); }
+                                                else { form.module = form.module.filter(m => m !== opt); }
+                                            }"
+                                        />
+                                        <span class="text-sm">{{ opt }}</span>
+                                    </label>
+                                </div>
+                                <InputError :message="form.errors.module" />
                             </div>
 
                             <FeatureSelector v-model="form.feature_ids" :features="features" :project-id="project.id" />

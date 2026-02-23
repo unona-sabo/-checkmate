@@ -6,6 +6,7 @@ use App\Http\Requests\AIGenerator\GenerateTestCasesRequest;
 use App\Http\Requests\AIGenerator\ImportTestCasesRequest;
 use App\Models\AiGeneration;
 use App\Models\Project;
+use App\Models\ProjectFeature;
 use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Services\AITestGeneratorService;
@@ -28,6 +29,7 @@ class AIGeneratorController extends Controller
         $defaultProvider = config('services.ai.default_provider', 'gemini');
         $hasGeminiKey = ! empty(config('services.gemini.api_key'));
         $hasClaudeKey = ! empty(config('services.anthropic.api_key'));
+        $hasOpenaiKey = ! empty(config('services.openai.api_key'));
 
         return Inertia::render('AIGenerator/Index', [
             'project' => $project,
@@ -35,6 +37,7 @@ class AIGeneratorController extends Controller
             'defaultProvider' => $defaultProvider,
             'hasGeminiKey' => $hasGeminiKey,
             'hasClaudeKey' => $hasClaudeKey,
+            'hasOpenaiKey' => $hasOpenaiKey,
         ]);
     }
 
@@ -49,9 +52,12 @@ class AIGeneratorController extends Controller
 
         $service = new AITestGeneratorService($provider);
 
+        $language = $validated['language'] ?? null;
+
         $options = array_filter([
             'count' => $count,
             'custom_prompt' => $customPrompt,
+            'language' => $language,
         ], fn ($v) => $v !== null);
 
         $testCases = match ($validated['input_type']) {
@@ -98,10 +104,12 @@ class AIGeneratorController extends Controller
             ->where('test_suite_id', $testSuite->id)
             ->max('order') ?? -1;
 
+        $createdCaseIds = [];
+
         foreach ($validated['test_cases'] as $index => $caseData) {
             $steps = $this->parseStepsToArray($caseData['steps'] ?? '');
 
-            TestCase::query()->create([
+            $testCase = TestCase::query()->create([
                 'test_suite_id' => $testSuite->id,
                 'title' => $caseData['title'],
                 'description' => $caseData['description'] ?? null,
@@ -115,6 +123,17 @@ class AIGeneratorController extends Controller
                 'order' => $maxOrder + $index + 1,
                 'created_by' => $request->user()->id,
             ]);
+
+            $createdCaseIds[] = $testCase->id;
+        }
+
+        // Link created test cases to features associated with the test suite
+        $featureIds = $testSuite->projectFeatures()->pluck('project_features.id');
+        if ($featureIds->isNotEmpty()) {
+            foreach ($featureIds as $featureId) {
+                $feature = ProjectFeature::query()->find($featureId);
+                $feature->testCases()->syncWithoutDetaching($createdCaseIds);
+            }
         }
 
         // Update ai_generation record if provided

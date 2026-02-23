@@ -2,6 +2,7 @@
 
 use App\Models\AiGeneration;
 use App\Models\Project;
+use App\Models\ProjectFeature;
 use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Models\User;
@@ -302,6 +303,41 @@ test('save validates test_cases are required', function () {
     );
 
     $response->assertSessionHasErrors('test_cases');
+});
+
+test('save links test cases to features associated with the test suite', function () {
+    $suite = TestSuite::factory()->create(['project_id' => $this->project->id]);
+    $feature = ProjectFeature::factory()->create(['project_id' => $this->project->id]);
+    $suite->projectFeatures()->attach($feature->id);
+
+    $this->actingAs($this->user)->post(
+        route('ai-generator.save', $this->project),
+        [
+            'test_suite_id' => $suite->id,
+            'test_cases' => [
+                [
+                    'title' => 'Feature-linked TC 1',
+                    'steps' => '1. Step one',
+                    'expected_result' => 'Result',
+                    'priority' => 'medium',
+                    'type' => 'functional',
+                ],
+                [
+                    'title' => 'Feature-linked TC 2',
+                    'steps' => '1. Step one',
+                    'expected_result' => 'Result',
+                    'priority' => 'high',
+                    'type' => 'functional',
+                ],
+            ],
+        ]
+    );
+
+    $createdCases = TestCase::where('test_suite_id', $suite->id)->pluck('id')->toArray();
+    expect($createdCases)->toHaveCount(2);
+
+    $linkedCaseIds = $feature->testCases()->pluck('test_cases.id')->toArray();
+    expect($linkedCaseIds)->toEqualCanonicalizing($createdCases);
 });
 
 test('save validates test suite belongs to project', function () {

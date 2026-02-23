@@ -463,13 +463,14 @@ const filterSeverity = ref('');
 const filterAutomation = ref('');
 const filterAuthor = ref('');
 const filterFeature = ref('');
+const filterModule = ref('');
 const filterCreatedFrom = ref('');
 const filterCreatedTo = ref('');
 const filterUpdatedFrom = ref('');
 const filterUpdatedTo = ref('');
 
 const activeFilterCount = computed(() => {
-    return [filterType, filterPriority, filterSeverity, filterAutomation, filterAuthor, filterFeature, filterCreatedFrom, filterCreatedTo, filterUpdatedFrom, filterUpdatedTo]
+    return [filterType, filterPriority, filterSeverity, filterAutomation, filterAuthor, filterFeature, filterModule, filterCreatedFrom, filterCreatedTo, filterUpdatedFrom, filterUpdatedTo]
         .filter(f => f.value !== '').length;
 });
 
@@ -480,6 +481,7 @@ const clearFilters = () => {
     filterAutomation.value = '';
     filterAuthor.value = '';
     filterFeature.value = '';
+    filterModule.value = '';
     filterCreatedFrom.value = '';
     filterCreatedTo.value = '';
     filterUpdatedFrom.value = '';
@@ -514,6 +516,12 @@ const filteredFlatSuites = computed(() => {
                     if (tc.project_features && tc.project_features.length > 0) return false;
                 } else if (filterFeature.value) {
                     if (!tc.project_features?.some(f => String(f.id) === filterFeature.value)) return false;
+                }
+                // Module filter
+                if (filterModule.value === '__none__') {
+                    if (tc.module && tc.module.length > 0) return false;
+                } else if (filterModule.value) {
+                    if (!tc.module?.includes(filterModule.value)) return false;
                 }
                 // Date filters
                 if (filterCreatedFrom.value && tc.created_at < filterCreatedFrom.value) return false;
@@ -1323,8 +1331,8 @@ onMounted(() => {
                 <!-- Two Column Layout -->
                 <div class="flex gap-6 flex-1 min-h-0">
                 <!-- Left: Test Suites Navigation -->
-                <div class="w-[430px] shrink-0">
-                    <div class="sticky top-0 rounded-xl border bg-card shadow-sm">
+                <div class="w-[430px] shrink-0 self-start sticky top-6">
+                    <div class="rounded-xl border bg-card shadow-sm">
                         <div class="p-3 border-b bg-muted/30">
                             <div class="flex items-center gap-2 text-sm font-medium">
                                 <FolderTree class="h-4 w-4 text-primary" />
@@ -1584,6 +1592,28 @@ onMounted(() => {
                                 <button v-if="filterFeature" @click="filterFeature = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
                                     <X class="h-3 w-3" />
                                 </button>
+                            </div>
+                            <!-- Module -->
+                            <div>
+                                <Label class="text-[11px] text-muted-foreground mb-1 block">Module</Label>
+                                <div class="relative">
+                                    <Select v-model="filterModule">
+                                        <SelectTrigger class="h-8 text-xs" :class="filterModule ? 'pr-7' : ''">
+                                            <SelectValue placeholder="All" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__none__">No module</SelectItem>
+                                            <SelectItem value="UI">UI</SelectItem>
+                                            <SelectItem value="API">API</SelectItem>
+                                            <SelectItem value="Backend">Backend</SelectItem>
+                                            <SelectItem value="Database">Database</SelectItem>
+                                            <SelectItem value="Integration">Integration</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <button v-if="filterModule" @click="filterModule = ''" class="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                        <X class="h-3 w-3" />
+                                    </button>
+                                </div>
                             </div>
                             <!-- Dates: 2x2 grid spanning 2 columns -->
                             <div class="col-span-2 grid grid-cols-2 gap-x-3 gap-y-2.5">

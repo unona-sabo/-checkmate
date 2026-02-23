@@ -24,6 +24,7 @@ class TestCase extends Model
         'priority',
         'severity',
         'type',
+        'module',
         'automation_status',
         'tags',
         'order',
@@ -39,6 +40,7 @@ class TestCase extends Model
         return [
             'steps' => 'array',
             'tags' => 'array',
+            'module' => 'array',
             'is_automated' => 'boolean',
             'last_automated_run' => 'datetime',
         ];

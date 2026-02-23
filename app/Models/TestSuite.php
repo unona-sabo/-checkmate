@@ -18,8 +18,16 @@ class TestSuite extends Model
         'name',
         'description',
         'type',
+        'module',
         'order',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'module' => 'array',
+        ];
+    }
 
     /**
      * Get the project that owns the test suite.

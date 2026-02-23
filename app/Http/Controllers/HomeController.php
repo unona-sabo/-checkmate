@@ -217,6 +217,7 @@ class HomeController extends Controller
                     'Automation status tracking: not automated, to be automated, automated',
                     'Step-by-step test steps with expected results per step',
                     'Preconditions and expected result fields',
+                    'Module tagging per suite and test case (UI, API, Backend, Database, Integration)',
                     'Tags for categorization',
                     'Creator tracking and filtering by user',
                     'File attachments per test case (images, PDFs, documents, up to 10 MB)',

@@ -421,8 +421,8 @@ const saveChildReorder = () => {
 
             <div class="grid gap-6 lg:grid-cols-4">
                 <!-- Sidebar with navigation -->
-                <div class="lg:col-span-1">
-                    <div class="sticky top-0 rounded-xl border bg-card shadow-sm">
+                <div class="lg:col-span-1 self-start sticky top-6">
+                    <div class="rounded-xl border bg-card shadow-sm">
                         <div class="p-3 border-b bg-muted/30">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2 text-sm font-medium">

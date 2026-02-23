@@ -118,6 +118,7 @@ export interface TestSuite {
     name: string;
     description: string | null;
     type: string;
+    module: string[] | null;
     order: number;
     created_at: string;
     updated_at: string;
@@ -140,6 +141,7 @@ export interface TestCase {
     severity: 'trivial' | 'minor' | 'major' | 'critical' | 'blocker';
     type: 'functional' | 'smoke' | 'regression' | 'integration' | 'acceptance' | 'performance' | 'security' | 'usability' | 'other';
     automation_status: 'not_automated' | 'to_be_automated' | 'automated';
+    module: string[] | null;
     tags: string[] | null;
     order: number;
     created_by: number | null;
@@ -451,7 +453,7 @@ export interface ProjectFeature {
     is_active: boolean;
     test_cases_count?: number;
     checklists_count?: number;
-    test_cases?: { id: number; title: string; test_suite_id: number; test_suite?: { id: number; name: string } }[];
+    test_cases?: { id: number; title: string; test_suite_id: number; module?: string[] | null; test_suite?: { id: number; name: string } }[];
     checklists?: { id: number; name: string }[];
     created_at: string;
     updated_at: string;

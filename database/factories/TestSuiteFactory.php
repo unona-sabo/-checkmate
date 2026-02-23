@@ -29,6 +29,7 @@ class TestSuiteFactory extends Factory
                 'Reports',
             ]),
             'description' => fake()->optional()->sentence(),
+            'module' => null,
             'order' => fake()->numberBetween(0, 10),
         ];
     }

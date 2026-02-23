@@ -42,6 +42,7 @@ const props = defineProps<{
     defaultProvider: string;
     hasGeminiKey: boolean;
     hasClaudeKey: boolean;
+    hasOpenaiKey: boolean;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -60,6 +61,7 @@ const imagePreview = ref<string | null>(null);
 const countInput = ref('');
 const provider = ref(props.defaultProvider);
 const customPrompt = ref('');
+const language = ref('auto');
 
 // File input refs
 const fileInputRef = useTemplateRef<HTMLInputElement>('fileInputRef');
@@ -91,6 +93,7 @@ const editingIndex = ref<number | null>(null);
 const hasApiKey = computed(() => {
     if (provider.value === 'gemini') return props.hasGeminiKey;
     if (provider.value === 'claude') return props.hasClaudeKey;
+    if (provider.value === 'openai') return props.hasOpenaiKey;
     return false;
 });
 
@@ -202,6 +205,10 @@ function buildFormData(): FormData {
 
     if (customPrompt.value.trim()) {
         formData.append('custom_prompt', customPrompt.value.trim());
+    }
+
+    if (language.value && language.value !== 'auto') {
+        formData.append('language', language.value);
     }
 
     if (activeTab.value === 'text') {
@@ -528,7 +535,7 @@ const severityColors: Record<string, string> = {
                                 </p>
                             </div>
 
-                            <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="grid gap-4 sm:grid-cols-3">
                                 <div>
                                     <Label>Number of test cases</Label>
                                     <Input
@@ -555,6 +562,22 @@ const severityColors: Record<string, string> = {
                                             <SelectItem value="claude">
                                                 Claude {{ hasClaudeKey ? '' : '(no key)' }}
                                             </SelectItem>
+                                            <SelectItem value="openai">
+                                                OpenAI {{ hasOpenaiKey ? '' : '(no key)' }}
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label>Language</Label>
+                                    <Select v-model="language">
+                                        <SelectTrigger class="mt-1.5">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="auto">Auto</SelectItem>
+                                            <SelectItem value="English">English</SelectItem>
+                                            <SelectItem value="Українська">Українська</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -563,7 +586,7 @@ const severityColors: Record<string, string> = {
                             <div v-if="!hasApiKey" class="flex items-center gap-2 rounded-md bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
                                 <AlertTriangle class="h-4 w-4 shrink-0" />
                                 <span>
-                                    {{ provider === 'gemini' ? 'GEMINI_API_KEY' : 'ANTHROPIC_API_KEY' }} is not configured in your .env file.
+                                    {{ provider === 'gemini' ? 'GEMINI_API_KEY' : provider === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY' }} is not configured in your .env file.
                                 </span>
                             </div>
 

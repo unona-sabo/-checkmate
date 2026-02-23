@@ -144,9 +144,14 @@ const filterSeverity = ref('');
 const filterAutomation = ref('');
 const filterAuthor = ref('');
 const filterFeature = ref('');
+const filterModule = ref('');
+const filterCreatedFrom = ref('');
+const filterCreatedTo = ref('');
+const filterUpdatedFrom = ref('');
+const filterUpdatedTo = ref('');
 
 const activeFilterCount = computed(() => {
-    return [filterType, filterPriority, filterSeverity, filterAutomation, filterAuthor, filterFeature]
+    return [filterType, filterPriority, filterSeverity, filterAutomation, filterAuthor, filterFeature, filterModule, filterCreatedFrom, filterCreatedTo, filterUpdatedFrom, filterUpdatedTo]
         .filter(f => f.value !== '').length;
 });
 
@@ -157,6 +162,11 @@ const clearFilters = () => {
     filterAutomation.value = '';
     filterAuthor.value = '';
     filterFeature.value = '';
+    filterModule.value = '';
+    filterCreatedFrom.value = '';
+    filterCreatedTo.value = '';
+    filterUpdatedFrom.value = '';
+    filterUpdatedTo.value = '';
 };
 
 const filteredSections = computed(() => {
@@ -181,6 +191,15 @@ const filteredSections = computed(() => {
                 } else if (filterFeature.value) {
                     if (!tc.project_features?.some(f => String(f.id) === filterFeature.value)) return false;
                 }
+                if (filterModule.value === '__none__') {
+                    if (tc.module && tc.module.length > 0) return false;
+                } else if (filterModule.value) {
+                    if (!tc.module?.includes(filterModule.value)) return false;
+                }
+                if (filterCreatedFrom.value && tc.created_at < filterCreatedFrom.value) return false;
+                if (filterCreatedTo.value && tc.created_at.slice(0, 10) > filterCreatedTo.value) return false;
+                if (filterUpdatedFrom.value && tc.updated_at < filterUpdatedFrom.value) return false;
+                if (filterUpdatedTo.value && tc.updated_at.slice(0, 10) > filterUpdatedTo.value) return false;
                 return true;
             }),
         }))
@@ -372,22 +391,7 @@ const isCrossProject = computed(() => {
 
 const allSuiteOptions = computed(() => {
     const options: { id: number; name: string; label: string }[] = [];
-    const suites = isCrossProject.value ? availableSuites.value : (props.testSuite.parent_id ? [] : [props.testSuite]);
-    // For current project, build from the testSuite data we have
-    if (!isCrossProject.value) {
-        // Use parent suite options if available
-        const parentSuites = props.testSuite.parent ? [props.testSuite.parent] : [props.testSuite];
-        parentSuites.forEach(suite => {
-            options.push({ id: suite.id, name: suite.name, label: suite.name });
-            if (suite.id === props.testSuite.id) {
-                props.testSuite.children?.forEach(child => {
-                    options.push({ id: child.id, name: child.name, label: `${suite.name} / ${child.name}` });
-                });
-            }
-        });
-        return options;
-    }
-    suites.forEach(suite => {
+    availableSuites.value.forEach(suite => {
         options.push({ id: suite.id, name: suite.name, label: suite.name });
         suite.children?.forEach(child => {
             options.push({ id: child.id, name: child.name, label: `${suite.name} / ${child.name}` });
@@ -395,6 +399,16 @@ const allSuiteOptions = computed(() => {
     });
     return options;
 });
+
+const loadSuitesForProject = (projectId: string) => {
+    loadingSuites.value = true;
+    fetch(`/projects/${props.project.id}/test-suites/copy-suites?project_id=${projectId}`, {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    })
+        .then(res => res.json())
+        .then(data => { availableSuites.value = data; })
+        .finally(() => { loadingSuites.value = false; });
+};
 
 const openCopyDialog = () => {
     copyTargetProjectId.value = String(props.project.id);
@@ -412,24 +426,14 @@ const openCopyDialog = () => {
         .then(res => res.json())
         .then(data => { availableProjects.value = data; })
         .finally(() => { loadingProjects.value = false; });
+
+    loadSuitesForProject(String(props.project.id));
 };
 
 watch(copyTargetProjectId, (newVal) => {
     copyTargetSuiteId.value = '';
     if (!newVal) return;
-
-    if (Number(newVal) === props.project.id) {
-        availableSuites.value = [];
-        return;
-    }
-
-    loadingSuites.value = true;
-    fetch(`/projects/${props.project.id}/test-suites/copy-suites?project_id=${newVal}`, {
-        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-    })
-        .then(res => res.json())
-        .then(data => { availableSuites.value = data; })
-        .finally(() => { loadingSuites.value = false; });
+    loadSuitesForProject(newVal);
 });
 
 const copyToSuite = () => {
@@ -816,77 +820,220 @@ const exportSelectedCsv = () => {
                 </div>
             </div>
 
-            <!-- Filter panel -->
-            <div v-if="showFilters" class="rounded-lg border p-4 bg-muted/30 space-y-3">
-                <div class="flex items-center justify-between">
-                    <Label class="text-sm font-medium">Filters</Label>
-                    <Button v-if="activeFilterCount > 0" variant="ghost" size="sm" class="text-xs h-7" @click="clearFilters">
-                        Clear all
-                    </Button>
+            <!-- Content wrapper for absolute filter positioning -->
+            <div class="relative">
+            <!-- Filter Dropdown -->
+            <div v-if="showFilters" class="absolute top-0 left-0 z-20 w-3/4 rounded-xl border bg-card shadow-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm font-medium flex items-center gap-2">
+                        <Filter class="h-4 w-4 text-primary" />
+                        Filters
+                        <Badge v-if="activeFilterCount > 0" class="h-5 px-1.5 text-[10px] rounded-full">{{ activeFilterCount }}</Badge>
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <Button
+                            v-if="activeFilterCount > 0"
+                            variant="ghost"
+                            size="sm"
+                            class="h-6 gap-1 text-xs text-muted-foreground hover:text-destructive"
+                            @click="clearFilters"
+                        >
+                            <X class="h-3 w-3" />
+                            Clear All
+                        </Button>
+                        <button @click="showFilters = false" class="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer">
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                    <Select v-model="filterType">
-                        <SelectTrigger class="h-8 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="">All Types</SelectItem>
-                            <SelectItem value="functional">Functional</SelectItem>
-                            <SelectItem value="smoke">Smoke</SelectItem>
-                            <SelectItem value="regression">Regression</SelectItem>
-                            <SelectItem value="integration">Integration</SelectItem>
-                            <SelectItem value="acceptance">Acceptance</SelectItem>
-                            <SelectItem value="performance">Performance</SelectItem>
-                            <SelectItem value="security">Security</SelectItem>
-                            <SelectItem value="usability">Usability</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select v-model="filterPriority">
-                        <SelectTrigger class="h-8 text-xs"><SelectValue placeholder="Priority" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="">All Priorities</SelectItem>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="critical">Critical</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select v-model="filterSeverity">
-                        <SelectTrigger class="h-8 text-xs"><SelectValue placeholder="Severity" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="">All Severities</SelectItem>
-                            <SelectItem value="trivial">Trivial</SelectItem>
-                            <SelectItem value="minor">Minor</SelectItem>
-                            <SelectItem value="major">Major</SelectItem>
-                            <SelectItem value="critical">Critical</SelectItem>
-                            <SelectItem value="blocker">Blocker</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select v-model="filterAutomation">
-                        <SelectTrigger class="h-8 text-xs"><SelectValue placeholder="Automation" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="">All</SelectItem>
-                            <SelectItem value="not_automated">Not Automated</SelectItem>
-                            <SelectItem value="to_be_automated">To Be Automated</SelectItem>
-                            <SelectItem value="automated">Automated</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select v-model="filterAuthor">
-                        <SelectTrigger class="h-8 text-xs"><SelectValue placeholder="Author" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="">All Authors</SelectItem>
-                            <SelectItem v-for="user in users" :key="user.id" :value="String(user.id)">{{ user.name }}</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select v-model="filterFeature">
-                        <SelectTrigger class="h-8 text-xs"><SelectValue placeholder="Feature" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="">All Features</SelectItem>
-                            <SelectItem value="__none__">No Feature</SelectItem>
-                            <SelectItem v-for="f in availableFeatures" :key="f.id" :value="String(f.id)">{{ f.name }}</SelectItem>
-                        </SelectContent>
-                    </Select>
+                <div class="grid grid-cols-3 gap-x-3 gap-y-2.5">
+                    <!-- Type -->
+                    <div class="relative">
+                        <Label class="text-[11px] text-muted-foreground mb-1 block">Type</Label>
+                        <Select v-model="filterType">
+                            <SelectTrigger class="h-8 text-xs" :class="filterType ? 'pr-7' : ''">
+                                <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="functional">Functional</SelectItem>
+                                <SelectItem value="smoke">Smoke</SelectItem>
+                                <SelectItem value="regression">Regression</SelectItem>
+                                <SelectItem value="integration">Integration</SelectItem>
+                                <SelectItem value="acceptance">Acceptance</SelectItem>
+                                <SelectItem value="performance">Performance</SelectItem>
+                                <SelectItem value="security">Security</SelectItem>
+                                <SelectItem value="usability">Usability</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <button v-if="filterType" @click="filterType = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <X class="h-3 w-3" />
+                        </button>
+                    </div>
+                    <!-- Priority -->
+                    <div class="relative">
+                        <Label class="text-[11px] text-muted-foreground mb-1 block">Priority</Label>
+                        <Select v-model="filterPriority">
+                            <SelectTrigger class="h-8 text-xs" :class="filterPriority ? 'pr-7' : ''">
+                                <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="critical">Critical</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <button v-if="filterPriority" @click="filterPriority = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <X class="h-3 w-3" />
+                        </button>
+                    </div>
+                    <!-- Automation -->
+                    <div class="relative">
+                        <Label class="text-[11px] text-muted-foreground mb-1 block">Automation</Label>
+                        <Select v-model="filterAutomation">
+                            <SelectTrigger class="h-8 text-xs" :class="filterAutomation ? 'pr-7' : ''">
+                                <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="not_automated">Not Automated</SelectItem>
+                                <SelectItem value="to_be_automated">To Be Automated</SelectItem>
+                                <SelectItem value="automated">Automated</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <button v-if="filterAutomation" @click="filterAutomation = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <X class="h-3 w-3" />
+                        </button>
+                    </div>
+                    <!-- Severity -->
+                    <div class="relative">
+                        <Label class="text-[11px] text-muted-foreground mb-1 block">Severity</Label>
+                        <Select v-model="filterSeverity">
+                            <SelectTrigger class="h-8 text-xs" :class="filterSeverity ? 'pr-7' : ''">
+                                <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="trivial">Trivial</SelectItem>
+                                <SelectItem value="minor">Minor</SelectItem>
+                                <SelectItem value="major">Major</SelectItem>
+                                <SelectItem value="critical">Critical</SelectItem>
+                                <SelectItem value="blocker">Blocker</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <button v-if="filterSeverity" @click="filterSeverity = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <X class="h-3 w-3" />
+                        </button>
+                    </div>
+                    <!-- Author -->
+                    <div class="relative">
+                        <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
+                        <Select v-model="filterAuthor">
+                            <SelectTrigger class="h-8 text-xs" :class="filterAuthor ? 'pr-7' : ''">
+                                <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="user in users"
+                                    :key="user.id"
+                                    :value="String(user.id)"
+                                >
+                                    {{ user.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <button v-if="filterAuthor" @click="filterAuthor = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <X class="h-3 w-3" />
+                        </button>
+                    </div>
+                    <!-- Feature -->
+                    <div class="relative">
+                        <Label class="text-[11px] text-muted-foreground mb-1 block">Feature</Label>
+                        <Select v-model="filterFeature">
+                            <SelectTrigger class="h-8 text-xs" :class="filterFeature ? 'pr-7' : ''">
+                                <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__none__">No feature</SelectItem>
+                                <SelectItem
+                                    v-for="f in availableFeatures"
+                                    :key="f.id"
+                                    :value="String(f.id)"
+                                >
+                                    {{ f.module?.length ? `${f.module.join(', ')} / ` : '' }}{{ f.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <button v-if="filterFeature" @click="filterFeature = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <X class="h-3 w-3" />
+                        </button>
+                    </div>
+                    <!-- Module -->
+                    <div>
+                        <Label class="text-[11px] text-muted-foreground mb-1 block">Module</Label>
+                        <div class="relative">
+                            <Select v-model="filterModule">
+                                <SelectTrigger class="h-8 text-xs" :class="filterModule ? 'pr-7' : ''">
+                                    <SelectValue placeholder="All" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__none__">No module</SelectItem>
+                                    <SelectItem value="UI">UI</SelectItem>
+                                    <SelectItem value="API">API</SelectItem>
+                                    <SelectItem value="Backend">Backend</SelectItem>
+                                    <SelectItem value="Database">Database</SelectItem>
+                                    <SelectItem value="Integration">Integration</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <button v-if="filterModule" @click="filterModule = ''" class="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Dates: 2x2 grid spanning 2 columns -->
+                    <div class="col-span-2 grid grid-cols-2 gap-x-3 gap-y-2.5">
+                        <!-- Created From -->
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Created From</Label>
+                            <Input v-model="filterCreatedFrom" type="date" class="h-8 text-xs" :class="filterCreatedFrom ? 'pr-7' : ''" />
+                            <button v-if="filterCreatedFrom" @click="filterCreatedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <!-- Created To -->
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Created To</Label>
+                            <Input v-model="filterCreatedTo" type="date" class="h-8 text-xs" :class="filterCreatedTo ? 'pr-7' : ''" />
+                            <button v-if="filterCreatedTo" @click="filterCreatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <!-- Updated From -->
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Updated From</Label>
+                            <Input v-model="filterUpdatedFrom" type="date" class="h-8 text-xs" :class="filterUpdatedFrom ? 'pr-7' : ''" />
+                            <button v-if="filterUpdatedFrom" @click="filterUpdatedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <!-- Updated To -->
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Updated To</Label>
+                            <Input v-model="filterUpdatedTo" type="date" class="h-8 text-xs" :class="filterUpdatedTo ? 'pr-7' : ''" />
+                            <button v-if="filterUpdatedTo" @click="filterUpdatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Results count -->
+                    <div class="flex items-end justify-center pb-1">
+                        <span class="text-sm text-muted-foreground">
+                            Found <span class="font-semibold text-foreground">{{ filteredTestCaseCount }}</span> {{ filteredTestCaseCount === 1 ? 'case' : 'cases' }}
+                        </span>
+                    </div>
                 </div>
             </div>
+            <!-- Backdrop to close filter -->
+            <div v-if="showFilters" class="fixed inset-0 z-10" @click="showFilters = false" />
 
             <!-- Empty State -->
             <div v-if="suiteSections.length === 0 && !testSuite.children?.length" class="flex flex-1 items-center justify-center">
@@ -981,8 +1128,7 @@ const exportSelectedCsv = () => {
                                 >
                                     <Checkbox
                                         :model-value="isTestCaseSelected(testCase.id)"
-                                        @update:model-value="toggleTestCaseSelection(testCase.id)"
-                                        class="cursor-pointer"
+                                        class="cursor-pointer pointer-events-none"
                                     />
                                 </div>
                                 <div
@@ -1010,6 +1156,9 @@ const exportSelectedCsv = () => {
                                 </Badge>
                                 <Badge variant="secondary" class="text-[10px] px-1.5 h-4 font-normal">
                                     {{ testCase.type }}
+                                </Badge>
+                                <Badge v-for="mod in (testCase.module || [])" :key="mod" variant="outline" class="text-[10px] px-1.5 h-4 font-normal">
+                                    {{ mod }}
                                 </Badge>
                             </div>
                         </div>
@@ -1075,6 +1224,7 @@ const exportSelectedCsv = () => {
                         </div>
                     </div>
                 </template>
+            </div>
             </div>
         </div>
 

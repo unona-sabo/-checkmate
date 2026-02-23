@@ -20,6 +20,8 @@ class UpdateTestCaseRequest extends FormRequest
             'severity' => 'required|in:trivial,minor,major,critical,blocker',
             'type' => 'required|in:functional,smoke,regression,integration,acceptance,performance,security,usability,other',
             'automation_status' => 'required|in:not_automated,to_be_automated,automated',
+            'module' => 'nullable|array',
+            'module.*' => 'string|in:UI,API,Backend,Database,Integration',
             'tags' => 'nullable|array',
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',

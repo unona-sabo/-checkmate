@@ -11,9 +11,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
 import { Edit, Plus, Trash2, Paperclip, X, Download } from 'lucide-vue-next';
 import { ref } from 'vue';
+
+const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;
 
 const props = defineProps<{
     project: Project;
@@ -42,6 +45,7 @@ const form = useForm({
     severity: props.testCase.severity,
     type: props.testCase.type,
     automation_status: props.testCase.automation_status,
+    module: props.testCase.module ?? [] as string[],
     tags: props.testCase.tags || [],
     feature_ids: (props.testCase.project_features ?? []).map(f => f.id),
     attachments: [] as File[],
@@ -254,6 +258,28 @@ const deleteTestCase = () => {
                                         </SelectContent>
                                     </Select>
                                 </div>
+                            </div>
+
+                            <!-- Module -->
+                            <div class="space-y-2">
+                                <Label>Module</Label>
+                                <div class="flex items-center gap-4">
+                                    <button type="button" class="text-xs text-primary hover:underline cursor-pointer" @click="form.module = [...MODULE_OPTIONS]">Select All</button>
+                                    <button type="button" class="text-xs text-muted-foreground hover:underline cursor-pointer" @click="form.module = []">Clear</button>
+                                </div>
+                                <div class="flex flex-wrap gap-3">
+                                    <label v-for="opt in MODULE_OPTIONS" :key="opt" class="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                            :model-value="form.module.includes(opt)"
+                                            @update:model-value="(checked: boolean) => {
+                                                if (checked) { form.module.push(opt); }
+                                                else { form.module = form.module.filter(m => m !== opt); }
+                                            }"
+                                        />
+                                        <span class="text-sm">{{ opt }}</span>
+                                    </label>
+                                </div>
+                                <InputError :message="form.errors.module" />
                             </div>
 
                             <!-- Features -->

@@ -36,7 +36,7 @@ class TestCoverageController extends Controller
         $features = $project->features()
             ->where('is_active', true)
             ->withCount(['testCases', 'checklists'])
-            ->with('testCases:id,title,test_suite_id', 'testCases.testSuite:id,name', 'checklists:id,name')
+            ->with('testCases:id,title,test_suite_id,module', 'testCases.testSuite:id,name', 'checklists:id,name')
             ->orderBy('module')
             ->orderBy('priority')
             ->get();
