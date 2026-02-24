@@ -19,6 +19,13 @@ import {
     X,
     FileText,
     Rocket,
+    Palette,
+    StickyNote,
+    Database,
+    BarChart3,
+    Drama,
+    Terminal,
+    Link2,
 } from 'lucide-vue-next';
 import { releaseStatusVariant } from '@/lib/badge-variants';
 import { ref, watch, computed } from 'vue';
@@ -79,6 +86,13 @@ const getTypeIcon = (type: string) => {
         case 'bugreports': return Bug;
         case 'documentations': return FileText;
         case 'releases': return Rocket;
+        case 'design_links': return Palette;
+        case 'notes': return StickyNote;
+        case 'test_data_users': return Database;
+        case 'test_data_commands': return Terminal;
+        case 'test_data_links': return Link2;
+        case 'project_features': return Drama;
+        case 'automation_results': return BarChart3;
         default: return FileText;
     }
 };
@@ -105,12 +119,34 @@ const getBadgeColor = (type: string, value: string) => {
             case 'trivial': return 'bg-gray-100 text-gray-600 border-gray-200';
         }
     }
-    if (type === 'test_cases') {
+    if (type === 'test_cases' || type === 'project_features') {
         switch (value) {
             case 'critical': return 'bg-red-100 text-red-800 border-red-200';
             case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
             case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             case 'low': return 'bg-gray-100 text-gray-600 border-gray-200';
+        }
+    }
+    if (type === 'releases') {
+        switch (value) {
+            case 'planned': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'in_progress': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'released': return 'bg-green-100 text-green-800 border-green-200';
+            case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
+        }
+    }
+    if (type === 'notes') {
+        switch (value) {
+            case 'draft': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'published': return 'bg-green-100 text-green-800 border-green-200';
+        }
+    }
+    if (type === 'automation_results') {
+        switch (value) {
+            case 'passed': return 'bg-green-100 text-green-800 border-green-200';
+            case 'failed': return 'bg-red-100 text-red-800 border-red-200';
+            case 'skipped': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'error': return 'bg-orange-100 text-orange-800 border-orange-200';
         }
     }
     return 'bg-muted text-muted-foreground border-border';

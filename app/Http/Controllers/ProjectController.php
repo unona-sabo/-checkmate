@@ -235,6 +235,207 @@ class ProjectController extends Controller
             ];
         }
 
+        // Releases
+        $releases = $project->releases()
+            ->where(function ($q) use ($term) {
+                $q->where('name', 'like', $term)
+                    ->orWhere('version', 'like', $term)
+                    ->orWhere('description', 'like', $term);
+            })
+            ->limit(10)
+            ->get();
+
+        if ($releases->isNotEmpty()) {
+            $results[] = [
+                'type' => 'releases',
+                'label' => 'Releases',
+                'count' => $releases->count(),
+                'items' => $releases->map(fn ($r) => [
+                    'id' => $r->id,
+                    'title' => $r->version.' — '.$r->name,
+                    'subtitle' => null,
+                    'badge' => $r->status,
+                    'url' => route('releases.show', [$project, $r]),
+                ]),
+            ];
+        }
+
+        // Design Links
+        $designLinks = $project->designLinks()
+            ->where(function ($q) use ($term) {
+                $q->where('title', 'like', $term)
+                    ->orWhere('description', 'like', $term)
+                    ->orWhere('url', 'like', $term);
+            })
+            ->limit(10)
+            ->get();
+
+        if ($designLinks->isNotEmpty()) {
+            $results[] = [
+                'type' => 'design_links',
+                'label' => 'Design Links',
+                'count' => $designLinks->count(),
+                'items' => $designLinks->map(fn ($dl) => [
+                    'id' => $dl->id,
+                    'title' => $dl->title,
+                    'subtitle' => $dl->url,
+                    'badge' => $dl->category,
+                    'url' => '/projects/'.$project->id.'/design',
+                ]),
+            ];
+        }
+
+        // Notes
+        $notes = $project->notes()
+            ->where(function ($q) use ($term) {
+                $q->where('title', 'like', $term)
+                    ->orWhere('content', 'like', $term);
+            })
+            ->limit(10)
+            ->get();
+
+        if ($notes->isNotEmpty()) {
+            $results[] = [
+                'type' => 'notes',
+                'label' => 'Notes',
+                'count' => $notes->count(),
+                'items' => $notes->map(fn ($n) => [
+                    'id' => $n->id,
+                    'title' => $n->title,
+                    'subtitle' => null,
+                    'badge' => $n->is_draft ? 'draft' : 'published',
+                    'url' => route('projects.notes.show', [$project, $n]),
+                ]),
+            ];
+        }
+
+        // Test Data — Users
+        $testUsers = $project->testUsers()
+            ->where(function ($q) use ($term) {
+                $q->where('name', 'like', $term)
+                    ->orWhere('email', 'like', $term)
+                    ->orWhere('role', 'like', $term)
+                    ->orWhere('description', 'like', $term);
+            })
+            ->limit(10)
+            ->get();
+
+        if ($testUsers->isNotEmpty()) {
+            $results[] = [
+                'type' => 'test_data_users',
+                'label' => 'Test Data — Users',
+                'count' => $testUsers->count(),
+                'items' => $testUsers->map(fn ($u) => [
+                    'id' => $u->id,
+                    'title' => $u->name,
+                    'subtitle' => $u->email,
+                    'badge' => $u->role,
+                    'url' => '/projects/'.$project->id.'/test-data',
+                ]),
+            ];
+        }
+
+        // Test Data — Commands
+        $testCommands = $project->testCommands()
+            ->where(function ($q) use ($term) {
+                $q->where('description', 'like', $term)
+                    ->orWhere('command', 'like', $term)
+                    ->orWhere('comment', 'like', $term);
+            })
+            ->limit(10)
+            ->get();
+
+        if ($testCommands->isNotEmpty()) {
+            $results[] = [
+                'type' => 'test_data_commands',
+                'label' => 'Test Data — Commands',
+                'count' => $testCommands->count(),
+                'items' => $testCommands->map(fn ($c) => [
+                    'id' => $c->id,
+                    'title' => $c->description,
+                    'subtitle' => $c->command,
+                    'badge' => $c->category,
+                    'url' => '/projects/'.$project->id.'/test-data',
+                ]),
+            ];
+        }
+
+        // Test Data — Links
+        $testLinks = $project->testLinks()
+            ->where(function ($q) use ($term) {
+                $q->where('description', 'like', $term)
+                    ->orWhere('url', 'like', $term)
+                    ->orWhere('comment', 'like', $term);
+            })
+            ->limit(10)
+            ->get();
+
+        if ($testLinks->isNotEmpty()) {
+            $results[] = [
+                'type' => 'test_data_links',
+                'label' => 'Test Data — Links',
+                'count' => $testLinks->count(),
+                'items' => $testLinks->map(fn ($l) => [
+                    'id' => $l->id,
+                    'title' => $l->description,
+                    'subtitle' => $l->url,
+                    'badge' => $l->category,
+                    'url' => '/projects/'.$project->id.'/test-data',
+                ]),
+            ];
+        }
+
+        // Project Features (Test Coverage)
+        $projectFeatures = $project->features()
+            ->where('is_active', true)
+            ->where(function ($q) use ($term) {
+                $q->where('name', 'like', $term)
+                    ->orWhere('description', 'like', $term)
+                    ->orWhere('category', 'like', $term);
+            })
+            ->limit(10)
+            ->get();
+
+        if ($projectFeatures->isNotEmpty()) {
+            $results[] = [
+                'type' => 'project_features',
+                'label' => 'Project Features',
+                'count' => $projectFeatures->count(),
+                'items' => $projectFeatures->map(fn ($f) => [
+                    'id' => $f->id,
+                    'title' => $f->name,
+                    'subtitle' => $f->category,
+                    'badge' => $f->priority,
+                    'url' => '/projects/'.$project->id.'/test-coverage',
+                ]),
+            ];
+        }
+
+        // Automation Results
+        $automationResults = $project->automationTestResults()
+            ->where(function ($q) use ($term) {
+                $q->where('test_name', 'like', $term)
+                    ->orWhere('test_file', 'like', $term)
+                    ->orWhere('error_message', 'like', $term);
+            })
+            ->limit(10)
+            ->get();
+
+        if ($automationResults->isNotEmpty()) {
+            $results[] = [
+                'type' => 'automation_results',
+                'label' => 'Automation Results',
+                'count' => $automationResults->count(),
+                'items' => $automationResults->map(fn ($ar) => [
+                    'id' => $ar->id,
+                    'title' => $ar->test_name,
+                    'subtitle' => $ar->test_file,
+                    'badge' => $ar->status,
+                    'url' => '/projects/'.$project->id.'/automation',
+                ]),
+            ];
+        }
+
         $total = collect($results)->sum('count');
 
         return response()->json([
