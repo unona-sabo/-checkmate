@@ -33,7 +33,7 @@ import {
     Trash2,
     Clipboard,
 } from 'lucide-vue-next';
-import { ref, computed, useTemplateRef, onMounted, onUnmounted } from 'vue';
+import { ref, computed, useTemplateRef, onMounted, onUnmounted, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 
 const props = defineProps<{
@@ -59,7 +59,11 @@ const fileInput = ref<File | null>(null);
 const imageInput = ref<File | null>(null);
 const imagePreview = ref<string | null>(null);
 const countInput = ref('');
-const provider = ref(props.defaultProvider);
+const provider = ref(localStorage.getItem('ai_provider') || props.defaultProvider);
+
+watch(provider, (val) => {
+    localStorage.setItem('ai_provider', val);
+});
 const customPrompt = ref('');
 const language = ref('auto');
 

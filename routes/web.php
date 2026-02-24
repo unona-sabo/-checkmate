@@ -19,6 +19,7 @@ use App\Http\Controllers\TestRunCaseController;
 use App\Http\Controllers\TestRunController;
 use App\Http\Controllers\TestRunTemplateController;
 use App\Http\Controllers\TestSuiteController;
+use App\Http\Controllers\TranslationController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
 use Illuminate\Support\Facades\Route;
@@ -129,6 +130,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('cases/{testRunCase}', [TestRunCaseController::class, 'update'])->name('update');
         Route::post('cases/bulk-update', [TestRunCaseController::class, 'bulkUpdate'])->name('bulk-update');
         Route::post('cases/{testRunCase}/assign-to-me', [TestRunCaseController::class, 'assignToMe'])->name('assign-to-me');
+        Route::delete('cases/{testRunCase}', [TestRunCaseController::class, 'destroy'])->name('destroy');
     });
 
     // Bugreports (nested under projects)
@@ -261,6 +263,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('ai-generator/generate', [AIGeneratorController::class, 'generate'])->name('generate');
         Route::post('ai-generator/save', [AIGeneratorController::class, 'save'])->name('save');
     });
+
+    // Translation (AI-powered)
+    Route::post('projects/{project}/translate', [TranslationController::class, 'translate'])->name('translate');
 
     // Notes (nested under projects)
     Route::prefix('projects/{project}')->name('projects.notes.')->group(function () {

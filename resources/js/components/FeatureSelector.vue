@@ -45,23 +45,21 @@ const filteredFeatures = computed(() => {
     );
 });
 
-const groupedFeatures = computed(() => {
-    const groups: Record<string, FeatureSummary[]> = {};
-    for (const f of filteredFeatures.value) {
-        const modules = f.module?.length ? f.module : ['Uncategorized'];
-        for (const mod of modules) {
-            if (!groups[mod]) groups[mod] = [];
-            if (!groups[mod].some(existing => existing.id === f.id)) {
-                groups[mod].push(f);
-            }
-        }
-    }
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-});
-
 const selectedFeatures = computed(() => {
     return localFeatures.value.filter(f => props.modelValue.includes(f.id));
 });
+
+const allSelected = computed(() => {
+    return localFeatures.value.length > 0 && localFeatures.value.every(f => props.modelValue.includes(f.id));
+});
+
+const toggleAll = () => {
+    if (allSelected.value) {
+        emit('update:modelValue', []);
+    } else {
+        emit('update:modelValue', localFeatures.value.map(f => f.id));
+    }
+};
 
 const toggle = (id: number) => {
     const current = [...props.modelValue];
@@ -204,30 +202,32 @@ const createFeature = async () => {
                     class="h-8 pl-8 text-sm"
                 />
             </div>
+            <label class="flex items-center gap-2 border-t px-3 py-1.5 cursor-pointer hover:bg-muted/50">
+                <Checkbox :model-value="allSelected" @update:model-value="toggleAll" />
+                <span class="text-sm text-muted-foreground">{{ allSelected ? 'Deselect All' : 'Select All' }}</span>
+            </label>
             <div class="max-h-48 overflow-y-auto border-t px-2 py-1">
-                <template v-if="groupedFeatures.length">
-                    <div v-for="[module, features] in groupedFeatures" :key="module">
-                        <div class="px-1 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {{ module }}
-                        </div>
-                        <label
-                            v-for="feature in features"
-                            :key="feature.id"
-                            class="flex items-center gap-2 rounded px-1 py-1.5 cursor-pointer hover:bg-muted/50"
+                <template v-if="filteredFeatures.length">
+                    <label
+                        v-for="feature in filteredFeatures"
+                        :key="feature.id"
+                        class="flex items-center gap-2 rounded px-1 py-1.5 cursor-pointer hover:bg-muted/50"
+                    >
+                        <Checkbox
+                            :model-value="modelValue.includes(feature.id)"
+                            @update:model-value="toggle(feature.id)"
+                        />
+                        <span class="flex-1 text-sm">{{ feature.name }}</span>
+                        <Badge v-for="mod in (feature.module || [])" :key="mod" variant="outline" class="text-xs">
+                            {{ mod }}
+                        </Badge>
+                        <span
+                            class="rounded px-1.5 py-0.5 text-xs font-medium"
+                            :class="priorityColor(feature.priority)"
                         >
-                            <Checkbox
-                                :model-value="modelValue.includes(feature.id)"
-                                @update:model-value="toggle(feature.id)"
-                            />
-                            <span class="flex-1 text-sm">{{ feature.name }}</span>
-                            <span
-                                class="rounded px-1.5 py-0.5 text-xs font-medium"
-                                :class="priorityColor(feature.priority)"
-                            >
-                                {{ feature.priority }}
-                            </span>
-                        </label>
-                    </div>
+                            {{ feature.priority }}
+                        </span>
+                    </label>
                 </template>
                 <div v-else class="py-3 text-center text-sm text-muted-foreground">
                     No features matching "{{ search }}"

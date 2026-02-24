@@ -24,10 +24,32 @@ class ChecklistController extends Controller
         $this->authorize('view', $project);
 
         $checklists = $project->checklists()
-            ->withCount('rows')
-            ->with(['sectionHeaders:id,checklist_id,data,order', 'projectFeatures:id,name,module'])
+            ->with(['rows:id,checklist_id,data,row_type', 'sectionHeaders:id,checklist_id,data,order', 'projectFeatures:id,name,module'])
             ->orderBy('order')
             ->get(['id', 'project_id', 'name', 'columns_config', 'order', 'category', 'created_at', 'updated_at']);
+
+        foreach ($checklists as $checklist) {
+            $textKeys = collect($checklist->columns_config ?? [])
+                ->whereIn('type', ['text', 'date'])
+                ->pluck('key')
+                ->toArray();
+
+            $checklist->setAttribute('rows_count', $checklist->rows
+                ->where('row_type', 'normal')
+                ->filter(function ($row) use ($textKeys): bool {
+                    foreach ($textKeys as $key) {
+                        $value = $row->data[$key] ?? null;
+                        if (is_string($value) && trim($value) !== '') {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                })
+                ->count());
+
+            $checklist->unsetRelation('rows');
+        }
 
         $availableFeatures = $project->features()->where('is_active', true)
             ->orderBy('module')->orderBy('name')

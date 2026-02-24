@@ -498,7 +498,10 @@ const getBugStatusColor = (status: string) => {
                                 :href="`/projects/${project.id}/releases/${release.id}`"
                                 class="flex items-center justify-between gap-6 rounded border px-3 py-2 text-sm transition-colors hover:bg-muted/50 cursor-pointer"
                             >
-                                <span class="font-medium truncate min-w-0">{{ release.version }} — {{ release.name }}</span>
+                                <span class="flex items-center gap-2 truncate min-w-0">
+                                    <Badge variant="outline" class="font-mono text-xs shrink-0">v{{ release.version }}</Badge>
+                                    <span class="font-medium truncate">{{ release.name }}</span>
+                                </span>
                                 <div class="flex items-center gap-2 shrink-0">
                                     <Badge :variant="releaseStatusVariant(release.status)" class="text-xs px-1.5 py-0 h-5">
                                         {{ release.status?.replace('_', ' ') }}

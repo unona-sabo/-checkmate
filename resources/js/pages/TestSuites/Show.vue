@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import TranslateButtons from '@/components/TranslateButtons.vue';
 import { Textarea } from '@/components/ui/textarea';
 import {
     DropdownMenu,
@@ -994,7 +995,10 @@ onMounted(() => {
                                     </div>
 
                                     <div class="space-y-2">
-                                        <Label>Steps (one per line)</Label>
+                                        <div class="flex items-center justify-between">
+                                            <Label>Steps (one per line)</Label>
+                                            <TranslateButtons :project-id="project.id" :text="noteContent" @translated="noteContent = $event" />
+                                        </div>
                                         <Textarea
                                             v-model="noteContent"
                                             placeholder="1. Navigate to the login page&#10;2. Enter valid credentials&#10;3. Click the login button&#10;4. Verify dashboard is displayed"

@@ -76,4 +76,20 @@ class TestRunCaseController extends Controller
 
         return back()->with('success', 'Test case assigned to you.');
     }
+
+    public function destroy(Project $project, TestRun $testRun, TestRunCase $testRunCase)
+    {
+        $this->authorize('update', $project);
+
+        if ($testRun->status !== 'active') {
+            return back()->with('error', 'Can only remove cases from active test runs.');
+        }
+
+        $testRunCase->delete();
+
+        $testRun->updateStats();
+        $testRun->updateProgress();
+
+        return back()->with('success', 'Item removed from test run.');
+    }
 }

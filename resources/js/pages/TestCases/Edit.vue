@@ -39,7 +39,7 @@ const form = useForm({
     title: props.testCase.title,
     description: props.testCase.description || '',
     preconditions: props.testCase.preconditions || '',
-    steps: props.testCase.steps || [{ action: '', expected: '' }] as TestStep[],
+    steps: (props.testCase.steps ?? []) as TestStep[],
     expected_result: props.testCase.expected_result || '',
     priority: props.testCase.priority,
     severity: props.testCase.severity,
@@ -163,6 +163,7 @@ const deleteTestCase = () => {
                                         Add Step
                                     </Button>
                                 </div>
+                                <p v-if="form.steps.length === 0" class="text-sm text-muted-foreground">No steps added yet.</p>
                                 <div v-for="(step, index) in form.steps" :key="index" class="flex gap-2 rounded-lg border p-3">
                                     <div class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground shrink-0">
                                         {{ index + 1 }}
@@ -184,7 +185,6 @@ const deleteTestCase = () => {
                                         />
                                     </div>
                                     <Button
-                                        v-if="form.steps.length > 1"
                                         type="button"
                                         variant="ghost"
                                         size="icon-sm"

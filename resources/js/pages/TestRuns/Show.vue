@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
     Play, Edit, CheckCircle2, XCircle, AlertTriangle,
     SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check, Pause, Timer, ChevronDown, ChevronUp,
-    Plus, Layers, FileText, Boxes, ListChecks
+    Plus, Layers, FileText, Boxes, ListChecks, Trash2
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -127,6 +127,16 @@ const quickStatus = (testRunCase: TestRunCase, status: TestRunCase['status']) =>
         `/projects/${props.project.id}/test-runs/${props.testRun.id}/cases/${testRunCase.id}`,
         { status },
         { preserveScroll: true }
+    );
+};
+
+const caseToRemove = ref<TestRunCase | null>(null);
+
+const removeCase = () => {
+    if (!caseToRemove.value) return;
+    router.delete(
+        `/projects/${props.project.id}/test-runs/${props.testRun.id}/cases/${caseToRemove.value.id}`,
+        { preserveScroll: true, onSuccess: () => { caseToRemove.value = null; } }
     );
 };
 
@@ -633,6 +643,18 @@ const addCasesCount = computed(() => {
                                         >
                                             <ExternalLink class="h-4 w-4" />
                                         </a>
+                                        <RestrictedAction>
+                                            <Button
+                                                v-if="testRun.status === 'active'"
+                                                size="icon-sm"
+                                                variant="ghost"
+                                                class="p-0 text-muted-foreground hover:text-destructive cursor-pointer"
+                                                @click.stop="caseToRemove = trc"
+                                                title="Remove"
+                                            >
+                                                <Trash2 class="h-4 w-4" />
+                                            </Button>
+                                        </RestrictedAction>
                                     </div>
                                 </div>
                                 <!-- Expanded Details -->
@@ -882,6 +904,25 @@ const addCasesCount = computed(() => {
                             Add Cases
                         </Button>
                     </RestrictedAction>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        <!-- Remove Case Confirmation Dialog -->
+        <Dialog :open="!!caseToRemove" @update:open="caseToRemove = null">
+            <DialogContent class="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Remove Item?</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to remove this item from the test run? This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="flex gap-4 sm:justify-end">
+                    <Button variant="secondary" @click="caseToRemove = null" class="flex-1 sm:flex-none">
+                        No
+                    </Button>
+                    <Button variant="destructive" @click="removeCase" class="flex-1 sm:flex-none">
+                        Yes
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

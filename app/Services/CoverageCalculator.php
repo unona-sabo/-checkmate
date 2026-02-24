@@ -30,7 +30,7 @@ class CoverageCalculator
         $features = $project->features()
             ->where('is_active', true)
             ->withCount(['testCases', 'checklists'])
-            ->with('testCases:id,module')
+            ->with('testCases:id,module', 'checklists:id,module')
             ->get();
 
         /** @var array<string, array{total: int, covered: int, test_cases: int, checklists: int}> $moduleStats */
@@ -44,7 +44,7 @@ class CoverageCalculator
 
             $isCovered = ($feature->test_cases_count > 0) || ($feature->checklists_count > 0);
 
-            // Initialize feature-level module stats
+            // Initialize feature-level module stats (without checklists — counted separately below)
             foreach ($featureModules as $mod) {
                 if (! isset($moduleStats[$mod])) {
                     $moduleStats[$mod] = ['total' => 0, 'covered' => 0, 'test_cases' => 0, 'checklists' => 0];
@@ -54,7 +54,6 @@ class CoverageCalculator
                 if ($isCovered) {
                     $moduleStats[$mod]['covered']++;
                 }
-                $moduleStats[$mod]['checklists'] += $feature->checklists_count;
             }
 
             // Count test cases by their own module (fall back to feature modules)
@@ -69,6 +68,21 @@ class CoverageCalculator
                         $moduleStats[$mod] = ['total' => 0, 'covered' => 0, 'test_cases' => 0, 'checklists' => 0];
                     }
                     $moduleStats[$mod]['test_cases']++;
+                }
+            }
+
+            // Count checklists by their own module (fall back to feature modules)
+            foreach ($feature->checklists as $checklist) {
+                $clModules = $checklist->module ?? [];
+                if ($clModules === []) {
+                    $clModules = $featureModules;
+                }
+
+                foreach ($clModules as $mod) {
+                    if (! isset($moduleStats[$mod])) {
+                        $moduleStats[$mod] = ['total' => 0, 'covered' => 0, 'test_cases' => 0, 'checklists' => 0];
+                    }
+                    $moduleStats[$mod]['checklists']++;
                 }
             }
         }

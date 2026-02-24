@@ -375,7 +375,7 @@ const highlightDescription = (content: string): string => {
                                 <CardHeader class="pb-2">
                                     <div class="flex items-start justify-between">
                                         <CardTitle class="text-lg flex items-start gap-2">
-                                            <FileText class="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+                                            <FileText class="h-4 w-4 shrink-0 mt-1 text-primary" />
                                             <span v-html="highlight(doc.title)" />
                                         </CardTitle>
                                         <span v-if="doc.category" class="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">

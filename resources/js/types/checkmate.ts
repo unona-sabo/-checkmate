@@ -484,7 +484,7 @@ export interface ProjectFeature {
     test_cases_count?: number;
     checklists_count?: number;
     test_cases?: { id: number; title: string; test_suite_id: number; module?: string[] | null; test_suite?: { id: number; name: string } }[];
-    checklists?: { id: number; name: string }[];
+    checklists?: { id: number; name: string; module?: string[] | null }[];
     created_at: string;
     updated_at: string;
 }

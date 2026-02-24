@@ -75,6 +75,16 @@ const formatStepsToText = (): string => {
         .join('\n');
 };
 
+const hasContent = computed(() => {
+    return !!(
+        props.testCase.description ||
+        props.testCase.preconditions ||
+        props.testCase.steps?.length ||
+        props.testCase.expected_result ||
+        props.testCase.attachments?.length
+    );
+});
+
 const navigateToCreateBugreport = () => {
     const params = new URLSearchParams();
     if (props.testCase.title) params.set('title', props.testCase.title);
@@ -188,6 +198,23 @@ const navigateToCreateBugreport = () => {
                         </CardHeader>
                         <CardContent>
                             <p class="text-sm text-muted-foreground whitespace-pre-wrap">{{ testCase.expected_result }}</p>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Empty state -->
+                    <Card v-if="!hasContent">
+                        <CardContent class="flex flex-col items-center justify-center py-12 text-center">
+                            <FileText class="h-10 w-10 text-muted-foreground/40" />
+                            <p class="mt-3 text-sm font-medium text-muted-foreground">No content added yet</p>
+                            <p class="mt-1 text-xs text-muted-foreground/70">Add a description, preconditions, test steps, or expected result to this test case.</p>
+                            <RestrictedAction>
+                                <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/edit`">
+                                    <Button variant="outline" size="sm" class="mt-4 gap-2">
+                                        <Edit class="h-3.5 w-3.5" />
+                                        Edit Test Case
+                                    </Button>
+                                </Link>
+                            </RestrictedAction>
                         </CardContent>
                     </Card>
 

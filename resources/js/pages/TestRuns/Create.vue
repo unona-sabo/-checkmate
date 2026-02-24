@@ -111,16 +111,20 @@ const toggleTestCase = (testCaseId: number) => {
     }
 };
 
-const selectAll = () => {
-    const allIds: number[] = [];
+const allTestCaseIds = computed(() => {
+    const ids: number[] = [];
     props.testSuites.forEach(suite => {
-        allIds.push(...getAllTestCases(suite));
+        ids.push(...getAllTestCases(suite));
     });
-    form.test_case_ids = allIds;
-};
+    return ids;
+});
 
-const deselectAll = () => {
-    form.test_case_ids = [];
+const allTestCasesSelected = computed(() => {
+    return allTestCaseIds.value.length > 0 && allTestCaseIds.value.every(id => form.test_case_ids.includes(id));
+});
+
+const toggleAllTestCases = () => {
+    form.test_case_ids = allTestCasesSelected.value ? [] : [...allTestCaseIds.value];
 };
 
 // --- Checklist mode helpers ---
@@ -165,12 +169,14 @@ const toggleRowTitle = (title: string) => {
     selectedRowTitles.value = set;
 };
 
-const selectAllRows = () => {
-    selectedRowTitles.value = new Set(checklistRows.value.map(r => r.title));
-};
+const allRowsSelected = computed(() => {
+    return checklistRows.value.length > 0 && checklistRows.value.every(r => selectedRowTitles.value.has(r.title));
+});
 
-const deselectAllRows = () => {
-    selectedRowTitles.value = new Set();
+const toggleAllRows = () => {
+    selectedRowTitles.value = allRowsSelected.value
+        ? new Set()
+        : new Set(checklistRows.value.map(r => r.title));
 };
 
 // --- Submit ---
@@ -284,14 +290,10 @@ const isSubmitDisabled = computed(() => {
                             <div v-if="!isChecklistMode" class="space-y-3">
                                 <div class="flex items-center justify-between">
                                     <Label>Select Test Cases</Label>
-                                    <div class="flex gap-2">
-                                        <Button type="button" variant="outline" size="sm" @click="selectAll">
-                                            Select All
-                                        </Button>
-                                        <Button type="button" variant="outline" size="sm" @click="deselectAll">
-                                            Deselect All
-                                        </Button>
-                                    </div>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox :model-value="allTestCasesSelected" @update:model-value="toggleAllTestCases" />
+                                        <span class="text-sm text-muted-foreground">{{ allTestCasesSelected ? 'Deselect All' : 'Select All' }}</span>
+                                    </label>
                                 </div>
 
                                 <div v-if="!testSuites.length" class="rounded-lg border border-dashed p-6 text-center">
@@ -394,14 +396,10 @@ const isSubmitDisabled = computed(() => {
                                 <div v-if="selectedChecklist && checklistRows.length > 0" class="space-y-2">
                                     <div class="flex items-center justify-between">
                                         <Label>Select Rows</Label>
-                                        <div class="flex gap-2">
-                                            <Button type="button" variant="outline" size="sm" @click="selectAllRows">
-                                                Select All
-                                            </Button>
-                                            <Button type="button" variant="outline" size="sm" @click="deselectAllRows">
-                                                Deselect All
-                                            </Button>
-                                        </div>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <Checkbox :model-value="allRowsSelected" @update:model-value="toggleAllRows" />
+                                            <span class="text-sm text-muted-foreground">{{ allRowsSelected ? 'Deselect All' : 'Select All' }}</span>
+                                        </label>
                                     </div>
 
                                     <div class="space-y-1 rounded-lg border p-4 max-h-96 overflow-y-auto">

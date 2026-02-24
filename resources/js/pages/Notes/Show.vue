@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import InputError from '@/components/InputError.vue';
+import TranslateButtons from '@/components/TranslateButtons.vue';
 import { StickyNote, Save, Trash2, Upload, FileText } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { computed, ref, watch } from 'vue';
@@ -142,7 +143,10 @@ const formatDate = (date: string) => {
                                 </div>
 
                                 <div class="space-y-2 min-w-0">
-                                    <Label for="content">Content</Label>
+                                    <div class="flex items-center justify-between">
+                                        <Label for="content">Content</Label>
+                                        <TranslateButtons :project-id="project.id" :text="form.content" @translated="form.content = $event" />
+                                    </div>
                                     <Textarea
                                         id="content"
                                         v-model="form.content"

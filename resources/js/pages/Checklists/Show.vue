@@ -29,6 +29,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import TranslateButtons from '@/components/TranslateButtons.vue';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
@@ -123,9 +124,11 @@ const mapRows = (raw: ChecklistRow[] | undefined): ExtendedChecklistRow[] =>
     }));
 
 const rows = ref<ExtendedChecklistRow[]>(mapRows(props.rows));
+const hasLoadedRows = ref(!!props.rows);
 
 watch(() => props.rows, (newRows) => {
     if (newRows) {
+        hasLoadedRows.value = true;
         rows.value = mapRows(newRows);
         resizeAllTextareas();
     }
@@ -1335,10 +1338,6 @@ onMounted(() => {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Selected Rows</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem @click="createBugreportFromSelected">
-                                    <Bug class="h-4 w-4 mr-2" />
-                                    Create Bugreport
-                                </DropdownMenuItem>
                                 <DropdownMenuSub v-if="selectColumns.length > 0">
                                     <DropdownMenuSubTrigger>
                                         <RefreshCw class="h-4 w-4 mr-2" />
@@ -1366,6 +1365,10 @@ onMounted(() => {
                                         </template>
                                     </DropdownMenuSubContent>
                                 </DropdownMenuSub>
+                                <DropdownMenuItem @click="createBugreportFromSelected">
+                                    <Bug class="h-4 w-4 mr-2" />
+                                    Create Bugreport
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem @click="openCopyToChecklistDialog" :disabled="otherChecklists.length === 0">
                                     <Copy class="h-4 w-4 mr-2" />
@@ -1493,7 +1496,10 @@ onMounted(() => {
 
                             <div class="space-y-4 py-4 px-0.5 overflow-y-auto min-h-0 flex-1">
                                 <div class="space-y-2">
-                                    <Label>Notes</Label>
+                                    <div class="flex items-center justify-between">
+                                        <Label>Notes</Label>
+                                        <TranslateButtons :project-id="project.id" :text="noteContent" @translated="noteContent = $event" />
+                                    </div>
                                     <Textarea
                                         :model-value="noteContent"
                                         @update:model-value="noteContent = $event"
@@ -1642,8 +1648,9 @@ onMounted(() => {
             </div>
 
             <!-- Filter Dropdown -->
-            <div v-if="showFilters" class="relative z-20">
-                <div class="rounded-xl border bg-card shadow-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div class="relative -mt-3">
+                <div v-if="showFilters" class="fixed inset-0 z-10" @click="showFilters = false" />
+                <div v-if="showFilters" class="absolute top-0 right-0 z-20 w-full md:w-[calc(66%-0.3125rem)] rounded-xl border bg-card shadow-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-sm font-medium flex items-center gap-2">
                             <Filter class="h-4 w-4 text-primary" />
@@ -1751,8 +1758,8 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- Skeleton while deferred rows are loading -->
-            <Card v-if="!props.rows">
+            <!-- Skeleton only on initial deferred load (not after saves) -->
+            <Card v-if="!hasLoadedRows">
                 <CardContent class="p-0">
                     <div class="space-y-0">
                         <div class="flex items-center gap-2 border-b bg-muted px-3 py-2.5">
@@ -1770,7 +1777,7 @@ onMounted(() => {
                 </CardContent>
             </Card>
 
-            <Card v-else>
+            <Card v-if="hasLoadedRows">
                 <CardContent class="p-0">
                     <div ref="scrollContainerRef" class="overflow-auto max-h-[calc(100vh-220px)]">
                         <table class="w-full border-collapse" style="table-layout: auto;">

@@ -76,7 +76,7 @@ const props = defineProps<{
     gaps: CoverageGap[];
     hasAnthropicKey: boolean;
     allTestCases: TestCaseSummary[];
-    allChecklists: Pick<Checklist, 'id' | 'name'>[];
+    allChecklists: Pick<Checklist, 'id' | 'name' | 'module'>[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -146,7 +146,6 @@ const displayedCoverageByModule = computed(() => {
     if (!selectedFeature.value) return props.coverageByModule;
 
     const f = selectedFeature.value;
-    const isCovered = (f.test_cases_count ?? 0) > 0 || (f.checklists_count ?? 0) > 0;
 
     // Build module stats from test case modules
     const moduleMap = new Map<string, { test_cases_count: number; checklists_count: number }>();
@@ -154,7 +153,7 @@ const displayedCoverageByModule = computed(() => {
     // Seed with feature-level modules
     const featureModules = f.module?.length ? f.module : ['Uncategorized'];
     for (const mod of featureModules) {
-        moduleMap.set(mod, { test_cases_count: 0, checklists_count: f.checklists_count ?? 0 });
+        moduleMap.set(mod, { test_cases_count: 0, checklists_count: 0 });
     }
 
     // Count test cases by their own module
@@ -170,14 +169,30 @@ const displayedCoverageByModule = computed(() => {
         }
     }
 
-    return Array.from(moduleMap.entries()).map(([mod, stats]) => ({
-        module: mod,
-        total_features: 1,
-        covered_features: isCovered ? 1 : 0,
-        test_cases_count: stats.test_cases_count,
-        checklists_count: stats.checklists_count,
-        coverage_percentage: isCovered ? 100 : 0,
-    }));
+    // Count checklists by their own module
+    for (const cl of f.checklists ?? []) {
+        const clModules = cl.module?.length ? cl.module : featureModules;
+        for (const mod of clModules) {
+            const existing = moduleMap.get(mod);
+            if (existing) {
+                existing.checklists_count++;
+            } else {
+                moduleMap.set(mod, { test_cases_count: 0, checklists_count: 1 });
+            }
+        }
+    }
+
+    return Array.from(moduleMap.entries()).map(([mod, stats]) => {
+        const modCovered = stats.test_cases_count > 0 || stats.checklists_count > 0;
+        return {
+            module: mod,
+            total_features: 1,
+            covered_features: modCovered ? 1 : 0,
+            test_cases_count: stats.test_cases_count,
+            checklists_count: stats.checklists_count,
+            coverage_percentage: modCovered ? 100 : 0,
+        };
+    });
 });
 
 const filteredFeatures = computed(() => {

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
+import TranslateButtons from '@/components/TranslateButtons.vue';
 import { StickyNote } from 'lucide-vue-next';
 
 interface Documentation {
@@ -91,7 +92,10 @@ const submit = () => {
                             </div>
 
                             <div class="space-y-2 min-w-0">
-                                <Label for="content">Content</Label>
+                                <div class="flex items-center justify-between">
+                                    <Label for="content">Content</Label>
+                                    <TranslateButtons :project-id="project.id" :text="form.content" @translated="form.content = $event" />
+                                </div>
                                 <Textarea
                                     id="content"
                                     v-model="form.content"

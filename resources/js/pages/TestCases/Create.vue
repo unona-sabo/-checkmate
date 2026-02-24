@@ -36,12 +36,12 @@ const urlParams = new URLSearchParams(window.location.search);
 
 const parseStepsParam = (): TestStep[] => {
     const raw = urlParams.get('steps');
-    if (!raw) return [{ action: '', expected: '' }];
+    if (!raw) return [];
     try {
         const parsed = JSON.parse(raw) as TestStep[];
-        return parsed.length > 0 ? parsed : [{ action: '', expected: '' }];
+        return parsed.length > 0 ? parsed : [];
     } catch {
-        return [{ action: '', expected: '' }];
+        return [];
     }
 };
 
@@ -178,6 +178,7 @@ const submit = () => {
                                         Add Step
                                     </Button>
                                 </div>
+                                <p v-if="form.steps.length === 0" class="text-sm text-muted-foreground">No steps added yet.</p>
                                 <div v-for="(step, index) in form.steps" :key="index" class="flex gap-2 rounded-lg border p-3">
                                     <div class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground shrink-0">
                                         {{ index + 1 }}
@@ -199,7 +200,6 @@ const submit = () => {
                                         />
                                     </div>
                                     <Button
-                                        v-if="form.steps.length > 1"
                                         type="button"
                                         variant="ghost"
                                         size="icon-sm"
