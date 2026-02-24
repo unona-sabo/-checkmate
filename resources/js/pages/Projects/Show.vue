@@ -30,6 +30,7 @@ import {
 import { releaseStatusVariant } from '@/lib/badge-variants';
 import { ref, watch, computed } from 'vue';
 import axios from 'axios';
+import { escapeHtml, escapeRegExp } from '@/composables/useSearch';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 
 const props = defineProps<{
@@ -48,6 +49,13 @@ const searchResults = ref<ProjectSearchResponse | null>(null);
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const isSearchActive = computed(() => searchQuery.value.trim().length > 0);
+
+const highlight = (text: string): string => {
+    const safe = escapeHtml(text);
+    if (!searchQuery.value.trim()) return safe;
+    const query = escapeRegExp(searchQuery.value.trim());
+    return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+};
 
 watch(searchQuery, (value) => {
     if (searchTimeout) {
@@ -261,8 +269,8 @@ const getBugStatusColor = (status: string) => {
                                             <component :is="getTypeIcon(group.type)" class="h-3.5 w-3.5 text-muted-foreground group-hover/item:text-primary transition-colors" />
                                         </div>
                                         <div class="min-w-0">
-                                            <p class="text-sm font-normal truncate group-hover/item:text-primary transition-colors">{{ item.title }}</p>
-                                            <p v-if="item.subtitle" class="text-xs text-muted-foreground">{{ item.subtitle }}</p>
+                                            <p class="text-sm font-normal truncate group-hover/item:text-primary transition-colors" v-html="highlight(item.title)" />
+                                            <p v-if="item.subtitle" class="text-xs text-muted-foreground" v-html="highlight(item.subtitle)" />
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0 ml-4">
@@ -561,3 +569,11 @@ const getBugStatusColor = (status: string) => {
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+:deep(.search-highlight) {
+    background-color: rgb(147 197 253 / 0.5);
+    border-radius: 0.125rem;
+    padding: 0.0625rem 0.125rem;
+}
+</style>
