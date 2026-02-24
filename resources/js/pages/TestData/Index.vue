@@ -28,6 +28,8 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import InputError from '@/components/InputError.vue';
@@ -53,6 +55,7 @@ import {
     Terminal,
     Link2,
     ExternalLink,
+    Columns3,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useCanEdit } from '@/composables/useCanEdit';
@@ -267,8 +270,68 @@ const saveColumnConfig = () => {
     localStorage.setItem(linkColStorageKey.value, JSON.stringify(linkColumns.value.map(c => ({ key: c.key, width: c.width }))));
 };
 
+// ===== Column visibility =====
+const hiddenUserCols = ref<string[]>([]);
+const hiddenPaymentCols = ref<string[]>([]);
+const hiddenCommandCols = ref<string[]>([]);
+const hiddenLinkCols = ref<string[]>([]);
+
+const hiddenColsMap: Record<string, { ref: typeof hiddenUserCols; defaults: ColumnDef[]; storageKey: () => string }> = {
+    users: { ref: hiddenUserCols, defaults: defaultUserColumns, storageKey: () => `test-data-users-hidden-cols-${props.project.id}` },
+    payments: { ref: hiddenPaymentCols, defaults: defaultPaymentColumns, storageKey: () => `test-data-payments-hidden-cols-${props.project.id}` },
+    commands: { ref: hiddenCommandCols, defaults: defaultCommandColumns, storageKey: () => `test-data-commands-hidden-cols-${props.project.id}` },
+    links: { ref: hiddenLinkCols, defaults: defaultLinkColumns, storageKey: () => `test-data-links-hidden-cols-${props.project.id}` },
+};
+
+const loadHiddenColumns = () => {
+    for (const [, entry] of Object.entries(hiddenColsMap)) {
+        try {
+            const saved = localStorage.getItem(entry.storageKey());
+            if (saved) {
+                const parsed = JSON.parse(saved) as string[];
+                const validKeys = entry.defaults.filter(c => !c.fixed).map(c => c.key);
+                entry.ref.value = parsed.filter(k => validKeys.includes(k));
+            }
+        } catch { /* ignore */ }
+    }
+};
+
+const saveHiddenColumns = () => {
+    for (const [, entry] of Object.entries(hiddenColsMap)) {
+        try {
+            localStorage.setItem(entry.storageKey(), JSON.stringify(entry.ref.value));
+        } catch { /* ignore */ }
+    }
+};
+
+const activeHiddenCols = computed(() => hiddenColsMap[activeTab.value].ref.value);
+
+const activeAllColumns = computed(() => {
+    const defaults = hiddenColsMap[activeTab.value].defaults;
+    return defaults.filter(c => !c.fixed);
+});
+
+const hasHiddenColumns = computed(() => activeHiddenCols.value.length > 0);
+
+const toggleColumnVisibility = (key: string) => {
+    const arr = hiddenColsMap[activeTab.value].ref;
+    const idx = arr.value.indexOf(key);
+    if (idx >= 0) {
+        arr.value.splice(idx, 1);
+    } else {
+        arr.value.push(key);
+    }
+    saveHiddenColumns();
+};
+
+const visibleUserColumns = computed(() => userColumns.value.filter(c => !hiddenUserCols.value.includes(c.key)));
+const visiblePaymentColumns = computed(() => paymentColumns.value.filter(c => !hiddenPaymentCols.value.includes(c.key)));
+const visibleCommandColumns = computed(() => commandColumns.value.filter(c => !hiddenCommandCols.value.includes(c.key)));
+const visibleLinkColumns = computed(() => linkColumns.value.filter(c => !hiddenLinkCols.value.includes(c.key)));
+
 onMounted(() => {
     loadColumnConfig();
+    loadHiddenColumns();
 });
 
 // ===== Local mutable copies of row data =====
@@ -1499,6 +1562,33 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                 </Select>
 
                 <div class="ml-auto flex items-center gap-2">
+                    <!-- Columns visibility dropdown -->
+                    <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                            <Button :variant="hasHiddenColumns ? 'default' : 'outline'" size="sm" class="gap-1.5 text-xs cursor-pointer">
+                                <Columns3 class="h-3.5 w-3.5" />
+                                Cols
+                                <span v-if="hasHiddenColumns" class="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background/20 text-[10px] font-medium">
+                                    {{ activeHiddenCols.length }}
+                                </span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                v-for="col in activeAllColumns"
+                                :key="col.key"
+                                class="cursor-pointer"
+                                @select.prevent="toggleColumnVisibility(col.key)"
+                            >
+                                <Check v-if="!activeHiddenCols.includes(col.key)" class="h-4 w-4 mr-2" />
+                                <span v-else class="h-4 w-4 mr-2" />
+                                {{ col.label }}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
                             <Button variant="outline" size="sm" class="gap-1.5 text-xs cursor-pointer">
@@ -1614,7 +1704,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                             <tr class="border-b bg-muted">
                                 <th class="w-6 px-1 py-3"></th>
                                 <th
-                                    v-for="(col, colIndex) in userColumns"
+                                    v-for="(col, colIndex) in visibleUserColumns"
                                     :key="col.key"
                                     class="px-3 py-3 text-left font-medium relative select-none"
                                     :style="{ width: col.width + 'px' }"
@@ -1682,7 +1772,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                     </div>
                                 </td>
                                 <td
-                                    v-for="col in userColumns"
+                                    v-for="col in visibleUserColumns"
                                     :key="col.key"
                                     class="px-3 py-2"
                                     :class="{
@@ -1825,7 +1915,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                             <tr class="border-b bg-muted">
                                 <th class="w-6 px-1 py-3"></th>
                                 <th
-                                    v-for="(col, colIndex) in paymentColumns"
+                                    v-for="(col, colIndex) in visiblePaymentColumns"
                                     :key="col.key"
                                     class="px-3 py-3 text-left font-medium relative select-none"
                                     :style="{ width: col.width + 'px' }"
@@ -1893,7 +1983,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                     </div>
                                 </td>
                                 <td
-                                    v-for="col in paymentColumns"
+                                    v-for="col in visiblePaymentColumns"
                                     :key="col.key"
                                     class="px-3 py-2"
                                     :class="{
@@ -2018,7 +2108,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                             <tr class="border-b bg-muted">
                                 <th class="w-6 px-1 py-3"></th>
                                 <th
-                                    v-for="(col, colIndex) in commandColumns"
+                                    v-for="(col, colIndex) in visibleCommandColumns"
                                     :key="col.key"
                                     class="px-3 py-3 text-left font-medium relative select-none"
                                     :style="{ width: col.width + 'px' }"
@@ -2085,7 +2175,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                     </div>
                                 </td>
                                 <td
-                                    v-for="col in commandColumns"
+                                    v-for="col in visibleCommandColumns"
                                     :key="col.key"
                                     class="px-3 py-2"
                                 >
@@ -2182,7 +2272,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                             <tr class="border-b bg-muted">
                                 <th class="w-6 px-1 py-3"></th>
                                 <th
-                                    v-for="(col, colIndex) in linkColumns"
+                                    v-for="(col, colIndex) in visibleLinkColumns"
                                     :key="col.key"
                                     class="px-3 py-3 text-left font-medium relative select-none"
                                     :style="{ width: col.width + 'px' }"
@@ -2249,7 +2339,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                     </div>
                                 </td>
                                 <td
-                                    v-for="col in linkColumns"
+                                    v-for="col in visibleLinkColumns"
                                     :key="col.key"
                                     class="px-3 py-2"
                                 >

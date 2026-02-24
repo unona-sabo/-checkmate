@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import TranslateButtons from '@/components/TranslateButtons.vue';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Dialog,
@@ -639,7 +640,7 @@ const onDialogClose = (open: boolean) => {
                     </div>
                     <div v-if="availableFeatures.length > 0" class="relative">
                         <Select v-model="filterFeature">
-                            <SelectTrigger class="h-9 w-44 text-xs" :class="filterFeature ? 'pr-7' : ''">
+                            <SelectTrigger class="h-8 w-44 bg-gradient-to-b from-background to-muted/30" :class="filterFeature ? 'pr-7' : ''">
                                 <SelectValue placeholder="All features" />
                             </SelectTrigger>
                             <SelectContent>
@@ -679,7 +680,10 @@ const onDialogClose = (open: boolean) => {
 
                             <div class="space-y-4 py-4 px-0.5 overflow-y-auto min-h-0 flex-1">
                                 <div class="space-y-2">
-                                    <Label>Notes</Label>
+                                    <div class="flex items-center justify-between">
+                                        <Label>Notes</Label>
+                                        <TranslateButtons :project-id="project.id" :text="noteContent" @translated="noteContent = $event" />
+                                    </div>
                                     <Textarea
                                         v-model="noteContent"
                                         placeholder="1. First item&#10;2. Second item&#10;3. Third item&#10;&#10;Or just write each item on a new line..."
