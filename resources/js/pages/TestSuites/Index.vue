@@ -2045,7 +2045,7 @@ onMounted(() => {
             <DialogContent class="max-w-2xl max-h-[80vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
-                        <Upload class="h-5 w-5 text-primary" />
+                        <Download class="h-5 w-5 text-primary" />
                         Import Test Cases
                     </DialogTitle>
                     <DialogDescription>
@@ -2055,12 +2055,20 @@ onMounted(() => {
                 <div class="space-y-4 py-4 overflow-y-auto min-h-0 flex-1">
                     <div class="space-y-2">
                         <Label>File</Label>
-                        <input
-                            type="file"
-                            accept=".csv,.xlsx,.xls"
-                            class="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer cursor-pointer"
-                            @change="onImportFileChange"
-                        />
+                        <div class="flex items-center gap-3">
+                            <input
+                                ref="importFileInput"
+                                type="file"
+                                accept=".csv,.xlsx,.xls"
+                                class="hidden"
+                                @change="onImportFileChange"
+                            />
+                            <Button variant="outline" size="sm" class="gap-2 cursor-pointer" @click="($refs.importFileInput as HTMLInputElement).click()">
+                                <Upload class="h-4 w-4" />
+                                Choose File
+                            </Button>
+                            <span class="text-sm text-muted-foreground truncate">{{ importFile?.name || 'No file selected' }}</span>
+                        </div>
                     </div>
 
                     <div v-if="importHeaders.length > 0" class="space-y-4">
@@ -2145,7 +2153,7 @@ onMounted(() => {
                         :disabled="!importTargetSuiteId || importRows.length === 0 || isImportingCases || matchedFieldCount === 0"
                         class="gap-2"
                     >
-                        <Upload class="h-4 w-4" />
+                        <Download class="h-4 w-4" />
                         {{ isImportingCases ? 'Importing...' : `Import ${importRows.length} test case(s)` }}
                     </Button>
                 </DialogFooter>

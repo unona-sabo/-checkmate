@@ -232,6 +232,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('test-data/links/{testLink}', [TestDataController::class, 'destroyLink'])->name('links.destroy');
         Route::delete('test-data/links-bulk', [TestDataController::class, 'bulkDestroyLinks'])->name('links.bulk-destroy');
         Route::put('test-data/links-reorder', [TestDataController::class, 'reorderLinks'])->name('links.reorder');
+        Route::post('test-data/users-import', [TestDataController::class, 'importUsers'])->name('users.import');
+        Route::post('test-data/payments-import', [TestDataController::class, 'importPayments'])->name('payments.import');
+        Route::post('test-data/commands-import', [TestDataController::class, 'importCommands'])->name('commands.import');
+        Route::post('test-data/links-import', [TestDataController::class, 'importLinks'])->name('links.import');
     });
 
     // Documentations (nested under projects)

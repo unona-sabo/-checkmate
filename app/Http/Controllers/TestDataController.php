@@ -13,6 +13,7 @@ use App\Models\TestLink;
 use App\Models\TestPaymentMethod;
 use App\Models\TestUser;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -245,6 +246,147 @@ class TestDataController extends Controller
         $project->testLinks()->whereIn('id', $validated['ids'])->delete();
 
         return back()->with('success', 'Links deleted successfully.');
+    }
+
+    // ===== Import =====
+
+    public function importUsers(Request $request, Project $project): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'rows' => 'required|array|min:1',
+            'rows.*.name' => 'required|string|max:255',
+            'rows.*.email' => 'nullable|string|max:255',
+            'rows.*.password' => 'nullable|string|max:255',
+            'rows.*.role' => 'nullable|string|max:255',
+            'rows.*.environment' => 'nullable|string|max:255',
+            'rows.*.is_valid' => 'nullable',
+            'rows.*.tags' => 'nullable|string|max:1000',
+            'rows.*.description' => 'nullable|string|max:5000',
+        ]);
+
+        $maxOrder = $project->testUsers()->max('order') ?? -1;
+
+        foreach ($validated['rows'] as $index => $row) {
+            $tags = ! empty($row['tags']) ? array_map('trim', explode(',', $row['tags'])) : [];
+            $isValid = isset($row['is_valid']) ? in_array(strtolower((string) $row['is_valid']), ['yes', 'true', '1'], true) : true;
+
+            $project->testUsers()->create([
+                'name' => $row['name'],
+                'email' => $row['email'] ?? null,
+                'password' => $row['password'] ?? null,
+                'role' => $row['role'] ?? null,
+                'environment' => $row['environment'] ?? null,
+                'is_valid' => $isValid,
+                'tags' => $tags,
+                'description' => $row['description'] ?? null,
+                'created_by' => auth()->id(),
+                'order' => $maxOrder + $index + 1,
+            ]);
+        }
+
+        return back()->with('success', count($validated['rows']).' user(s) imported successfully.');
+    }
+
+    public function importPayments(Request $request, Project $project): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'rows' => 'required|array|min:1',
+            'rows.*.name' => 'required|string|max:255',
+            'rows.*.type' => 'nullable|string|max:255',
+            'rows.*.system' => 'nullable|string|max:255',
+            'rows.*.credentials' => 'nullable|string|max:5000',
+            'rows.*.environment' => 'nullable|string|max:255',
+            'rows.*.is_valid' => 'nullable',
+            'rows.*.tags' => 'nullable|string|max:1000',
+            'rows.*.description' => 'nullable|string|max:5000',
+        ]);
+
+        $maxOrder = $project->testPaymentMethods()->max('order') ?? -1;
+
+        foreach ($validated['rows'] as $index => $row) {
+            $tags = ! empty($row['tags']) ? array_map('trim', explode(',', $row['tags'])) : [];
+            $isValid = isset($row['is_valid']) ? in_array(strtolower((string) $row['is_valid']), ['yes', 'true', '1'], true) : true;
+            $credentials = null;
+            if (! empty($row['credentials'])) {
+                $pairs = array_map('trim', explode(';', $row['credentials']));
+                $credentials = [];
+                foreach ($pairs as $pair) {
+                    $parts = explode(':', $pair, 2);
+                    if (count($parts) === 2) {
+                        $credentials[trim($parts[0])] = trim($parts[1]);
+                    }
+                }
+            }
+
+            $project->testPaymentMethods()->create([
+                'name' => $row['name'],
+                'type' => $row['type'] ?? null,
+                'system' => $row['system'] ?? null,
+                'credentials' => $credentials,
+                'environment' => $row['environment'] ?? null,
+                'is_valid' => $isValid,
+                'tags' => $tags,
+                'description' => $row['description'] ?? null,
+                'created_by' => auth()->id(),
+                'order' => $maxOrder + $index + 1,
+            ]);
+        }
+
+        return back()->with('success', count($validated['rows']).' payment(s) imported successfully.');
+    }
+
+    public function importCommands(Request $request, Project $project): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'rows' => 'required|array|min:1',
+            'rows.*.category' => 'nullable|string|max:255',
+            'rows.*.description' => 'required|string|max:255',
+            'rows.*.command' => 'required|string|max:5000',
+            'rows.*.comment' => 'nullable|string|max:5000',
+        ]);
+
+        $maxOrder = $project->testCommands()->max('order') ?? -1;
+
+        foreach ($validated['rows'] as $index => $row) {
+            $project->testCommands()->create([
+                ...$row,
+                'created_by' => auth()->id(),
+                'order' => $maxOrder + $index + 1,
+            ]);
+        }
+
+        return back()->with('success', count($validated['rows']).' command(s) imported successfully.');
+    }
+
+    public function importLinks(Request $request, Project $project): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'rows' => 'required|array|min:1',
+            'rows.*.category' => 'nullable|string|max:255',
+            'rows.*.description' => 'required|string|max:255',
+            'rows.*.url' => 'required|string|max:2048',
+            'rows.*.comment' => 'nullable|string|max:5000',
+        ]);
+
+        $maxOrder = $project->testLinks()->max('order') ?? -1;
+
+        foreach ($validated['rows'] as $index => $row) {
+            $project->testLinks()->create([
+                ...$row,
+                'created_by' => auth()->id(),
+                'order' => $maxOrder + $index + 1,
+            ]);
+        }
+
+        return back()->with('success', count($validated['rows']).' link(s) imported successfully.');
     }
 
     // ===== Reorder =====

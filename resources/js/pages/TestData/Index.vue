@@ -24,6 +24,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import InputError from '@/components/InputError.vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import {
@@ -38,6 +44,8 @@ import {
     Eye,
     EyeOff,
     Download,
+    Upload,
+    FileSpreadsheet,
     Users,
     CreditCard,
     GripVertical,
@@ -1057,8 +1065,11 @@ const executeBulkDelete = () => {
 const exportCsv = () => {
     let csv = '';
     if (activeTab.value === 'users') {
+        const rows = selectedUserIds.value.size > 0
+            ? filteredUsers.value.filter(u => selectedUserIds.value.has(u.id))
+            : filteredUsers.value;
         csv = 'Name,Email,Password,Role,Environment,Valid,Tags,Description\n';
-        filteredUsers.value.forEach(u => {
+        rows.forEach(u => {
             csv += [
                 `"${(u.name || '').replace(/"/g, '""')}"`,
                 `"${(u.email || '').replace(/"/g, '""')}"`,
@@ -1071,8 +1082,11 @@ const exportCsv = () => {
             ].join(',') + '\n';
         });
     } else if (activeTab.value === 'payments') {
+        const rows = selectedPaymentIds.value.size > 0
+            ? filteredPayments.value.filter(p => selectedPaymentIds.value.has(p.id))
+            : filteredPayments.value;
         csv = 'Name,Type,System,Credentials,Environment,Valid,Tags,Description\n';
-        filteredPayments.value.forEach(p => {
+        rows.forEach(p => {
             const creds = p.credentials
                 ? Object.entries(p.credentials).map(([k, v]) => `${k}: ${v}`).join('; ')
                 : '';
@@ -1088,8 +1102,11 @@ const exportCsv = () => {
             ].join(',') + '\n';
         });
     } else if (activeTab.value === 'commands') {
+        const rows = selectedCommandIds.value.size > 0
+            ? filteredCommands.value.filter(c => selectedCommandIds.value.has(c.id))
+            : filteredCommands.value;
         csv = 'Category,Description,Command,Comment\n';
-        filteredCommands.value.forEach(c => {
+        rows.forEach(c => {
             csv += [
                 `"${(c.category || '').replace(/"/g, '""')}"`,
                 `"${(c.description || '').replace(/"/g, '""')}"`,
@@ -1098,8 +1115,11 @@ const exportCsv = () => {
             ].join(',') + '\n';
         });
     } else {
+        const rows = selectedLinkIds.value.size > 0
+            ? filteredLinks.value.filter(l => selectedLinkIds.value.has(l.id))
+            : filteredLinks.value;
         csv = 'Category,Description,URL,Comment\n';
-        filteredLinks.value.forEach(l => {
+        rows.forEach(l => {
             csv += [
                 `"${(l.category || '').replace(/"/g, '""')}"`,
                 `"${(l.description || '').replace(/"/g, '""')}"`,
@@ -1117,6 +1137,137 @@ const exportCsv = () => {
     a.download = `test-${activeTab.value}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+};
+
+// ===== CSV/Excel Import =====
+const showImportDialog = ref(false);
+const importFile = ref<File | null>(null);
+const importHeaders = ref<string[]>([]);
+const importRows = ref<any[][]>([]);
+const isImporting = ref(false);
+
+const fieldAliasesPerTab: Record<string, Record<string, string[]>> = {
+    users: {
+        'Name': ['name', 'username', 'user name', 'full name'],
+        'Email': ['email', 'e-mail', 'mail'],
+        'Password': ['password', 'pass'],
+        'Role': ['role', 'user role'],
+        'Environment': ['environment', 'env'],
+        'Valid': ['valid', 'is_valid', 'is valid', 'active'],
+        'Tags': ['tags', 'labels', 'keywords'],
+        'Description': ['description', 'notes', 'note', 'comment'],
+    },
+    payments: {
+        'Name': ['name', 'payment name', 'method name'],
+        'Type': ['type', 'payment type', 'method type'],
+        'System': ['system', 'payment system', 'provider'],
+        'Credentials': ['credentials', 'creds', 'card number', 'account'],
+        'Environment': ['environment', 'env'],
+        'Valid': ['valid', 'is_valid', 'is valid', 'active'],
+        'Tags': ['tags', 'labels', 'keywords'],
+        'Description': ['description', 'notes', 'note', 'comment'],
+    },
+    commands: {
+        'Category': ['category', 'group', 'type'],
+        'Description': ['description', 'name', 'title'],
+        'Command': ['command', 'cmd', 'script'],
+        'Comment': ['comment', 'note', 'notes'],
+    },
+    links: {
+        'Category': ['category', 'group', 'type'],
+        'Description': ['description', 'name', 'title'],
+        'URL': ['url', 'link', 'href', 'address'],
+        'Comment': ['comment', 'note', 'notes'],
+    },
+};
+
+const getImportMatchedField = (header: string): string | null => {
+    const aliases = fieldAliasesPerTab[activeTab.value] || {};
+    const normalized = header.toLowerCase().trim();
+    for (const [field, aliasList] of Object.entries(aliases)) {
+        if (aliasList.includes(normalized)) return field;
+    }
+    return null;
+};
+
+const importFieldMapping = computed(() => {
+    return importHeaders.value.map(h => ({
+        header: h,
+        matchedField: getImportMatchedField(h),
+    }));
+});
+
+const matchedFieldCount = computed(() => importFieldMapping.value.filter(m => m.matchedField).length);
+
+const onImportFileChange = async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    importFile.value = file;
+    importHeaders.value = [];
+    importRows.value = [];
+
+    try {
+        const XLSX = await import('xlsx');
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        if (json.length < 2) return;
+
+        importHeaders.value = (json[0] || []).map(String);
+        importRows.value = json.slice(1).filter(row => row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''));
+    } catch {
+        importHeaders.value = [];
+        importRows.value = [];
+    }
+};
+
+const openImportDialog = () => {
+    importFile.value = null;
+    importHeaders.value = [];
+    importRows.value = [];
+    showImportDialog.value = true;
+};
+
+const buildImportPayload = () => {
+    const mapping = importFieldMapping.value;
+    return importRows.value.map(row => {
+        const obj: Record<string, any> = {};
+        mapping.forEach((m, i) => {
+            if (m.matchedField) {
+                const key = m.matchedField.toLowerCase().replace(/ /g, '_');
+                obj[key] = row[i] !== undefined && row[i] !== null ? String(row[i]) : '';
+            }
+        });
+        return obj;
+    });
+};
+
+const submitImport = () => {
+    if (importRows.value.length === 0 || matchedFieldCount.value === 0) return;
+    isImporting.value = true;
+
+    const rows = buildImportPayload();
+    const routeMap: Record<string, string> = {
+        users: `/projects/${props.project.id}/test-data/users-import`,
+        payments: `/projects/${props.project.id}/test-data/payments-import`,
+        commands: `/projects/${props.project.id}/test-data/commands-import`,
+        links: `/projects/${props.project.id}/test-data/links-import`,
+    };
+
+    router.post(routeMap[activeTab.value], { rows }, {
+        preserveState: false,
+        onSuccess: () => {
+            showImportDialog.value = false;
+            isImporting.value = false;
+        },
+        onError: () => {
+            isImporting.value = false;
+        },
+    });
 };
 
 // Type badge colors
@@ -1348,16 +1499,32 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                 </Select>
 
                 <div class="ml-auto flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        class="gap-2 cursor-pointer"
-                        :disabled="(activeTab === 'users' ? filteredUsers : activeTab === 'payments' ? filteredPayments : activeTab === 'commands' ? filteredCommands : filteredLinks).length === 0"
-                        @click="exportCsv"
-                    >
-                        <Download class="h-4 w-4" />
-                        Export CSV
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                            <Button variant="outline" size="sm" class="gap-1.5 text-xs cursor-pointer">
+                                <FileSpreadsheet class="h-3.5 w-3.5" />
+                                File
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem class="cursor-pointer" @click="openImportDialog">
+                                <Download class="h-4 w-4 mr-2" />
+                                Import
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                class="cursor-pointer"
+                                :disabled="(activeTab === 'users' ? filteredUsers : activeTab === 'payments' ? filteredPayments : activeTab === 'commands' ? filteredCommands : filteredLinks).length === 0"
+                                @click="exportCsv"
+                            >
+                                <Upload class="h-4 w-4 mr-2" />
+                                {{ (activeTab === 'users' && selectedUserIds.size > 0) ? `Export Selected (${selectedUserIds.size})`
+                                    : (activeTab === 'payments' && selectedPaymentIds.size > 0) ? `Export Selected (${selectedPaymentIds.size})`
+                                    : (activeTab === 'commands' && selectedCommandIds.size > 0) ? `Export Selected (${selectedCommandIds.size})`
+                                    : (activeTab === 'links' && selectedLinkIds.size > 0) ? `Export Selected (${selectedLinkIds.size})`
+                                    : 'Export All' }}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
                     <RestrictedAction>
                         <Button
@@ -2538,6 +2705,84 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                     <DialogFooter class="flex gap-4 sm:justify-end">
                         <Button variant="secondary" class="flex-1 cursor-pointer sm:flex-none" @click="showBulkDeleteConfirm = false">No</Button>
                         <Button variant="destructive" class="flex-1 cursor-pointer sm:flex-none" @click="executeBulkDelete">Yes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <!-- Import Dialog -->
+            <Dialog v-model:open="showImportDialog">
+                <DialogContent class="max-w-2xl max-h-[80vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <Download class="h-5 w-5 text-primary" />
+                            Import {{ activeTab === 'users' ? 'Users' : activeTab === 'payments' ? 'Payments' : activeTab === 'commands' ? 'Commands' : 'Links' }}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Upload a CSV or Excel file. Columns will be automatically mapped to fields.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="space-y-4 py-4 overflow-y-auto min-h-0 flex-1">
+                        <div class="space-y-2">
+                            <Label>File</Label>
+                            <div class="flex items-center gap-3">
+                                <input
+                                    ref="importFileInput"
+                                    type="file"
+                                    accept=".csv,.xlsx,.xls"
+                                    class="hidden"
+                                    @change="onImportFileChange"
+                                />
+                                <Button variant="outline" size="sm" class="gap-2 cursor-pointer" @click="($refs.importFileInput as HTMLInputElement).click()">
+                                    <Upload class="h-4 w-4" />
+                                    Choose File
+                                </Button>
+                                <span class="text-sm text-muted-foreground truncate">{{ importFile?.name || 'No file selected' }}</span>
+                            </div>
+                        </div>
+
+                        <div v-if="importHeaders.length > 0" class="space-y-4">
+                            <div class="rounded-lg border p-4 bg-muted/30 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <Label>Column Mapping</Label>
+                                    <span class="text-xs text-muted-foreground">
+                                        {{ matchedFieldCount }} of {{ importHeaders.length }} columns matched
+                                    </span>
+                                </div>
+                                <div class="grid gap-1.5">
+                                    <div
+                                        v-for="mapping in importFieldMapping"
+                                        :key="mapping.header"
+                                        class="flex items-center gap-2 text-sm"
+                                    >
+                                        <span
+                                            class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset"
+                                            :class="mapping.matchedField
+                                                ? 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20'
+                                                : 'bg-muted text-muted-foreground ring-border'"
+                                        >
+                                            {{ mapping.header }}
+                                        </span>
+                                        <span v-if="mapping.matchedField" class="text-muted-foreground">&rarr;</span>
+                                        <span v-if="mapping.matchedField" class="text-sm font-medium">{{ mapping.matchedField }}</span>
+                                        <span v-else class="text-xs text-muted-foreground italic">ignored</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p class="text-sm text-muted-foreground">
+                                Found <strong>{{ importRows.length }}</strong> row(s) to import
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter class="flex gap-2 sm:justify-end">
+                        <Button variant="outline" @click="showImportDialog = false">Cancel</Button>
+                        <Button
+                            @click="submitImport"
+                            :disabled="importRows.length === 0 || isImporting || matchedFieldCount === 0"
+                            class="gap-2"
+                        >
+                            <Download class="h-4 w-4" />
+                            {{ isImporting ? 'Importing...' : `Import ${importRows.length} row(s)` }}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

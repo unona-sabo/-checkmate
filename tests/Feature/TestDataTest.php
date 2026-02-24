@@ -751,3 +751,123 @@ test('viewer cannot store link', function () {
         ])
         ->assertForbidden();
 });
+
+// ===== Import =====
+
+test('import users creates multiple users from rows', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('test-data.users.import', $project), [
+            'rows' => [
+                ['name' => 'Alice', 'email' => 'alice@test.com', 'role' => 'admin', 'is_valid' => 'Yes'],
+                ['name' => 'Bob', 'email' => 'bob@test.com', 'role' => 'user', 'is_valid' => 'No'],
+            ],
+        ])
+        ->assertRedirect();
+
+    expect($project->testUsers()->count())->toBe(2);
+    expect($project->testUsers()->where('name', 'Alice')->first()->is_valid)->toBeTrue();
+    expect($project->testUsers()->where('name', 'Bob')->first()->is_valid)->toBeFalse();
+});
+
+test('import payments creates multiple payments from rows', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('test-data.payments.import', $project), [
+            'rows' => [
+                ['name' => 'Visa Gold', 'type' => 'card', 'credentials' => 'number: 4111111111111111; cvv: 123'],
+                ['name' => 'BTC Wallet', 'type' => 'crypto'],
+            ],
+        ])
+        ->assertRedirect();
+
+    expect($project->testPaymentMethods()->count())->toBe(2);
+    $visa = $project->testPaymentMethods()->where('name', 'Visa Gold')->first();
+    expect($visa->credentials)->toBe(['number' => '4111111111111111', 'cvv' => '123']);
+});
+
+test('import commands creates multiple commands from rows', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('test-data.commands.import', $project), [
+            'rows' => [
+                ['category' => 'Deploy', 'description' => 'Deploy prod', 'command' => 'php artisan deploy'],
+                ['description' => 'Run tests', 'command' => 'php artisan test'],
+            ],
+        ])
+        ->assertRedirect();
+
+    expect($project->testCommands()->count())->toBe(2);
+});
+
+test('import links creates multiple links from rows', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('test-data.links.import', $project), [
+            'rows' => [
+                ['category' => 'Docs', 'description' => 'API Docs', 'url' => 'https://api.example.com/docs'],
+                ['description' => 'Dashboard', 'url' => 'https://dashboard.example.com'],
+            ],
+        ])
+        ->assertRedirect();
+
+    expect($project->testLinks()->count())->toBe(2);
+});
+
+test('import users validates rows required', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('test-data.users.import', $project), ['rows' => []])
+        ->assertSessionHasErrors('rows');
+});
+
+test('import assigns incremental order values', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    TestCommand::factory()->create(['project_id' => $project->id, 'order' => 5]);
+
+    $this->actingAs($user)
+        ->post(route('test-data.commands.import', $project), [
+            'rows' => [
+                ['description' => 'First', 'command' => 'cmd1'],
+                ['description' => 'Second', 'command' => 'cmd2'],
+            ],
+        ])
+        ->assertRedirect();
+
+    $commands = $project->testCommands()->orderBy('order')->get();
+    expect($commands[1]->order)->toBe(6);
+    expect($commands[2]->order)->toBe(7);
+});
+
+test('viewer cannot import users', function () {
+    $owner = User::factory()->create();
+    $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+    $workspace->members()->attach($owner->id, ['role' => 'owner']);
+
+    $project = Project::factory()->create([
+        'user_id' => $owner->id,
+        'workspace_id' => $workspace->id,
+    ]);
+
+    $viewer = User::factory()->create();
+    $workspace->members()->attach($viewer->id, ['role' => 'viewer']);
+    $viewer->update(['current_workspace_id' => $workspace->id]);
+
+    $this->actingAs($viewer)
+        ->post(route('test-data.users.import', $project), [
+            'rows' => [['name' => 'Test']],
+        ])
+        ->assertForbidden();
+});

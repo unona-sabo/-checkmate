@@ -412,7 +412,7 @@ class HomeController extends Controller
                     'Payment system tracking (Stripe, PayPal, Square, Braintree)',
                     'Copy-to-clipboard for emails, passwords, and credentials',
                     'Password visibility toggle with eye icon',
-                    'CSV export of filtered test data across all tabs',
+                    'CSV/Excel import and export across all tabs via File dropdown',
                     'Bulk selection and deletion for users, payments, commands, and links',
                     'Search and filter by validity, environment, role, and payment type',
                     'Creator tracking per test data entry',
