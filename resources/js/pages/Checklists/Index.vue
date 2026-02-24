@@ -620,7 +620,7 @@ const onDialogClose = (open: boolean) => {
                     </h1>
                     <p class="text-muted-foreground">Create and manage custom checklists</p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div v-if="checklists.length > 0" class="flex items-center gap-2">
                     <div class="relative">
                         <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input

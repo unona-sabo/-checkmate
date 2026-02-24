@@ -211,36 +211,38 @@ const resumeRun = (run: TestRun) => {
                     <p class="text-muted-foreground">Execute and track test case results</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <div class="relative">
-                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Search test runs..."
-                            class="pl-9 pr-8 w-56 bg-background/60"
-                        />
-                        <button
-                            v-if="searchQuery"
-                            @click="searchQuery = ''"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    <template v-if="testRuns.length > 0">
+                        <div class="relative">
+                            <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                v-model="searchQuery"
+                                type="text"
+                                placeholder="Search test runs..."
+                                class="pl-9 pr-8 w-56 bg-background/60"
+                            />
+                            <button
+                                v-if="searchQuery"
+                                @click="searchQuery = ''"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                            >
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
+                        <Button
+                            variant="outline"
+                            class="gap-2 relative cursor-pointer"
+                            @click="showFilters = !showFilters"
                         >
-                            <X class="h-4 w-4" />
-                        </button>
-                    </div>
-                    <Button
-                        variant="outline"
-                        class="gap-2 relative cursor-pointer"
-                        @click="showFilters = !showFilters"
-                    >
-                        <Filter class="h-4 w-4" />
-                        Filter
-                        <Badge
-                            v-if="activeFilterCount > 0"
-                            class="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full"
-                        >
-                            {{ activeFilterCount }}
-                        </Badge>
-                    </Button>
+                            <Filter class="h-4 w-4" />
+                            Filter
+                            <Badge
+                                v-if="activeFilterCount > 0"
+                                class="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full"
+                            >
+                                {{ activeFilterCount }}
+                            </Badge>
+                        </Button>
+                    </template>
                     <RestrictedAction>
                         <DropdownMenu>
                             <DropdownMenuTrigger as-child>

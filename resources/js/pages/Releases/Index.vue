@@ -138,7 +138,7 @@ const formatDate = (date: string | null): string => {
 <template>
     <Head :title="`Releases - ${project.name}`" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6 px-[150px] py-6">
+        <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <!-- Header -->
             <div>
                 <div class="flex items-center justify-between">
@@ -150,7 +150,7 @@ const formatDate = (date: string | null): string => {
                         <p class="text-muted-foreground">Plan, track, and manage product releases</p>
                     </div>
                 </div>
-                <div class="mt-4 flex items-center justify-end gap-2">
+                <div v-if="releases.length" class="mt-4 flex items-center justify-end gap-2">
                     <div class="relative">
                         <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
@@ -250,11 +250,17 @@ const formatDate = (date: string | null): string => {
             </div>
 
             <!-- Empty state -->
-            <div v-else class="flex flex-1 items-center justify-center">
+            <div v-else class="flex flex-1 items-center justify-center py-12">
                 <div class="text-center">
-                    <Rocket class="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                    <h3 class="text-lg font-semibold">No releases yet</h3>
-                    <p class="mt-1 text-sm text-muted-foreground">Create your first release to start tracking</p>
+                    <Rocket class="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 class="mt-4 text-lg font-semibold">No releases yet</h3>
+                    <p class="mt-2 text-sm text-muted-foreground">Create your first release to start tracking.</p>
+                    <RestrictedAction>
+                        <Button variant="cta" @click="showCreateDialog = true" class="mt-4 cursor-pointer gap-2">
+                            <Plus class="h-4 w-4" />
+                            Create Release
+                        </Button>
+                    </RestrictedAction>
                 </div>
             </div>
         </div>

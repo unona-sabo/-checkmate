@@ -267,6 +267,34 @@ export interface TestPaymentMethod {
     updated_at: string;
 }
 
+export interface TestCommand {
+    id: number;
+    project_id: number;
+    category: string | null;
+    description: string;
+    command: string;
+    comment: string | null;
+    order: number;
+    created_by: number | null;
+    creator: { id: number; name: string } | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TestLink {
+    id: number;
+    project_id: number;
+    category: string | null;
+    description: string;
+    url: string;
+    comment: string | null;
+    order: number;
+    created_by: number | null;
+    creator: { id: number; name: string } | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Release {
     id: number;
     project_id: number;

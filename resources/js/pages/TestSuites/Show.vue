@@ -8,7 +8,7 @@ import {
     Plus, Edit, Layers, FileText,
     Zap, RotateCcw, GripVertical, Boxes, FolderPlus, Search, X, Link2, Check,
     MoreHorizontal, Trash2, Play, Copy, Minus, Filter, FileSpreadsheet,
-    Upload, Download, Loader2
+    Upload, Download, Loader2, StickyNote, Pencil
 } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -41,7 +41,7 @@ import RestrictedAction from '@/components/RestrictedAction.vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
 import FeatureSelector from '@/components/FeatureSelector.vue';
 import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useSearch } from '@/composables/useSearch';
 
 const props = defineProps<{
@@ -641,6 +641,156 @@ const exportSelectedCsv = () => {
     if (selectedTestCaseIds.value.length === 0) return;
     window.location.href = `/projects/${props.project.id}/test-suites/export-cases?ids=${selectedTestCaseIds.value.join(',')}`;
 };
+
+// Note dialog state
+const showNoteDialog = ref(false);
+const noteContent = ref('');
+const noteTitle = ref('');
+const selectedNoteSubcategoryId = ref<string>('');
+const isImportingNote = ref(false);
+const hasDraft = ref(false);
+const DRAFT_STORAGE_KEY = `test-suite-note-draft-${props.project.id}-${props.testSuite.id}`;
+
+// Target suite: for parent suites, optionally pick subcategory; for subcategories, it's the suite itself
+const noteTargetSuiteId = computed(() => {
+    if (props.testSuite.parent_id) return String(props.testSuite.id);
+    return selectedNoteSubcategoryId.value || String(props.testSuite.id);
+});
+
+// Subcategory options (only relevant for parent suites)
+const noteSubcategoryOptions = computed(() => {
+    if (props.testSuite.parent_id) return [];
+    return props.testSuite.children?.map(c => ({ id: c.id, name: c.name })) || [];
+});
+
+interface NoteDraft {
+    content: string;
+    title: string;
+    subcategoryId: string;
+}
+
+const loadDraft = () => {
+    try {
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+            const draft: NoteDraft = JSON.parse(saved);
+            if (draft.content && draft.content.trim()) {
+                hasDraft.value = true;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load draft:', e);
+    }
+};
+
+const saveDraft = () => {
+    if (!noteContent.value.trim()) {
+        deleteDraft();
+        return;
+    }
+    const draft: NoteDraft = {
+        content: noteContent.value,
+        title: noteTitle.value,
+        subcategoryId: selectedNoteSubcategoryId.value,
+    };
+    try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+        hasDraft.value = true;
+    } catch (e) {
+        console.error('Failed to save draft:', e);
+    }
+};
+
+const deleteDraft = () => {
+    try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        hasDraft.value = false;
+    } catch (e) {
+        console.error('Failed to delete draft:', e);
+    }
+};
+
+const clearNotes = () => {
+    noteContent.value = '';
+    noteTitle.value = '';
+    selectedNoteSubcategoryId.value = '';
+    deleteDraft();
+};
+
+const openDraft = () => {
+    try {
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+            const draft: NoteDraft = JSON.parse(saved);
+            noteContent.value = draft.content;
+            noteTitle.value = draft.title;
+            selectedNoteSubcategoryId.value = draft.subcategoryId || '';
+        }
+    } catch (e) {
+        console.error('Failed to open draft:', e);
+    }
+};
+
+const onNoteDialogChange = (open: boolean) => {
+    if (open && hasDraft.value) {
+        openDraft();
+    }
+    if (!open && noteContent.value.trim()) {
+        saveDraft();
+    }
+    if (!open) {
+        noteContent.value = '';
+        noteTitle.value = '';
+    }
+};
+
+// Parse note lines into test steps
+const parsedSteps = computed(() => {
+    if (!noteContent.value.trim()) return [];
+    return noteContent.value
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => ({
+            action: line.replace(/^[\d]+[.\)\-:\s]+/, '').trim(),
+            expected: null,
+        }))
+        .filter(step => step.action.length > 0);
+});
+
+const importNoteAsTestCase = () => {
+    if (!parsedSteps.value.length || !noteTitle.value.trim() || !noteTargetSuiteId.value) return;
+    isImportingNote.value = true;
+    router.post(
+        `/projects/${props.project.id}/test-suites/${noteTargetSuiteId.value}/test-cases`,
+        {
+            title: noteTitle.value.trim(),
+            steps: parsedSteps.value,
+            priority: 'medium',
+            severity: 'major',
+            type: 'functional',
+            automation_status: 'not_automated',
+            tags: [],
+        },
+        {
+            preserveState: false,
+            onSuccess: () => {
+                showNoteDialog.value = false;
+                noteContent.value = '';
+                noteTitle.value = '';
+                isImportingNote.value = false;
+                deleteDraft();
+            },
+            onError: () => {
+                isImportingNote.value = false;
+            },
+        },
+    );
+};
+
+onMounted(() => {
+    loadDraft();
+});
 </script>
 
 <template>
@@ -736,7 +886,7 @@ const exportSelectedCsv = () => {
                 </div>
                 <div v-else />
                 <div class="flex items-center gap-2">
-                    <div class="relative">
+                    <div v-if="suiteSections.length > 0 || testSuite.children?.length" class="relative">
                         <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             v-model="searchQuery"
@@ -779,6 +929,7 @@ const exportSelectedCsv = () => {
                         </DropdownMenuContent>
                     </DropdownMenu>
                     <Button
+                        v-if="suiteSections.length > 0 || testSuite.children?.length"
                         variant="outline"
                         size="sm"
                         class="gap-1.5 text-xs relative"
@@ -809,6 +960,115 @@ const exportSelectedCsv = () => {
                             </Button>
                         </Link>
                     </RestrictedAction>
+                    <RestrictedAction>
+                        <Button
+                            :variant="hasDraft ? 'cta' : 'outline'"
+                            class="gap-2"
+                            @click="showNoteDialog = true; if (hasDraft) openDraft();"
+                        >
+                            <Pencil v-if="hasDraft" class="h-4 w-4" />
+                            <StickyNote v-else class="h-4 w-4" />
+                            {{ hasDraft ? 'Draft' : 'Create a Note' }}
+                        </Button>
+                    </RestrictedAction>
+                    <Dialog v-model:open="showNoteDialog" @update:open="onNoteDialogChange">
+                            <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
+                                <DialogHeader>
+                                    <DialogTitle class="flex items-center gap-2">
+                                        <StickyNote class="h-5 w-5 text-primary" />
+                                        {{ hasDraft ? 'Edit Draft' : 'Create a Note' }}
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        Write your notes below. Each line will become a test step in the new test case.
+                                    </DialogDescription>
+                                </DialogHeader>
+
+                                <div class="space-y-4 py-4 px-0.5 overflow-y-auto min-h-0 flex-1">
+                                    <div class="space-y-2">
+                                        <Label>Test Case Title</Label>
+                                        <Input
+                                            v-model="noteTitle"
+                                            type="text"
+                                            placeholder="e.g. Verify user login flow"
+                                        />
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <Label>Steps (one per line)</Label>
+                                        <Textarea
+                                            v-model="noteContent"
+                                            placeholder="1. Navigate to the login page&#10;2. Enter valid credentials&#10;3. Click the login button&#10;4. Verify dashboard is displayed"
+                                            rows="10"
+                                            class="font-mono text-sm resize-y"
+                                            style="word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap; overflow-y: auto; max-height: 400px;"
+                                        />
+                                        <p v-if="parsedSteps.length > 0" class="text-sm text-muted-foreground">
+                                            {{ parsedSteps.length }} step(s) will be created
+                                        </p>
+                                    </div>
+
+                                    <div v-if="parsedSteps.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30">
+                                        <div v-if="!testSuite.parent_id && noteSubcategoryOptions.length > 0" class="space-y-2 min-w-0">
+                                            <Label>Subcategory <span class="text-muted-foreground font-normal">(optional — defaults to this suite)</span></Label>
+                                            <Select v-model="selectedNoteSubcategoryId">
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select subcategory..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem
+                                                        v-for="sub in noteSubcategoryOptions"
+                                                        :key="sub.id"
+                                                        :value="String(sub.id)"
+                                                    >
+                                                        {{ sub.name }}
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div class="space-y-2 overflow-hidden">
+                                            <Label>Preview</Label>
+                                            <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word;">
+                                                <ol class="list-decimal list-inside space-y-1">
+                                                    <li v-for="(step, index) in parsedSteps.slice(0, 10)" :key="index" class="break-words whitespace-pre-wrap" style="overflow-wrap: break-word; word-break: break-all;">
+                                                        {{ step.action }}
+                                                    </li>
+                                                    <li v-if="parsedSteps.length > 10" class="text-muted-foreground">
+                                                        ... and {{ parsedSteps.length - 10 }} more
+                                                    </li>
+                                                </ol>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <DialogFooter class="flex justify-between sm:justify-between">
+                                    <Button
+                                        v-if="noteContent.trim() || noteTitle.trim()"
+                                        variant="ghost"
+                                        @click="clearNotes"
+                                        class="gap-2 text-muted-foreground hover:text-destructive"
+                                    >
+                                        <X class="h-4 w-4" />
+                                        Clear
+                                    </Button>
+                                    <div v-else></div>
+                                    <div class="flex gap-2">
+                                        <Button variant="outline" @click="showNoteDialog = false">
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            @click="importNoteAsTestCase"
+                                            :disabled="parsedSteps.length === 0 || !noteTitle.trim() || isImportingNote"
+                                            class="gap-2"
+                                        >
+                                            <Plus class="h-4 w-4" />
+                                            Create Test Case
+                                        </Button>
+                                    </div>
+                                </DialogFooter>
+                            </DialogContent>
+                    </Dialog>
                     <RestrictedAction>
                         <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/edit`">
                             <Button variant="outline" class="gap-2">
@@ -1036,7 +1296,7 @@ const exportSelectedCsv = () => {
             <div v-if="showFilters" class="fixed inset-0 z-10" @click="showFilters = false" />
 
             <!-- Empty State -->
-            <div v-if="suiteSections.length === 0 && !testSuite.children?.length" class="flex flex-1 items-center justify-center">
+            <div v-if="suiteSections.length === 0 && !testSuite.children?.length" class="flex flex-1 justify-center pt-24">
                 <div class="text-center">
                     <FileText class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="text-lg font-semibold">No test cases yet</h3>

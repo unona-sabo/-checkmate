@@ -109,6 +109,22 @@ class Project extends Model
     }
 
     /**
+     * Get all test commands for the project.
+     */
+    public function testCommands(): HasMany
+    {
+        return $this->hasMany(TestCommand::class);
+    }
+
+    /**
+     * Get all test links for the project.
+     */
+    public function testLinks(): HasMany
+    {
+        return $this->hasMany(TestLink::class);
+    }
+
+    /**
      * Get all notes for the project.
      */
     public function notes(): HasMany

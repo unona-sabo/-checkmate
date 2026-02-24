@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Project;
+use App\Models\TestCommand;
+use App\Models\TestLink;
 use App\Models\TestPaymentMethod;
 use App\Models\TestUser;
 use App\Models\User;
@@ -8,12 +10,14 @@ use App\Models\Workspace;
 
 // ===== Index =====
 
-test('index page renders with test users and payment methods', function () {
+test('index page renders with test users, payment methods, commands, and links', function () {
     $user = User::factory()->create();
     $project = Project::factory()->create(['user_id' => $user->id]);
 
     TestUser::factory()->count(3)->create(['project_id' => $project->id]);
     TestPaymentMethod::factory()->count(2)->create(['project_id' => $project->id]);
+    TestCommand::factory()->count(4)->create(['project_id' => $project->id]);
+    TestLink::factory()->count(2)->create(['project_id' => $project->id]);
 
     $response = $this->actingAs($user)->get(route('test-data.index', $project));
 
@@ -23,6 +27,8 @@ test('index page renders with test users and payment methods', function () {
         ->has('project')
         ->has('testUsers', 3)
         ->has('testPaymentMethods', 2)
+        ->has('testCommands', 4)
+        ->has('testLinks', 2)
     );
 });
 
@@ -465,4 +471,283 @@ test('store auto-assigns order as max plus one', function () {
 
     $newUser = TestUser::where('email', 'new@example.com')->first();
     expect($newUser->order)->toBe(6);
+});
+
+// ===== Test Commands CRUD =====
+
+test('store creates command with valid data', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(route('test-data.commands.store', $project), [
+        'category' => 'deploy',
+        'description' => 'Deploy to production',
+        'command' => 'php artisan deploy --production',
+        'comment' => 'Run during maintenance window',
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('test_commands', [
+        'project_id' => $project->id,
+        'category' => 'deploy',
+        'description' => 'Deploy to production',
+        'command' => 'php artisan deploy --production',
+        'comment' => 'Run during maintenance window',
+        'created_by' => $user->id,
+    ]);
+});
+
+test('store validates required command fields', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(route('test-data.commands.store', $project), [
+        'description' => '',
+        'command' => '',
+    ]);
+
+    $response->assertSessionHasErrors(['description', 'command']);
+});
+
+test('update modifies existing command', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $command = TestCommand::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->put(route('test-data.commands.update', [$project, $command]), [
+        'description' => 'Updated command',
+        'command' => 'npm run build',
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('test_commands', [
+        'id' => $command->id,
+        'description' => 'Updated command',
+        'command' => 'npm run build',
+    ]);
+});
+
+test('destroy deletes command', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $command = TestCommand::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->delete(route('test-data.commands.destroy', [$project, $command]));
+
+    $response->assertRedirect();
+    $this->assertDatabaseMissing('test_commands', ['id' => $command->id]);
+});
+
+test('bulk destroy deletes multiple commands scoped to project', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $otherProject = Project::factory()->create(['user_id' => $user->id]);
+
+    $commands = TestCommand::factory()->count(3)->create(['project_id' => $project->id]);
+    $otherCommand = TestCommand::factory()->create(['project_id' => $otherProject->id]);
+
+    $response = $this->actingAs($user)->delete(route('test-data.commands.bulk-destroy', $project), [
+        'ids' => [$commands[0]->id, $commands[1]->id, $otherCommand->id],
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseMissing('test_commands', ['id' => $commands[0]->id]);
+    $this->assertDatabaseMissing('test_commands', ['id' => $commands[1]->id]);
+    $this->assertDatabaseHas('test_commands', ['id' => $commands[2]->id]);
+    $this->assertDatabaseHas('test_commands', ['id' => $otherCommand->id]);
+});
+
+test('reorder commands updates order values', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $commands = TestCommand::factory()->count(3)->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->put(route('test-data.commands.reorder', $project), [
+        'ids' => [$commands[2]->id, $commands[0]->id, $commands[1]->id],
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('test_commands', ['id' => $commands[2]->id, 'order' => 0]);
+    $this->assertDatabaseHas('test_commands', ['id' => $commands[0]->id, 'order' => 1]);
+    $this->assertDatabaseHas('test_commands', ['id' => $commands[1]->id, 'order' => 2]);
+});
+
+test('store command auto-assigns order', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    TestCommand::factory()->create(['project_id' => $project->id, 'order' => 3]);
+
+    $this->actingAs($user)->post(route('test-data.commands.store', $project), [
+        'description' => 'New command',
+        'command' => 'echo hello',
+    ]);
+
+    $newCommand = TestCommand::where('description', 'New command')->first();
+    expect($newCommand->order)->toBe(4);
+});
+
+test('viewer cannot store command', function () {
+    $owner = User::factory()->create();
+    $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+    $workspace->members()->attach($owner->id, ['role' => 'owner']);
+
+    $project = Project::factory()->create([
+        'user_id' => $owner->id,
+        'workspace_id' => $workspace->id,
+    ]);
+
+    $viewer = User::factory()->create();
+    $workspace->members()->attach($viewer->id, ['role' => 'viewer']);
+    $viewer->update(['current_workspace_id' => $workspace->id]);
+
+    $this->actingAs($viewer)
+        ->post(route('test-data.commands.store', $project), [
+            'description' => 'Test',
+            'command' => 'echo test',
+        ])
+        ->assertForbidden();
+});
+
+// ===== Test Links CRUD =====
+
+test('store creates link with valid data', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(route('test-data.links.store', $project), [
+        'category' => 'documentation',
+        'description' => 'API Docs',
+        'url' => 'https://docs.example.com/api',
+        'comment' => 'Main API reference',
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('test_links', [
+        'project_id' => $project->id,
+        'category' => 'documentation',
+        'description' => 'API Docs',
+        'url' => 'https://docs.example.com/api',
+        'comment' => 'Main API reference',
+        'created_by' => $user->id,
+    ]);
+});
+
+test('store validates required link fields', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(route('test-data.links.store', $project), [
+        'description' => '',
+        'url' => '',
+    ]);
+
+    $response->assertSessionHasErrors(['description', 'url']);
+});
+
+test('store validates link url format', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(route('test-data.links.store', $project), [
+        'description' => 'Bad link',
+        'url' => 'not-a-url',
+    ]);
+
+    $response->assertSessionHasErrors('url');
+});
+
+test('update modifies existing link', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $link = TestLink::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->put(route('test-data.links.update', [$project, $link]), [
+        'description' => 'Updated link',
+        'url' => 'https://updated.example.com',
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('test_links', [
+        'id' => $link->id,
+        'description' => 'Updated link',
+        'url' => 'https://updated.example.com',
+    ]);
+});
+
+test('destroy deletes link', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $link = TestLink::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->delete(route('test-data.links.destroy', [$project, $link]));
+
+    $response->assertRedirect();
+    $this->assertDatabaseMissing('test_links', ['id' => $link->id]);
+});
+
+test('bulk destroy deletes multiple links scoped to project', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $otherProject = Project::factory()->create(['user_id' => $user->id]);
+
+    $links = TestLink::factory()->count(3)->create(['project_id' => $project->id]);
+    $otherLink = TestLink::factory()->create(['project_id' => $otherProject->id]);
+
+    $response = $this->actingAs($user)->delete(route('test-data.links.bulk-destroy', $project), [
+        'ids' => [$links[0]->id, $links[1]->id, $otherLink->id],
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseMissing('test_links', ['id' => $links[0]->id]);
+    $this->assertDatabaseMissing('test_links', ['id' => $links[1]->id]);
+    $this->assertDatabaseHas('test_links', ['id' => $links[2]->id]);
+    $this->assertDatabaseHas('test_links', ['id' => $otherLink->id]);
+});
+
+test('reorder links updates order values', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $links = TestLink::factory()->count(3)->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->put(route('test-data.links.reorder', $project), [
+        'ids' => [$links[2]->id, $links[0]->id, $links[1]->id],
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('test_links', ['id' => $links[2]->id, 'order' => 0]);
+    $this->assertDatabaseHas('test_links', ['id' => $links[0]->id, 'order' => 1]);
+    $this->assertDatabaseHas('test_links', ['id' => $links[1]->id, 'order' => 2]);
+});
+
+test('viewer cannot store link', function () {
+    $owner = User::factory()->create();
+    $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+    $workspace->members()->attach($owner->id, ['role' => 'owner']);
+
+    $project = Project::factory()->create([
+        'user_id' => $owner->id,
+        'workspace_id' => $workspace->id,
+    ]);
+
+    $viewer = User::factory()->create();
+    $workspace->members()->attach($viewer->id, ['role' => 'viewer']);
+    $viewer->update(['current_workspace_id' => $workspace->id]);
+
+    $this->actingAs($viewer)
+        ->post(route('test-data.links.store', $project), [
+            'description' => 'Test',
+            'url' => 'https://example.com',
+        ])
+        ->assertForbidden();
 });

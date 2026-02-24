@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestUser, type TestPaymentMethod } from '@/types';
+import { type BreadcrumbItem, type Project, type TestUser, type TestPaymentMethod, type TestCommand, type TestLink } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -42,6 +42,9 @@ import {
     CreditCard,
     GripVertical,
     GripHorizontal,
+    Terminal,
+    Link2,
+    ExternalLink,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useCanEdit } from '@/composables/useCanEdit';
@@ -52,6 +55,8 @@ const props = defineProps<{
     project: Project;
     testUsers: TestUser[];
     testPaymentMethods: TestPaymentMethod[];
+    testCommands: TestCommand[];
+    testLinks: TestLink[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -61,7 +66,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 // Tab state
-const activeTab = ref<'users' | 'payments'>('users');
+const activeTab = ref<'users' | 'payments' | 'commands' | 'links'>('users');
 
 // Search
 const searchQuery = ref('');
@@ -134,12 +139,34 @@ const defaultPaymentColumns: ColumnDef[] = [
     { key: 'actions', label: 'Actions', width: 96, fixed: true },
 ];
 
+const defaultCommandColumns: ColumnDef[] = [
+    { key: 'checkbox', label: '', width: 40, fixed: true },
+    { key: 'category', label: 'Category', width: 120 },
+    { key: 'description', label: 'Description', width: 200 },
+    { key: 'command', label: 'Command', width: 300 },
+    { key: 'comment', label: 'Comment', width: 200 },
+    { key: 'actions', label: 'Actions', width: 96, fixed: true },
+];
+
+const defaultLinkColumns: ColumnDef[] = [
+    { key: 'checkbox', label: '', width: 40, fixed: true },
+    { key: 'category', label: 'Category', width: 120 },
+    { key: 'description', label: 'Description', width: 200 },
+    { key: 'url', label: 'URL', width: 300 },
+    { key: 'comment', label: 'Comment', width: 200 },
+    { key: 'actions', label: 'Actions', width: 96, fixed: true },
+];
+
 const userColumns = ref<ColumnDef[]>([...defaultUserColumns.map(c => ({ ...c }))]);
 const paymentColumns = ref<ColumnDef[]>([...defaultPaymentColumns.map(c => ({ ...c }))]);
+const commandColumns = ref<ColumnDef[]>([...defaultCommandColumns.map(c => ({ ...c }))]);
+const linkColumns = ref<ColumnDef[]>([...defaultLinkColumns.map(c => ({ ...c }))]);
 
 // localStorage persistence for column config
 const userColStorageKey = computed(() => `test-data-users-columns-${props.project.id}`);
 const paymentColStorageKey = computed(() => `test-data-payments-columns-${props.project.id}`);
+const commandColStorageKey = computed(() => `test-data-commands-columns-${props.project.id}`);
+const linkColStorageKey = computed(() => `test-data-links-columns-${props.project.id}`);
 
 const loadColumnConfig = () => {
     try {
@@ -183,11 +210,53 @@ const loadColumnConfig = () => {
             paymentColumns.value = merged;
         }
     } catch { /* ignore */ }
+
+    try {
+        const cmdJson = localStorage.getItem(commandColStorageKey.value);
+        if (cmdJson) {
+            const saved = JSON.parse(cmdJson) as ColumnDef[];
+            const merged: ColumnDef[] = [];
+            for (const s of saved) {
+                const def = defaultCommandColumns.find(d => d.key === s.key);
+                if (def) {
+                    merged.push({ ...def, width: s.width, fixed: def.fixed });
+                }
+            }
+            for (const d of defaultCommandColumns) {
+                if (!merged.find(m => m.key === d.key)) {
+                    merged.push({ ...d });
+                }
+            }
+            commandColumns.value = merged;
+        }
+    } catch { /* ignore */ }
+
+    try {
+        const lnkJson = localStorage.getItem(linkColStorageKey.value);
+        if (lnkJson) {
+            const saved = JSON.parse(lnkJson) as ColumnDef[];
+            const merged: ColumnDef[] = [];
+            for (const s of saved) {
+                const def = defaultLinkColumns.find(d => d.key === s.key);
+                if (def) {
+                    merged.push({ ...def, width: s.width, fixed: def.fixed });
+                }
+            }
+            for (const d of defaultLinkColumns) {
+                if (!merged.find(m => m.key === d.key)) {
+                    merged.push({ ...d });
+                }
+            }
+            linkColumns.value = merged;
+        }
+    } catch { /* ignore */ }
 };
 
 const saveColumnConfig = () => {
     localStorage.setItem(userColStorageKey.value, JSON.stringify(userColumns.value.map(c => ({ key: c.key, width: c.width }))));
     localStorage.setItem(paymentColStorageKey.value, JSON.stringify(paymentColumns.value.map(c => ({ key: c.key, width: c.width }))));
+    localStorage.setItem(commandColStorageKey.value, JSON.stringify(commandColumns.value.map(c => ({ key: c.key, width: c.width }))));
+    localStorage.setItem(linkColStorageKey.value, JSON.stringify(linkColumns.value.map(c => ({ key: c.key, width: c.width }))));
 };
 
 onMounted(() => {
@@ -197,6 +266,8 @@ onMounted(() => {
 // ===== Local mutable copies of row data =====
 const localUsers = ref<TestUser[]>([...props.testUsers]);
 const localPayments = ref<TestPaymentMethod[]>([...props.testPaymentMethods]);
+const localCommands = ref<TestCommand[]>([...props.testCommands]);
+const localLinks = ref<TestLink[]>([...props.testLinks]);
 
 watch(() => props.testUsers, (newVal) => {
     localUsers.value = [...newVal];
@@ -204,6 +275,14 @@ watch(() => props.testUsers, (newVal) => {
 
 watch(() => props.testPaymentMethods, (newVal) => {
     localPayments.value = [...newVal];
+}, { deep: true });
+
+watch(() => props.testCommands, (newVal) => {
+    localCommands.value = [...newVal];
+}, { deep: true });
+
+watch(() => props.testLinks, (newVal) => {
+    localLinks.value = [...newVal];
 }, { deep: true });
 
 // Filtered users
@@ -277,13 +356,77 @@ const filteredPayments = computed(() => {
     return payments;
 });
 
+// Category filter
+const categoryFilter = ref<string>('all');
+
+// Filtered commands
+const uniqueCommandCategories = computed(() => {
+    const cats = localCommands.value
+        .map(c => c.category)
+        .filter((c): c is string => c !== null && c !== '');
+    return [...new Set(cats)].sort();
+});
+
+const filteredCommands = computed(() => {
+    let commands = localCommands.value;
+
+    if (searchQuery.value.trim()) {
+        const q = searchQuery.value.toLowerCase();
+        commands = commands.filter(c =>
+            c.description.toLowerCase().includes(q) ||
+            c.command.toLowerCase().includes(q) ||
+            (c.category && c.category.toLowerCase().includes(q)) ||
+            (c.comment && c.comment.toLowerCase().includes(q))
+        );
+    }
+
+    if (categoryFilter.value !== 'all') {
+        commands = commands.filter(c => c.category === categoryFilter.value);
+    }
+
+    return commands;
+});
+
+// Filtered links
+const uniqueLinkCategories = computed(() => {
+    const cats = localLinks.value
+        .map(l => l.category)
+        .filter((c): c is string => c !== null && c !== '');
+    return [...new Set(cats)].sort();
+});
+
+const filteredLinks = computed(() => {
+    let links = localLinks.value;
+
+    if (searchQuery.value.trim()) {
+        const q = searchQuery.value.toLowerCase();
+        links = links.filter(l =>
+            l.description.toLowerCase().includes(q) ||
+            l.url.toLowerCase().includes(q) ||
+            (l.category && l.category.toLowerCase().includes(q)) ||
+            (l.comment && l.comment.toLowerCase().includes(q))
+        );
+    }
+
+    if (categoryFilter.value !== 'all') {
+        links = links.filter(l => l.category === categoryFilter.value);
+    }
+
+    return links;
+});
+
+// Category suggestions for dialogs
+const allCommandCategories = computed(() => uniqueCommandCategories.value);
+const allLinkCategories = computed(() => uniqueLinkCategories.value);
+
 // ===== canDragRows =====
 const isFiltered = computed(() =>
     searchQuery.value.trim() !== '' ||
     validityFilter.value !== 'all' ||
     environmentFilter.value !== 'all' ||
     roleFilter.value !== 'all' ||
-    typeFilter.value !== 'all'
+    typeFilter.value !== 'all' ||
+    categoryFilter.value !== 'all'
 );
 
 const canDragRows = computed(() => canEdit.value && !isFiltered.value);
@@ -291,10 +434,15 @@ const canDragRows = computed(() => canEdit.value && !isFiltered.value);
 // Bulk selection
 const selectedUserIds = ref<Set<number>>(new Set());
 const selectedPaymentIds = ref<Set<number>>(new Set());
+const selectedCommandIds = ref<Set<number>>(new Set());
+const selectedLinkIds = ref<Set<number>>(new Set());
 
 watch(activeTab, () => {
     selectedUserIds.value = new Set();
     selectedPaymentIds.value = new Set();
+    selectedCommandIds.value = new Set();
+    selectedLinkIds.value = new Set();
+    categoryFilter.value = 'all';
 });
 
 const toggleUserSelection = (id: number) => {
@@ -325,12 +473,41 @@ const toggleAllPayments = () => {
     }
 };
 
+const toggleCommandSelection = (id: number) => {
+    const s = new Set(selectedCommandIds.value);
+    if (s.has(id)) { s.delete(id); } else { s.add(id); }
+    selectedCommandIds.value = s;
+};
+
+const toggleAllCommands = () => {
+    if (selectedCommandIds.value.size === filteredCommands.value.length) {
+        selectedCommandIds.value = new Set();
+    } else {
+        selectedCommandIds.value = new Set(filteredCommands.value.map(c => c.id));
+    }
+};
+
+const toggleLinkSelection = (id: number) => {
+    const s = new Set(selectedLinkIds.value);
+    if (s.has(id)) { s.delete(id); } else { s.add(id); }
+    selectedLinkIds.value = s;
+};
+
+const toggleAllLinks = () => {
+    if (selectedLinkIds.value.size === filteredLinks.value.length) {
+        selectedLinkIds.value = new Set();
+    } else {
+        selectedLinkIds.value = new Set(filteredLinks.value.map(l => l.id));
+    }
+};
+
 // ===== Row Drag and Drop =====
+type TableType = 'users' | 'payments' | 'commands' | 'links';
 const draggedRowIndex = ref<number | null>(null);
 const dragOverRowIndex = ref<number | null>(null);
-const dragRowTable = ref<'users' | 'payments' | null>(null);
+const dragRowTable = ref<TableType | null>(null);
 
-const onRowDragStart = (table: 'users' | 'payments', index: number, event: DragEvent) => {
+const onRowDragStart = (table: TableType, index: number, event: DragEvent) => {
     draggedRowIndex.value = index;
     dragRowTable.value = table;
     if (event.dataTransfer) {
@@ -351,7 +528,7 @@ const onRowDragLeave = () => {
     dragOverRowIndex.value = null;
 };
 
-const onRowDrop = (table: 'users' | 'payments', index: number, event: DragEvent) => {
+const onRowDrop = (table: TableType, index: number, event: DragEvent) => {
     event.preventDefault();
     if (draggedRowIndex.value === null || draggedRowIndex.value === index || dragRowTable.value !== table) {
         draggedRowIndex.value = null;
@@ -360,21 +537,20 @@ const onRowDrop = (table: 'users' | 'payments', index: number, event: DragEvent)
         return;
     }
 
-    if (table === 'users') {
-        const dragged = localUsers.value[draggedRowIndex.value];
-        localUsers.value.splice(draggedRowIndex.value, 1);
-        localUsers.value.splice(index, 0, dragged);
-        router.put(`/projects/${props.project.id}/test-data/users-reorder`, {
-            ids: localUsers.value.map(u => u.id),
-        }, { preserveScroll: true, preserveState: true });
-    } else {
-        const dragged = localPayments.value[draggedRowIndex.value];
-        localPayments.value.splice(draggedRowIndex.value, 1);
-        localPayments.value.splice(index, 0, dragged);
-        router.put(`/projects/${props.project.id}/test-data/payments-reorder`, {
-            ids: localPayments.value.map(p => p.id),
-        }, { preserveScroll: true, preserveState: true });
-    }
+    const tableConfig: Record<TableType, { local: { value: { id: number }[] }; endpoint: string }> = {
+        users: { local: localUsers, endpoint: 'users-reorder' },
+        payments: { local: localPayments, endpoint: 'payments-reorder' },
+        commands: { local: localCommands, endpoint: 'commands-reorder' },
+        links: { local: localLinks, endpoint: 'links-reorder' },
+    };
+
+    const cfg = tableConfig[table];
+    const dragged = cfg.local.value[draggedRowIndex.value];
+    cfg.local.value.splice(draggedRowIndex.value, 1);
+    cfg.local.value.splice(index, 0, dragged);
+    router.put(`/projects/${props.project.id}/test-data/${cfg.endpoint}`, {
+        ids: cfg.local.value.map(item => item.id),
+    }, { preserveScroll: true, preserveState: true });
 
     draggedRowIndex.value = null;
     dragOverRowIndex.value = null;
@@ -390,9 +566,9 @@ const onRowDragEnd = () => {
 // ===== Column Drag and Drop =====
 const draggedColIndex = ref<number | null>(null);
 const dragOverColIndex = ref<number | null>(null);
-const dragColTable = ref<'users' | 'payments' | null>(null);
+const dragColTable = ref<TableType | null>(null);
 
-const onColDragStart = (table: 'users' | 'payments', index: number, event: DragEvent) => {
+const onColDragStart = (table: TableType, index: number, event: DragEvent) => {
     draggedColIndex.value = index;
     dragColTable.value = table;
     if (event.dataTransfer) {
@@ -413,7 +589,7 @@ const onColDragLeave = () => {
     dragOverColIndex.value = null;
 };
 
-const onColDrop = (table: 'users' | 'payments', index: number, event: DragEvent) => {
+const onColDrop = (table: TableType, index: number, event: DragEvent) => {
     event.preventDefault();
     if (draggedColIndex.value === null || draggedColIndex.value === index || dragColTable.value !== table) {
         draggedColIndex.value = null;
@@ -422,7 +598,8 @@ const onColDrop = (table: 'users' | 'payments', index: number, event: DragEvent)
         return;
     }
 
-    const cols = table === 'users' ? userColumns : paymentColumns;
+    const colsMap: Record<TableType, typeof userColumns> = { users: userColumns, payments: paymentColumns, commands: commandColumns, links: linkColumns };
+    const cols = colsMap[table];
     const dragged = cols.value[draggedColIndex.value];
     cols.value.splice(draggedColIndex.value, 1);
     cols.value.splice(index, 0, dragged);
@@ -440,14 +617,15 @@ const onColDragEnd = () => {
 };
 
 // ===== Column Resize =====
-const resizingCol = ref<{ table: 'users' | 'payments'; index: number } | null>(null);
+const resizingCol = ref<{ table: TableType; index: number } | null>(null);
 const resizeStartX = ref(0);
 const resizeStartWidth = ref(0);
 
-const startResize = (table: 'users' | 'payments', index: number, event: MouseEvent) => {
+const startResize = (table: TableType, index: number, event: MouseEvent) => {
     resizingCol.value = { table, index };
     resizeStartX.value = event.clientX;
-    const cols = table === 'users' ? userColumns : paymentColumns;
+    const colsMap: Record<TableType, typeof userColumns> = { users: userColumns, payments: paymentColumns, commands: commandColumns, links: linkColumns };
+    const cols = colsMap[table];
     resizeStartWidth.value = cols.value[index].width || 150;
     document.addEventListener('mousemove', onResize);
     document.addEventListener('mouseup', stopResize);
@@ -457,7 +635,8 @@ const onResize = (event: MouseEvent) => {
     if (!resizingCol.value) return;
     const diff = event.clientX - resizeStartX.value;
     const newWidth = Math.max(50, resizeStartWidth.value + diff);
-    const cols = resizingCol.value.table === 'users' ? userColumns : paymentColumns;
+    const colsMap: Record<TableType, typeof userColumns> = { users: userColumns, payments: paymentColumns, commands: commandColumns, links: linkColumns };
+    const cols = colsMap[resizingCol.value.table];
     cols.value[resizingCol.value.index].width = newWidth;
 };
 
@@ -670,6 +849,110 @@ const submitPaymentForm = () => {
     }
 };
 
+// ===== Command Form =====
+const showCommandDialog = ref(false);
+const editingCommand = ref<TestCommand | null>(null);
+
+const commandForm = useForm({
+    category: '' as string | null,
+    description: '',
+    command: '',
+    comment: '' as string | null,
+});
+
+const openAddCommandDialog = () => {
+    editingCommand.value = null;
+    commandForm.reset();
+    commandForm.clearErrors();
+    showCommandDialog.value = true;
+};
+
+const openEditCommandDialog = (cmd: TestCommand) => {
+    editingCommand.value = cmd;
+    commandForm.category = cmd.category || '';
+    commandForm.description = cmd.description;
+    commandForm.command = cmd.command;
+    commandForm.comment = cmd.comment || '';
+    commandForm.clearErrors();
+    showCommandDialog.value = true;
+};
+
+const submitCommandForm = () => {
+    const data = {
+        ...commandForm.data(),
+        category: commandForm.category || null,
+        comment: commandForm.comment || null,
+    };
+
+    if (editingCommand.value) {
+        commandForm.transform(() => data).put(`/projects/${props.project.id}/test-data/commands/${editingCommand.value!.id}`, {
+            onSuccess: () => {
+                showCommandDialog.value = false;
+                editingCommand.value = null;
+            },
+        });
+    } else {
+        commandForm.transform(() => data).post(`/projects/${props.project.id}/test-data/commands`, {
+            onSuccess: () => {
+                showCommandDialog.value = false;
+                commandForm.reset();
+            },
+        });
+    }
+};
+
+// ===== Link Form =====
+const showLinkDialog = ref(false);
+const editingLink = ref<TestLink | null>(null);
+
+const linkForm = useForm({
+    category: '' as string | null,
+    description: '',
+    url: '',
+    comment: '' as string | null,
+});
+
+const openAddLinkDialog = () => {
+    editingLink.value = null;
+    linkForm.reset();
+    linkForm.clearErrors();
+    showLinkDialog.value = true;
+};
+
+const openEditLinkDialog = (link: TestLink) => {
+    editingLink.value = link;
+    linkForm.category = link.category || '';
+    linkForm.description = link.description;
+    linkForm.url = link.url;
+    linkForm.comment = link.comment || '';
+    linkForm.clearErrors();
+    showLinkDialog.value = true;
+};
+
+const submitLinkForm = () => {
+    const data = {
+        ...linkForm.data(),
+        category: linkForm.category || null,
+        comment: linkForm.comment || null,
+    };
+
+    if (editingLink.value) {
+        linkForm.transform(() => data).put(`/projects/${props.project.id}/test-data/links/${editingLink.value!.id}`, {
+            onSuccess: () => {
+                showLinkDialog.value = false;
+                editingLink.value = null;
+            },
+        });
+    } else {
+        linkForm.transform(() => data).post(`/projects/${props.project.id}/test-data/links`, {
+            onSuccess: () => {
+                showLinkDialog.value = false;
+                linkForm.reset();
+            },
+        });
+    }
+};
+
 // ===== Delete Dialogs =====
 const showDeleteUserConfirm = ref(false);
 const userToDelete = ref<TestUser | null>(null);
@@ -707,33 +990,67 @@ const deletePayment = () => {
     });
 };
 
+const showDeleteCommandConfirm = ref(false);
+const commandToDelete = ref<TestCommand | null>(null);
+
+const confirmDeleteCommand = (cmd: TestCommand) => {
+    commandToDelete.value = cmd;
+    showDeleteCommandConfirm.value = true;
+};
+
+const deleteCommand = () => {
+    if (!commandToDelete.value) return;
+    router.delete(`/projects/${props.project.id}/test-data/commands/${commandToDelete.value.id}`, {
+        onSuccess: () => {
+            showDeleteCommandConfirm.value = false;
+            commandToDelete.value = null;
+        },
+    });
+};
+
+const showDeleteLinkConfirm = ref(false);
+const linkToDelete = ref<TestLink | null>(null);
+
+const confirmDeleteLink = (link: TestLink) => {
+    linkToDelete.value = link;
+    showDeleteLinkConfirm.value = true;
+};
+
+const deleteLink = () => {
+    if (!linkToDelete.value) return;
+    router.delete(`/projects/${props.project.id}/test-data/links/${linkToDelete.value.id}`, {
+        onSuccess: () => {
+            showDeleteLinkConfirm.value = false;
+            linkToDelete.value = null;
+        },
+    });
+};
+
 // ===== Bulk Delete =====
 const showBulkDeleteConfirm = ref(false);
-const bulkDeleteTarget = ref<'users' | 'payments'>('users');
+const bulkDeleteTarget = ref<TableType>('users');
 
-const openBulkDelete = (target: 'users' | 'payments') => {
+const openBulkDelete = (target: TableType) => {
     bulkDeleteTarget.value = target;
     showBulkDeleteConfirm.value = true;
 };
 
+const bulkDeleteConfig: Record<TableType, { endpoint: string; ids: typeof selectedUserIds; label: string }> = {
+    users: { endpoint: 'users-bulk', ids: selectedUserIds, label: 'Test Users' },
+    payments: { endpoint: 'payments-bulk', ids: selectedPaymentIds, label: 'Payment Methods' },
+    commands: { endpoint: 'commands-bulk', ids: selectedCommandIds, label: 'Commands' },
+    links: { endpoint: 'links-bulk', ids: selectedLinkIds, label: 'Links' },
+};
+
 const executeBulkDelete = () => {
-    if (bulkDeleteTarget.value === 'users') {
-        router.delete(`/projects/${props.project.id}/test-data/users-bulk`, {
-            data: { ids: [...selectedUserIds.value] },
-            onSuccess: () => {
-                showBulkDeleteConfirm.value = false;
-                selectedUserIds.value = new Set();
-            },
-        });
-    } else {
-        router.delete(`/projects/${props.project.id}/test-data/payments-bulk`, {
-            data: { ids: [...selectedPaymentIds.value] },
-            onSuccess: () => {
-                showBulkDeleteConfirm.value = false;
-                selectedPaymentIds.value = new Set();
-            },
-        });
-    }
+    const cfg = bulkDeleteConfig[bulkDeleteTarget.value];
+    router.delete(`/projects/${props.project.id}/test-data/${cfg.endpoint}`, {
+        data: { ids: [...cfg.ids.value] },
+        onSuccess: () => {
+            showBulkDeleteConfirm.value = false;
+            cfg.ids.value = new Set();
+        },
+    });
 };
 
 // ===== CSV Export =====
@@ -753,7 +1070,7 @@ const exportCsv = () => {
                 `"${(u.description || '').replace(/"/g, '""')}"`,
             ].join(',') + '\n';
         });
-    } else {
+    } else if (activeTab.value === 'payments') {
         csv = 'Name,Type,System,Credentials,Environment,Valid,Tags,Description\n';
         filteredPayments.value.forEach(p => {
             const creds = p.credentials
@@ -768,6 +1085,26 @@ const exportCsv = () => {
                 p.is_valid ? 'Yes' : 'No',
                 `"${(p.tags || []).join(', ').replace(/"/g, '""')}"`,
                 `"${(p.description || '').replace(/"/g, '""')}"`,
+            ].join(',') + '\n';
+        });
+    } else if (activeTab.value === 'commands') {
+        csv = 'Category,Description,Command,Comment\n';
+        filteredCommands.value.forEach(c => {
+            csv += [
+                `"${(c.category || '').replace(/"/g, '""')}"`,
+                `"${(c.description || '').replace(/"/g, '""')}"`,
+                `"${(c.command || '').replace(/"/g, '""')}"`,
+                `"${(c.comment || '').replace(/"/g, '""')}"`,
+            ].join(',') + '\n';
+        });
+    } else {
+        csv = 'Category,Description,URL,Comment\n';
+        filteredLinks.value.forEach(l => {
+            csv += [
+                `"${(l.category || '').replace(/"/g, '""')}"`,
+                `"${(l.description || '').replace(/"/g, '""')}"`,
+                `"${(l.url || '').replace(/"/g, '""')}"`,
+                `"${(l.comment || '').replace(/"/g, '""')}"`,
             ].join(',') + '\n';
         });
     }
@@ -827,13 +1164,51 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
     <Head title="Test Data" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 p-6">
+        <div class="flex h-full min-w-0 flex-1 flex-col gap-6 p-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <h1 class="flex items-start gap-2 text-2xl font-bold tracking-tight">
                     <Database class="mt-1 h-6 w-6 shrink-0 text-primary" />
                     Test Data
                 </h1>
+                <RestrictedAction>
+                    <Button
+                        v-if="activeTab === 'users'"
+                        variant="cta"
+                        class="gap-2 cursor-pointer"
+                        @click="openAddUserDialog"
+                    >
+                        <Plus class="h-4 w-4" />
+                        Add User
+                    </Button>
+                    <Button
+                        v-else-if="activeTab === 'payments'"
+                        variant="cta"
+                        class="gap-2 cursor-pointer"
+                        @click="openAddPaymentDialog"
+                    >
+                        <Plus class="h-4 w-4" />
+                        Add Payment
+                    </Button>
+                    <Button
+                        v-else-if="activeTab === 'commands'"
+                        variant="cta"
+                        class="gap-2 cursor-pointer"
+                        @click="openAddCommandDialog"
+                    >
+                        <Plus class="h-4 w-4" />
+                        Add Command
+                    </Button>
+                    <Button
+                        v-else
+                        variant="cta"
+                        class="gap-2 cursor-pointer"
+                        @click="openAddLinkDialog"
+                    >
+                        <Plus class="h-4 w-4" />
+                        Add Link
+                    </Button>
+                </RestrictedAction>
             </div>
 
             <!-- Tab Buttons -->
@@ -856,10 +1231,28 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                     Payment Methods
                     <Badge variant="secondary" class="ml-1">{{ localPayments.length }}</Badge>
                 </Button>
+                <Button
+                    :variant="activeTab === 'commands' ? 'default' : 'outline'"
+                    class="gap-2 cursor-pointer"
+                    @click="activeTab = 'commands'"
+                >
+                    <Terminal class="h-4 w-4" />
+                    Commands
+                    <Badge variant="secondary" class="ml-1">{{ localCommands.length }}</Badge>
+                </Button>
+                <Button
+                    :variant="activeTab === 'links' ? 'default' : 'outline'"
+                    class="gap-2 cursor-pointer"
+                    @click="activeTab = 'links'"
+                >
+                    <Link2 class="h-4 w-4" />
+                    Links
+                    <Badge variant="secondary" class="ml-1">{{ localLinks.length }}</Badge>
+                </Button>
             </div>
 
             <!-- Toolbar -->
-            <div class="flex flex-wrap items-center gap-3">
+            <div v-if="(activeTab === 'users' && localUsers.length > 0) || (activeTab === 'payments' && localPayments.length > 0) || (activeTab === 'commands' && localCommands.length > 0) || (activeTab === 'links' && localLinks.length > 0)" class="flex flex-wrap items-center gap-3">
                 <div class="relative">
                     <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -876,9 +1269,9 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                     </button>
                 </div>
 
-                <!-- Validity filter -->
-                <Select v-model="validityFilter">
-                    <SelectTrigger class="w-32 cursor-pointer">
+                <!-- Validity filter (users/payments only) -->
+                <Select v-if="activeTab === 'users' || activeTab === 'payments'" v-model="validityFilter">
+                    <SelectTrigger class="w-32 cursor-pointer bg-background/60">
                         <SelectValue placeholder="Validity" />
                     </SelectTrigger>
                     <SelectContent>
@@ -888,9 +1281,9 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                     </SelectContent>
                 </Select>
 
-                <!-- Environment filter -->
-                <Select v-model="environmentFilter">
-                    <SelectTrigger class="w-36 cursor-pointer">
+                <!-- Environment filter (users/payments only) -->
+                <Select v-if="activeTab === 'users' || activeTab === 'payments'" v-model="environmentFilter">
+                    <SelectTrigger class="w-36 cursor-pointer bg-background/60">
                         <SelectValue placeholder="Environment" />
                     </SelectTrigger>
                     <SelectContent>
@@ -901,9 +1294,34 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                     </SelectContent>
                 </Select>
 
+                <!-- Category filter (commands/links) -->
+                <Select v-if="activeTab === 'commands' && uniqueCommandCategories.length > 0" v-model="categoryFilter">
+                    <SelectTrigger class="w-36 cursor-pointer bg-background/60">
+                        <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all" class="cursor-pointer">All Categories</SelectItem>
+                        <SelectItem v-for="cat in uniqueCommandCategories" :key="cat" :value="cat" class="cursor-pointer">
+                            {{ cat }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <Select v-if="activeTab === 'links' && uniqueLinkCategories.length > 0" v-model="categoryFilter">
+                    <SelectTrigger class="w-36 cursor-pointer bg-background/60">
+                        <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all" class="cursor-pointer">All Categories</SelectItem>
+                        <SelectItem v-for="cat in uniqueLinkCategories" :key="cat" :value="cat" class="cursor-pointer">
+                            {{ cat }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+
                 <!-- Role filter (users tab) -->
                 <Select v-if="activeTab === 'users' && uniqueRoles.length > 0" v-model="roleFilter">
-                    <SelectTrigger class="w-36 cursor-pointer">
+                    <SelectTrigger class="w-36 cursor-pointer bg-background/60">
                         <SelectValue placeholder="Role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -916,7 +1334,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
 
                 <!-- Type filter (payments tab) -->
                 <Select v-if="activeTab === 'payments'" v-model="typeFilter">
-                    <SelectTrigger class="w-36 cursor-pointer">
+                    <SelectTrigger class="w-36 cursor-pointer bg-background/60">
                         <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -934,7 +1352,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                         variant="outline"
                         size="sm"
                         class="gap-2 cursor-pointer"
-                        :disabled="(activeTab === 'users' ? filteredUsers : filteredPayments).length === 0"
+                        :disabled="(activeTab === 'users' ? filteredUsers : activeTab === 'payments' ? filteredPayments : activeTab === 'commands' ? filteredCommands : filteredLinks).length === 0"
                         @click="exportCsv"
                     >
                         <Download class="h-4 w-4" />
@@ -962,28 +1380,28 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                             <Trash2 class="h-4 w-4" />
                             Delete ({{ selectedPaymentIds.size }})
                         </Button>
+                        <Button
+                            v-if="activeTab === 'commands' && selectedCommandIds.size > 0"
+                            variant="destructive"
+                            size="sm"
+                            class="gap-2 cursor-pointer"
+                            @click="openBulkDelete('commands')"
+                        >
+                            <Trash2 class="h-4 w-4" />
+                            Delete ({{ selectedCommandIds.size }})
+                        </Button>
+                        <Button
+                            v-if="activeTab === 'links' && selectedLinkIds.size > 0"
+                            variant="destructive"
+                            size="sm"
+                            class="gap-2 cursor-pointer"
+                            @click="openBulkDelete('links')"
+                        >
+                            <Trash2 class="h-4 w-4" />
+                            Delete ({{ selectedLinkIds.size }})
+                        </Button>
                     </RestrictedAction>
 
-                    <RestrictedAction>
-                        <Button
-                            v-if="activeTab === 'users'"
-                            variant="cta"
-                            class="gap-2 cursor-pointer"
-                            @click="openAddUserDialog"
-                        >
-                            <Plus class="h-4 w-4" />
-                            Add User
-                        </Button>
-                        <Button
-                            v-else
-                            variant="cta"
-                            class="gap-2 cursor-pointer"
-                            @click="openAddPaymentDialog"
-                        >
-                            <Plus class="h-4 w-4" />
-                            Add Payment
-                        </Button>
-                    </RestrictedAction>
                 </div>
             </div>
 
@@ -1394,6 +1812,351 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                 </Card>
             </template>
 
+            <!-- Commands Tab Content -->
+            <template v-if="activeTab === 'commands'">
+                <div v-if="localCommands.length === 0" class="flex flex-1 items-center justify-center">
+                    <div class="text-center">
+                        <Terminal class="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 class="mt-4 text-lg font-semibold">No commands yet</h3>
+                        <p class="mt-2 text-sm text-muted-foreground">
+                            Store useful commands for deploy, database, testing, etc.
+                        </p>
+                        <RestrictedAction>
+                            <Button variant="cta" class="mt-4 gap-2 cursor-pointer" @click="openAddCommandDialog">
+                                <Plus class="h-4 w-4" />
+                                Add Command
+                            </Button>
+                        </RestrictedAction>
+                    </div>
+                </div>
+
+                <div v-else-if="filteredCommands.length === 0" class="flex flex-1 items-center justify-center">
+                    <div class="text-center">
+                        <Search class="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 class="mt-4 text-lg font-semibold">No matching commands</h3>
+                        <p class="mt-2 text-sm text-muted-foreground">
+                            Try adjusting your search or filters.
+                        </p>
+                        <Button variant="secondary" class="mt-4 cursor-pointer" @click="searchQuery = ''; categoryFilter = 'all'">
+                            Clear filters
+                        </Button>
+                    </div>
+                </div>
+
+                <Card v-else>
+                    <CardContent class="p-0">
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-sm" style="table-layout: fixed">
+                        <thead>
+                            <tr class="border-b bg-muted">
+                                <th class="w-6 px-1 py-3"></th>
+                                <th
+                                    v-for="(col, colIndex) in commandColumns"
+                                    :key="col.key"
+                                    class="px-3 py-3 text-left font-medium relative select-none"
+                                    :style="{ width: col.width + 'px' }"
+                                    :class="{
+                                        'text-right': col.key === 'actions',
+                                        'bg-primary/10': dragOverColIndex === colIndex && dragColTable === 'commands',
+                                        'opacity-50': draggedColIndex === colIndex && dragColTable === 'commands',
+                                    }"
+                                    @dragover="!col.fixed && onColDragOver(colIndex, $event)"
+                                    @dragleave="onColDragLeave"
+                                    @drop="!col.fixed && onColDrop('commands', colIndex, $event)"
+                                >
+                                    <div class="flex items-center gap-1">
+                                        <div
+                                            v-if="!col.fixed"
+                                            draggable="true"
+                                            class="shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-muted"
+                                            @dragstart="onColDragStart('commands', colIndex, $event)"
+                                            @dragend="onColDragEnd"
+                                        >
+                                            <GripHorizontal class="h-3 w-3 text-muted-foreground/50" />
+                                        </div>
+                                        <template v-if="col.key === 'checkbox'">
+                                            <Checkbox
+                                                :model-value="selectedCommandIds.size === filteredCommands.length && filteredCommands.length > 0"
+                                                class="cursor-pointer"
+                                                @update:model-value="toggleAllCommands"
+                                            />
+                                        </template>
+                                        <span v-else-if="col.key !== 'actions'" class="truncate">{{ col.label }}</span>
+                                        <span v-else class="ml-auto">{{ col.label }}</span>
+                                    </div>
+                                    <div
+                                        v-if="!col.fixed"
+                                        class="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize group"
+                                        @mousedown.stop="startResize('commands', colIndex, $event)"
+                                    >
+                                        <div class="absolute right-1 top-0 bottom-0 w-0.5 group-hover:bg-primary/50 group-active:bg-primary" />
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="(cmd, index) in filteredCommands"
+                                :key="cmd.id"
+                                class="border-b transition-colors hover:bg-muted/50"
+                                :class="{
+                                    'border-t-2 border-t-primary': dragOverRowIndex === index && dragRowTable === 'commands' && canDragRows,
+                                    'opacity-50': draggedRowIndex === index && dragRowTable === 'commands' && canDragRows,
+                                }"
+                                @dragover="canDragRows && onRowDragOver(index, $event)"
+                                @dragleave="onRowDragLeave"
+                                @drop="canDragRows && onRowDrop('commands', index, $event)"
+                            >
+                                <td class="px-1 py-2 align-top">
+                                    <div
+                                        :draggable="canDragRows"
+                                        @dragstart="canDragRows && onRowDragStart('commands', index, $event)"
+                                        @dragend="onRowDragEnd"
+                                        :class="canDragRows ? 'cursor-grab active:cursor-grabbing' : 'cursor-default opacity-30'"
+                                    >
+                                        <GripVertical class="h-4 w-4 text-muted-foreground/50" />
+                                    </div>
+                                </td>
+                                <td
+                                    v-for="col in commandColumns"
+                                    :key="col.key"
+                                    class="px-3 py-2"
+                                >
+                                    <template v-if="col.key === 'checkbox'">
+                                        <Checkbox
+                                            :model-value="selectedCommandIds.has(cmd.id)"
+                                            class="cursor-pointer"
+                                            @update:model-value="toggleCommandSelection(cmd.id)"
+                                        />
+                                    </template>
+                                    <template v-else-if="col.key === 'category'">
+                                        <Badge v-if="cmd.category" variant="secondary">{{ cmd.category }}</Badge>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
+                                    </template>
+                                    <template v-else-if="col.key === 'description'">
+                                        <span class="font-medium">{{ cmd.description }}</span>
+                                    </template>
+                                    <template v-else-if="col.key === 'command'">
+                                        <div class="flex items-center gap-1">
+                                            <code class="truncate max-w-[280px] rounded bg-muted px-1.5 py-0.5 text-xs font-mono">{{ cmd.command }}</code>
+                                            <button
+                                                class="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
+                                                title="Copy command"
+                                                @click="copyToClipboard(cmd.command, `cmd-${cmd.id}`)"
+                                            >
+                                                <Check v-if="copiedField === `cmd-${cmd.id}`" class="h-3.5 w-3.5 text-green-500" />
+                                                <Copy v-else class="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    </template>
+                                    <template v-else-if="col.key === 'comment'">
+                                        <span v-if="cmd.comment" class="line-clamp-1 text-muted-foreground" :title="cmd.comment">{{ cmd.comment }}</span>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
+                                    </template>
+                                    <template v-else-if="col.key === 'actions'">
+                                        <div class="flex justify-end gap-1">
+                                            <RestrictedAction>
+                                                <Button variant="ghost" size="icon-sm" class="cursor-pointer" @click="openEditCommandDialog(cmd)">
+                                                    <Edit class="h-4 w-4" />
+                                                </Button>
+                                            </RestrictedAction>
+                                            <RestrictedAction>
+                                                <Button variant="ghost" size="icon-sm" class="cursor-pointer text-destructive hover:text-destructive" @click="confirmDeleteCommand(cmd)">
+                                                    <Trash2 class="h-4 w-4" />
+                                                </Button>
+                                            </RestrictedAction>
+                                        </div>
+                                    </template>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                    </CardContent>
+                </Card>
+            </template>
+
+            <!-- Links Tab Content -->
+            <template v-if="activeTab === 'links'">
+                <div v-if="localLinks.length === 0" class="flex flex-1 items-center justify-center">
+                    <div class="text-center">
+                        <Link2 class="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 class="mt-4 text-lg font-semibold">No links yet</h3>
+                        <p class="mt-2 text-sm text-muted-foreground">
+                            Store reference URLs with descriptions and comments.
+                        </p>
+                        <RestrictedAction>
+                            <Button variant="cta" class="mt-4 gap-2 cursor-pointer" @click="openAddLinkDialog">
+                                <Plus class="h-4 w-4" />
+                                Add Link
+                            </Button>
+                        </RestrictedAction>
+                    </div>
+                </div>
+
+                <div v-else-if="filteredLinks.length === 0" class="flex flex-1 items-center justify-center">
+                    <div class="text-center">
+                        <Search class="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 class="mt-4 text-lg font-semibold">No matching links</h3>
+                        <p class="mt-2 text-sm text-muted-foreground">
+                            Try adjusting your search or filters.
+                        </p>
+                        <Button variant="secondary" class="mt-4 cursor-pointer" @click="searchQuery = ''; categoryFilter = 'all'">
+                            Clear filters
+                        </Button>
+                    </div>
+                </div>
+
+                <Card v-else>
+                    <CardContent class="p-0">
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-sm" style="table-layout: fixed">
+                        <thead>
+                            <tr class="border-b bg-muted">
+                                <th class="w-6 px-1 py-3"></th>
+                                <th
+                                    v-for="(col, colIndex) in linkColumns"
+                                    :key="col.key"
+                                    class="px-3 py-3 text-left font-medium relative select-none"
+                                    :style="{ width: col.width + 'px' }"
+                                    :class="{
+                                        'text-right': col.key === 'actions',
+                                        'bg-primary/10': dragOverColIndex === colIndex && dragColTable === 'links',
+                                        'opacity-50': draggedColIndex === colIndex && dragColTable === 'links',
+                                    }"
+                                    @dragover="!col.fixed && onColDragOver(colIndex, $event)"
+                                    @dragleave="onColDragLeave"
+                                    @drop="!col.fixed && onColDrop('links', colIndex, $event)"
+                                >
+                                    <div class="flex items-center gap-1">
+                                        <div
+                                            v-if="!col.fixed"
+                                            draggable="true"
+                                            class="shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-muted"
+                                            @dragstart="onColDragStart('links', colIndex, $event)"
+                                            @dragend="onColDragEnd"
+                                        >
+                                            <GripHorizontal class="h-3 w-3 text-muted-foreground/50" />
+                                        </div>
+                                        <template v-if="col.key === 'checkbox'">
+                                            <Checkbox
+                                                :model-value="selectedLinkIds.size === filteredLinks.length && filteredLinks.length > 0"
+                                                class="cursor-pointer"
+                                                @update:model-value="toggleAllLinks"
+                                            />
+                                        </template>
+                                        <span v-else-if="col.key !== 'actions'" class="truncate">{{ col.label }}</span>
+                                        <span v-else class="ml-auto">{{ col.label }}</span>
+                                    </div>
+                                    <div
+                                        v-if="!col.fixed"
+                                        class="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize group"
+                                        @mousedown.stop="startResize('links', colIndex, $event)"
+                                    >
+                                        <div class="absolute right-1 top-0 bottom-0 w-0.5 group-hover:bg-primary/50 group-active:bg-primary" />
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="(link, index) in filteredLinks"
+                                :key="link.id"
+                                class="border-b transition-colors hover:bg-muted/50"
+                                :class="{
+                                    'border-t-2 border-t-primary': dragOverRowIndex === index && dragRowTable === 'links' && canDragRows,
+                                    'opacity-50': draggedRowIndex === index && dragRowTable === 'links' && canDragRows,
+                                }"
+                                @dragover="canDragRows && onRowDragOver(index, $event)"
+                                @dragleave="onRowDragLeave"
+                                @drop="canDragRows && onRowDrop('links', index, $event)"
+                            >
+                                <td class="px-1 py-2 align-top">
+                                    <div
+                                        :draggable="canDragRows"
+                                        @dragstart="canDragRows && onRowDragStart('links', index, $event)"
+                                        @dragend="onRowDragEnd"
+                                        :class="canDragRows ? 'cursor-grab active:cursor-grabbing' : 'cursor-default opacity-30'"
+                                    >
+                                        <GripVertical class="h-4 w-4 text-muted-foreground/50" />
+                                    </div>
+                                </td>
+                                <td
+                                    v-for="col in linkColumns"
+                                    :key="col.key"
+                                    class="px-3 py-2"
+                                >
+                                    <template v-if="col.key === 'checkbox'">
+                                        <Checkbox
+                                            :model-value="selectedLinkIds.has(link.id)"
+                                            class="cursor-pointer"
+                                            @update:model-value="toggleLinkSelection(link.id)"
+                                        />
+                                    </template>
+                                    <template v-else-if="col.key === 'category'">
+                                        <Badge v-if="link.category" variant="secondary">{{ link.category }}</Badge>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
+                                    </template>
+                                    <template v-else-if="col.key === 'description'">
+                                        <span class="font-medium">{{ link.description }}</span>
+                                    </template>
+                                    <template v-else-if="col.key === 'url'">
+                                        <div class="flex items-center gap-1">
+                                            <a
+                                                :href="link.url"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="truncate max-w-[240px] text-primary underline-offset-4 hover:underline"
+                                                :title="link.url"
+                                            >
+                                                {{ link.url }}
+                                            </a>
+                                            <a
+                                                :href="link.url"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
+                                                title="Open in new tab"
+                                            >
+                                                <ExternalLink class="h-3.5 w-3.5" />
+                                            </a>
+                                            <button
+                                                class="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
+                                                title="Copy URL"
+                                                @click="copyToClipboard(link.url, `link-${link.id}`)"
+                                            >
+                                                <Check v-if="copiedField === `link-${link.id}`" class="h-3.5 w-3.5 text-green-500" />
+                                                <Copy v-else class="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    </template>
+                                    <template v-else-if="col.key === 'comment'">
+                                        <span v-if="link.comment" class="line-clamp-1 text-muted-foreground" :title="link.comment">{{ link.comment }}</span>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
+                                    </template>
+                                    <template v-else-if="col.key === 'actions'">
+                                        <div class="flex justify-end gap-1">
+                                            <RestrictedAction>
+                                                <Button variant="ghost" size="icon-sm" class="cursor-pointer" @click="openEditLinkDialog(link)">
+                                                    <Edit class="h-4 w-4" />
+                                                </Button>
+                                            </RestrictedAction>
+                                            <RestrictedAction>
+                                                <Button variant="ghost" size="icon-sm" class="cursor-pointer text-destructive hover:text-destructive" @click="confirmDeleteLink(link)">
+                                                    <Trash2 class="h-4 w-4" />
+                                                </Button>
+                                            </RestrictedAction>
+                                        </div>
+                                    </template>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                    </CardContent>
+                </Card>
+            </template>
+
             <!-- Add/Edit User Dialog -->
             <Dialog v-model:open="showUserDialog">
                 <DialogContent class="max-w-md max-h-[90vh] overflow-y-auto">
@@ -1428,7 +2191,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                             <div class="space-y-2">
                                 <Label>Environment</Label>
                                 <Select v-model="userForm.environment">
-                                    <SelectTrigger class="cursor-pointer">
+                                    <SelectTrigger class="cursor-pointer bg-background/60">
                                         <SelectValue placeholder="Select environment" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1507,7 +2270,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                             <div class="space-y-2">
                                 <Label>Type</Label>
                                 <Select v-model="paymentForm.type">
-                                    <SelectTrigger class="cursor-pointer">
+                                    <SelectTrigger class="cursor-pointer bg-background/60">
                                         <SelectValue placeholder="Select type" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1544,7 +2307,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                         <div class="space-y-2">
                             <Label>Environment</Label>
                             <Select v-model="paymentForm.environment">
-                                <SelectTrigger class="cursor-pointer">
+                                <SelectTrigger class="cursor-pointer bg-background/60">
                                     <SelectValue placeholder="Select environment" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1638,15 +2401,137 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                 </DialogContent>
             </Dialog>
 
+            <!-- Add/Edit Command Dialog -->
+            <Dialog v-model:open="showCommandDialog">
+                <DialogContent class="max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{{ editingCommand ? 'Edit Command' : 'Add Command' }}</DialogTitle>
+                        <DialogDescription>
+                            {{ editingCommand ? 'Update command details.' : 'Add a useful command for your team.' }}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form class="space-y-4" @submit.prevent="submitCommandForm">
+                        <div class="space-y-2">
+                            <Label for="cmd-category">Category</Label>
+                            <Input id="cmd-category" v-model="commandForm.category" placeholder="deploy, database, testing..." list="cmd-category-suggestions" />
+                            <datalist id="cmd-category-suggestions">
+                                <option v-for="cat in allCommandCategories" :key="cat" :value="cat" />
+                            </datalist>
+                            <InputError :message="commandForm.errors.category" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="cmd-description">Description</Label>
+                            <Input id="cmd-description" v-model="commandForm.description" placeholder="Run database migrations" />
+                            <InputError :message="commandForm.errors.description" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="cmd-command">Command</Label>
+                            <Textarea id="cmd-command" v-model="commandForm.command" placeholder="php artisan migrate" rows="3" class="font-mono text-sm" />
+                            <InputError :message="commandForm.errors.command" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="cmd-comment">Comment</Label>
+                            <Textarea id="cmd-comment" v-model="commandForm.comment" placeholder="Optional notes..." rows="2" />
+                            <InputError :message="commandForm.errors.comment" />
+                        </div>
+                        <DialogFooter class="flex gap-4 sm:justify-end">
+                            <Button type="button" variant="secondary" class="flex-1 cursor-pointer sm:flex-none" @click="showCommandDialog = false">
+                                Cancel
+                            </Button>
+                            <Button type="submit" variant="cta" class="flex-1 cursor-pointer sm:flex-none" :disabled="commandForm.processing">
+                                {{ editingCommand ? 'Update' : 'Add Command' }}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Add/Edit Link Dialog -->
+            <Dialog v-model:open="showLinkDialog">
+                <DialogContent class="max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{{ editingLink ? 'Edit Link' : 'Add Link' }}</DialogTitle>
+                        <DialogDescription>
+                            {{ editingLink ? 'Update link details.' : 'Add a reference URL for your team.' }}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form class="space-y-4" @submit.prevent="submitLinkForm">
+                        <div class="space-y-2">
+                            <Label for="link-category">Category</Label>
+                            <Input id="link-category" v-model="linkForm.category" placeholder="documentation, monitoring, admin..." list="link-category-suggestions" />
+                            <datalist id="link-category-suggestions">
+                                <option v-for="cat in allLinkCategories" :key="cat" :value="cat" />
+                            </datalist>
+                            <InputError :message="linkForm.errors.category" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="link-description">Description</Label>
+                            <Input id="link-description" v-model="linkForm.description" placeholder="API Documentation" />
+                            <InputError :message="linkForm.errors.description" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="link-url">URL</Label>
+                            <Input id="link-url" v-model="linkForm.url" type="url" placeholder="https://example.com/docs" />
+                            <InputError :message="linkForm.errors.url" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="link-comment">Comment</Label>
+                            <Textarea id="link-comment" v-model="linkForm.comment" placeholder="Optional notes..." rows="2" />
+                            <InputError :message="linkForm.errors.comment" />
+                        </div>
+                        <DialogFooter class="flex gap-4 sm:justify-end">
+                            <Button type="button" variant="secondary" class="flex-1 cursor-pointer sm:flex-none" @click="showLinkDialog = false">
+                                Cancel
+                            </Button>
+                            <Button type="submit" variant="cta" class="flex-1 cursor-pointer sm:flex-none" :disabled="linkForm.processing">
+                                {{ editingLink ? 'Update' : 'Add Link' }}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Delete Command Confirmation -->
+            <Dialog v-model:open="showDeleteCommandConfirm">
+                <DialogContent class="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Command?</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete "{{ commandToDelete?.description }}"? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter class="flex gap-4 sm:justify-end">
+                        <Button variant="secondary" class="flex-1 cursor-pointer sm:flex-none" @click="showDeleteCommandConfirm = false">No</Button>
+                        <Button variant="destructive" class="flex-1 cursor-pointer sm:flex-none" @click="deleteCommand">Yes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Delete Link Confirmation -->
+            <Dialog v-model:open="showDeleteLinkConfirm">
+                <DialogContent class="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Link?</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete "{{ linkToDelete?.description }}"? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter class="flex gap-4 sm:justify-end">
+                        <Button variant="secondary" class="flex-1 cursor-pointer sm:flex-none" @click="showDeleteLinkConfirm = false">No</Button>
+                        <Button variant="destructive" class="flex-1 cursor-pointer sm:flex-none" @click="deleteLink">Yes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <!-- Bulk Delete Confirmation -->
             <Dialog v-model:open="showBulkDeleteConfirm">
                 <DialogContent class="max-w-sm">
                     <DialogHeader>
-                        <DialogTitle>Delete {{ bulkDeleteTarget === 'users' ? 'Test Users' : 'Payment Methods' }}?</DialogTitle>
+                        <DialogTitle>Delete {{ bulkDeleteConfig[bulkDeleteTarget].label }}?</DialogTitle>
                         <DialogDescription>
                             Are you sure you want to delete
-                            {{ bulkDeleteTarget === 'users' ? selectedUserIds.size : selectedPaymentIds.size }}
-                            {{ bulkDeleteTarget === 'users' ? 'test user(s)' : 'payment method(s)' }}?
+                            {{ bulkDeleteConfig[bulkDeleteTarget].ids.value.size }}
+                            item(s)?
                             This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>

@@ -222,6 +222,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('test-data/payments-bulk', [TestDataController::class, 'bulkDestroyPayments'])->name('payments.bulk-destroy');
         Route::put('test-data/users-reorder', [TestDataController::class, 'reorderUsers'])->name('users.reorder');
         Route::put('test-data/payments-reorder', [TestDataController::class, 'reorderPayments'])->name('payments.reorder');
+        Route::post('test-data/commands', [TestDataController::class, 'storeCommand'])->name('commands.store');
+        Route::put('test-data/commands/{testCommand}', [TestDataController::class, 'updateCommand'])->name('commands.update');
+        Route::delete('test-data/commands/{testCommand}', [TestDataController::class, 'destroyCommand'])->name('commands.destroy');
+        Route::delete('test-data/commands-bulk', [TestDataController::class, 'bulkDestroyCommands'])->name('commands.bulk-destroy');
+        Route::put('test-data/commands-reorder', [TestDataController::class, 'reorderCommands'])->name('commands.reorder');
+        Route::post('test-data/links', [TestDataController::class, 'storeLink'])->name('links.store');
+        Route::put('test-data/links/{testLink}', [TestDataController::class, 'updateLink'])->name('links.update');
+        Route::delete('test-data/links/{testLink}', [TestDataController::class, 'destroyLink'])->name('links.destroy');
+        Route::delete('test-data/links-bulk', [TestDataController::class, 'bulkDestroyLinks'])->name('links.bulk-destroy');
+        Route::put('test-data/links-reorder', [TestDataController::class, 'reorderLinks'])->name('links.reorder');
     });
 
     // Documentations (nested under projects)

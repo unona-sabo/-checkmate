@@ -208,7 +208,7 @@ const saveReorder = () => {
 };
 
 const highlightDescription = (content: string): string => {
-    const plain = content.replace(/<[^>]*>/g, '').substring(0, 200) + '...';
+    const plain = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 200) + '...';
     return highlight(plain);
 };
 </script>
