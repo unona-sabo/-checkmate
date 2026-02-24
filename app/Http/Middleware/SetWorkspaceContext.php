@@ -27,6 +27,22 @@ class SetWorkspaceContext
             }
         }
 
+        // If a project is in the route, use its workspace to keep header in sync
+        $project = $request->route('project');
+        if ($project instanceof \App\Models\Project && $project->workspace_id) {
+            $projectWorkspace = $user->workspaces()
+                ->where('workspaces.id', $project->workspace_id)
+                ->first();
+
+            if ($projectWorkspace) {
+                $workspace = $projectWorkspace;
+                if ($user->current_workspace_id !== $workspace->id) {
+                    $user->update(['current_workspace_id' => $workspace->id]);
+                    $user->setRelation('currentWorkspace', $workspace);
+                }
+            }
+        }
+
         $request->attributes->set('workspace', $workspace);
 
         return $next($request);
