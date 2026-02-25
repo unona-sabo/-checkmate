@@ -31,4 +31,21 @@ class StoreBugreportRequest extends FormRequest
             'test_case_id' => 'nullable|integer|exists:test_cases,id',
         ];
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        $messages = [];
+
+        foreach ($this->file('attachments') ?? [] as $index => $file) {
+            $name = $file->getClientOriginalName();
+            $messages["attachments.{$index}.file"] = "The file \"{$name}\" must be a valid file.";
+            $messages["attachments.{$index}.max"] = "The file \"{$name}\" must not be larger than 10MB.";
+            $messages["attachments.{$index}.mimes"] = "The file \"{$name}\" must be of type: jpg, png, gif, webp, pdf, doc, docx, xls, xlsx, txt, csv, zip.";
+        }
+
+        return $messages;
+    }
 }

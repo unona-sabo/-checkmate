@@ -88,6 +88,12 @@ const removeFile = (index: number) => {
     form.attachments.splice(index, 1);
 };
 
+const attachmentErrors = computed(() => {
+    return Object.entries(form.errors)
+        .filter(([key]) => key.startsWith('attachments'))
+        .map(([, message]) => message);
+});
+
 const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
@@ -321,7 +327,9 @@ const submit = () => {
                                         </Button>
                                     </div>
                                 </div>
-                                <InputError :message="form.errors.attachments" />
+                                <div v-if="attachmentErrors.length" class="space-y-1">
+                                    <p v-for="(error, i) in attachmentErrors" :key="i" class="text-sm text-destructive">{{ error }}</p>
+                                </div>
                             </div>
 
                             <div class="flex gap-2">

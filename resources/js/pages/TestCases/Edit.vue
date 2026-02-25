@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Edit, Plus, Trash2, Paperclip, X, Download } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;
 
@@ -79,6 +79,12 @@ const onFilesSelected = (event: Event) => {
 const removeFile = (index: number) => {
     form.attachments.splice(index, 1);
 };
+
+const attachmentErrors = computed(() => {
+    return Object.entries(form.errors)
+        .filter(([key]) => key.startsWith('attachments'))
+        .map(([, message]) => message);
+});
 
 const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
@@ -346,7 +352,9 @@ const deleteTestCase = () => {
                                         </Button>
                                     </div>
                                 </div>
-                                <InputError :message="form.errors.attachments" />
+                                <div v-if="attachmentErrors.length" class="space-y-1">
+                                    <p v-for="(error, i) in attachmentErrors" :key="i" class="text-sm text-destructive">{{ error }}</p>
+                                </div>
                             </div>
 
                             <div class="flex gap-2">
