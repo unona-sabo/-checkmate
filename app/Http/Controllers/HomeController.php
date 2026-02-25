@@ -298,6 +298,7 @@ class HomeController extends Controller
                     'Copy link to clipboard',
                     'Feature linking per bug report with inline quick-create',
                     'Fixed-on environment tracking (develop, staging, production)',
+                    'Auto-save draft to localStorage with restore on return',
                 ],
                 'model' => Bugreport::class,
             ],

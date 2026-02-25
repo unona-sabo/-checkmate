@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { type ProjectFeature } from '@/types/checkmate';
 import FeatureSelector from '@/components/FeatureSelector.vue';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { Bug, Paperclip, X, FileText } from 'lucide-vue-next';
+import { useFormDraft } from '@/composables/useFormDraft';
+import { Bug, Paperclip, X, FileText, StickyNote, Trash2 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
 interface User {
@@ -70,6 +72,29 @@ const form = useForm({
 });
 useClearErrorsOnInput(form);
 
+const draftKey = `bugreport-draft-${props.project.id}`;
+const hasUrlParams = urlParams.has('title');
+const { loadDraft, deleteDraft, getDraft } = useFormDraft(form, draftKey, {
+    exclude: ['attachments', 'checklist_id', 'checklist_row_ids', 'checklist_link_column', 'test_case_id'],
+});
+
+const draftData = ref<Record<string, unknown> | null>(null);
+if (!hasUrlParams) {
+    draftData.value = getDraft();
+}
+
+const restoreDraft = () => {
+    loadDraft();
+    draftData.value = null;
+};
+
+const discardDraft = () => {
+    deleteDraft();
+    draftData.value = null;
+};
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 const fileInput = ref<HTMLInputElement | null>(null);
 
 const onFilesSelected = (event: Event) => {
@@ -117,11 +142,11 @@ const toggleAllEnvs = () => {
         form.fixed_on = [...envOptions];
     }
 };
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const submit = () => {
     form.post(`/projects/${props.project.id}/bugreports`, {
         forceFormData: true,
+        onSuccess: () => deleteDraft(),
     });
 };
 </script>
@@ -131,7 +156,41 @@ const submit = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="max-w-2xl">
+            <div class="max-w-2xl space-y-4">
+                <!-- Draft Card -->
+                <Card
+                    v-if="draftData"
+                    class="border-dashed border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 cursor-pointer group relative"
+                    @click="restoreDraft"
+                >
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        class="absolute top-3 right-3 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive z-10 cursor-pointer"
+                        @click.stop="discardDraft"
+                        title="Discard draft"
+                    >
+                        <Trash2 class="h-4 w-4" />
+                    </Button>
+                    <CardHeader>
+                        <CardTitle class="flex items-center gap-2 text-base">
+                            <StickyNote class="h-5 w-5 text-amber-500" />
+                            <Badge variant="warning" class="text-xs">Draft</Badge>
+                            <span class="truncate">{{ draftData.title }}</span>
+                        </CardTitle>
+                        <CardDescription v-if="draftData.description" class="line-clamp-2">
+                            {{ draftData.description }}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span v-if="draftData.severity">{{ capitalize(draftData.severity as string) }}</span>
+                            <span v-if="draftData.priority">{{ capitalize(draftData.priority as string) }} priority</span>
+                            <span class="ml-auto">Click to restore</span>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <Card>
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
