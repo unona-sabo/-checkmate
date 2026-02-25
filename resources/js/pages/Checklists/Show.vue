@@ -1585,6 +1585,13 @@ onUnmounted(() => {
                                                     {{ option.label }}
                                                 </span>
                                             </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                @click="changeSelectedStatus(col.key, '')"
+                                                class="text-muted-foreground"
+                                            >
+                                                <X class="h-3 w-3 mr-1.5" />
+                                                Clear {{ col.label }}
+                                            </DropdownMenuItem>
                                             <DropdownMenuSeparator v-if="selectColumns.length > 1" />
                                         </template>
                                     </DropdownMenuSubContent>
