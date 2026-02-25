@@ -69,6 +69,7 @@ test('store creates bugreport with valid data', function () {
         'priority' => 'high',
         'status' => 'new',
         'environment' => 'Production',
+        'fixed_on' => ['develop', 'staging'],
     ]);
 
     $response->assertRedirect();
@@ -81,6 +82,9 @@ test('store creates bugreport with valid data', function () {
         'status' => 'new',
         'reported_by' => $user->id,
     ]);
+
+    $bugreport = Bugreport::where('title', 'Login button broken')->first();
+    expect($bugreport->fixed_on)->toBe(['develop', 'staging']);
 });
 
 test('update modifies existing bugreport', function () {
@@ -97,6 +101,7 @@ test('update modifies existing bugreport', function () {
         'severity' => 'critical',
         'priority' => 'high',
         'status' => 'in_progress',
+        'fixed_on' => ['production'],
     ]);
 
     $response->assertRedirect();
@@ -107,6 +112,8 @@ test('update modifies existing bugreport', function () {
         'severity' => 'critical',
         'status' => 'in_progress',
     ]);
+
+    expect($bugreport->fresh()->fixed_on)->toBe(['production']);
 });
 
 test('destroy deletes bugreport', function () {

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Edit, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
@@ -24,6 +25,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const form = useForm({
     name: props.project.name,
 });
+useClearErrorsOnInput(form);
 
 const showDeleteDialog = ref(false);
 

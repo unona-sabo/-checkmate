@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import TranslateButtons from '@/components/TranslateButtons.vue';
 import { StickyNote } from 'lucide-vue-next';
 
@@ -36,6 +37,7 @@ const form = useForm({
     documentation_id: null as number | null,
     is_draft: true,
 });
+useClearErrorsOnInput(form);
 
 const submit = () => {
     form.post(`/projects/${props.project.id}/notes`);

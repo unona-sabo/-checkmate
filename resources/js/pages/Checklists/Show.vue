@@ -1249,12 +1249,17 @@ const submitImport = () => {
 
 const closeImportDialog = () => {
     showImportDialog.value = false;
-    importFile.value = null;
-    importError.value = null;
-    if (fileInputRef.value) {
-        fileInputRef.value.value = '';
-    }
 };
+
+watch(showImportDialog, (open) => {
+    if (!open) {
+        importFile.value = null;
+        importError.value = null;
+        if (fileInputRef.value) {
+            fileInputRef.value.value = '';
+        }
+    }
+});
 
 const exportChecklist = () => {
     window.location.href = `/projects/${props.project.id}/checklists/${props.checklist.id}/export`;
@@ -2577,15 +2582,29 @@ onMounted(() => {
 
                     <div class="space-y-4 py-4">
                         <div class="space-y-2">
-                            <Label for="import-file">CSV File</Label>
-                            <Input
-                                id="import-file"
+                            <Label>CSV File</Label>
+                            <input
                                 ref="fileInputRef"
                                 type="file"
                                 accept=".csv,.txt"
+                                class="hidden"
                                 @change="handleFileSelect"
-                                :class="{ 'border-destructive': importError }"
                             />
+                            <div class="flex items-center gap-3">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    class="cursor-pointer"
+                                    @click="($refs.fileInputRef as HTMLInputElement).click()"
+                                >
+                                    <Upload class="mr-2 h-4 w-4" />
+                                    Choose File
+                                </Button>
+                                <span class="text-sm text-muted-foreground">
+                                    {{ importFile ? importFile.name : 'No file selected' }}
+                                </span>
+                            </div>
                             <p class="text-xs text-muted-foreground">
                                 Maximum file size: 5MB. Supported formats: CSV, TXT
                             </p>

@@ -294,6 +294,7 @@ class HomeController extends Controller
                     'Create from selected checklist rows with auto-link back',
                     'Copy link to clipboard',
                     'Feature linking per bug report with inline quick-create',
+                    'Fixed-on environment tracking (develop, staging, production)',
                 ],
                 'model' => Bugreport::class,
             ],

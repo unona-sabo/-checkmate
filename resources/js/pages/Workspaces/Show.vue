@@ -4,6 +4,7 @@ import { ArrowRightLeft, Trash2, UserPlus } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +44,7 @@ const breadcrumbs = [{ title: 'Workspace Settings', href: '/workspaces/settings'
 
 // Rename form
 const renameForm = useForm({ name: props.workspace.name });
+useClearErrorsOnInput(renameForm);
 
 function updateWorkspace() {
     renameForm.put('/workspaces/settings', {
@@ -55,6 +57,7 @@ const addMemberForm = useForm({
     email: '',
     role: 'member',
 });
+useClearErrorsOnInput(addMemberForm);
 
 function addMember() {
     addMemberForm.post('/workspaces/members', {

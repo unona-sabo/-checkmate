@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Edit, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
@@ -34,6 +35,7 @@ const form = useForm({
     milestone: props.testRun.milestone || '',
     status: props.testRun.status,
 });
+useClearErrorsOnInput(form);
 
 const environmentPresets = ['Develop', 'Staging', 'Production'];
 

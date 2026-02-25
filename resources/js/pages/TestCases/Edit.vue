@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Edit, Plus, Trash2, Paperclip, X, Download } from 'lucide-vue-next';
 import { ref } from 'vue';
 
@@ -50,6 +51,7 @@ const form = useForm({
     feature_ids: (props.testCase.project_features ?? []).map(f => f.id),
     attachments: [] as File[],
 });
+useClearErrorsOnInput(form);
 
 const showDeleteDialog = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);

@@ -11,8 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Bug, Paperclip, X, FileText } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 interface User {
     id: number;
@@ -59,6 +60,7 @@ const form = useForm({
     status: 'new',
     environment: '',
     assigned_to: null as number | null,
+    fixed_on: [] as string[],
     feature_ids: [] as number[],
     attachments: [] as File[],
     checklist_id: urlParams.get('checklist_id') || null as string | null,
@@ -66,6 +68,7 @@ const form = useForm({
     checklist_link_column: urlParams.get('checklist_link_column') || null as string | null,
     test_case_id: urlParams.get('test_case_id') || null as string | null,
 });
+useClearErrorsOnInput(form);
 
 const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -90,6 +93,25 @@ const formatFileSize = (bytes: number): string => {
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / 1048576).toFixed(1) + ' MB';
 };
+
+const envOptions = ['develop', 'staging', 'production'] as const;
+const allEnvsSelected = computed(() => envOptions.every(e => form.fixed_on.includes(e)));
+const toggleEnv = (env: string) => {
+    const idx = form.fixed_on.indexOf(env);
+    if (idx >= 0) {
+        form.fixed_on.splice(idx, 1);
+    } else {
+        form.fixed_on.push(env);
+    }
+};
+const toggleAllEnvs = () => {
+    if (allEnvsSelected.value) {
+        form.fixed_on = [];
+    } else {
+        form.fixed_on = [...envOptions];
+    }
+};
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const submit = () => {
     form.post(`/projects/${props.project.id}/bugreports`, {
@@ -234,6 +256,16 @@ const submit = () => {
                                     placeholder="e.g., Chrome 120, Windows 11, Production"
                                 />
                                 <InputError :message="form.errors.environment" />
+                            </div>
+
+                            <div class="space-y-2">
+                                <Label>Fixed On</Label>
+                                <div class="flex flex-wrap gap-2">
+                                    <Button type="button" size="sm" :variant="allEnvsSelected ? 'default' : 'outline'" @click="toggleAllEnvs" class="cursor-pointer">All</Button>
+                                    <Button v-for="env in envOptions" :key="env" type="button" size="sm" :variant="form.fixed_on.includes(env) ? 'default' : 'outline'" @click="toggleEnv(env)" class="cursor-pointer">
+                                        {{ capitalize(env) }}
+                                    </Button>
+                                </div>
                             </div>
 
                             <!-- Features -->

@@ -37,6 +37,7 @@ interface Bugreport {
     priority: 'high' | 'medium' | 'low';
     status: 'new' | 'open' | 'in_progress' | 'resolved' | 'closed' | 'reopened';
     environment: string | null;
+    fixed_on: string[] | null;
     reporter: { id: number; name: string } | null;
     assignee: { id: number; name: string } | null;
     attachments?: Attachment[];
@@ -301,6 +302,14 @@ const formatDate = (date: string): string => {
                             <div v-if="bugreport.environment">
                                 <p class="text-xs text-muted-foreground">Environment</p>
                                 <p class="text-sm font-medium">{{ bugreport.environment }}</p>
+                            </div>
+                            <div v-if="bugreport.fixed_on?.length">
+                                <p class="text-xs text-muted-foreground">Fixed On</p>
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    <Badge v-for="env in bugreport.fixed_on" :key="env" variant="success" class="text-xs">
+                                        {{ env.charAt(0).toUpperCase() + env.slice(1) }}
+                                    </Badge>
+                                </div>
                             </div>
                             <div v-if="bugreport.reporter">
                                 <p class="text-xs text-muted-foreground">Reported by</p>

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ClipboardList, Plus, Trash2, Copy, ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
@@ -59,6 +60,7 @@ const form = useForm({
     columns_config: [...defaultColumns] as ColumnConfig[],
     feature_ids: [] as number[],
 });
+useClearErrorsOnInput(form);
 
 // Apply template when selected
 watch(selectedTemplateId, (templateId) => {

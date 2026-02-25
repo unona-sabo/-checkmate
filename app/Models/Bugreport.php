@@ -23,9 +23,20 @@ class Bugreport extends Model
         'priority',
         'status',
         'environment',
+        'fixed_on',
         'assigned_to',
         'reported_by',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'fixed_on' => 'array',
+        ];
+    }
 
     public function project(): BelongsTo
     {

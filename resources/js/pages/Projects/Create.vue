@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { FolderPlus } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -17,6 +18,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const form = useForm({
     name: '',
 });
+useClearErrorsOnInput(form);
 
 const submit = () => {
     form.post('/projects');

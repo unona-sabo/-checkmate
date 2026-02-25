@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { FileText, Plus, Trash2, Paperclip, X, Bug } from 'lucide-vue-next';
 import { ref } from 'vue';
 
@@ -77,6 +78,7 @@ const form = useForm({
     checklist_link_column: urlParams.get('checklist_link_column') || null as string | null,
     bugreport_id: urlParams.get('bugreport_id') || null as string | null,
 });
+useClearErrorsOnInput(form);
 
 const fileInput = ref<HTMLInputElement | null>(null);
 

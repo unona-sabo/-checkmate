@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Checkbox } from '@/components/ui/checkbox';
 import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Layers, Boxes } from 'lucide-vue-next';
@@ -42,6 +43,7 @@ const form = useForm({
     parent_id: preselectedParentId,
     feature_ids: [] as number[],
 });
+useClearErrorsOnInput(form);
 
 const submit = () => {
     form.post(`/projects/${props.project.id}/test-suites`);

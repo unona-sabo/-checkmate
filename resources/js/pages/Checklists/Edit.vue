@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Edit, Plus, Trash2, ChevronDown, ChevronUp, Palette } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
@@ -40,6 +41,7 @@ const form = useForm({
     ] as ColumnConfig[],
     feature_ids: (props.checklist.project_features ?? []).map(f => f.id),
 });
+useClearErrorsOnInput(form);
 
 const showDeleteDialog = ref(false);
 const expandedColumns = ref<Record<number, boolean>>({});

@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Checkbox } from '@/components/ui/checkbox';
 import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Edit, Trash2 } from 'lucide-vue-next';
@@ -41,6 +42,7 @@ const form = useForm({
     parent_id: props.testSuite.parent_id,
     feature_ids: (props.testSuite.project_features ?? []).map(f => f.id),
 });
+useClearErrorsOnInput(form);
 
 const showDeleteDialog = ref(false);
 

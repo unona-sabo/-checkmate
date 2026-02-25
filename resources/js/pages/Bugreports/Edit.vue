@@ -11,8 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Bug, Paperclip, X, Download, Trash2 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 interface User {
     id: number;
@@ -30,6 +31,7 @@ interface Bugreport {
     priority: string;
     status: string;
     environment: string | null;
+    fixed_on: string[] | null;
     assigned_to: number | null;
     attachments?: Attachment[];
     project_features?: { id: number }[];
@@ -61,10 +63,12 @@ const form = useForm({
     priority: props.bugreport.priority,
     status: props.bugreport.status,
     environment: props.bugreport.environment || '',
+    fixed_on: props.bugreport.fixed_on || [],
     assigned_to: props.bugreport.assigned_to,
     feature_ids: (props.bugreport.project_features ?? []).map(f => f.id),
     attachments: [] as File[],
 });
+useClearErrorsOnInput(form);
 
 const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -99,6 +103,25 @@ const deleteAttachment = (attachmentId: number) => {
         preserveScroll: true,
     });
 };
+
+const envOptions = ['develop', 'staging', 'production'] as const;
+const allEnvsSelected = computed(() => envOptions.every(e => form.fixed_on.includes(e)));
+const toggleEnv = (env: string) => {
+    const idx = form.fixed_on.indexOf(env);
+    if (idx >= 0) {
+        form.fixed_on.splice(idx, 1);
+    } else {
+        form.fixed_on.push(env);
+    }
+};
+const toggleAllEnvs = () => {
+    if (allEnvsSelected.value) {
+        form.fixed_on = [];
+    } else {
+        form.fixed_on = [...envOptions];
+    }
+};
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const submit = () => {
     form.post(`/projects/${props.project.id}/bugreports/${props.bugreport.id}`, {
@@ -238,6 +261,16 @@ const submit = () => {
                                     type="text"
                                 />
                                 <InputError :message="form.errors.environment" />
+                            </div>
+
+                            <div class="space-y-2">
+                                <Label>Fixed On</Label>
+                                <div class="flex flex-wrap gap-2">
+                                    <Button type="button" size="sm" :variant="allEnvsSelected ? 'default' : 'outline'" @click="toggleAllEnvs" class="cursor-pointer">All</Button>
+                                    <Button v-for="env in envOptions" :key="env" type="button" size="sm" :variant="form.fixed_on.includes(env) ? 'default' : 'outline'" @click="toggleEnv(env)" class="cursor-pointer">
+                                        {{ capitalize(env) }}
+                                    </Button>
+                                </div>
                             </div>
 
                             <!-- Features -->

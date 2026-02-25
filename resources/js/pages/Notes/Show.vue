@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import TranslateButtons from '@/components/TranslateButtons.vue';
 import { StickyNote, Save, Trash2, Upload, FileText } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -51,6 +52,7 @@ const form = useForm({
     documentation_id: props.note.documentation_id,
     is_draft: props.note.is_draft,
 });
+useClearErrorsOnInput(form);
 
 // Track if form has changes
 const initialState = {

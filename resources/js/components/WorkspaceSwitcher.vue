@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router, useForm, usePage } from '@inertiajs/vue3';
 import { Building2, Check, ChevronsUpDown, Plus } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { AppPageProps } from '@/types';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 
 const page = usePage<AppPageProps>();
 
@@ -30,6 +31,14 @@ const workspaces = computed(() => page.props.workspaces);
 
 const showCreateDialog = ref(false);
 const createForm = useForm({ name: '' });
+useClearErrorsOnInput(createForm);
+
+watch(showCreateDialog, (open) => {
+    if (!open) {
+        createForm.reset();
+        createForm.clearErrors();
+    }
+});
 
 function switchWorkspace(workspaceId: number) {
     router.post('/workspaces/switch', { workspace_id: workspaceId }, {
@@ -73,7 +82,7 @@ function createWorkspace() {
                 <span class="truncate">{{ ws.name }}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem class="cursor-pointer" @click="showCreateDialog = true">
+            <DropdownMenuItem class="cursor-pointer" @click="createForm.reset(); createForm.clearErrors(); showCreateDialog = true">
                 <Plus class="mr-2 h-4 w-4" />
                 Create Workspace
             </DropdownMenuItem>

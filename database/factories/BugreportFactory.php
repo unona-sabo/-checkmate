@@ -24,6 +24,7 @@ class BugreportFactory extends Factory
             'priority' => fake()->randomElement(['high', 'medium', 'low']),
             'status' => fake()->randomElement(['new', 'open', 'in_progress', 'resolved', 'closed', 'reopened']),
             'environment' => fake()->optional()->word(),
+            'fixed_on' => fake()->optional()->randomElements(['develop', 'staging', 'production'], fake()->numberBetween(1, 3)),
             'assigned_to' => null,
             'reported_by' => User::factory(),
         ];

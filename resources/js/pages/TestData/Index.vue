@@ -33,6 +33,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import {
     Database,
@@ -739,6 +740,7 @@ const userForm = useForm({
     is_valid: true,
     tags: [] as string[],
 });
+useClearErrorsOnInput(userForm);
 
 const tagInput = ref('');
 
@@ -818,6 +820,7 @@ const paymentForm = useForm({
     description: '' as string | null,
     tags: [] as string[],
 });
+useClearErrorsOnInput(paymentForm);
 
 const paymentTagInput = ref('');
 
@@ -930,6 +933,7 @@ const commandForm = useForm({
     command: '',
     comment: '' as string | null,
 });
+useClearErrorsOnInput(commandForm);
 
 const openAddCommandDialog = () => {
     editingCommand.value = null;
@@ -982,6 +986,7 @@ const linkForm = useForm({
     url: '',
     comment: '' as string | null,
 });
+useClearErrorsOnInput(linkForm);
 
 const openAddLinkDialog = () => {
     editingLink.value = null;
@@ -1023,6 +1028,12 @@ const submitLinkForm = () => {
         });
     }
 };
+
+// Clear errors when dialogs close via X / outside click
+watch(showUserDialog, (open) => { if (!open) userForm.clearErrors(); });
+watch(showPaymentDialog, (open) => { if (!open) paymentForm.clearErrors(); });
+watch(showCommandDialog, (open) => { if (!open) commandForm.clearErrors(); });
+watch(showLinkDialog, (open) => { if (!open) linkForm.clearErrors(); });
 
 // ===== Delete Dialogs =====
 const showDeleteUserConfirm = ref(false);

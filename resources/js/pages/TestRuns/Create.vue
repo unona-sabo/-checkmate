@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, Layers, FileText, Boxes, ListChecks } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
@@ -39,6 +40,7 @@ const form = useForm({
     milestone: '',
     test_case_ids: [] as number[],
 });
+useClearErrorsOnInput(form);
 
 // Checklist form
 const checklistForm = useForm({
@@ -50,6 +52,7 @@ const checklistForm = useForm({
     checklist_id: null as number | null,
     titles: [] as string[],
 });
+useClearErrorsOnInput(checklistForm);
 
 const envPreset = ref('');
 const envNotes = ref('');

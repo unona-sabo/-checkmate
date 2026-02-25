@@ -24,6 +24,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import {
     Palette,
@@ -42,7 +43,7 @@ import {
     Link2,
     Globe,
 } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 interface DesignLink {
     id: number;
@@ -134,6 +135,13 @@ const form = useForm({
     color: '',
     description: '',
     category: '' as string,
+});
+useClearErrorsOnInput(form);
+
+watch(showFormDialog, (open) => {
+    if (!open) {
+        form.clearErrors();
+    }
 });
 
 const openAddDialog = () => {

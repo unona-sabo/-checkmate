@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import RichTextEditor from '@/components/RichTextEditor.vue';
 import { FileText, Upload, X } from 'lucide-vue-next';
 import { ref } from 'vue';
@@ -37,6 +38,7 @@ const form = useForm({
     parent_id: props.defaultParentId ?? null as number | null,
     attachments: [] as File[],
 });
+useClearErrorsOnInput(form);
 
 const imageUploadUrl = `/projects/${props.project.id}/documentations/upload-image`;
 
