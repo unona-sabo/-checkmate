@@ -14,6 +14,7 @@ class TestRunCase extends Model
         'test_run_id',
         'test_case_id',
         'title',
+        'expected_result',
         'status',
         'actual_result',
         'time_spent',

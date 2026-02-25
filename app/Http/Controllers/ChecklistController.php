@@ -374,7 +374,14 @@ class ChecklistController extends Controller
             ['key' => 'status', 'label' => 'Status', 'type' => 'checkbox'],
         ];
 
-        $rows = $checklist->rows()->orderBy('order')->get();
+        $query = $checklist->rows()->orderBy('order');
+
+        $ids = request()->query('ids');
+        if ($ids) {
+            $query->whereIn('id', explode(',', $ids));
+        }
+
+        $rows = $query->get();
 
         $filename = str_replace(' ', '_', $checklist->name).'_'.date('Y-m-d').'.csv';
 

@@ -51,6 +51,7 @@ const checklistForm = useForm({
     milestone: '',
     checklist_id: null as number | null,
     titles: [] as string[],
+    expected_results: {} as Record<string, string>,
 });
 useClearErrorsOnInput(checklistForm);
 
@@ -144,6 +145,13 @@ const textColumnKey = computed((): string | null => {
     return col?.key ?? null;
 });
 
+const expectedResultColumnKey = computed((): string | null => {
+    if (!selectedChecklist.value?.columns_config || !textColumnKey.value) return null;
+    const cols = selectedChecklist.value.columns_config.filter(col => col.type === 'text' && col.key !== textColumnKey.value);
+    const expectedCol = cols.find(col => /expected|result/i.test(col.label));
+    return expectedCol?.key ?? cols[0]?.key ?? null;
+});
+
 const checklistRows = computed((): { title: string; row: ChecklistRow }[] => {
     if (!selectedChecklist.value?.rows || !textColumnKey.value) return [];
     return selectedChecklist.value.rows
@@ -189,6 +197,18 @@ const submit = () => {
 
 const submitChecklist = () => {
     checklistForm.titles = Array.from(selectedRowTitles.value);
+    if (expectedResultColumnKey.value) {
+        const map: Record<string, string> = {};
+        checklistRows.value.forEach(item => {
+            if (selectedRowTitles.value.has(item.title)) {
+                const val = String((item.row.data as Record<string, unknown>)?.[expectedResultColumnKey.value!] ?? '').trim();
+                if (val) {
+                    map[item.title] = val;
+                }
+            }
+        });
+        checklistForm.expected_results = map;
+    }
     checklistForm.post(`/projects/${props.project.id}/test-runs/from-checklist`);
 };
 

@@ -17,6 +17,8 @@ class StoreTestRunFromChecklistRequest extends FormRequest
             'checklist_id' => 'required|exists:checklists,id',
             'titles' => 'required|array|min:1',
             'titles.*' => 'required|string|max:1000',
+            'expected_results' => 'nullable|array',
+            'expected_results.*' => 'nullable|string',
         ];
     }
 }

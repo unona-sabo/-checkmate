@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Checklist;
+use App\Models\ChecklistRow;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
@@ -136,4 +137,51 @@ test('viewer cannot destroy checklist', function () {
     $this->actingAs($viewer)
         ->delete(route('checklists.destroy', [$project, $checklist]))
         ->assertForbidden();
+});
+
+test('export returns CSV with all rows', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $checklist = Checklist::factory()->create([
+        'project_id' => $project->id,
+        'columns_config' => [
+            ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
+            ['key' => 'done', 'label' => 'Done', 'type' => 'checkbox'],
+        ],
+    ]);
+
+    ChecklistRow::create(['checklist_id' => $checklist->id, 'data' => ['item' => 'Row A', 'done' => true], 'order' => 0]);
+    ChecklistRow::create(['checklist_id' => $checklist->id, 'data' => ['item' => 'Row B', 'done' => false], 'order' => 1]);
+
+    $response = $this->actingAs($user)->get(
+        route('checklists.export', [$project, $checklist])
+    );
+
+    $response->assertOk();
+    $content = $response->streamedContent();
+    expect($content)->toContain('Row A');
+    expect($content)->toContain('Row B');
+});
+
+test('export with ids returns only selected rows', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $checklist = Checklist::factory()->create([
+        'project_id' => $project->id,
+        'columns_config' => [
+            ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
+        ],
+    ]);
+
+    $row1 = ChecklistRow::create(['checklist_id' => $checklist->id, 'data' => ['item' => 'Included Row'], 'order' => 0]);
+    ChecklistRow::create(['checklist_id' => $checklist->id, 'data' => ['item' => 'Excluded Row'], 'order' => 1]);
+
+    $response = $this->actingAs($user)->get(
+        route('checklists.export', [$project, $checklist]).'?ids='.$row1->id
+    );
+
+    $response->assertOk();
+    $content = $response->streamedContent();
+    expect($content)->toContain('Included Row');
+    expect($content)->not->toContain('Excluded Row');
 });

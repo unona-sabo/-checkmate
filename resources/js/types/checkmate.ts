@@ -213,6 +213,7 @@ export interface TestRunCase {
     test_run_id: number;
     test_case_id: number | null;
     title?: string | null;
+    expected_result?: string | null;
     status: 'untested' | 'passed' | 'failed' | 'blocked' | 'skipped' | 'retest';
     actual_result: string | null;
     time_spent: number | null;

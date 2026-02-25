@@ -1265,6 +1265,12 @@ const exportChecklist = () => {
     window.location.href = `/projects/${props.project.id}/checklists/${props.checklist.id}/export`;
 };
 
+const exportSelectedChecklist = () => {
+    if (selectedRows.value.length === 0) return;
+    const ids = selectedRows.value.map(r => r.id).join(',');
+    window.location.href = `/projects/${props.project.id}/checklists/${props.checklist.id}/export?ids=${ids}`;
+};
+
 onMounted(() => {
     loadHiddenColumns();
     resizeAllTextareas();
@@ -1456,7 +1462,14 @@ onMounted(() => {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem @click="exportChecklist">
                                     <Upload class="h-4 w-4 mr-2" />
-                                    Export
+                                    Export All
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    v-if="hasSelectedRows"
+                                    @click="exportSelectedChecklist"
+                                >
+                                    <Upload class="h-4 w-4 mr-2" />
+                                    Export Selected ({{ selectedRows.length }})
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>

@@ -112,9 +112,12 @@ class TestRunController extends Controller
             'created_by' => auth()->id(),
         ]);
 
+        $expectedResults = $validated['expected_results'] ?? [];
+
         foreach ($validated['titles'] as $title) {
             $testRun->testRunCases()->create([
                 'title' => $title,
+                'expected_result' => $expectedResults[$title] ?? null,
                 'status' => 'untested',
             ]);
         }
@@ -271,6 +274,7 @@ class TestRunController extends Controller
             }
         } elseif ($testRun->source === 'checklist') {
             $existingTitles = $testRun->testRunCases()->pluck('title')->toArray();
+            $expectedResults = $validated['expected_results'] ?? [];
 
             foreach ($validated['titles'] ?? [] as $title) {
                 if (in_array($title, $existingTitles)) {
@@ -279,6 +283,7 @@ class TestRunController extends Controller
 
                 $testRun->testRunCases()->create([
                     'title' => $title,
+                    'expected_result' => $expectedResults[$title] ?? null,
                     'status' => 'untested',
                 ]);
                 $added++;

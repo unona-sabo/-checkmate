@@ -132,6 +132,56 @@ test('show page renders with checklist-sourced cases', function () {
     );
 });
 
+test('store from checklist persists expected_results per title', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $checklist = Checklist::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-runs.store-from-checklist', $project),
+        [
+            'name' => 'Expected Result Run',
+            'checklist_id' => $checklist->id,
+            'titles' => ['Login works', 'Signup works'],
+            'expected_results' => [
+                'Login works' => 'User is redirected to dashboard',
+                'Signup works' => 'User receives confirmation email',
+            ],
+        ]
+    );
+
+    $response->assertRedirect();
+
+    $testRun = TestRun::where('name', 'Expected Result Run')->first();
+    $cases = $testRun->testRunCases()->orderBy('id')->get();
+
+    expect($cases)->toHaveCount(2);
+    expect($cases[0]->title)->toBe('Login works');
+    expect($cases[0]->expected_result)->toBe('User is redirected to dashboard');
+    expect($cases[1]->title)->toBe('Signup works');
+    expect($cases[1]->expected_result)->toBe('User receives confirmation email');
+});
+
+test('store from checklist works without expected_results', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $checklist = Checklist::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-runs.store-from-checklist', $project),
+        [
+            'name' => 'No Expected Run',
+            'checklist_id' => $checklist->id,
+            'titles' => ['Check item'],
+        ]
+    );
+
+    $response->assertRedirect();
+
+    $testRun = TestRun::where('name', 'No Expected Run')->first();
+    expect($testRun->testRunCases->first()->expected_result)->toBeNull();
+});
+
 test('store from test cases accepts and persists priority', function () {
     $user = User::factory()->create();
     $project = Project::factory()->create(['user_id' => $user->id]);

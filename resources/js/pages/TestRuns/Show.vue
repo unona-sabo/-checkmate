@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
     Play, Edit, CheckCircle2, XCircle, AlertTriangle,
     SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check, Pause, Timer, ChevronDown, ChevronUp,
-    Plus, Layers, FileText, Boxes, ListChecks, Trash2
+    Plus, Layers, FileText, Boxes, ListChecks, Trash2, Bug
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -217,9 +217,34 @@ const toggleExpanded = (id: number) => {
 };
 
 const hasDetails = (trc: TestRunCase): boolean => {
+    if (trc.expected_result) return true;
     const tc = trc.test_case;
     if (!tc) return false;
     return !!(tc.description || tc.preconditions || tc.steps?.length || tc.expected_result);
+};
+
+const createBugReportUrl = (trc: TestRunCase): string => {
+    const params = new URLSearchParams();
+    if (trc.test_case) {
+        params.set('title', trc.test_case.title);
+        if (trc.test_case.description) params.set('description', trc.test_case.description);
+        if (trc.test_case.steps?.length) {
+            const formatted = trc.test_case.steps.map((step, i) => {
+                let line = `${i + 1}. ${step.action}`;
+                if (step.expected) line += `\nExpected: ${step.expected}`;
+                return line;
+            }).join('\n');
+            params.set('steps_to_reproduce', formatted);
+        }
+        if (trc.test_case.expected_result) params.set('expected_result', trc.test_case.expected_result);
+        if (trc.actual_result) params.set('actual_result', trc.actual_result);
+        params.set('test_case_id', String(trc.test_case.id));
+    } else {
+        if (trc.title) params.set('title', trc.title);
+        if (trc.expected_result) params.set('expected_result', trc.expected_result);
+        if (trc.actual_result) params.set('actual_result', trc.actual_result);
+    }
+    return `/projects/${props.project.id}/bugreports/create?${params.toString()}`;
 };
 
 const { searchQuery, highlight } = useSearch();
@@ -324,6 +349,13 @@ const textColumnKey = computed((): string | null => {
     return col?.key ?? null;
 });
 
+const expectedResultColumnKey = computed((): string | null => {
+    if (!selectedAddChecklist.value?.columns_config || !textColumnKey.value) return null;
+    const cols = selectedAddChecklist.value.columns_config.filter(col => col.type === 'text' && col.key !== textColumnKey.value);
+    const expectedCol = cols.find(col => /expected|result/i.test(col.label));
+    return expectedCol?.key ?? cols[0]?.key ?? null;
+});
+
 const checklistRows = computed((): { title: string; row: ChecklistRow }[] => {
     if (!selectedAddChecklist.value?.rows || !textColumnKey.value) return [];
     return selectedAddChecklist.value.rows
@@ -379,6 +411,18 @@ const submitAddCases = () => {
         data.test_case_ids = addCaseIds.value;
     } else {
         data.titles = Array.from(addRowTitles.value);
+        if (expectedResultColumnKey.value) {
+            const map: Record<string, string> = {};
+            checklistRows.value.forEach(item => {
+                if (addRowTitles.value.has(item.title)) {
+                    const val = String((item.row.data as Record<string, unknown>)?.[expectedResultColumnKey.value!] ?? '').trim();
+                    if (val) {
+                        map[item.title] = val;
+                    }
+                }
+            });
+            data.expected_results = map;
+        }
     }
 
     router.post(
@@ -643,6 +687,13 @@ const addCasesCount = computed(() => {
                                         >
                                             <ExternalLink class="h-4 w-4" />
                                         </a>
+                                        <Link
+                                            :href="createBugReportUrl(trc)"
+                                            class="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-destructive hover:bg-muted cursor-pointer"
+                                            title="Create Bug Report"
+                                        >
+                                            <Bug class="h-4 w-4" />
+                                        </Link>
                                         <RestrictedAction>
                                             <Button
                                                 v-if="testRun.status === 'active'"
@@ -682,6 +733,12 @@ const addCasesCount = computed(() => {
                                     <div v-if="trc.test_case.expected_result">
                                         <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Expected Result</p>
                                         <p class="text-sm whitespace-pre-wrap">{{ trc.test_case.expected_result }}</p>
+                                    </div>
+                                </div>
+                                <div v-if="expandedCases.has(trc.id) && !trc.test_case && trc.expected_result" class="mt-2 ml-7 space-y-2 border-t pt-2">
+                                    <div>
+                                        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Expected Result</p>
+                                        <p class="text-sm whitespace-pre-wrap">{{ trc.expected_result }}</p>
                                     </div>
                                 </div>
                             </CardContent>

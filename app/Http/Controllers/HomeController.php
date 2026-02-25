@@ -178,6 +178,7 @@ class HomeController extends Controller
                 'features' => [
                     'Custom column types: text, checkbox, select with colors, date',
                     'CSV import with smart column mapping and export with UTF-8 BOM',
+                    'Export selected (checked) rows only via File dropdown',
                     'Section headers with custom background/font colors and font weight',
                     'Drag-and-drop row and column reordering',
                     'Dynamic filters by select columns and date range',
@@ -272,6 +273,8 @@ class HomeController extends Controller
                     'Source picker dropdown: create new run from test cases or checklist',
                     'Remove individual cases from active test runs with confirmation dialog',
                     'Select All / Deselect All toggle for test cases and checklist rows',
+                    'Show expected result for checklist-based checks on expand',
+                    'Create bug report directly from any check with pre-filled fields',
                 ],
                 'model' => TestRun::class,
             ],

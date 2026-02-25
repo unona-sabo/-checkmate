@@ -262,3 +262,35 @@ test('stats and progress are updated after adding cases', function () {
     expect($testRun->stats)->toBe(['passed' => 1, 'untested' => 1]);
     expect($testRun->progress)->toBe(50);
 });
+
+test('add checklist titles with expected_results stores them', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $checklist = Checklist::factory()->create(['project_id' => $project->id]);
+
+    $testRun = TestRun::factory()->active()->create([
+        'project_id' => $project->id,
+        'source' => 'checklist',
+        'checklist_id' => $checklist->id,
+        'created_by' => $user->id,
+    ]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-runs.add-cases', [$project, $testRun]),
+        [
+            'titles' => ['New check 1', 'New check 2'],
+            'expected_results' => [
+                'New check 1' => 'Should show success message',
+            ],
+        ]
+    );
+
+    $response->assertRedirect();
+
+    $testRun->refresh();
+    $cases = $testRun->testRunCases()->orderBy('id')->get();
+
+    expect($cases)->toHaveCount(2);
+    expect($cases[0]->expected_result)->toBe('Should show success message');
+    expect($cases[1]->expected_result)->toBeNull();
+});
