@@ -218,9 +218,12 @@ class ChecklistController extends Controller
             if (isset($rowData['id'])) {
                 $existing = $existingRows->get($rowData['id']);
 
-                // Only bump updated_at when content or appearance actually changed
+                // Explicitly set updated_at: bump when changed, preserve when unchanged.
+                // Without this, Eloquent Builder auto-sets updated_at on every update() call.
                 if ($existing && $this->rowContentChanged($existing, $updateData)) {
                     $updateData['updated_at'] = $now;
+                } elseif ($existing) {
+                    $updateData['updated_at'] = $existing->updated_at;
                 }
 
                 $checklist->rows()->where('id', $rowData['id'])->update($updateData);
