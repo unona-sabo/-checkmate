@@ -10,6 +10,7 @@ export interface ClipboardData {
         background_color: string | null;
         font_color: string | null;
         font_weight: string;
+        module: string[];
     }>;
     source_columns_config: ColumnConfig[];
     source_checklist_name: string;

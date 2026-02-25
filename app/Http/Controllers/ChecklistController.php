@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Checklist\BulkCreateRowsRequest;
 use App\Http\Requests\Checklist\CopyRowsRequest;
+use App\Http\Requests\Checklist\PatchChecklistRowsRequest;
 use App\Http\Requests\Checklist\ReorderChecklistsRequest;
 use App\Http\Requests\Checklist\StoreChecklistNoteRequest;
 use App\Http\Requests\Checklist\StoreChecklistRequest;
@@ -237,6 +238,48 @@ class ChecklistController extends Controller
         $checklist->rows()->whereNotIn('id', $existingIds)->delete();
 
         return back()->with('success', 'Checklist rows updated successfully.');
+    }
+
+    public function patchRows(PatchChecklistRowsRequest $request, Project $project, Checklist $checklist)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
+
+        $existingRows = $checklist->rows()
+            ->whereIn('id', array_column($validated['rows'], 'id'))
+            ->get()
+            ->keyBy('id');
+
+        $now = now()->format('Y-m-d H:i:s');
+
+        foreach ($validated['rows'] as $rowData) {
+            $existing = $existingRows->get($rowData['id']);
+
+            if (! $existing) {
+                continue;
+            }
+
+            $updateData = [
+                'data' => $rowData['data'],
+                'order' => $rowData['order'],
+                'row_type' => $rowData['row_type'] ?? 'normal',
+                'background_color' => $rowData['background_color'] ?? null,
+                'font_color' => $rowData['font_color'] ?? null,
+                'font_weight' => $rowData['font_weight'] ?? 'normal',
+                'module' => $rowData['module'] ?? null,
+            ];
+
+            if ($this->rowContentChanged($existing, $updateData)) {
+                $updateData['updated_at'] = $now;
+            } else {
+                $updateData['updated_at'] = $existing->updated_at;
+            }
+
+            $checklist->rows()->where('id', $rowData['id'])->update($updateData);
+        }
+
+        return back()->with('success', 'Rows updated successfully.');
     }
 
     public function updateNote(StoreChecklistNoteRequest $request, Project $project, Checklist $checklist)
@@ -698,6 +741,7 @@ class ChecklistController extends Controller
                 'background_color' => $rowData['background_color'] ?? null,
                 'font_color' => $rowData['font_color'] ?? null,
                 'font_weight' => $rowData['font_weight'] ?? 'normal',
+                'module' => $rowData['module'] ?? null,
             ]);
         }
 

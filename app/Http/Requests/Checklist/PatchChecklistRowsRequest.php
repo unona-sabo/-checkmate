@@ -4,24 +4,21 @@ namespace App\Http\Requests\Checklist;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class CopyRowsRequest extends FormRequest
+class PatchChecklistRowsRequest extends FormRequest
 {
     public function rules(): array
     {
         return [
-            'rows' => 'required|array|min:1',
+            'rows' => 'required|array',
+            'rows.*.id' => 'required|integer',
             'rows.*.data' => 'required|array',
+            'rows.*.order' => 'required|integer',
             'rows.*.row_type' => 'nullable|in:normal,section_header',
             'rows.*.background_color' => 'nullable|string|max:7',
             'rows.*.font_color' => 'nullable|string|max:7',
             'rows.*.font_weight' => 'nullable|in:normal,medium,semibold,bold',
             'rows.*.module' => 'nullable|array',
-            'rows.*.module.*' => 'string|in:UI,API,Backend,Database,Integration',
-            'section_row_id' => 'nullable|integer|exists:checklist_rows,id',
-            'source_columns_config' => 'nullable|array',
-            'source_columns_config.*.key' => 'required|string',
-            'source_columns_config.*.label' => 'required|string',
-            'source_columns_config.*.type' => 'required|string',
+            'rows.*.module.*' => 'string|max:50',
         ];
     }
 }

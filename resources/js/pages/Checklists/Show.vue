@@ -38,7 +38,7 @@ import {
     ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle, Columns3, Check, Link2, Filter,
     LocateFixed
 } from 'lucide-vue-next';
-import { ref, watch, onMounted, nextTick, computed } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
@@ -604,6 +604,9 @@ const removeRow = () => {
     }
 };
 
+// Track dirty row IDs for delta saves
+const dirtyRowIds = new Set<number>();
+
 const saveRows = () => {
     saveError.value = false;
     isSaving.value = true;
@@ -631,7 +634,56 @@ const saveRows = () => {
                 hasContentChanges.value = false;
                 saveError.value = false;
                 isSaving.value = false;
+                dirtyRowIds.clear();
                 // Shift: previous saved = what was last saved, last saved = current
+                previousSavedState.value = lastSavedState;
+                lastSavedState = {
+                    rows: JSON.parse(JSON.stringify(rows.value)),
+                    columns: JSON.parse(JSON.stringify(columns.value)),
+                };
+            },
+            onError: () => {
+                saveError.value = true;
+                isSaving.value = false;
+            },
+        }
+    );
+};
+
+const saveDirtyRows = () => {
+    if (dirtyRowIds.size === 0) return;
+
+    saveError.value = false;
+    isSaving.value = true;
+
+    const dirtyRows = rows.value
+        .filter(row => dirtyRowIds.has(row.id))
+        .map((row) => ({
+            id: row.id,
+            data: row.data,
+            order: rows.value.indexOf(row),
+            row_type: row.row_type,
+            background_color: row.background_color,
+            font_color: row.font_color,
+            font_weight: row.font_weight,
+            module: row.module && row.module.length > 0 ? row.module : null,
+        }));
+
+    if (dirtyRows.length === 0) {
+        isSaving.value = false;
+        return;
+    }
+
+    router.patch(
+        `/projects/${props.project.id}/checklists/${props.checklist.id}/rows`,
+        { rows: dirtyRows },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                hasContentChanges.value = false;
+                saveError.value = false;
+                isSaving.value = false;
+                dirtyRowIds.clear();
                 previousSavedState.value = lastSavedState;
                 lastSavedState = {
                     rows: JSON.parse(JSON.stringify(rows.value)),
@@ -648,44 +700,52 @@ const saveRows = () => {
 
 const selectColumnKeys = computed(() => columns.value.filter(c => c.type === 'select').map(c => c.key));
 
-let checkboxSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
 const updateCell = (row: ExtendedChecklistRow, key: string, value: unknown) => {
     row.data[key] = value;
     row.updated_at = new Date().toISOString();
+    dirtyRowIds.add(row.id);
+
     // Auto-save immediately for select columns
     if (selectColumnKeys.value.includes(key)) {
-        nextTick(() => saveRows());
-    } else if (checkboxKeys.value.includes(key)) {
-        // Debounced save for checkboxes — waits 1.5s after last toggle
-        if (checkboxSaveTimer) clearTimeout(checkboxSaveTimer);
-        checkboxSaveTimer = setTimeout(() => {
-            checkboxSaveTimer = null;
-            saveRows();
-        }, 1500);
+        if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+        nextTick(() => saveDirtyRows());
     } else {
+        // Debounced save for checkboxes and text/date — 1.5s after last change
         hasContentChanges.value = true;
+        if (autoSaveTimer) clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => {
+            autoSaveTimer = null;
+            saveDirtyRows();
+        }, 1500);
     }
 };
 
 const saveOnBlur = () => {
-    if (hasContentChanges.value) {
+    if (dirtyRowIds.size > 0) {
+        if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+        saveDirtyRows();
+    } else if (hasContentChanges.value) {
         saveRows();
     }
 };
 
 const setBackgroundColor = (row: ExtendedChecklistRow, color: string | null) => {
     row.background_color = color;
+    dirtyRowIds.add(row.id);
     hasContentChanges.value = true;
 };
 
 const setFontColor = (row: ExtendedChecklistRow, color: string | null) => {
     row.font_color = color;
+    dirtyRowIds.add(row.id);
     hasContentChanges.value = true;
 };
 
 const setFontWeight = (row: ExtendedChecklistRow, weight: 'normal' | 'medium' | 'semibold' | 'bold') => {
     row.font_weight = weight;
+    dirtyRowIds.add(row.id);
     hasContentChanges.value = true;
 };
 
@@ -697,6 +757,7 @@ const toggleRowModule = (row: ExtendedChecklistRow, mod: string) => {
     } else {
         row.module.push(mod);
     }
+    dirtyRowIds.add(row.id);
     hasContentChanges.value = true;
 };
 
@@ -805,6 +866,7 @@ const copyToChecklist = () => {
         background_color: row.background_color || null,
         font_color: row.font_color || null,
         font_weight: row.font_weight || 'normal',
+        module: row.module || [],
     }));
 
     router.post(
@@ -838,6 +900,7 @@ const copyRowsToClipboard = () => {
             background_color: row.background_color || null,
             font_color: row.font_color || null,
             font_weight: row.font_weight || 'normal',
+            module: row.module || [],
         })),
         source_columns_config: columns.value.map(c => ({ key: c.key, label: c.label, type: c.type, options: c.options })),
         source_checklist_name: props.checklist.name,
@@ -864,17 +927,25 @@ const currentSectionHeaders = computed(() => {
 
 const openPasteDialog = () => {
     pasteSectionId.value = null;
+    pastePosition.value = 'end';
     showPasteDialog.value = true;
 };
 
 const pasteRows = () => {
     if (!clipboardData.value || clipboardData.value.rows.length === 0) return;
 
+    // If "After current row" is selected, use local paste
+    if (pastePosition.value === 'cursor') {
+        showPasteDialog.value = false;
+        pasteRowsAtCursor();
+        return;
+    }
+
     isPasting.value = true;
 
     const payload = {
         rows: clipboardData.value.rows,
-        section_row_id: pasteSectionId.value,
+        section_row_id: pastePosition.value === 'section' ? pasteSectionId.value : null,
         source_columns_config: clipboardData.value.source_columns_config,
     };
 
@@ -1271,10 +1342,140 @@ const exportSelectedChecklist = () => {
     window.location.href = `/projects/${props.project.id}/checklists/${props.checklist.id}/export?ids=${ids}`;
 };
 
+// Track which row the user is currently focused on
+const focusedRowIndex = ref<number | null>(null);
+
+const onCellFocus = (displayIndex: number) => {
+    const row = displayRows.value[displayIndex];
+    if (row) {
+        focusedRowIndex.value = rows.value.findIndex(r => r.id === row.id);
+    }
+};
+
+// Build a column mapping from source columns to target columns (key match → label match)
+const buildColumnMap = (sourceColumns: ColumnConfig[], targetColumns: ExtendedColumnConfig[]): Record<string, string> => {
+    const columnMap: Record<string, string> = {};
+    const mappedTargetKeys: string[] = [];
+
+    // Pass 1: match by key
+    for (const srcCol of sourceColumns) {
+        for (const tgtCol of targetColumns) {
+            if (srcCol.key === tgtCol.key && !mappedTargetKeys.includes(tgtCol.key)) {
+                columnMap[srcCol.key] = tgtCol.key;
+                mappedTargetKeys.push(tgtCol.key);
+                break;
+            }
+        }
+    }
+
+    // Pass 2: match remaining by label (case-insensitive)
+    for (const srcCol of sourceColumns) {
+        if (columnMap[srcCol.key]) continue;
+        for (const tgtCol of targetColumns) {
+            if (mappedTargetKeys.includes(tgtCol.key)) continue;
+            if (srcCol.label.toLowerCase() === tgtCol.label.toLowerCase()) {
+                columnMap[srcCol.key] = tgtCol.key;
+                mappedTargetKeys.push(tgtCol.key);
+                break;
+            }
+        }
+    }
+
+    return columnMap;
+};
+
+// Map row data from source columns to target columns using a column map
+const mapRowData = (data: Record<string, unknown>, columnMap: Record<string, string>, targetColumns: ExtendedColumnConfig[]): Record<string, unknown> => {
+    const mapped: Record<string, unknown> = {};
+    for (const tgtCol of targetColumns) {
+        mapped[tgtCol.key] = tgtCol.type === 'checkbox' ? false : '';
+    }
+    for (const [srcKey, value] of Object.entries(data)) {
+        if (columnMap[srcKey]) {
+            mapped[columnMap[srcKey]] = value;
+        }
+    }
+    return mapped;
+};
+
+// Paste position for the paste dialog
+const pastePosition = ref<'end' | 'cursor' | 'section'>('end');
+
+// Paste rows locally at cursor position (no server round-trip)
+const pasteRowsAtCursor = () => {
+    if (!clipboardData.value || clipboardData.value.rows.length === 0) return;
+
+    const insertIndex = focusedRowIndex.value !== null
+        ? focusedRowIndex.value
+        : rows.value.length;
+
+    // Build column mapping if source columns differ
+    const sourceColumns = clipboardData.value.source_columns_config;
+    const needsMapping = sourceColumns && sourceColumns.length > 0;
+    const columnMap = needsMapping ? buildColumnMap(sourceColumns, columns.value) : null;
+
+    const newRows: ExtendedChecklistRow[] = clipboardData.value.rows.map((clipRow, i) => {
+        const data = columnMap
+            ? mapRowData(clipRow.data, columnMap, columns.value)
+            : { ...clipRow.data };
+
+        return {
+            id: Date.now() + i,
+            checklist_id: props.checklist.id,
+            data,
+            order: 0,
+            row_type: clipRow.row_type || 'normal',
+            background_color: clipRow.background_color || null,
+            font_color: clipRow.font_color || null,
+            font_weight: clipRow.font_weight || 'normal',
+            module: clipRow.module || [],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            _isNew: true,
+        };
+    });
+
+    rows.value.splice(insertIndex, 0, ...newRows);
+
+    // Ensure pasted rows are visible
+    const lastNewRowIndex = insertIndex + newRows.length;
+    if (visibleRowCount.value < lastNewRowIndex) {
+        visibleRowCount.value = lastNewRowIndex;
+    }
+
+    clearClipboard();
+
+    nextTick(() => {
+        resizeAllTextareas();
+        saveRows();
+    });
+};
+
+// Keyboard listener for Ctrl+C / Ctrl+V (use e.code for keyboard layout independence)
+const handleKeyDown = (e: KeyboardEvent) => {
+    // Skip if inside a dialog
+    if ((e.target as HTMLElement)?.closest('[role="dialog"]')) return;
+
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && hasSelectedRows.value) {
+        // Don't preventDefault — allow native text copy to still work
+        copyRowsToClipboard();
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && hasClipboardRows.value) {
+        e.preventDefault(); // Prevent pasting text into focused textarea
+        pasteRowsAtCursor();
+    }
+};
+
 onMounted(() => {
     loadHiddenColumns();
     resizeAllTextareas();
     loadClipboard();
+    document.addEventListener('keydown', handleKeyDown, true);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('keydown', handleKeyDown, true);
 });
 
 </script>
@@ -1912,6 +2113,7 @@ onMounted(() => {
                                                 rows="1"
                                                 :readonly="!canEdit"
                                                 @input="(e: Event) => autoResizeTextarea(e.target as HTMLTextAreaElement)"
+                                                @focus="onCellFocus(index)"
                                                 @blur="saveOnBlur"
                                             />
                                         </td>
@@ -1929,6 +2131,7 @@ onMounted(() => {
                                                         type="checkbox"
                                                         :checked="!!row.data[column.key]"
                                                         @change="(e) => updateCell(row, column.key, (e.target as HTMLInputElement).checked)"
+                                                        @focus="onCellFocus(index)"
                                                         class="h-4 w-4 rounded border-gray-300 cursor-pointer"
                                                         :disabled="!canEdit"
                                                     />
@@ -1944,6 +2147,7 @@ onMounted(() => {
                                                     rows="1"
                                                     :readonly="!canEdit"
                                                     @input="(e: Event) => autoResizeTextarea(e.target as HTMLTextAreaElement)"
+                                                    @focus="onCellFocus(index)"
                                                     @blur="saveOnBlur"
                                                 />
                                             </template>
@@ -1953,6 +2157,7 @@ onMounted(() => {
                                                         <button
                                                             class="h-7 px-2 text-sm rounded border flex items-center gap-1 min-w-[80px] hover:bg-muted/50 cursor-pointer"
                                                             :class="{ 'pointer-events-none opacity-70': !canEdit }"
+                                                            @focus="onCellFocus(index)"
                                                             :style="getSelectedOption(column, row.data[column.key]) ? {
                                                                 backgroundColor: getSelectedOption(column, row.data[column.key])?.color || '#dbeafe',
                                                                 color: getTextColorForBg(getSelectedOption(column, row.data[column.key])?.color)
@@ -1997,6 +2202,7 @@ onMounted(() => {
                                                     @update:model-value="(val) => updateCell(row, column.key, val)"
                                                     class="h-7 text-sm"
                                                     :readonly="!canEdit"
+                                                    @focus="onCellFocus(index)"
                                                     @blur="saveOnBlur"
                                                 />
                                             </template>
@@ -2006,6 +2212,7 @@ onMounted(() => {
                                                     @update:model-value="(val) => updateCell(row, column.key, val)"
                                                     class="h-7 text-sm"
                                                     :readonly="!canEdit"
+                                                    @focus="onCellFocus(index)"
                                                     @blur="saveOnBlur"
                                                 />
                                             </template>
@@ -2385,27 +2592,40 @@ onMounted(() => {
                         </DialogDescription>
                     </DialogHeader>
                     <div class="py-4 space-y-4">
-                        <div v-if="currentSectionHeaders.length > 0" class="space-y-2">
-                            <Label for="paste-section">Insert into Section</Label>
-                            <div class="flex gap-2">
-                                <Select v-model="pasteSectionId" class="flex-1">
-                                    <SelectTrigger id="paste-section">
-                                        <SelectValue placeholder="End of checklist (default)" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem
-                                            v-for="sh in currentSectionHeaders"
-                                            :key="sh.id"
-                                            :value="sh.id"
-                                            :textValue="sh.label"
-                                        >
-                                            {{ sh.label }}
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Button v-if="pasteSectionId !== null" variant="ghost" size="icon" class="shrink-0 cursor-pointer" @click="pasteSectionId = null">
-                                    <X class="h-4 w-4" />
-                                </Button>
+                        <div class="space-y-2">
+                            <Label>Insert Position</Label>
+                            <div class="space-y-1.5">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" v-model="pastePosition" value="end" class="cursor-pointer" />
+                                    <span class="text-sm">End of checklist</span>
+                                </label>
+                                <label v-if="focusedRowIndex !== null" class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" v-model="pastePosition" value="cursor" class="cursor-pointer" />
+                                    <span class="text-sm">At current row (row {{ focusedRowIndex + 1 }})</span>
+                                </label>
+                                <template v-if="currentSectionHeaders.length > 0">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" v-model="pastePosition" value="section" class="cursor-pointer" />
+                                        <span class="text-sm">Into section</span>
+                                    </label>
+                                    <div v-if="pastePosition === 'section'" class="ml-6">
+                                        <Select v-model="pasteSectionId">
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select section..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem
+                                                    v-for="sh in currentSectionHeaders"
+                                                    :key="sh.id"
+                                                    :value="sh.id"
+                                                    :textValue="sh.label"
+                                                >
+                                                    {{ sh.label }}
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>

@@ -208,6 +208,8 @@ class HomeController extends Controller
                     'Filter rows by module in the filter panel',
                     'AI-powered translation for import notes via TranslateButtons',
                     'Smart row count excluding empty rows and section headers on index page',
+                    'Delta saves: PATCH only changed rows instead of full PUT for cell edits with debounced auto-save',
+                    'Ctrl+C/V keyboard shortcuts for copying and pasting rows with cursor-aware insert position',
                 ],
                 'model' => Checklist::class,
             ],
