@@ -11,6 +11,7 @@ const LOAD_MORE_COUNT = 50;
 export function useChecklistFilters(
     rows: Ref<ExtendedChecklistRow[]>,
     searchQuery: Ref<string>,
+    checkedRowIds?: Ref<Set<number>>,
 ) {
     const scrollContainerRef = ref<HTMLElement | null>(null);
     const highlightedRowId = ref<number | null>(null);
@@ -48,10 +49,17 @@ export function useChecklistFilters(
         const allRows = rows.value;
         const query = searchQuery.value.trim().toLowerCase();
         const hasFilters = activeFilterCount.value > 0;
+        const checked = checkedRowIds?.value;
+        const hasChecked = checked && checked.size > 0;
 
         if (!query && !hasFilters) return allRows;
 
         let dataRows = allRows.filter(row => row.row_type !== 'section_header');
+
+        // When rows are checked, narrow scope to checked rows only
+        if (hasChecked) {
+            dataRows = dataRows.filter(row => checked.has(row.id));
+        }
 
         if (query) {
             dataRows = dataRows.filter(row => isRowMatch(row, query));

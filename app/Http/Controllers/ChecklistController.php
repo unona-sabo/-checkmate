@@ -702,7 +702,7 @@ class ChecklistController extends Controller
      */
     private function rowContentChanged(\App\Models\ChecklistRow $existing, array $updateData): bool
     {
-        if ($existing->data != $updateData['data']) {
+        if (json_encode($existing->data) !== json_encode($updateData['data'])) {
             return true;
         }
 
@@ -722,7 +722,7 @@ class ChecklistController extends Controller
             return true;
         }
 
-        if (($existing->module ?? []) != ($updateData['module'] ?? [])) {
+        if (json_encode($existing->module ?? []) !== json_encode($updateData['module'] ?? [])) {
             return true;
         }
 

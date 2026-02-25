@@ -282,7 +282,18 @@ const {
     canDragRows,
     INITIAL_ROWS,
     LOAD_MORE_COUNT,
-} = useChecklistFilters(rows, searchQuery);
+} = useChecklistFilters(rows, searchQuery, computed(() => {
+    const cbKeys = columns.value.filter(col => col.type === 'checkbox').map(col => col.key);
+    if (cbKeys.length === 0) return new Set<number>();
+    const ids = new Set<number>();
+    for (const row of rows.value) {
+        if (row.row_type === 'section_header') continue;
+        if (cbKeys.some(key => !!row.data[key])) {
+            ids.add(row.id);
+        }
+    }
+    return ids;
+}));
 
 const navigateToRow = (row: ExtendedChecklistRow) => _navigateToRow(row, resizeAllTextareas);
 
@@ -641,6 +652,7 @@ let checkboxSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
 const updateCell = (row: ExtendedChecklistRow, key: string, value: unknown) => {
     row.data[key] = value;
+    row.updated_at = new Date().toISOString();
     // Auto-save immediately for select columns
     if (selectColumnKeys.value.includes(key)) {
         nextTick(() => saveRows());
