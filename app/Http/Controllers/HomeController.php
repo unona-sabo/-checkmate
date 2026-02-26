@@ -214,6 +214,7 @@ class HomeController extends Controller
                     'Arrow keys and Tab/Shift+Tab navigation between table cells',
                     'Sticky header shadow on scroll for visual depth',
                     'Clear status per select column in bulk Change Status action',
+                    'Infinite scroll auto-loading rows on scroll while search and filters work across all rows',
                 ],
                 'model' => Checklist::class,
             ],
