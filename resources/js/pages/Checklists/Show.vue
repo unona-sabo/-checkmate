@@ -48,6 +48,7 @@ import { useChecklistClipboard, type ClipboardData } from '@/composables/useChec
 import { useChecklistFilters } from '@/composables/useChecklistFilters';
 import { useChecklistDragDrop } from '@/composables/useChecklistDragDrop';
 import { useLocalStorageDraft } from '@/composables/useLocalStorageDraft';
+import axios from 'axios';
 
 const { canEdit } = useCanEdit();
 
@@ -278,7 +279,6 @@ const {
     hasMoreRows,
     totalRowCount,
     loadMoreRows,
-    showAllRows,
     navigateToRow: _navigateToRow,
     canDragRows,
     INITIAL_ROWS,
@@ -652,7 +652,7 @@ const saveRows = () => {
     );
 };
 
-const saveDirtyRows = () => {
+const saveDirtyRows = async () => {
     if (dirtyRowIds.size === 0) return;
 
     saveError.value = false;
@@ -676,28 +676,24 @@ const saveDirtyRows = () => {
         return;
     }
 
-    router.patch(
-        `/projects/${props.project.id}/checklists/${props.checklist.id}/rows`,
-        { rows: dirtyRows },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                hasContentChanges.value = false;
-                saveError.value = false;
-                isSaving.value = false;
-                dirtyRowIds.clear();
-                previousSavedState.value = lastSavedState;
-                lastSavedState = {
-                    rows: JSON.parse(JSON.stringify(rows.value)),
-                    columns: JSON.parse(JSON.stringify(columns.value)),
-                };
-            },
-            onError: () => {
-                saveError.value = true;
-                isSaving.value = false;
-            },
-        }
-    );
+    try {
+        await axios.patch(
+            `/projects/${props.project.id}/checklists/${props.checklist.id}/rows`,
+            { rows: dirtyRows },
+        );
+        hasContentChanges.value = false;
+        saveError.value = false;
+        dirtyRowIds.clear();
+        previousSavedState.value = lastSavedState;
+        lastSavedState = {
+            rows: JSON.parse(JSON.stringify(rows.value)),
+            columns: JSON.parse(JSON.stringify(columns.value)),
+        };
+    } catch {
+        saveError.value = true;
+    } finally {
+        isSaving.value = false;
+    }
 };
 
 const selectColumnKeys = computed(() => columns.value.filter(c => c.type === 'select').map(c => c.key));
@@ -2582,18 +2578,10 @@ onUnmounted(() => {
                         </table>
 
                         <!-- Infinite scroll sentinel + Show All fallback -->
-                        <div v-if="hasMoreRows" class="flex flex-col items-center gap-2 py-4 border-t">
+                        <div v-if="hasMoreRows" class="flex items-center justify-center py-4 border-t">
                             <div ref="sentinelRef" class="h-1" />
-                            <div class="flex items-center gap-3">
-                                <span class="text-sm text-muted-foreground">
-                                    Showing {{ displayRows.length }} of {{ totalRowCount }} rows
-                                </span>
-                                <Button variant="ghost" size="sm" @click="showAllRows" class="cursor-pointer">
-                                    Show all
-                                </Button>
-                            </div>
-                            <span class="text-xs text-muted-foreground/70">
-                                Show all rows to enable drag-and-drop reordering
+                            <span class="text-sm text-muted-foreground">
+                                Showing {{ displayRows.length }} of {{ totalRowCount }} rows
                             </span>
                         </div>
                     </div>

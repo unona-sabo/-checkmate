@@ -279,6 +279,10 @@ class ChecklistController extends Controller
             $checklist->rows()->where('id', $rowData['id'])->update($updateData);
         }
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return back()->with('success', 'Rows updated successfully.');
     }
 
