@@ -584,6 +584,7 @@ const showDeleteSelectedConfirm = ref(false);
 const removeSelectedRows = () => {
     const selectedIds = new Set(selectedRows.value.map(r => r.id));
     rows.value = rows.value.filter(r => !selectedIds.has(r.id));
+    clearManualSelection();
     showDeleteSelectedConfirm.value = false;
     hasContentChanges.value = false;
     nextTick(() => saveRows());
@@ -803,13 +804,71 @@ const checkboxColumnKeys = computed(() => {
     return columns.value.filter(col => col.type === 'checkbox').map(col => col.key);
 });
 
-// Get selected rows (filtered rows with any checkbox checked — respects active filters/search)
+// Manual row selection by clicking row numbers
+const manualSelectedIds = ref<Set<number>>(new Set());
+let lastClickedRowId: number | null = null;
+
+const toggleRowSelection = (row: ExtendedChecklistRow, event?: MouseEvent) => {
+    const dataRows = filteredRows.value.filter(r => r.row_type !== 'section_header');
+
+    // Shift+Click: select range from last clicked to current
+    if (event?.shiftKey && lastClickedRowId !== null) {
+        const lastIdx = dataRows.findIndex(r => r.id === lastClickedRowId);
+        const curIdx = dataRows.findIndex(r => r.id === row.id);
+        if (lastIdx !== -1 && curIdx !== -1) {
+            const start = Math.min(lastIdx, curIdx);
+            const end = Math.max(lastIdx, curIdx);
+            const newSet = new Set(manualSelectedIds.value);
+            for (let i = start; i <= end; i++) {
+                newSet.add(dataRows[i].id);
+            }
+            manualSelectedIds.value = newSet;
+            lastClickedRowId = row.id;
+            return;
+        }
+    }
+
+    if (manualSelectedIds.value.has(row.id)) {
+        manualSelectedIds.value.delete(row.id);
+    } else {
+        manualSelectedIds.value.add(row.id);
+    }
+    manualSelectedIds.value = new Set(manualSelectedIds.value); // trigger reactivity
+    lastClickedRowId = row.id;
+};
+
+const selectAllRows = () => {
+    const dataRows = filteredRows.value.filter(r => r.row_type !== 'section_header');
+    manualSelectedIds.value = new Set(dataRows.map(r => r.id));
+};
+
+const clearManualSelection = () => {
+    manualSelectedIds.value = new Set();
+    lastClickedRowId = null;
+};
+
+const isRowManuallySelected = (row: ExtendedChecklistRow): boolean => {
+    return manualSelectedIds.value.has(row.id);
+};
+
+// Get the 1-based row number within all rows (excluding section headers)
+const getRowNumber = (row: ExtendedChecklistRow): number => {
+    let num = 0;
+    for (const r of rows.value) {
+        if (r.row_type !== 'section_header') num++;
+        if (r.id === row.id) return num;
+    }
+    return 0;
+};
+
+// Get selected rows (checkbox-checked OR manually selected — respects active filters/search)
 const selectedRows = computed(() => {
     const checkboxKeys = checkboxColumnKeys.value;
-    if (checkboxKeys.length === 0) return [];
+    const manualIds = manualSelectedIds.value;
 
     return filteredRows.value.filter(row => {
         if (row.row_type === 'section_header') return false;
+        if (manualIds.has(row.id)) return true;
         return checkboxKeys.some(key => !!row.data[key]);
     });
 });
@@ -1451,7 +1510,47 @@ const pasteRowsAtCursor = () => {
     });
 };
 
-// Keyboard listener for Ctrl+C / Ctrl+V (use e.code for keyboard layout independence)
+// Navigate to adjacent cell via arrow keys or Tab
+const navigateCell = (direction: 'up' | 'down' | 'left' | 'right') => {
+    const target = document.activeElement as HTMLElement;
+    if (!target) return false;
+
+    const td = target.closest('td');
+    const tr = target.closest('tr');
+    if (!td || !tr) return false;
+
+    const tbody = tr.closest('tbody');
+    if (!tbody) return false;
+
+    const allRows = Array.from(tbody.querySelectorAll('tr'));
+    const rowIdx = allRows.indexOf(tr);
+    const allCells = Array.from(tr.querySelectorAll('td'));
+    const colIdx = allCells.indexOf(td);
+
+    let nextRow = rowIdx;
+    let nextCol = colIdx;
+
+    if (direction === 'up') nextRow--;
+    else if (direction === 'down') nextRow++;
+    else if (direction === 'left') nextCol--;
+    else if (direction === 'right') nextCol++;
+
+    if (nextRow < 0 || nextRow >= allRows.length) return false;
+    if (nextCol < 0 || nextCol >= allCells.length) return false;
+
+    const targetRow = allRows[nextRow];
+    const targetCell = targetRow.querySelectorAll('td')[nextCol];
+    if (!targetCell) return false;
+
+    const focusable = targetCell.querySelector('textarea, input, button, [tabindex]') as HTMLElement;
+    if (focusable) {
+        focusable.focus();
+        return true;
+    }
+    return false;
+};
+
+// Keyboard listener for Ctrl+C / Ctrl+V / Ctrl+A / Esc / Arrow navigation
 const handleKeyDown = (e: KeyboardEvent) => {
     // Skip if inside a dialog
     if ((e.target as HTMLElement)?.closest('[role="dialog"]')) return;
@@ -1462,8 +1561,46 @@ const handleKeyDown = (e: KeyboardEvent) => {
     }
 
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && hasClipboardRows.value) {
-        e.preventDefault(); // Prevent pasting text into focused textarea
+        e.preventDefault();
         pasteRowsAtCursor();
+    }
+
+    // Ctrl+A — select all rows
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {
+        // Only intercept when not typing in a text field
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag !== 'TEXTAREA' && tag !== 'INPUT') {
+            e.preventDefault();
+            selectAllRows();
+        }
+    }
+
+    // Esc — clear manual selection
+    if (e.code === 'Escape' && manualSelectedIds.value.size > 0) {
+        clearManualSelection();
+    }
+
+    // Arrow key / Tab navigation between cells
+    const target = e.target as HTMLElement;
+    const isInTable = target?.closest('table');
+    if (isInTable) {
+        if (e.code === 'ArrowUp' && !e.shiftKey) {
+            if (navigateCell('up')) e.preventDefault();
+        } else if (e.code === 'ArrowDown' && !e.shiftKey) {
+            if (navigateCell('down')) e.preventDefault();
+        } else if (e.code === 'Tab' && !e.shiftKey) {
+            if (navigateCell('right')) e.preventDefault();
+        } else if (e.code === 'Tab' && e.shiftKey) {
+            if (navigateCell('left')) e.preventDefault();
+        }
+    }
+};
+
+// Track scroll for sticky header shadow
+const isScrolled = ref(false);
+const onScroll = () => {
+    if (scrollContainerRef.value) {
+        isScrolled.value = scrollContainerRef.value.scrollTop > 0;
     }
 };
 
@@ -1472,10 +1609,12 @@ onMounted(() => {
     resizeAllTextareas();
     loadClipboard();
     document.addEventListener('keydown', handleKeyDown, true);
+    scrollContainerRef.value?.addEventListener('scroll', onScroll, { passive: true });
 });
 
 onUnmounted(() => {
     document.removeEventListener('keydown', handleKeyDown, true);
+    scrollContainerRef.value?.removeEventListener('scroll', onScroll);
 });
 
 </script>
@@ -2019,9 +2158,9 @@ onUnmounted(() => {
                 <CardContent class="p-0">
                     <div ref="scrollContainerRef" class="overflow-auto max-h-[calc(100vh-220px)]">
                         <table class="w-full border-collapse" style="table-layout: auto;">
-                            <thead class="sticky top-0 z-10">
+                            <thead class="sticky top-0 z-10 transition-shadow" :class="isScrolled ? 'shadow-md' : ''">
                                 <tr class="border-b bg-muted">
-                                    <th class="w-6 px-1 py-2"></th>
+                                    <th class="w-10 px-1 py-2"></th>
                                     <th
                                         v-for="(column, colIndex) in visibleColumns"
                                         :key="column.key"
@@ -2082,6 +2221,7 @@ onUnmounted(() => {
                                             'border-t-2 border-t-primary': dragOverRowIndex === index && canDragRows,
                                             'opacity-50': draggedRowIndex === index && canDragRows,
                                             'ring-2 ring-primary/50 bg-primary/5': highlightedRowId === row.id,
+                                            'bg-primary/5': isRowManuallySelected(row),
                                         }
                                     ]"
                                     :style="getRowStyles(row)"
@@ -2099,13 +2239,34 @@ onUnmounted(() => {
                                             <LocateFixed class="h-4 w-4 text-primary" />
                                         </button>
                                         <div
-                                            v-else
+                                            v-else-if="row.row_type === 'section_header'"
                                             :draggable="canDragRows"
                                             @dragstart="canDragRows && onRowDragStart(index, $event)"
                                             @dragend="onRowDragEnd"
                                             :class="canDragRows ? 'cursor-grab active:cursor-grabbing' : 'cursor-default opacity-30'"
                                         >
                                             <GripVertical class="h-4 w-4 text-muted-foreground/50" />
+                                        </div>
+                                        <div v-else class="flex items-center">
+                                            <div
+                                                :draggable="canDragRows"
+                                                @dragstart="canDragRows && onRowDragStart(index, $event)"
+                                                @dragend="onRowDragEnd"
+                                                :class="canDragRows ? 'cursor-grab active:cursor-grabbing' : 'cursor-default opacity-30'"
+                                                class="shrink-0"
+                                            >
+                                                <GripVertical class="h-4 w-4 text-muted-foreground/50" />
+                                            </div>
+                                            <button
+                                                @click.stop="toggleRowSelection(row, $event)"
+                                                class="text-[10px] leading-none min-w-[18px] h-[18px] flex items-center justify-center rounded cursor-pointer select-none"
+                                                :class="isRowManuallySelected(row)
+                                                    ? 'bg-primary text-primary-foreground font-semibold'
+                                                    : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'"
+                                                :title="isRowManuallySelected(row) ? 'Deselect row' : 'Select row (Shift+Click for range)'"
+                                            >
+                                                {{ getRowNumber(row) }}
+                                            </button>
                                         </div>
                                     </td>
                                     <template v-if="row.row_type === 'section_header'">
