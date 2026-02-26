@@ -1,4 +1,4 @@
-import { ref, computed, watch, nextTick, type Ref } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted, type Ref } from 'vue';
 import type { ChecklistRow } from '@/types';
 
 interface ExtendedChecklistRow extends ChecklistRow {
@@ -215,8 +215,37 @@ export function useChecklistFilters(
 
     const canDragRows = computed(() => !searchQuery.value.trim() && !hasMoreRows.value && activeFilterCount.value === 0);
 
+    // Infinite scroll: auto-load more rows when sentinel becomes visible
+    const sentinelRef = ref<HTMLElement | null>(null);
+    let observer: IntersectionObserver | null = null;
+
+    onMounted(() => {
+        observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting && hasMoreRows.value) {
+                    visibleRowCount.value += LOAD_MORE_COUNT;
+                }
+            },
+            { root: scrollContainerRef.value, threshold: 0 },
+        );
+
+        // Watch for sentinel element appearing in DOM
+        watch(sentinelRef, (el) => {
+            if (observer) {
+                observer.disconnect();
+                if (el) observer.observe(el);
+            }
+        }, { immediate: true });
+    });
+
+    onUnmounted(() => {
+        observer?.disconnect();
+        observer = null;
+    });
+
     return {
         scrollContainerRef,
+        sentinelRef,
         highlightedRowId,
         visibleRowCount,
         showFilters,

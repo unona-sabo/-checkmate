@@ -261,6 +261,7 @@ const { searchQuery, isSearchActive } = useSearch();
 
 const {
     scrollContainerRef,
+    sentinelRef,
     highlightedRowId,
     visibleRowCount,
     showFilters,
@@ -2580,16 +2581,14 @@ onUnmounted(() => {
                             </tbody>
                         </table>
 
-                        <!-- Load More -->
+                        <!-- Infinite scroll sentinel + Show All fallback -->
                         <div v-if="hasMoreRows" class="flex flex-col items-center gap-2 py-4 border-t">
+                            <div ref="sentinelRef" class="h-1" />
                             <div class="flex items-center gap-3">
                                 <span class="text-sm text-muted-foreground">
                                     Showing {{ displayRows.length }} of {{ totalRowCount }} rows
                                 </span>
-                                <Button variant="outline" size="sm" @click="loadMoreRows">
-                                    Load more
-                                </Button>
-                                <Button variant="ghost" size="sm" @click="showAllRows">
+                                <Button variant="ghost" size="sm" @click="showAllRows" class="cursor-pointer">
                                     Show all
                                 </Button>
                             </div>
