@@ -124,6 +124,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('test-runs/{testRun}/add-cases', [TestRunController::class, 'addCases'])->name('add-cases');
         Route::post('test-runs/{testRun}/pause', [TestRunController::class, 'pause'])->name('pause');
         Route::post('test-runs/{testRun}/resume', [TestRunController::class, 'resume'])->name('resume');
+        Route::post('test-runs/{testRun}/adjust-time', [TestRunController::class, 'adjustTime'])->name('adjust-time');
     });
 
     // Test Run Cases

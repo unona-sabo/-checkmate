@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
     Play, Edit, CheckCircle2, XCircle, AlertTriangle,
     SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check, Pause, Timer, ChevronDown, ChevronUp,
-    Plus, Layers, FileText, Boxes, ListChecks, Trash2, Bug
+    Plus, Layers, FileText, Boxes, ListChecks, Trash2, Bug, Clock
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -152,6 +152,39 @@ const resumeRun = () => {
     router.post(`/projects/${props.project.id}/test-runs/${props.testRun.id}/resume`, {}, { preserveScroll: true });
 };
 
+// --- Time Adjustment ---
+const showTimeDialog = ref(false);
+const timeAdjustHours = ref(0);
+const timeAdjustMinutes = ref(0);
+const timeAdjustProcessing = ref(false);
+
+const openTimeDialog = () => {
+    timeAdjustHours.value = 0;
+    timeAdjustMinutes.value = 0;
+    showTimeDialog.value = true;
+};
+
+const submitTimeAdjustment = () => {
+    const hours = Number(timeAdjustHours.value) || 0;
+    const minutes = Number(timeAdjustMinutes.value) || 0;
+    if (hours === 0 && minutes === 0) return;
+
+    timeAdjustProcessing.value = true;
+    router.post(
+        `/projects/${props.project.id}/test-runs/${props.testRun.id}/adjust-time`,
+        { hours, minutes },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showTimeDialog.value = false;
+            },
+            onFinish: () => {
+                timeAdjustProcessing.value = false;
+            },
+        }
+    );
+};
+
 const formatElapsed = (seconds: number | null | undefined): string | null => {
     if (seconds == null || seconds < 0) return null;
     const days = Math.floor(seconds / 86400);
@@ -191,7 +224,8 @@ const liveElapsed = computed((): number | null => {
     if (run.is_paused && run.paused_at) {
         paused += Math.floor((nowMs - new Date(run.paused_at).getTime()) / 1000);
     }
-    return Math.max(0, total - paused);
+    const adjustment = run.time_adjustment_seconds ?? 0;
+    return Math.max(0, total - paused + adjustment);
 });
 
 const groupedCases = computed(() => {
@@ -588,11 +622,17 @@ const addCasesCount = computed(() => {
                         </div>
                         <div class="flex gap-6">
                             <div v-if="formatElapsed(liveElapsed)" class="text-center">
-                                <div class="text-2xl font-bold flex items-center gap-1" :class="testRun.is_paused ? 'text-yellow-500' : 'text-primary'">
+                                <button
+                                    type="button"
+                                    @click="openTimeDialog"
+                                    class="text-2xl font-bold flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+                                    :class="testRun.is_paused ? 'text-yellow-500' : 'text-primary'"
+                                    title="Click to adjust time"
+                                >
                                     <Pause v-if="testRun.is_paused" class="h-5 w-5" />
                                     <Timer v-else class="h-5 w-5" />
                                     {{ formatElapsed(liveElapsed) }}
-                                </div>
+                                </button>
                                 <div class="text-xs text-muted-foreground">{{ testRun.is_paused ? 'Paused' : 'Elapsed' }}</div>
                             </div>
                             <div v-if="testRun.stats?.passed" class="text-center">
@@ -1023,6 +1063,55 @@ const addCasesCount = computed(() => {
                     <Button variant="destructive" @click="removeCase" class="flex-1 sm:flex-none">
                         Yes
                     </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Time Adjustment Dialog -->
+        <Dialog v-model:open="showTimeDialog">
+            <DialogContent class="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Clock class="h-5 w-5 text-primary" />
+                        Add Time
+                    </DialogTitle>
+                    <DialogDescription>
+                        Enter additional time to add to the elapsed duration of this test run.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <Label for="adjust-hours">Hours</Label>
+                        <Input
+                            id="adjust-hours"
+                            v-model.number="timeAdjustHours"
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                        />
+                    </div>
+                    <div class="space-y-2">
+                        <Label for="adjust-minutes">Minutes</Label>
+                        <Input
+                            id="adjust-minutes"
+                            v-model.number="timeAdjustMinutes"
+                            type="number"
+                            min="0"
+                            max="59"
+                            placeholder="0"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="showTimeDialog = false">Cancel</Button>
+                    <RestrictedAction>
+                        <Button
+                            @click="submitTimeAdjustment"
+                            :disabled="timeAdjustProcessing || (timeAdjustHours === 0 && timeAdjustMinutes === 0)"
+                        >
+                            Add Time
+                        </Button>
+                    </RestrictedAction>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

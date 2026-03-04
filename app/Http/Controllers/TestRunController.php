@@ -296,6 +296,30 @@ class TestRunController extends Controller
         return back()->with('success', "{$added} case(s) added to the test run.");
     }
 
+    public function adjustTime(Project $project, TestRun $testRun)
+    {
+        $this->authorize('update', $project);
+
+        $validated = request()->validate([
+            'hours' => ['nullable', 'numeric', 'min:0'],
+            'minutes' => ['nullable', 'numeric', 'min:0', 'max:59'],
+        ]);
+
+        $hours = (int) ($validated['hours'] ?? 0);
+        $minutes = (int) ($validated['minutes'] ?? 0);
+        $addedSeconds = ($hours * 3600) + ($minutes * 60);
+
+        if ($addedSeconds <= 0) {
+            return back()->with('error', 'Please enter a time greater than zero.');
+        }
+
+        $testRun->update([
+            'time_adjustment_seconds' => $testRun->time_adjustment_seconds + $addedSeconds,
+        ]);
+
+        return back()->with('success', 'Time adjusted successfully.');
+    }
+
     public function resume(Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);

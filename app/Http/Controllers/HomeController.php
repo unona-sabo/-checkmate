@@ -282,6 +282,8 @@ class HomeController extends Controller
                     'Select All / Deselect All toggle for test cases and checklist rows',
                     'Show expected result for checklist-based checks on expand',
                     'Create bug report directly from any check with pre-filled fields',
+                    'Manual time adjustment: click elapsed time to add hours/minutes to total',
+                    'Search test cases by name when creating runs or adding cases',
                 ],
                 'model' => TestRun::class,
             ],

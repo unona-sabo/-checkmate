@@ -29,6 +29,7 @@ class TestRun extends Model
         'created_by',
         'paused_at',
         'total_paused_seconds',
+        'time_adjustment_seconds',
     ];
 
     protected function casts(): array
@@ -108,7 +109,9 @@ class TestRun extends Model
             $pausedSeconds += (int) $this->paused_at->diffInSeconds(now());
         }
 
-        return max(0, $totalSeconds - $pausedSeconds);
+        $adjustment = $this->time_adjustment_seconds ?? 0;
+
+        return max(0, $totalSeconds - $pausedSeconds + $adjustment);
     }
 
     /**

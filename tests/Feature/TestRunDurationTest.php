@@ -136,6 +136,61 @@ test('updating test run status to completed sets completed_by', function () {
     expect($testRun->completed_by)->toBe($this->user->id);
 });
 
+test('adjust time adds seconds to time_adjustment_seconds', function () {
+    $testRun = TestRun::factory()->active()->create([
+        'project_id' => $this->project->id,
+        'time_adjustment_seconds' => 0,
+    ]);
+
+    $this->actingAs($this->user)->post(
+        route('test-runs.adjust-time', [$this->project, $testRun]),
+        ['hours' => 1, 'minutes' => 30]
+    );
+
+    $testRun->refresh();
+    expect($testRun->time_adjustment_seconds)->toBe(5400);
+});
+
+test('adjust time accumulates across multiple adjustments', function () {
+    $testRun = TestRun::factory()->active()->create([
+        'project_id' => $this->project->id,
+        'time_adjustment_seconds' => 3600,
+    ]);
+
+    $this->actingAs($this->user)->post(
+        route('test-runs.adjust-time', [$this->project, $testRun]),
+        ['hours' => 0, 'minutes' => 45]
+    );
+
+    $testRun->refresh();
+    expect($testRun->time_adjustment_seconds)->toBe(6300);
+});
+
+test('adjust time rejects zero time', function () {
+    $testRun = TestRun::factory()->active()->create([
+        'project_id' => $this->project->id,
+    ]);
+
+    $response = $this->actingAs($this->user)->post(
+        route('test-runs.adjust-time', [$this->project, $testRun]),
+        ['hours' => 0, 'minutes' => 0]
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+});
+
+test('time adjustment is included in elapsed seconds', function () {
+    $testRun = TestRun::factory()->active()->create([
+        'project_id' => $this->project->id,
+        'started_at' => now()->subMinutes(10),
+        'time_adjustment_seconds' => 3600,
+    ]);
+
+    $elapsed = $testRun->getElapsedSeconds();
+    expect($elapsed)->toBeGreaterThanOrEqual(3600 + 600 - 5);
+});
+
 test('test runs index eager loads completed_by_user', function () {
     $completer = User::factory()->create(['name' => 'Jane Doe']);
 

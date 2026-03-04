@@ -191,6 +191,7 @@ export interface TestRun {
     created_by: number | null;
     paused_at: string | null;
     total_paused_seconds: number;
+    time_adjustment_seconds: number;
     elapsed_seconds?: number | null;
     is_paused?: boolean;
     created_at: string;
