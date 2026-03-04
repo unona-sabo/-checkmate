@@ -8,7 +8,7 @@ import {
     Plus, Edit, Layers, FileText,
     Zap, RotateCcw, GripVertical, Boxes, FolderPlus, Search, X, Link2, Check,
     MoreHorizontal, Trash2, Play, Copy, Minus, Filter, FileSpreadsheet,
-    Upload, Download, Loader2, StickyNote, Pencil
+    Upload, Download, Loader2, StickyNote, Pencil, Bot
 } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -260,17 +260,19 @@ const toggleTestCaseSelection = (testCaseId: number) => {
 
 // Drag and drop state per section
 const dragState = ref<{
-    sectionId: number | null;
+    sourceSectionId: number | null;
     draggedIndex: number | null;
+    overSectionId: number | null;
     dragOverIndex: number | null;
 }>({
-    sectionId: null,
+    sourceSectionId: null,
     draggedIndex: null,
+    overSectionId: null,
     dragOverIndex: null,
 });
 
 const onDragStart = (sectionId: number, index: number, event: DragEvent) => {
-    dragState.value = { sectionId, draggedIndex: index, dragOverIndex: null };
+    dragState.value = { sourceSectionId: sectionId, draggedIndex: index, overSectionId: null, dragOverIndex: null };
     if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', `${sectionId}-${index}`);
@@ -282,34 +284,53 @@ const onDragOver = (sectionId: number, index: number, event: DragEvent) => {
     if (event.dataTransfer) {
         event.dataTransfer.dropEffect = 'move';
     }
-    if (dragState.value.sectionId === sectionId) {
-        dragState.value.dragOverIndex = index;
-    }
+    dragState.value.overSectionId = sectionId;
+    dragState.value.dragOverIndex = index;
 };
 
 const onDragLeave = () => {
+    dragState.value.overSectionId = null;
     dragState.value.dragOverIndex = null;
 };
 
 const onDrop = (sectionId: number, index: number, event: DragEvent) => {
     event.preventDefault();
-    if (dragState.value.sectionId === sectionId &&
-        dragState.value.draggedIndex !== null &&
-        dragState.value.draggedIndex !== index) {
+    const { sourceSectionId, draggedIndex } = dragState.value;
 
-        const section = suiteSections.value.find(s => s.id === sectionId);
-        if (section) {
-            const draggedItem = section.testCases[dragState.value.draggedIndex];
-            section.testCases.splice(dragState.value.draggedIndex, 1);
-            section.testCases.splice(index, 0, draggedItem);
-            saveOrder(sectionId, section.testCases);
-        }
+    if (sourceSectionId === null || draggedIndex === null) {
+        dragState.value = { sourceSectionId: null, draggedIndex: null, overSectionId: null, dragOverIndex: null };
+        return;
     }
-    dragState.value = { sectionId: null, draggedIndex: null, dragOverIndex: null };
+
+    const sourceSection = suiteSections.value.find(s => s.id === sourceSectionId);
+    const targetSection = suiteSections.value.find(s => s.id === sectionId);
+
+    if (!sourceSection || !targetSection) {
+        dragState.value = { sourceSectionId: null, draggedIndex: null, overSectionId: null, dragOverIndex: null };
+        return;
+    }
+
+    if (sourceSectionId === sectionId) {
+        // Same section reorder
+        if (draggedIndex !== index) {
+            const draggedItem = sourceSection.testCases[draggedIndex];
+            sourceSection.testCases.splice(draggedIndex, 1);
+            sourceSection.testCases.splice(index, 0, draggedItem);
+            saveOrder(sectionId, sourceSection.testCases);
+        }
+    } else {
+        // Cross-section move
+        const draggedItem = sourceSection.testCases[draggedIndex];
+        sourceSection.testCases.splice(draggedIndex, 1);
+        targetSection.testCases.splice(index, 0, draggedItem);
+        saveOrderAcrossSuites(sourceSection, targetSection);
+    }
+
+    dragState.value = { sourceSectionId: null, draggedIndex: null, overSectionId: null, dragOverIndex: null };
 };
 
 const onDragEnd = () => {
-    dragState.value = { sectionId: null, draggedIndex: null, dragOverIndex: null };
+    dragState.value = { sourceSectionId: null, draggedIndex: null, overSectionId: null, dragOverIndex: null };
 };
 
 const saveOrder = (suiteId: number, testCases: TestCase[]) => {
@@ -320,6 +341,25 @@ const saveOrder = (suiteId: number, testCases: TestCase[]) => {
     }));
 
     router.post(`/projects/${props.project.id}/test-suites/${suiteId}/test-cases/reorder`, { cases }, {
+        preserveScroll: true,
+        onFinish: () => {
+            isSaving.value = false;
+        },
+    });
+};
+
+const saveOrderAcrossSuites = (sourceSection: SuiteSection, targetSection: SuiteSection) => {
+    isSaving.value = true;
+    const cases: { id: number; order: number; test_suite_id: number }[] = [];
+
+    sourceSection.testCases.forEach((tc, i) => {
+        cases.push({ id: tc.id, order: i + 1, test_suite_id: sourceSection.id });
+    });
+    targetSection.testCases.forEach((tc, i) => {
+        cases.push({ id: tc.id, order: i + 1, test_suite_id: targetSection.id });
+    });
+
+    router.post(`/projects/${props.project.id}/test-suites/reorder-cases`, { cases }, {
         preserveScroll: true,
         onFinish: () => {
             isSaving.value = false;
@@ -390,15 +430,20 @@ const isCrossProject = computed(() => {
     return copyTargetProjectId.value && Number(copyTargetProjectId.value) !== props.project.id;
 });
 
-const allSuiteOptions = computed(() => {
-    const options: { id: number; name: string; label: string }[] = [];
-    availableSuites.value.forEach(suite => {
-        options.push({ id: suite.id, name: suite.name, label: suite.name });
-        suite.children?.forEach(child => {
-            options.push({ id: child.id, name: child.name, label: `${suite.name} / ${child.name}` });
-        });
-    });
-    return options;
+const copyTargetParentSuiteId = ref('');
+
+const parentSuiteOptions = computed(() => {
+    return availableSuites.value.map(s => ({ id: s.id, name: s.name }));
+});
+
+const copySuiteChildOptions = computed(() => {
+    if (!copyTargetParentSuiteId.value) return [];
+    const parent = availableSuites.value.find(s => s.id === Number(copyTargetParentSuiteId.value));
+    return parent?.children?.map(c => ({ id: c.id, name: c.name })) ?? [];
+});
+
+watch(copyTargetParentSuiteId, () => {
+    copyTargetSuiteId.value = copyTargetParentSuiteId.value;
 });
 
 const loadSuitesForProject = (projectId: string) => {
@@ -413,6 +458,7 @@ const loadSuitesForProject = (projectId: string) => {
 
 const openCopyDialog = () => {
     copyTargetProjectId.value = String(props.project.id);
+    copyTargetParentSuiteId.value = '';
     copyTargetSuiteId.value = '';
     copyAttachments.value = true;
     copyFeatures.value = true;
@@ -432,6 +478,7 @@ const openCopyDialog = () => {
 };
 
 watch(copyTargetProjectId, (newVal) => {
+    copyTargetParentSuiteId.value = '';
     copyTargetSuiteId.value = '';
     if (!newVal) return;
     loadSuitesForProject(newVal);
@@ -1378,8 +1425,8 @@ onMounted(() => {
                             :key="testCase.id"
                             class="group flex items-center justify-between px-4 py-2.5 rounded-xl border bg-card hover:border-primary/50 hover:shadow-sm transition-all duration-150"
                             :class="{
-                                'border-t-2 border-t-primary': dragState.sectionId === section.id && dragState.dragOverIndex === tcIndex,
-                                'opacity-50': dragState.sectionId === section.id && dragState.draggedIndex === tcIndex
+                                'border-t-2 border-t-primary': dragState.overSectionId === section.id && dragState.dragOverIndex === tcIndex,
+                                'opacity-50': dragState.sourceSectionId === section.id && dragState.draggedIndex === tcIndex
                             }"
                             @dragover="onDragOver(section.id, tcIndex, $event)"
                             @dragleave="onDragLeave"
@@ -1409,12 +1456,14 @@ onMounted(() => {
                                     class="flex items-center gap-3 min-w-0 flex-1"
                                 >
                                     <div class="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
-                                        <component :is="getTypeIcon(testCase.type)" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                        <Bot v-if="testCase.automation_status === 'automated'" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                        <component v-else :is="getTypeIcon(testCase.type)" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                                     </div>
                                     <p class="text-sm font-normal truncate group-hover:text-primary transition-colors" v-html="highlight(testCase.title)" />
                                 </Link>
                             </div>
                             <div class="flex items-center gap-2 shrink-0 ml-4">
+                                <FeatureBadges v-if="testCase.project_features?.length" :features="testCase.project_features" :max-visible="2" />
                                 <Badge :variant="priorityVariant(testCase.priority)" class="text-[10px] px-1.5 h-4 font-medium">
                                     {{ testCase.priority }}
                                 </Badge>
@@ -1573,10 +1622,26 @@ onMounted(() => {
                     </div>
                     <div class="space-y-2">
                         <Label>Target Suite</Label>
-                        <Select v-model="copyTargetSuiteId" :disabled="loadingSuites || allSuiteOptions.length === 0">
-                            <SelectTrigger><SelectValue :placeholder="loadingSuites ? 'Loading...' : 'Select suite...'" /></SelectTrigger>
+                        <Select v-model="copyTargetParentSuiteId" :disabled="loadingSuites || parentSuiteOptions.length === 0">
+                            <SelectTrigger class="truncate"><SelectValue :placeholder="loadingSuites ? 'Loading...' : 'Select suite...'" /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem v-for="s in allSuiteOptions" :key="s.id" :value="String(s.id)">{{ s.label }}</SelectItem>
+                                <SelectItem v-for="s in parentSuiteOptions" :key="s.id" :value="String(s.id)">
+                                    <span class="truncate">{{ s.name }}</span>
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div v-if="copySuiteChildOptions.length > 0" class="space-y-2">
+                        <Label>Subcategory <span class="text-muted-foreground font-normal">(optional)</span></Label>
+                        <Select v-model="copyTargetSuiteId">
+                            <SelectTrigger class="truncate"><SelectValue placeholder="Parent suite (default)" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="copyTargetParentSuiteId">
+                                    <span class="text-muted-foreground">Parent suite (default)</span>
+                                </SelectItem>
+                                <SelectItem v-for="c in copySuiteChildOptions" :key="c.id" :value="String(c.id)">
+                                    <span class="truncate">{{ c.name }}</span>
+                                </SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

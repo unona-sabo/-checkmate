@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Play, Layers, FileText, Boxes, ListChecks } from 'lucide-vue-next';
+import { Play, Layers, FileText, Boxes, ListChecks, Search, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 
@@ -66,6 +66,7 @@ watch([envPreset, envNotes], () => {
 });
 
 // --- Test Cases mode helpers ---
+const testCaseSearch = ref('');
 const expandedSuites = ref<Record<number, boolean>>({});
 
 const toggleSuite = (suiteId: number) => {
@@ -121,6 +122,25 @@ const allTestCaseIds = computed(() => {
         ids.push(...getAllTestCases(suite));
     });
     return ids;
+});
+
+const filteredTestSuites = computed(() => {
+    const query = testCaseSearch.value.trim().toLowerCase();
+    if (!query) return props.testSuites;
+
+    return props.testSuites
+        .map(suite => {
+            const filteredCases = suite.test_cases?.filter(tc => tc.title.toLowerCase().includes(query)) ?? [];
+            const filteredChildren = (suite.children ?? [])
+                .map(child => ({
+                    ...child,
+                    test_cases: child.test_cases?.filter(tc => tc.title.toLowerCase().includes(query)) ?? [],
+                }))
+                .filter(child => child.test_cases.length > 0);
+
+            return { ...suite, test_cases: filteredCases, children: filteredChildren };
+        })
+        .filter(suite => (suite.test_cases?.length ?? 0) > 0 || (suite.children?.length ?? 0) > 0);
 });
 
 const allTestCasesSelected = computed(() => {
@@ -319,13 +339,36 @@ const isSubmitDisabled = computed(() => {
                                     </label>
                                 </div>
 
+                                <div class="relative">
+                                    <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input
+                                        v-model="testCaseSearch"
+                                        type="text"
+                                        placeholder="Search test cases..."
+                                        class="pl-9 pr-9"
+                                    />
+                                    <button
+                                        v-if="testCaseSearch"
+                                        type="button"
+                                        @click="testCaseSearch = ''"
+                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                                    >
+                                        <X class="h-4 w-4" />
+                                    </button>
+                                </div>
+
                                 <div v-if="!testSuites.length" class="rounded-lg border border-dashed p-6 text-center">
                                     <Layers class="mx-auto h-8 w-8 text-muted-foreground" />
                                     <p class="mt-2 text-sm text-muted-foreground">No test suites found. Create test cases first.</p>
                                 </div>
 
+                                <div v-else-if="filteredTestSuites.length === 0 && testCaseSearch" class="rounded-lg border border-dashed p-6 text-center">
+                                    <Search class="mx-auto h-8 w-8 text-muted-foreground" />
+                                    <p class="mt-2 text-sm text-muted-foreground">No test cases matching "{{ testCaseSearch }}"</p>
+                                </div>
+
                                 <div v-else class="space-y-2 rounded-lg border p-4 max-h-96 overflow-y-auto">
-                                    <template v-for="suite in testSuites" :key="suite.id">
+                                    <template v-for="suite in filteredTestSuites" :key="suite.id">
                                         <!-- Parent Suite -->
                                         <div class="space-y-2">
                                             <div class="flex items-center gap-2 py-1">

@@ -144,6 +144,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('bugreports/{bugreport}', [BugreportController::class, 'update'])->name('update');
         Route::delete('bugreports/{bugreport}', [BugreportController::class, 'destroy'])->name('destroy');
         Route::delete('bugreports/{bugreport}/attachments/{attachment}', [BugreportController::class, 'destroyAttachment'])->name('destroy-attachment');
+        Route::post('bugreports/{bugreport}/export-clickup', [BugreportController::class, 'exportToClickUp'])->name('export-clickup');
     });
 
     // Design Links (nested under projects)

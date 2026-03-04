@@ -26,6 +26,7 @@ class Bugreport extends Model
         'fixed_on',
         'assigned_to',
         'reported_by',
+        'clickup_task_id',
     ];
 
     /**

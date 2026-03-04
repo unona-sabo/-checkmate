@@ -326,6 +326,27 @@ const toggleAddTestCase = (testCaseId: number) => {
     }
 };
 
+const addCaseSearch = ref('');
+
+const filteredAddTestSuites = computed(() => {
+    const query = addCaseSearch.value.trim().toLowerCase();
+    if (!query || !props.testSuites) return props.testSuites ?? [];
+
+    return props.testSuites
+        .map(suite => {
+            const filteredCases = suite.test_cases?.filter(tc => tc.title.toLowerCase().includes(query)) ?? [];
+            const filteredChildren = (suite.children ?? [])
+                .map(child => ({
+                    ...child,
+                    test_cases: child.test_cases?.filter(tc => tc.title.toLowerCase().includes(query)) ?? [],
+                }))
+                .filter(child => child.test_cases.length > 0);
+
+            return { ...suite, test_cases: filteredCases, children: filteredChildren };
+        })
+        .filter(suite => (suite.test_cases?.length ?? 0) > 0 || (suite.children?.length ?? 0) > 0);
+});
+
 // For checklist source
 const addRowTitles = ref<Set<string>>(new Set());
 const selectedAddChecklistId = ref('');
@@ -398,6 +419,7 @@ const deselectAllAddRows = () => {
 
 const openAddCasesDialog = () => {
     addCaseIds.value = [];
+    addCaseSearch.value = '';
     addRowTitles.value = new Set();
     selectedAddChecklistId.value = props.testRun.checklist_id ? String(props.testRun.checklist_id) : '';
     showAddCasesDialog.value = true;
@@ -816,12 +838,33 @@ const addCasesCount = computed(() => {
                             <div v-for="i in 3" :key="i" class="h-8 animate-pulse rounded-md bg-muted" />
                         </div>
                     </template>
+                    <div class="relative">
+                        <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            v-model="addCaseSearch"
+                            type="text"
+                            placeholder="Search test cases..."
+                            class="pl-9 pr-9"
+                        />
+                        <button
+                            v-if="addCaseSearch"
+                            type="button"
+                            @click="addCaseSearch = ''"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
                     <div class="flex-1 overflow-y-auto space-y-2 pr-1">
                         <div v-if="!testSuites?.length" class="rounded-lg border border-dashed p-6 text-center">
                             <Layers class="mx-auto h-8 w-8 text-muted-foreground" />
                             <p class="mt-2 text-sm text-muted-foreground">No test suites found.</p>
                         </div>
-                        <template v-else v-for="suite in testSuites" :key="suite.id">
+                        <div v-else-if="filteredAddTestSuites.length === 0 && addCaseSearch" class="rounded-lg border border-dashed p-6 text-center">
+                            <Search class="mx-auto h-8 w-8 text-muted-foreground" />
+                            <p class="mt-2 text-sm text-muted-foreground">No test cases matching "{{ addCaseSearch }}"</p>
+                        </div>
+                        <template v-else v-for="suite in filteredAddTestSuites" :key="suite.id">
                             <div class="space-y-1">
                                 <div class="flex items-center gap-2 py-1">
                                     <Checkbox

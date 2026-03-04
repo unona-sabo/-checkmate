@@ -794,6 +794,7 @@ const submitUserForm = () => {
             onSuccess: () => {
                 showUserDialog.value = false;
                 editingUser.value = null;
+                userForm.reset();
             },
         });
     } else {
@@ -911,6 +912,7 @@ const submitPaymentForm = () => {
             onSuccess: () => {
                 showPaymentDialog.value = false;
                 editingPayment.value = null;
+                paymentForm.reset();
             },
         });
     } else {
@@ -964,6 +966,7 @@ const submitCommandForm = () => {
             onSuccess: () => {
                 showCommandDialog.value = false;
                 editingCommand.value = null;
+                commandForm.reset();
             },
         });
     } else {
@@ -1017,6 +1020,7 @@ const submitLinkForm = () => {
             onSuccess: () => {
                 showLinkDialog.value = false;
                 editingLink.value = null;
+                linkForm.reset();
             },
         });
     } else {
@@ -1375,7 +1379,7 @@ const environmentLabel = (env: string) => {
 
 const formatCredentials = (creds: Record<string, string> | null): string => {
     if (!creds) return '';
-    return Object.entries(creds).map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(', ');
+    return Object.entries(creds).filter(([, v]) => v != null && v !== '').map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(', ');
 };
 
 const formatCredentialsValues = (creds: Record<string, string> | null): string => {
@@ -1798,10 +1802,11 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                         />
                                     </template>
                                     <template v-else-if="col.key === 'name'">
-                                        <span class="font-medium">{{ user.name }}</span>
+                                        <span v-if="user.name" class="font-medium">{{ user.name }}</span>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'email'">
-                                        <div class="flex items-center gap-1">
+                                        <div v-if="user.email" class="flex items-center gap-1">
                                             <span class="truncate max-w-[180px]">{{ user.email }}</span>
                                             <button
                                                 class="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
@@ -1812,6 +1817,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                                 <Copy v-else class="h-3.5 w-3.5" />
                                             </button>
                                         </div>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'password'">
                                         <div v-if="user.password" class="flex items-center gap-1">
@@ -2009,12 +2015,14 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                         />
                                     </template>
                                     <template v-else-if="col.key === 'name'">
-                                        <span class="font-medium">{{ payment.name }}</span>
+                                        <span v-if="payment.name" class="font-medium">{{ payment.name }}</span>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'type'">
-                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" :class="typeBadgeClass(payment.type)">
+                                        <span v-if="payment.type" class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" :class="typeBadgeClass(payment.type)">
                                             {{ payment.type }}
                                         </span>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'system'">
                                         <span v-if="payment.system">{{ payment.system }}</span>
@@ -2202,10 +2210,11 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                         <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'description'">
-                                        <span class="font-medium">{{ cmd.description }}</span>
+                                        <span v-if="cmd.description" class="font-medium">{{ cmd.description }}</span>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'command'">
-                                        <div class="flex items-center gap-1">
+                                        <div v-if="cmd.command" class="flex items-center gap-1">
                                             <code class="truncate max-w-[280px] rounded bg-muted px-1.5 py-0.5 text-xs font-mono">{{ cmd.command }}</code>
                                             <button
                                                 class="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
@@ -2216,6 +2225,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                                 <Copy v-else class="h-3.5 w-3.5" />
                                             </button>
                                         </div>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'comment'">
                                         <span v-if="cmd.comment" class="line-clamp-1 text-muted-foreground" :title="cmd.comment">{{ cmd.comment }}</span>
@@ -2366,10 +2376,11 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                         <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'description'">
-                                        <span class="font-medium">{{ link.description }}</span>
+                                        <span v-if="link.description" class="font-medium">{{ link.description }}</span>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'url'">
-                                        <div class="flex items-center gap-1">
+                                        <div v-if="link.url" class="flex items-center gap-1">
                                             <a
                                                 :href="link.url"
                                                 target="_blank"
@@ -2397,6 +2408,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                                 <Copy v-else class="h-3.5 w-3.5" />
                                             </button>
                                         </div>
+                                        <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'comment'">
                                         <span v-if="link.comment" class="line-clamp-1 text-muted-foreground" :title="link.comment">{{ link.comment }}</span>

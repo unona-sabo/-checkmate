@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Bug, Edit, Trash2, Paperclip, Download, Link2, Check, FlaskConical } from 'lucide-vue-next';
+import { Bug, Edit, Trash2, Paperclip, Download, Link2, Check, FlaskConical, ExternalLink } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -40,6 +40,7 @@ interface Bugreport {
     fixed_on: string[] | null;
     reporter: { id: number; name: string } | null;
     assignee: { id: number; name: string } | null;
+    clickup_task_id: string | null;
     attachments?: Attachment[];
     created_at: string;
     updated_at: string;
@@ -132,6 +133,19 @@ const navigateToCreateTestCase = () => {
 
 const formatDate = (date: string): string => {
     return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+// ClickUp export
+const isExportingToClickUp = ref(false);
+
+const exportToClickUp = () => {
+    isExportingToClickUp.value = true;
+    router.post(`/projects/${props.project.id}/bugreports/${props.bugreport.id}/export-clickup`, {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            isExportingToClickUp.value = false;
+        },
+    });
 };
 </script>
 
@@ -326,6 +340,29 @@ const formatDate = (date: string): string => {
                             <div>
                                 <p class="text-xs text-muted-foreground">Updated</p>
                                 <p class="text-sm font-medium">{{ formatDate(bugreport.updated_at) }}</p>
+                            </div>
+                            <div class="border-t pt-3">
+                                <p class="text-xs text-muted-foreground mb-2">ClickUp</p>
+                                <a
+                                    v-if="bugreport.clickup_task_id"
+                                    :href="`https://app.clickup.com/t/${bugreport.clickup_task_id}`"
+                                    target="_blank"
+                                    class="inline-flex items-center gap-1.5 text-sm text-primary hover:underline cursor-pointer"
+                                >
+                                    <ExternalLink class="h-3.5 w-3.5" />
+                                    {{ bugreport.clickup_task_id }}
+                                </a>
+                                <RestrictedAction v-else>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        class="w-full gap-2 cursor-pointer"
+                                        @click="exportToClickUp"
+                                    >
+                                        <ExternalLink class="h-3.5 w-3.5" />
+                                        Export to ClickUp
+                                    </Button>
+                                </RestrictedAction>
                             </div>
                         </CardContent>
                     </Card>

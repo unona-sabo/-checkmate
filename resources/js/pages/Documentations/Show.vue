@@ -31,6 +31,8 @@ interface Documentation {
     content: string | null;
     category: string | null;
     order: number;
+    parent_id: number | null;
+    parent?: Documentation;
     children?: Documentation[];
     attachments?: Attachment[];
     created_at: string;
@@ -374,13 +376,25 @@ const saveChildReorder = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold tracking-tight">
-                    <FileText class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
-                        @click="copyLink"
-                        class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
-                        :title="copied ? 'Copied!' : 'Copy link'"
-                    ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
-                </h1>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">
+                        <FileText class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
+                            @click="copyLink"
+                            class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
+                            :title="copied ? 'Copied!' : 'Copy link'"
+                        ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
+                    </h1>
+                    <div v-if="documentation.parent" class="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <span>in</span>
+                        <Link
+                            :href="`/projects/${project.id}/documentations/${documentation.parent.id}`"
+                            class="inline-flex items-center gap-1.5 text-primary hover:underline cursor-pointer"
+                        >
+                            <FileText class="h-3.5 w-3.5" />
+                            {{ documentation.parent.title }}
+                        </Link>
+                    </div>
+                </div>
                 <div class="flex gap-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>

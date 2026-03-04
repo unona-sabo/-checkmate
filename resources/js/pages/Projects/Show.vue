@@ -320,7 +320,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <ClipboardList class="h-5 w-5 text-primary" />
                                 Checklists
-                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.checklists?.length || 0 }}</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.checklists_count ?? 0 }}</span>
                             </CardTitle>
                             <RestrictedAction>
                                 <Link :href="`/projects/${project.id}/checklists/create`">
@@ -359,7 +359,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <Layers class="h-5 w-5 text-primary" />
                                 Test Suites
-                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.test_suites?.length || 0 }}</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.test_suites_count ?? 0 }}</span>
                             </CardTitle>
                             <RestrictedAction>
                                 <Link :href="`/projects/${project.id}/test-suites/create`">
@@ -398,7 +398,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <Play class="h-5 w-5 text-primary" />
                                 Test Runs
-                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.test_runs?.length || 0 }}</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.test_runs_count ?? 0 }}</span>
                             </CardTitle>
                             <RestrictedAction>
                                 <Link :href="`/projects/${project.id}/test-runs/create`">
@@ -443,7 +443,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <Bug class="h-5 w-5 text-primary" />
                                 Bug Reports
-                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.bugreports?.length || 0 }}</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.bugreports_count ?? 0 }}</span>
                             </CardTitle>
                             <RestrictedAction>
                                 <Link :href="`/projects/${project.id}/bugreports/create`">
@@ -487,7 +487,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <Rocket class="h-5 w-5 text-primary" />
                                 Releases
-                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.releases?.length || 0 }}</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.releases_count ?? 0 }}</span>
                             </CardTitle>
                             <RestrictedAction>
                                 <Link :href="`/projects/${project.id}/releases`">
@@ -534,7 +534,7 @@ const getBugStatusColor = (status: string) => {
                             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
                                 <FileText class="h-5 w-5 text-primary" />
                                 Documentations
-                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.documentations?.length || 0 }}</span>
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">{{ project.documentations_count ?? 0 }}</span>
                             </CardTitle>
                             <RestrictedAction>
                                 <Link :href="`/projects/${project.id}/documentations/create`">

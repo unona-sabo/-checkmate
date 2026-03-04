@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite, type TestCase } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil, Filter, Loader2, Upload, Download, FileSpreadsheet, Zap, RotateCcw } from 'lucide-vue-next';
+import { Plus, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil, Filter, Loader2, Upload, Download, FileSpreadsheet, Zap, RotateCcw, Bot } from 'lucide-vue-next';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
@@ -611,20 +611,27 @@ const isCrossProject = computed(() => {
     return copyTargetProjectId.value && Number(copyTargetProjectId.value) !== props.project.id;
 });
 
-const allSuiteOptions = computed(() => {
-    const options: { id: number; name: string; label: string }[] = [];
+const copyTargetParentSuiteId = ref('');
+
+const copyParentSuiteOptions = computed(() => {
     const source = isCrossProject.value ? availableSuites.value : props.testSuites;
-    source.forEach(suite => {
-        options.push({ id: suite.id, name: suite.name, label: suite.name });
-        suite.children?.forEach(child => {
-            options.push({ id: child.id, name: child.name, label: `${suite.name} / ${child.name}` });
-        });
-    });
-    return options;
+    return source.map(s => ({ id: s.id, name: s.name }));
+});
+
+const copyChildSuiteOptions = computed(() => {
+    if (!copyTargetParentSuiteId.value) return [];
+    const source = isCrossProject.value ? availableSuites.value : props.testSuites;
+    const parent = source.find(s => s.id === Number(copyTargetParentSuiteId.value));
+    return parent?.children?.map(c => ({ id: c.id, name: c.name })) ?? [];
+});
+
+watch(copyTargetParentSuiteId, () => {
+    copyTargetSuiteId.value = copyTargetParentSuiteId.value;
 });
 
 const openCopyDialog = () => {
     copyTargetProjectId.value = String(props.project.id);
+    copyTargetParentSuiteId.value = '';
     copyTargetSuiteId.value = '';
     copyAttachments.value = true;
     copyFeatures.value = true;
@@ -642,6 +649,7 @@ const openCopyDialog = () => {
 };
 
 watch(copyTargetProjectId, (newVal) => {
+    copyTargetParentSuiteId.value = '';
     copyTargetSuiteId.value = '';
     if (!newVal) return;
 
@@ -1776,7 +1784,8 @@ onMounted(() => {
                                             <GripVertical class="h-4 w-4 text-muted-foreground/50" />
                                         </div>
                                         <div class="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
-                                            <component :is="getTypeIcon(testCase.type)" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                            <Bot v-if="testCase.automation_status === 'automated'" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                            <component v-else :is="getTypeIcon(testCase.type)" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                                         </div>
                                         <p class="text-sm font-normal truncate group-hover:text-primary transition-colors" v-html="highlight(testCase.title)" />
                                     </div>
@@ -1902,17 +1911,37 @@ onMounted(() => {
                             <Loader2 class="h-4 w-4 animate-spin" />
                             Loading suites...
                         </div>
-                        <Select v-else v-model="copyTargetSuiteId" :disabled="!copyTargetProjectId">
-                            <SelectTrigger>
+                        <Select v-else v-model="copyTargetParentSuiteId" :disabled="!copyTargetProjectId">
+                            <SelectTrigger class="truncate">
                                 <SelectValue placeholder="Select suite..." />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem
-                                    v-for="suite in allSuiteOptions"
+                                    v-for="suite in copyParentSuiteOptions"
                                     :key="suite.id"
                                     :value="String(suite.id)"
                                 >
-                                    {{ suite.label }}
+                                    <span class="truncate">{{ suite.name }}</span>
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div v-if="copyChildSuiteOptions.length > 0" class="space-y-2">
+                        <Label>Subcategory <span class="text-muted-foreground font-normal">(optional)</span></Label>
+                        <Select v-model="copyTargetSuiteId">
+                            <SelectTrigger class="truncate">
+                                <SelectValue placeholder="Parent suite (default)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="copyTargetParentSuiteId">
+                                    <span class="text-muted-foreground">Parent suite (default)</span>
+                                </SelectItem>
+                                <SelectItem
+                                    v-for="child in copyChildSuiteOptions"
+                                    :key="child.id"
+                                    :value="String(child.id)"
+                                >
+                                    <span class="truncate">{{ child.name }}</span>
                                 </SelectItem>
                             </SelectContent>
                         </Select>

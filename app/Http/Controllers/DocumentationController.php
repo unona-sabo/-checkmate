@@ -96,7 +96,7 @@ class DocumentationController extends Controller
     {
         $this->authorize('view', $project);
 
-        $documentation->load(['children.children.children', 'attachments']);
+        $documentation->load(['parent', 'children.children.children', 'attachments']);
 
         $allDocs = $project->documentations()
             ->whereNull('parent_id')

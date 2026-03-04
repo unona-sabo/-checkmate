@@ -449,9 +449,16 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
 
-        $project->load([
+        $project->loadCount([
             'checklists',
-            'testSuites' => fn ($q) => $q->whereNull('parent_id')->with('children'),
+            'testSuites',
+            'testRuns',
+            'bugreports',
+            'releases',
+            'documentations',
+        ])->load([
+            'checklists' => fn ($q) => $q->latest()->take(5),
+            'testSuites' => fn ($q) => $q->whereNull('parent_id')->with('children')->take(5),
             'testRuns' => fn ($q) => $q->latest()->take(5),
             'bugreports' => fn ($q) => $q->latest()->take(5),
             'releases' => fn ($q) => $q->latest()->take(5),

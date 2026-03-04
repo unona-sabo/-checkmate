@@ -52,11 +52,13 @@ export interface Project {
     test_suites_count?: number;
     test_runs_count?: number;
     bugreports_count?: number;
+    releases_count?: number;
     documentations_count?: number;
     checklists?: Checklist[];
     test_suites?: TestSuite[];
     test_runs?: TestRun[];
     bugreports?: Bugreport[];
+    releases?: Release[];
     documentations?: Documentation[];
 }
 

@@ -179,6 +179,15 @@ class BugreportController extends Controller
             ->with('success', 'Bug report deleted successfully.');
     }
 
+    public function exportToClickUp(Project $project, Bugreport $bugreport)
+    {
+        $this->authorize('update', $project);
+
+        // TODO: Implement ClickUp API integration
+        // For now, return back with an info message
+        return back()->with('info', 'ClickUp integration is not configured yet. Set CLICKUP_API_TOKEN and CLICKUP_LIST_ID in your environment.');
+    }
+
     public function destroyAttachment(Project $project, Bugreport $bugreport, Attachment $attachment)
     {
         $this->authorize('update', $project);
