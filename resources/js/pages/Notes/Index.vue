@@ -13,7 +13,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { StickyNote, Plus, FileText, Edit, Trash2 } from 'lucide-vue-next';
+import { StickyNote, Plus, FileText, Trash2 } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { ref } from 'vue';
 
@@ -115,57 +115,52 @@ const deleteNote = () => {
             </div>
 
             <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card v-for="note in notes" :key="note.id" class="hover:border-primary transition-colors cursor-pointer flex flex-col">
-                    <CardHeader class="pb-2">
-                        <div class="flex items-start justify-between">
-                            <Link :href="`/projects/${project.id}/notes/${note.id}`" class="flex-1">
-                                <CardTitle class="text-base flex items-start gap-2 hover:text-primary transition-colors cursor-pointer">
+                <Link v-for="note in notes" :key="note.id" :href="`/projects/${project.id}/notes/${note.id}`" class="block">
+                    <Card class="hover:border-primary transition-colors cursor-pointer flex flex-col h-full">
+                        <CardHeader class="pb-2">
+                            <div class="flex items-start justify-between">
+                                <CardTitle class="text-base flex items-start gap-2">
                                     <StickyNote class="h-4 w-4 shrink-0 mt-0.5 text-yellow-500" />
                                     {{ note.title || 'Untitled Note' }}
                                 </CardTitle>
-                            </Link>
-                            <Badge :variant="note.is_draft ? 'secondary' : 'default'">
-                                {{ note.is_draft ? 'Draft' : 'Published' }}
-                            </Badge>
-                        </div>
-                    </CardHeader>
-                    <CardContent class="flex flex-col flex-1">
-                        <p v-if="note.content" class="text-sm text-muted-foreground mb-3">
-                            {{ truncateContent(note.content) }}
-                        </p>
-                        <p v-else class="text-sm text-muted-foreground italic mb-3">
-                            No content yet
-                        </p>
-
-                        <div v-if="note.documentation" class="flex items-center gap-1 text-xs text-muted-foreground mb-3">
-                            <FileText class="h-3 w-3" />
-                            <span>{{ note.documentation.title }}</span>
-                        </div>
-
-                        <div class="flex items-center justify-between mt-auto pt-3">
-                            <span class="text-xs text-muted-foreground">
-                                {{ formatDate(note.updated_at) }}
-                            </span>
-                            <div class="flex gap-1">
-                                <Link :href="`/projects/${project.id}/notes/${note.id}`">
-                                    <Button variant="ghost" size="icon-sm" class="p-0">
-                                        <Edit class="h-4 w-4" />
-                                    </Button>
-                                </Link>
-                                <RestrictedAction>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon-sm"
-                                        class="p-0 text-destructive hover:text-destructive"
-                                        @click.prevent="confirmDelete(note)"
-                                    >
-                                        <Trash2 class="h-4 w-4" />
-                                    </Button>
-                                </RestrictedAction>
+                                <Badge :variant="note.is_draft ? 'secondary' : 'default'">
+                                    {{ note.is_draft ? 'Draft' : 'Published' }}
+                                </Badge>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardHeader>
+                        <CardContent class="flex flex-col flex-1">
+                            <p v-if="note.content" class="text-sm text-muted-foreground mb-3">
+                                {{ truncateContent(note.content) }}
+                            </p>
+                            <p v-else class="text-sm text-muted-foreground italic mb-3">
+                                No content yet
+                            </p>
+
+                            <div v-if="note.documentation" class="flex items-center gap-1 text-xs text-muted-foreground mb-3">
+                                <FileText class="h-3 w-3" />
+                                <span>{{ note.documentation.title }}</span>
+                            </div>
+
+                            <div class="flex items-center justify-between mt-auto pt-3">
+                                <span class="text-xs text-muted-foreground">
+                                    {{ formatDate(note.updated_at) }}
+                                </span>
+                                <div class="flex gap-1">
+                                    <RestrictedAction>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            class="p-0 text-destructive hover:text-destructive"
+                                            @click.prevent.stop="confirmDelete(note)"
+                                        >
+                                            <Trash2 class="h-4 w-4" />
+                                        </Button>
+                                    </RestrictedAction>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
             </div>
             <!-- Delete Confirmation Dialog -->
             <Dialog v-model:open="showDeleteConfirm">

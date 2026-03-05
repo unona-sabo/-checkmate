@@ -42,6 +42,7 @@ import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
+import CellEditor from '@/components/CellEditor.vue';
 import { useCanEdit } from '@/composables/useCanEdit';
 import { useSearch } from '@/composables/useSearch';
 import { useChecklistClipboard, type ClipboardData } from '@/composables/useChecklistClipboard';
@@ -1539,7 +1540,7 @@ const navigateCell = (direction: 'up' | 'down' | 'left' | 'right') => {
     const targetCell = targetRow.querySelectorAll('td')[nextCol];
     if (!targetCell) return false;
 
-    const focusable = targetCell.querySelector('textarea, input, button, [tabindex]') as HTMLElement;
+    const focusable = targetCell.querySelector('textarea, input, button, [tabindex], [contenteditable]') as HTMLElement;
     if (focusable) {
         focusable.focus();
         return true;
@@ -1566,7 +1567,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {
         // Only intercept when not typing in a text field
         const tag = (e.target as HTMLElement)?.tagName;
-        if (tag !== 'TEXTAREA' && tag !== 'INPUT') {
+        if (tag !== 'TEXTAREA' && tag !== 'INPUT' && !(e.target as HTMLElement)?.closest('[contenteditable]')) {
             e.preventDefault();
             selectAllRows();
         }
@@ -1580,7 +1581,8 @@ const handleKeyDown = (e: KeyboardEvent) => {
     // Arrow key / Tab navigation between cells
     const target = e.target as HTMLElement;
     const isInTable = target?.closest('table');
-    if (isInTable) {
+    const isContentEditable = target?.closest('[contenteditable="true"]');
+    if (isInTable && !isContentEditable) {
         if (e.code === 'ArrowUp' && !e.shiftKey) {
             if (navigateCell('up')) e.preventDefault();
         } else if (e.code === 'ArrowDown' && !e.shiftKey) {
@@ -2303,15 +2305,12 @@ onUnmounted(() => {
                                                 </div>
                                             </template>
                                             <template v-else-if="column.type === 'text'">
-                                                <Textarea
-                                                    :model-value="row.data[column.key] as string"
+                                                <CellEditor
+                                                    :model-value="(row.data[column.key] as string) || ''"
                                                     @update:model-value="(val) => updateCell(row, column.key, val)"
-                                                    class="w-full min-h-[28px] text-sm resize-none overflow-hidden py-1 px-2 whitespace-pre-wrap break-words"
-                                                    :class="getFontWeightClass(row.font_weight)"
-                                                    :style="{ color: row.font_color || 'inherit' }"
-                                                    rows="1"
                                                     :readonly="!canEdit"
-                                                    @input="(e: Event) => autoResizeTextarea(e.target as HTMLTextAreaElement)"
+                                                    :font-weight="row.font_weight"
+                                                    :font-color="row.font_color"
                                                     @focus="onCellFocus(index)"
                                                     @blur="saveOnBlur"
                                                 />

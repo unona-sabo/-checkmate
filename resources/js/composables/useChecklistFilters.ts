@@ -39,7 +39,8 @@ export function useChecklistFilters(
     const isRowMatch = (row: ExtendedChecklistRow, query: string): boolean => {
         return Object.values(row.data).some(value => {
             if (typeof value === 'string') {
-                return value.toLowerCase().includes(query);
+                const text = value.replace(/<[^>]*>/g, '');
+                return text.toLowerCase().includes(query);
             }
             return false;
         });
