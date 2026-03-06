@@ -13,9 +13,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { StickyNote, Plus, FileText, Trash2 } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
+import { StickyNote, Plus, FileText, Trash2, Search, X } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
-import { ref } from 'vue';
+import { useSearch } from '@/composables/useSearch';
+import { ref, computed } from 'vue';
 
 interface Documentation {
     id: number;
@@ -59,6 +61,17 @@ const truncateContent = (content: string | null, length: number = 150) => {
     return content.substring(0, length) + '...';
 };
 
+const { searchQuery, highlight } = useSearch();
+
+const filteredNotes = computed(() => {
+    const query = searchQuery.value.trim().toLowerCase();
+    if (!query) return props.notes;
+    return props.notes.filter(note =>
+        (note.title ?? '').toLowerCase().includes(query) ||
+        (note.content ?? '').toLowerCase().includes(query),
+    );
+});
+
 const showDeleteConfirm = ref(false);
 const noteToDelete = ref<Note | null>(null);
 
@@ -88,14 +101,32 @@ const deleteNote = () => {
                     <StickyNote class="h-6 w-6 shrink-0 mt-1 text-primary" />
                     Notes
                 </h1>
-                <RestrictedAction>
-                    <Link :href="`/projects/${project.id}/notes/create`">
-                        <Button variant="cta" class="gap-2">
-                            <Plus class="h-4 w-4" />
-                            New Note
-                        </Button>
-                    </Link>
-                </RestrictedAction>
+                <div class="flex items-center gap-3">
+                    <div v-if="notes.length > 0" class="relative">
+                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search notes..."
+                            class="pl-9 pr-8 w-56 bg-background/60"
+                        />
+                        <button
+                            v-if="searchQuery"
+                            @click="searchQuery = ''"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
+                    <RestrictedAction>
+                        <Link :href="`/projects/${project.id}/notes/create`">
+                            <Button variant="cta" class="gap-2">
+                                <Plus class="h-4 w-4" />
+                                New Note
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
+                </div>
             </div>
 
             <div v-if="notes.length === 0" class="flex flex-1 items-center justify-center">
@@ -114,14 +145,24 @@ const deleteNote = () => {
                 </div>
             </div>
 
+            <div v-else-if="filteredNotes.length === 0" class="flex flex-col items-center justify-center py-12">
+                <Search class="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p class="font-semibold text-muted-foreground">No results found</p>
+                <p class="text-sm text-muted-foreground max-w-full truncate px-4">No notes match "{{ searchQuery }}"</p>
+                <Button variant="outline" size="sm" class="mt-3 gap-2" @click="searchQuery = ''">
+                    <X class="h-3.5 w-3.5" />
+                    Clear Search
+                </Button>
+            </div>
+
             <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Link v-for="note in notes" :key="note.id" :href="`/projects/${project.id}/notes/${note.id}`" class="block">
+                <Link v-for="note in filteredNotes" :key="note.id" :href="`/projects/${project.id}/notes/${note.id}`" class="block">
                     <Card class="hover:border-primary transition-colors cursor-pointer flex flex-col h-full">
                         <CardHeader class="pb-2">
                             <div class="flex items-start justify-between">
                                 <CardTitle class="text-base flex items-start gap-2">
                                     <StickyNote class="h-4 w-4 shrink-0 mt-0.5 text-yellow-500" />
-                                    {{ note.title || 'Untitled Note' }}
+                                    <span v-html="highlight(note.title || 'Untitled Note')" />
                                 </CardTitle>
                                 <Badge :variant="note.is_draft ? 'secondary' : 'default'">
                                     {{ note.is_draft ? 'Draft' : 'Published' }}
@@ -129,9 +170,7 @@ const deleteNote = () => {
                             </div>
                         </CardHeader>
                         <CardContent class="flex flex-col flex-1">
-                            <p v-if="note.content" class="text-sm text-muted-foreground mb-3">
-                                {{ truncateContent(note.content) }}
-                            </p>
+                            <p v-if="note.content" class="text-sm text-muted-foreground mb-3" v-html="highlight(truncateContent(note.content))" />
                             <p v-else class="text-sm text-muted-foreground italic mb-3">
                                 No content yet
                             </p>
@@ -184,3 +223,11 @@ const deleteNote = () => {
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+:deep(.search-highlight) {
+    background-color: rgb(147 197 253 / 0.5);
+    border-radius: 0.125rem;
+    padding: 0.0625rem 0.125rem;
+}
+</style>

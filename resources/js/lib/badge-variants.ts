@@ -25,12 +25,12 @@ export const severityVariant = (severity: string): Variant => {
 
 export const bugStatusVariant = (status: string): Variant => {
     switch (status) {
-        case 'new': return 'blue';
-        case 'open': return 'purple';
+        case 'to_do': return 'blue';
         case 'in_progress': return 'amber';
-        case 'resolved': return 'emerald';
-        case 'closed': return 'gray';
-        case 'reopened': return 'red';
+        case 'in_review': return 'purple';
+        case 'needs_changes': return 'red';
+        case 'cancelled': return 'gray';
+        case 'done': return 'emerald';
         default: return 'gray';
     }
 };

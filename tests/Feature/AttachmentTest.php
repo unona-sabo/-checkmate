@@ -21,7 +21,7 @@ test('bugreport can be created with attachments', function () {
         'title' => 'Test Bug',
         'severity' => 'major',
         'priority' => 'high',
-        'status' => 'new',
+        'status' => 'to_do',
         'attachments' => [
             UploadedFile::fake()->image('screenshot.png', 800, 600),
             UploadedFile::fake()->create('log.txt', 100, 'text/plain'),
@@ -45,7 +45,7 @@ test('bugreport can be updated with new attachments', function () {
         'title' => 'Updated Bug',
         'severity' => 'critical',
         'priority' => 'high',
-        'status' => 'open',
+        'status' => 'to_do',
         'attachments' => [
             UploadedFile::fake()->image('new-screenshot.jpg'),
         ],

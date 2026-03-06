@@ -16,7 +16,7 @@ class UpdateBugreportRequest extends FormRequest
             'actual_result' => 'nullable|string',
             'severity' => 'required|in:critical,major,minor,trivial',
             'priority' => 'required|in:high,medium,low',
-            'status' => 'required|in:new,open,in_progress,resolved,closed,reopened',
+            'status' => 'required|in:to_do,in_progress,in_review,needs_changes,cancelled,done',
             'environment' => 'nullable|string',
             'fixed_on' => 'nullable|array',
             'fixed_on.*' => 'in:develop,staging,production',

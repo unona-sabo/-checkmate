@@ -111,15 +111,17 @@ const filteredTestRuns = computed(() => {
         if (filterAuthor.value && String(run.creator?.id) !== filterAuthor.value) return false;
 
         // Created date filters
-        if (filterCreatedFrom.value && run.created_at < filterCreatedFrom.value) return false;
-        if (filterCreatedTo.value && run.created_at.slice(0, 10) > filterCreatedTo.value) return false;
+        const createdDate = run.created_at.slice(0, 10);
+        if (filterCreatedFrom.value && createdDate < filterCreatedFrom.value) return false;
+        if (filterCreatedTo.value && createdDate > filterCreatedTo.value) return false;
 
         // Completed date filters
+        const completedDate = run.completed_at?.slice(0, 10) ?? '';
         if (filterCompletedFrom.value) {
-            if (!run.completed_at || run.completed_at < filterCompletedFrom.value) return false;
+            if (!completedDate || completedDate < filterCompletedFrom.value) return false;
         }
         if (filterCompletedTo.value) {
-            if (!run.completed_at || run.completed_at.slice(0, 10) > filterCompletedTo.value) return false;
+            if (!completedDate || completedDate > filterCompletedTo.value) return false;
         }
 
         // Passed range
@@ -348,7 +350,7 @@ const resumeRun = (run: TestRun) => {
                             </button>
                         </div>
                     </div>
-                    <!-- Row 2: Environment, Created From, Completed From -->
+                    <!-- Row 2: Environment, Created From, Created To -->
                     <div class="grid grid-cols-3 gap-x-3 gap-y-2.5 mt-2.5">
                         <div class="relative">
                             <Label class="text-[11px] text-muted-foreground mb-1 block">Environment</Label>
@@ -372,14 +374,14 @@ const resumeRun = (run: TestRun) => {
                             </button>
                         </div>
                         <div class="relative">
-                            <Label class="text-[11px] text-muted-foreground mb-1 block">Completed From</Label>
-                            <Input v-model="filterCompletedFrom" type="date" class="h-8 text-xs" :class="filterCompletedFrom ? 'pr-7' : ''" />
-                            <button v-if="filterCompletedFrom" @click="filterCompletedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Created To</Label>
+                            <Input v-model="filterCreatedTo" type="date" class="h-8 text-xs" :class="filterCreatedTo ? 'pr-7' : ''" />
+                            <button v-if="filterCreatedTo" @click="filterCreatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
                                 <X class="h-3 w-3" />
                             </button>
                         </div>
                     </div>
-                    <!-- Row 3: Author, Created To, Completed To -->
+                    <!-- Row 3: Author, Completed From, Completed To -->
                     <div class="grid grid-cols-3 gap-x-3 gap-y-2.5 mt-2.5">
                         <Deferred data="users">
                             <template #fallback>
@@ -410,9 +412,9 @@ const resumeRun = (run: TestRun) => {
                             </div>
                         </Deferred>
                         <div class="relative">
-                            <Label class="text-[11px] text-muted-foreground mb-1 block">Created To</Label>
-                            <Input v-model="filterCreatedTo" type="date" class="h-8 text-xs" :class="filterCreatedTo ? 'pr-7' : ''" />
-                            <button v-if="filterCreatedTo" @click="filterCreatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Completed From</Label>
+                            <Input v-model="filterCompletedFrom" type="date" class="h-8 text-xs" :class="filterCompletedFrom ? 'pr-7' : ''" />
+                            <button v-if="filterCompletedFrom" @click="filterCompletedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
                                 <X class="h-3 w-3" />
                             </button>
                         </div>

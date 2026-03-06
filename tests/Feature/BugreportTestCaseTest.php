@@ -143,7 +143,7 @@ test('creating bugreport from test case copies attachments', function () {
             'title' => 'Bug from test case',
             'severity' => 'major',
             'priority' => 'high',
-            'status' => 'new',
+            'status' => 'to_do',
             'test_case_id' => $testCase->id,
         ]
     );

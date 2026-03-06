@@ -21,7 +21,7 @@ interface Bugreport {
     description: string | null;
     severity: 'critical' | 'major' | 'minor' | 'trivial';
     priority: 'high' | 'medium' | 'low';
-    status: 'new' | 'open' | 'in_progress' | 'resolved' | 'closed' | 'reopened';
+    status: 'to_do' | 'in_progress' | 'in_review' | 'needs_changes' | 'cancelled' | 'done';
     fixed_on: string[] | null;
     reporter: { id: number; name: string } | null;
     assignee: { id: number; name: string } | null;
@@ -207,12 +207,12 @@ const filteredBugreports = computed(() => {
                                         <SelectValue placeholder="All" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="new">New</SelectItem>
-                                        <SelectItem value="open">Open</SelectItem>
+                                        <SelectItem value="to_do">To Do</SelectItem>
                                         <SelectItem value="in_progress">In Progress</SelectItem>
-                                        <SelectItem value="resolved">Resolved</SelectItem>
-                                        <SelectItem value="closed">Closed</SelectItem>
-                                        <SelectItem value="reopened">Reopened</SelectItem>
+                                        <SelectItem value="in_review">In Review</SelectItem>
+                                        <SelectItem value="needs_changes">Needs Changes</SelectItem>
+                                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                                        <SelectItem value="done">Done</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <button v-if="filterStatus" @click="filterStatus = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
@@ -404,7 +404,7 @@ const filteredBugreports = computed(() => {
                                             {{ bug.severity }}
                                         </Badge>
                                         <Badge :variant="bugStatusVariant(bug.status)" class="text-[10px] px-1.5 h-4 shrink-0">
-                                            {{ bug.status.replace('_', ' ') }}
+                                            {{ bug.status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }}
                                         </Badge>
                                         <FeatureBadges v-if="bug.project_features?.length" :features="bug.project_features" :max-visible="2" />
                                     </div>

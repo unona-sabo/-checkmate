@@ -292,7 +292,7 @@ class HomeController extends Controller
                 'title' => 'Bug Reports',
                 'description' => 'Comprehensive issue tracking and bug management with full lifecycle, triage levels, and file attachments.',
                 'features' => [
-                    'Status workflow: new, open, in progress, resolved, closed, reopened',
+                    'Status workflow: to do, in progress, in review, needs changes, cancelled, done',
                     'Severity levels: critical, major, minor, trivial',
                     'Priority levels: high, medium, low',
                     'Steps to reproduce with expected and actual results',
@@ -308,6 +308,7 @@ class HomeController extends Controller
                     'Feature linking per bug report with inline quick-create',
                     'Fixed-on environment tracking (develop, staging, production)',
                     'Auto-save draft to localStorage with restore on return',
+                    'ClickUp integration: export bug reports, sync statuses via webhook',
                 ],
                 'model' => Bugreport::class,
             ],

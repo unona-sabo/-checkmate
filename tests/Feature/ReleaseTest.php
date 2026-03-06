@@ -2,6 +2,7 @@
 
 use App\Models\Bugreport;
 use App\Models\Project;
+use App\Models\ProjectFeature;
 use App\Models\Release;
 use App\Models\ReleaseChecklistItem;
 use App\Models\ReleaseFeature;
@@ -401,30 +402,36 @@ test('viewer cannot delete releases', function () {
 
 // ===== Metrics Calculator =====
 
-test('metrics calculator scopes bugs to release timeframe', function () {
+test('metrics calculator scopes bugs to release features', function () {
     $user = User::factory()->create();
     $project = Project::factory()->create(['user_id' => $user->id]);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id]);
+
     $release = Release::factory()->create([
         'project_id' => $project->id,
         'created_by' => $user->id,
-        'created_at' => now()->subDays(5),
     ]);
 
-    // Bug before release — should NOT be counted
-    Bugreport::factory()->create([
-        'project_id' => $project->id,
-        'status' => 'open',
-        'severity' => 'critical',
-        'created_at' => now()->subDays(10),
+    ReleaseFeature::create([
+        'release_id' => $release->id,
+        'feature_id' => $feature->id,
+        'feature_name' => $feature->name,
     ]);
 
-    // Bug after release — should be counted
+    // Bug NOT linked to feature — should NOT be counted
     Bugreport::factory()->create([
         'project_id' => $project->id,
-        'status' => 'open',
+        'status' => 'to_do',
         'severity' => 'critical',
-        'created_at' => now()->subDays(2),
     ]);
+
+    // Bug linked to release feature — should be counted
+    $linkedBug = Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'status' => 'to_do',
+        'severity' => 'critical',
+    ]);
+    $linkedBug->projectFeatures()->attach($feature->id);
 
     $calculator = app(ReleaseMetricsCalculator::class);
     $metrics = $calculator->calculate($release);

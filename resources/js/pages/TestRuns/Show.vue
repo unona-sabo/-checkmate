@@ -209,11 +209,16 @@ onUnmounted(() => {
     if (timerInterval) clearInterval(timerInterval);
 });
 
+const totalCaseTimeSpent = computed((): number => {
+    const cases = props.testRun.test_run_cases ?? [];
+    return cases.reduce((sum, trc) => sum + ((trc.time_spent ?? 0) * 60), 0);
+});
+
 const liveElapsed = computed((): number | null => {
     tick.value;
     const run = props.testRun;
     if (run.status === 'completed' || run.status === 'archived') {
-        return run.elapsed_seconds ?? null;
+        return (run.elapsed_seconds ?? 0) + totalCaseTimeSpent.value;
     }
     const start = run.started_at ?? run.created_at;
     if (!start) return null;
@@ -225,7 +230,8 @@ const liveElapsed = computed((): number | null => {
         paused += Math.floor((nowMs - new Date(run.paused_at).getTime()) / 1000);
     }
     const adjustment = run.time_adjustment_seconds ?? 0;
-    return Math.max(0, total - paused + adjustment);
+    const timerElapsed = Math.max(0, total - paused);
+    return timerElapsed + adjustment + totalCaseTimeSpent.value;
 });
 
 const groupedCases = computed(() => {

@@ -110,8 +110,9 @@ class TestRun extends Model
         }
 
         $adjustment = $this->time_adjustment_seconds ?? 0;
+        $caseTimeSpent = (int) $this->testRunCases()->sum('time_spent') * 60;
 
-        return max(0, $totalSeconds - $pausedSeconds + $adjustment);
+        return max(0, $totalSeconds - $pausedSeconds) + $adjustment + $caseTimeSpent;
     }
 
     /**

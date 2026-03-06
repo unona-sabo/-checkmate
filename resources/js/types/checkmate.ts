@@ -23,7 +23,7 @@ export interface Bugreport {
     id: number;
     project_id: number;
     title: string;
-    status: 'new' | 'open' | 'in_progress' | 'resolved' | 'closed' | 'reopened';
+    status: 'to_do' | 'in_progress' | 'in_review' | 'needs_changes' | 'cancelled' | 'done';
     severity: 'blocker' | 'critical' | 'major' | 'minor' | 'trivial';
     priority: 'critical' | 'high' | 'medium' | 'low';
     created_at: string;

@@ -100,7 +100,7 @@ test('bugreport store syncs feature_ids', function () {
         'title' => 'Login bug',
         'severity' => 'major',
         'priority' => 'high',
-        'status' => 'new',
+        'status' => 'to_do',
         'feature_ids' => $features->pluck('id')->toArray(),
     ]);
 

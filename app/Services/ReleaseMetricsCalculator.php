@@ -33,15 +33,21 @@ class ReleaseMetricsCalculator
         $testCompletion = $totalCases > 0 ? (int) round(($testedCases / $totalCases) * 100) : 0;
         $testPassRate = $testedCases > 0 ? (int) round(($passedCases / $testedCases) * 100) : 0;
 
-        // Bug metrics — scoped to release timeframe
-        $project = $release->project;
-        $bugreports = $project->bugreports()->where('created_at', '>=', $release->created_at)->get();
+        // Bug metrics — scoped to release features
+        $release->loadMissing('features');
+        $featureIds = $release->features->pluck('feature_id')->filter()->values();
 
-        $openBugs = $bugreports->whereNotIn('status', ['resolved', 'closed'])->count();
-        $criticalBugs = $bugreports->whereNotIn('status', ['resolved', 'closed'])->where('severity', 'critical')->count();
-        $highBugs = $bugreports->whereNotIn('status', ['resolved', 'closed'])->whereIn('severity', ['critical', 'major'])->count();
+        $bugreports = $featureIds->isNotEmpty()
+            ? $release->project->bugreports()
+                ->whereHas('projectFeatures', fn ($q) => $q->whereIn('feature_id', $featureIds))
+                ->get()
+            : collect();
+
+        $openBugs = $bugreports->whereNotIn('status', ['done', 'cancelled'])->count();
+        $criticalBugs = $bugreports->whereNotIn('status', ['done', 'cancelled'])->where('severity', 'critical')->count();
+        $highBugs = $bugreports->whereNotIn('status', ['done', 'cancelled'])->whereIn('severity', ['critical', 'major'])->count();
         $totalBugs = $bugreports->count();
-        $closedBugs = $bugreports->whereIn('status', ['resolved', 'closed'])->count();
+        $closedBugs = $bugreports->whereIn('status', ['done', 'cancelled'])->count();
         $bugClosureRate = $totalBugs > 0 ? (int) round(($closedBugs / $totalBugs) * 100) : 0;
 
         // Regression pass rate from linked test runs

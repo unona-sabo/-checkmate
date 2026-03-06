@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Bugreport\StoreBugreportRequest;
 use App\Http\Requests\Bugreport\UpdateBugreportRequest;
+use App\Jobs\ExportBugreportToClickUp;
 use App\Models\Attachment;
 use App\Models\Bugreport;
 use App\Models\ChecklistRow;
+use App\Models\ClickupSetting;
 use App\Models\Project;
 use App\Models\TestCase;
+use App\Services\ClickupService;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -183,9 +186,54 @@ class BugreportController extends Controller
     {
         $this->authorize('update', $project);
 
-        // TODO: Implement ClickUp API integration
-        // For now, return back with an info message
-        return back()->with('info', 'ClickUp integration is not configured yet. Set CLICKUP_API_TOKEN and CLICKUP_LIST_ID in your environment.');
+        $settings = ClickupSetting::current();
+
+        if (! $settings->isConfigured()) {
+            return back()->with('error', 'ClickUp integration is not configured. Go to Settings → ClickUp to set it up.');
+        }
+
+        if ($bugreport->clickup_task_id) {
+            return back()->with('info', 'This bug report has already been exported to ClickUp.');
+        }
+
+        ExportBugreportToClickUp::dispatch($bugreport);
+
+        return back()->with('success', 'Bug report is being exported to ClickUp.');
+    }
+
+    public function syncFromClickUp(Project $project, Bugreport $bugreport)
+    {
+        $this->authorize('update', $project);
+
+        if (! $bugreport->clickup_task_id) {
+            return back()->with('error', 'This bug report is not linked to ClickUp.');
+        }
+
+        $settings = ClickupSetting::current();
+
+        if (! $settings->isConfigured()) {
+            return back()->with('error', 'ClickUp integration is not configured.');
+        }
+
+        try {
+            $service = ClickupService::fromSettings();
+            $task = $service->getTask($bugreport->clickup_task_id);
+
+            $clickupStatus = strtolower($task['status']['status'] ?? '');
+            $statusMapping = $settings->status_mapping ?? [];
+            $reverseMapping = array_flip($statusMapping);
+            $appStatus = $reverseMapping[$clickupStatus] ?? null;
+
+            if ($appStatus && $appStatus !== $bugreport->status) {
+                $bugreport->update(['status' => $appStatus]);
+
+                return back()->with('success', 'Status synced from ClickUp.');
+            }
+
+            return back()->with('info', 'Status is already up to date.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to sync from ClickUp: '.$e->getMessage());
+        }
     }
 
     public function destroyAttachment(Project $project, Bugreport $bugreport, Attachment $attachment)

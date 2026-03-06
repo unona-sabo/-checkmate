@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Bug, Edit, Trash2, Paperclip, Download, Link2, Check, FlaskConical, ExternalLink } from 'lucide-vue-next';
+import { Bug, Edit, Trash2, Paperclip, Download, Link2, Check, FlaskConical, ExternalLink, RefreshCw } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -35,7 +35,7 @@ interface Bugreport {
     actual_result: string | null;
     severity: 'critical' | 'major' | 'minor' | 'trivial';
     priority: 'high' | 'medium' | 'low';
-    status: 'new' | 'open' | 'in_progress' | 'resolved' | 'closed' | 'reopened';
+    status: 'to_do' | 'in_progress' | 'in_review' | 'needs_changes' | 'cancelled' | 'done';
     environment: string | null;
     fixed_on: string[] | null;
     reporter: { id: number; name: string } | null;
@@ -135,8 +135,9 @@ const formatDate = (date: string): string => {
     return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-// ClickUp export
+// ClickUp export & sync
 const isExportingToClickUp = ref(false);
+const isSyncingFromClickUp = ref(false);
 
 const exportToClickUp = () => {
     isExportingToClickUp.value = true;
@@ -144,6 +145,16 @@ const exportToClickUp = () => {
         preserveScroll: true,
         onFinish: () => {
             isExportingToClickUp.value = false;
+        },
+    });
+};
+
+const syncFromClickUp = () => {
+    isSyncingFromClickUp.value = true;
+    router.post(`/projects/${props.project.id}/bugreports/${props.bugreport.id}/sync-clickup`, {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            isSyncingFromClickUp.value = false;
         },
     });
 };
@@ -298,7 +309,7 @@ const exportToClickUp = () => {
                             <div>
                                 <p class="text-xs text-muted-foreground">Status</p>
                                 <Badge :variant="bugStatusVariant(bugreport.status)" class="mt-1">
-                                    {{ bugreport.status.replace('_', ' ') }}
+                                    {{ bugreport.status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }}
                                 </Badge>
                             </div>
                             <div>
@@ -343,15 +354,26 @@ const exportToClickUp = () => {
                             </div>
                             <div class="border-t pt-3">
                                 <p class="text-xs text-muted-foreground mb-2">ClickUp</p>
-                                <a
-                                    v-if="bugreport.clickup_task_id"
-                                    :href="`https://app.clickup.com/t/${bugreport.clickup_task_id}`"
-                                    target="_blank"
-                                    class="inline-flex items-center gap-1.5 text-sm text-primary hover:underline cursor-pointer"
-                                >
-                                    <ExternalLink class="h-3.5 w-3.5" />
-                                    {{ bugreport.clickup_task_id }}
-                                </a>
+                                <div v-if="bugreport.clickup_task_id" class="flex items-center gap-2">
+                                    <a
+                                        :href="`https://app.clickup.com/t/${bugreport.clickup_task_id}`"
+                                        target="_blank"
+                                        class="inline-flex items-center gap-1.5 text-sm text-primary hover:underline cursor-pointer"
+                                    >
+                                        <ExternalLink class="h-3.5 w-3.5" />
+                                        {{ bugreport.clickup_task_id }}
+                                    </a>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        class="h-6 w-6 p-0 cursor-pointer"
+                                        :disabled="isSyncingFromClickUp"
+                                        title="Sync status from ClickUp"
+                                        @click="syncFromClickUp"
+                                    >
+                                        <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': isSyncingFromClickUp }" />
+                                    </Button>
+                                </div>
                                 <RestrictedAction v-else>
                                     <Button
                                         variant="outline"

@@ -248,12 +248,12 @@ const submit = () => {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="new">New</SelectItem>
-                                            <SelectItem value="open">Open</SelectItem>
+                                            <SelectItem value="to_do">To Do</SelectItem>
                                             <SelectItem value="in_progress">In Progress</SelectItem>
-                                            <SelectItem value="resolved">Resolved</SelectItem>
-                                            <SelectItem value="closed">Closed</SelectItem>
-                                            <SelectItem value="reopened">Reopened</SelectItem>
+                                            <SelectItem value="in_review">In Review</SelectItem>
+                                            <SelectItem value="needs_changes">Needs Changes</SelectItem>
+                                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                                            <SelectItem value="done">Done</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

@@ -67,7 +67,7 @@ test('store creates bugreport with valid data', function () {
         'actual_result' => 'Nothing happens',
         'severity' => 'major',
         'priority' => 'high',
-        'status' => 'new',
+        'status' => 'to_do',
         'environment' => 'Production',
         'fixed_on' => ['develop', 'staging'],
     ]);
@@ -79,7 +79,7 @@ test('store creates bugreport with valid data', function () {
         'title' => 'Login button broken',
         'severity' => 'major',
         'priority' => 'high',
-        'status' => 'new',
+        'status' => 'to_do',
         'reported_by' => $user->id,
     ]);
 
@@ -150,7 +150,7 @@ test('viewer cannot store bugreport', function () {
             'title' => 'Viewer Bug',
             'severity' => 'minor',
             'priority' => 'low',
-            'status' => 'new',
+            'status' => 'to_do',
         ])
         ->assertForbidden();
 });
@@ -179,7 +179,7 @@ test('viewer cannot update bugreport', function () {
             'title' => 'Updated',
             'severity' => 'minor',
             'priority' => 'low',
-            'status' => 'new',
+            'status' => 'to_do',
         ])
         ->assertForbidden();
 });
