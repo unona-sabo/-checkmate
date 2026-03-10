@@ -26,7 +26,9 @@ class BackupController extends Controller
      */
     public function download(): StreamedResponse
     {
-        $dbPath = database_path('database.sqlite');
+        $dbPath = $this->getDatabasePath();
+
+        abort_unless($dbPath && file_exists($dbPath), 500, 'Database file not found.');
 
         return response()->streamDownload(function () use ($dbPath) {
             readfile($dbPath);
@@ -42,12 +44,13 @@ class BackupController extends Controller
     {
         $this->ensureBackupDirectory();
 
+        $dbPath = $this->getDatabasePath();
+
+        abort_unless($dbPath && file_exists($dbPath), 500, 'Database file not found.');
+
         $filename = 'checkmate_'.now()->format('Y-m-d_His').'.sqlite';
 
-        copy(
-            database_path('database.sqlite'),
-            storage_path('app/private/backups/'.$filename)
-        );
+        copy($dbPath, storage_path('app/private/backups/'.$filename));
 
         return back()->with('success', 'Snapshot created: '.$filename);
     }
@@ -97,9 +100,27 @@ class BackupController extends Controller
 
         abort_unless(file_exists($snapshotPath), 404);
 
-        copy($snapshotPath, database_path('database.sqlite'));
+        $dbPath = $this->getDatabasePath();
+
+        abort_unless($dbPath, 500, 'Database file path not resolved.');
+
+        copy($snapshotPath, $dbPath);
 
         return back()->with('success', 'Database restored from: '.$filename);
+    }
+
+    /**
+     * Get the path to the SQLite database file.
+     */
+    private function getDatabasePath(): ?string
+    {
+        $dbPath = config('database.connections.sqlite.database');
+
+        if (! $dbPath || $dbPath === ':memory:') {
+            return null;
+        }
+
+        return $dbPath;
     }
 
     /**

@@ -13,12 +13,29 @@ beforeEach(function () {
     foreach (glob($this->backupDir.'/checkmate_*.sqlite') as $file) {
         unlink($file);
     }
+
+    // Ensure a real SQLite file exists for tests (CI uses :memory:)
+    $dbPath = config('database.connections.sqlite.database');
+    if (! $dbPath || $dbPath === ':memory:') {
+        $this->testDbPath = database_path('database.sqlite');
+        if (! file_exists($this->testDbPath)) {
+            file_put_contents($this->testDbPath, '');
+        }
+        config(['database.connections.sqlite.database' => $this->testDbPath]);
+    } else {
+        $this->testDbPath = null;
+    }
 });
 
 afterEach(function () {
     // Clean up test snapshots
     foreach (glob($this->backupDir.'/checkmate_*.sqlite') as $file) {
         unlink($file);
+    }
+
+    // Clean up temp db file created for CI
+    if (! empty($this->testDbPath) && file_exists($this->testDbPath) && filesize($this->testDbPath) === 0) {
+        unlink($this->testDbPath);
     }
 });
 
