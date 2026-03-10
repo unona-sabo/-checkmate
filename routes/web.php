@@ -8,6 +8,7 @@ use App\Http\Controllers\DesignLinkController;
 use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\PayoutMonitorController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectFeatureController;
 use App\Http\Controllers\ReleaseController;
@@ -242,6 +243,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('test-data/payments-import', [TestDataController::class, 'importPayments'])->name('payments.import');
         Route::post('test-data/commands-import', [TestDataController::class, 'importCommands'])->name('commands.import');
         Route::post('test-data/links-import', [TestDataController::class, 'importLinks'])->name('links.import');
+    });
+
+    // Payout Monitor (nested under projects)
+    Route::prefix('projects/{project}')->name('payout-monitor.')->group(function () {
+        Route::get('payout-monitor', [PayoutMonitorController::class, 'index'])->name('index');
+        Route::post('payout-monitor/fetch-latest', [PayoutMonitorController::class, 'fetchLatest'])->name('fetch-latest');
+        Route::post('payout-monitor/parse-log', [PayoutMonitorController::class, 'parseLog'])->name('parse-log');
     });
 
     // Documentations (nested under projects)

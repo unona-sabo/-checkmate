@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { writeToClipboard } from '@/composables/useClipboard';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Checklist, type ChecklistRow, type ColumnConfig, type SelectOption, type TestSuite } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -101,16 +102,10 @@ const titleEnd = computed(() => {
 const copyLink = () => {
     const route = `/projects/${props.project.id}/checklists/${props.checklist.id}`;
     const url = window.location.origin + route;
-    const textArea = document.createElement('textarea');
-    textArea.value = url;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-9999px';
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    copied.value = true;
-    setTimeout(() => { copied.value = false; }, 2000);
+    writeToClipboard(url).then(() => {
+        copied.value = true;
+        setTimeout(() => { copied.value = false; }, 2000);
+    });
 };
 
 const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;

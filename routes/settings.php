@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Settings\BackupController;
 use App\Http\Controllers\Settings\ClickupController;
+use App\Http\Controllers\Settings\GrafanaController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
@@ -43,4 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('settings/clickup/status-mapping', [ClickupController::class, 'updateStatusMapping'])->name('clickup.status-mapping');
     Route::post('settings/clickup/fetch-statuses', [ClickupController::class, 'fetchStatuses'])->name('clickup.fetch-statuses');
     Route::post('settings/clickup/register-webhook', [ClickupController::class, 'registerWebhook'])->name('clickup.register-webhook');
+
+    Route::get('settings/grafana', [GrafanaController::class, 'show'])->name('grafana.show');
+    Route::put('settings/grafana', [GrafanaController::class, 'update'])->name('grafana.update');
 });

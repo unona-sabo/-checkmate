@@ -8,6 +8,14 @@ export function escapeHtml(str: string): string {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+export function stripHtml(html: string): string {
+    return html.replace(/<[^>]*>/g, '');
+}
+
+export function containsHtml(text: string): boolean {
+    return /<[a-z][\s\S]*>/i.test(text);
+}
+
 export function useSearch() {
     const searchQuery = ref('');
 
@@ -24,7 +32,17 @@ export function useSearch() {
         return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
     };
 
-    return { searchQuery, clearSearch, isSearchActive, highlight };
+    const highlightRich = (text: string): string => {
+        if (!containsHtml(text)) return highlight(text);
+        if (!searchQuery.value.trim()) return text;
+        const query = escapeRegExp(searchQuery.value.trim());
+        const regex = new RegExp(`(${query})`, 'gi');
+        return text.replace(/>([^<]+)</g, (match, content) => {
+            return '>' + content.replace(regex, '<mark class="search-highlight">$1</mark>') + '<';
+        });
+    };
+
+    return { searchQuery, clearSearch, isSearchActive, highlight, highlightRich };
 }
 
 export function useFilteredList<T>(

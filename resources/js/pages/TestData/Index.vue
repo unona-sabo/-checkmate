@@ -32,8 +32,10 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
+import { useClipboard } from '@/composables/useClipboard';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import {
     Database,
@@ -102,20 +104,7 @@ const togglePasswordVisibility = (id: number) => {
 };
 
 // Copy to clipboard
-const copiedField = ref<string | null>(null);
-
-const copyToClipboard = (text: string, key: string) => {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-9999px';
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    copiedField.value = key;
-    setTimeout(() => { copiedField.value = null; }, 2000);
-};
+const { copiedKey: copiedField, copy: copyToClipboard } = useClipboard();
 
 // ===== Column definitions =====
 interface ColumnDef {
@@ -1393,6 +1382,7 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
     <Head title="Test Data" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
+        <TooltipProvider :delay-duration="300">
         <div class="flex h-full min-w-0 flex-1 flex-col gap-6 p-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
@@ -1807,7 +1797,12 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                     </template>
                                     <template v-else-if="col.key === 'email'">
                                         <div v-if="user.email" class="flex items-center gap-1">
-                                            <span class="truncate max-w-[180px]">{{ user.email }}</span>
+                                            <Tooltip>
+                                                <TooltipTrigger as-child>
+                                                    <span class="truncate max-w-[180px]">{{ user.email }}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" class="max-w-sm break-all">{{ user.email }}</TooltipContent>
+                                            </Tooltip>
                                             <button
                                                 class="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
                                                 title="Copy email"
@@ -1821,9 +1816,14 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                     </template>
                                     <template v-else-if="col.key === 'password'">
                                         <div v-if="user.password" class="flex items-center gap-1">
-                                            <span class="truncate max-w-[120px] font-mono text-xs">
-                                                {{ visiblePasswords.has(user.id) ? user.password : '••••••••' }}
-                                            </span>
+                                            <Tooltip>
+                                                <TooltipTrigger as-child>
+                                                    <span class="truncate max-w-[120px] font-mono text-xs">
+                                                        {{ visiblePasswords.has(user.id) ? user.password : '••••••••' }}
+                                                    </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent v-if="visiblePasswords.has(user.id)" side="top" class="max-w-sm break-all font-mono">{{ user.password }}</TooltipContent>
+                                            </Tooltip>
                                             <button
                                                 class="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
                                                 @click="togglePasswordVisibility(user.id)"
@@ -1864,7 +1864,12 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                         <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'description'">
-                                        <span v-if="user.description" class="line-clamp-1 text-muted-foreground" :title="user.description">{{ user.description }}</span>
+                                        <Tooltip v-if="user.description">
+                                            <TooltipTrigger as-child>
+                                                <span class="line-clamp-1 text-muted-foreground">{{ user.description }}</span>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" class="max-w-xs whitespace-pre-wrap">{{ user.description }}</TooltipContent>
+                                        </Tooltip>
                                         <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'actions'">
@@ -2030,9 +2035,14 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                     </template>
                                     <template v-else-if="col.key === 'credentials'">
                                         <div v-if="payment.credentials" class="flex items-center gap-1">
-                                            <span class="truncate max-w-[200px] font-mono text-xs">
-                                                {{ formatCredentials(payment.credentials) }}
-                                            </span>
+                                            <Tooltip>
+                                                <TooltipTrigger as-child>
+                                                    <span class="truncate max-w-[200px] font-mono text-xs">
+                                                        {{ formatCredentials(payment.credentials) }}
+                                                    </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" class="max-w-sm break-all font-mono">{{ formatCredentials(payment.credentials) }}</TooltipContent>
+                                            </Tooltip>
                                             <button
                                                 class="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
                                                 title="Copy credentials"
@@ -2062,7 +2072,12 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                         <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'description'">
-                                        <span v-if="payment.description" class="line-clamp-1 text-muted-foreground" :title="payment.description">{{ payment.description }}</span>
+                                        <Tooltip v-if="payment.description">
+                                            <TooltipTrigger as-child>
+                                                <span class="line-clamp-1 text-muted-foreground">{{ payment.description }}</span>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" class="max-w-xs whitespace-pre-wrap">{{ payment.description }}</TooltipContent>
+                                        </Tooltip>
                                         <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'actions'">
@@ -2215,7 +2230,12 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                     </template>
                                     <template v-else-if="col.key === 'command'">
                                         <div v-if="cmd.command" class="flex items-center gap-1">
-                                            <code class="truncate max-w-[280px] rounded bg-muted px-1.5 py-0.5 text-xs font-mono">{{ cmd.command }}</code>
+                                            <Tooltip>
+                                                <TooltipTrigger as-child>
+                                                    <code class="truncate max-w-[280px] rounded bg-muted px-1.5 py-0.5 text-xs font-mono">{{ cmd.command }}</code>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" class="max-w-md break-all font-mono">{{ cmd.command }}</TooltipContent>
+                                            </Tooltip>
                                             <button
                                                 class="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
                                                 title="Copy command"
@@ -2228,7 +2248,12 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                         <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'comment'">
-                                        <span v-if="cmd.comment" class="line-clamp-1 text-muted-foreground" :title="cmd.comment">{{ cmd.comment }}</span>
+                                        <Tooltip v-if="cmd.comment">
+                                            <TooltipTrigger as-child>
+                                                <span class="line-clamp-1 text-muted-foreground">{{ cmd.comment }}</span>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" class="max-w-xs whitespace-pre-wrap">{{ cmd.comment }}</TooltipContent>
+                                        </Tooltip>
                                         <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'actions'">
@@ -2381,15 +2406,19 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                     </template>
                                     <template v-else-if="col.key === 'url'">
                                         <div v-if="link.url" class="flex items-center gap-1">
-                                            <a
-                                                :href="link.url"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                class="truncate max-w-[240px] text-primary underline-offset-4 hover:underline"
-                                                :title="link.url"
-                                            >
-                                                {{ link.url }}
-                                            </a>
+                                            <Tooltip>
+                                                <TooltipTrigger as-child>
+                                                    <a
+                                                        :href="link.url"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        class="truncate max-w-[240px] text-primary underline-offset-4 hover:underline"
+                                                    >
+                                                        {{ link.url }}
+                                                    </a>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" class="max-w-md break-all">{{ link.url }}</TooltipContent>
+                                            </Tooltip>
                                             <a
                                                 :href="link.url"
                                                 target="_blank"
@@ -2411,7 +2440,12 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                                         <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'comment'">
-                                        <span v-if="link.comment" class="line-clamp-1 text-muted-foreground" :title="link.comment">{{ link.comment }}</span>
+                                        <Tooltip v-if="link.comment">
+                                            <TooltipTrigger as-child>
+                                                <span class="line-clamp-1 text-muted-foreground">{{ link.comment }}</span>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" class="max-w-xs whitespace-pre-wrap">{{ link.comment }}</TooltipContent>
+                                        </Tooltip>
                                         <span v-else class="text-muted-foreground">&mdash;</span>
                                     </template>
                                     <template v-else-if="col.key === 'actions'">
@@ -2900,5 +2934,6 @@ const formatCredentialsValues = (creds: Record<string, string> | null): string =
                 </DialogContent>
             </Dialog>
         </div>
+        </TooltipProvider>
     </AppLayout>
 </template>

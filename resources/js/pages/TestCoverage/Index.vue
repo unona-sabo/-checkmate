@@ -1324,7 +1324,7 @@ const refreshData = () => {
                             </div>
                             <div class="min-w-0 flex-1">
                                 <span class="text-sm leading-snug text-foreground">{{ tc.title }}</span>
-                                <Badge v-if="tc.test_suite" variant="outline" class="mt-0.5 text-xs">
+                                <Badge v-if="tc.test_suite" variant="outline" class="ml-3 align-middle text-xs">
                                     {{ tc.test_suite.name }}
                                 </Badge>
                             </div>

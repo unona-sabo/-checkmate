@@ -38,6 +38,10 @@ const sidebarNavItems: NavItem[] = [
         title: 'ClickUp',
         href: showClickup(),
     },
+    {
+        title: 'Grafana',
+        href: '/settings/grafana',
+    },
 ];
 
 const { isCurrentUrl } = useCurrentUrl();

@@ -32,6 +32,7 @@ import {
     Search,
     X,
     Calendar,
+    Filter,
 } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { releaseStatusVariant, releaseDecisionVariant } from '@/lib/badge-variants';
@@ -51,6 +52,23 @@ const breadcrumbs: BreadcrumbItem[] = [
 const searchQuery = ref('');
 const statusFilter = ref('all');
 const healthFilter = ref('all');
+const showFilters = ref(false);
+const filterPlannedFrom = ref('');
+const filterPlannedTo = ref('');
+const filterActualFrom = ref('');
+const filterActualTo = ref('');
+
+const activeFilterCount = computed(() => {
+    return [filterPlannedFrom, filterPlannedTo, filterActualFrom, filterActualTo]
+        .filter(f => f.value !== '').length;
+});
+
+const clearFilters = () => {
+    filterPlannedFrom.value = '';
+    filterPlannedTo.value = '';
+    filterActualFrom.value = '';
+    filterActualTo.value = '';
+};
 
 const filteredReleases = computed(() => {
     let result = [...props.releases];
@@ -71,6 +89,19 @@ const filteredReleases = computed(() => {
 
     if (healthFilter.value !== 'all') {
         result = result.filter((r) => r.health === healthFilter.value);
+    }
+
+    if (filterPlannedFrom.value) {
+        result = result.filter((r) => r.planned_date && r.planned_date >= filterPlannedFrom.value);
+    }
+    if (filterPlannedTo.value) {
+        result = result.filter((r) => r.planned_date && r.planned_date <= filterPlannedTo.value);
+    }
+    if (filterActualFrom.value) {
+        result = result.filter((r) => r.actual_date && r.actual_date >= filterActualFrom.value);
+    }
+    if (filterActualTo.value) {
+        result = result.filter((r) => r.actual_date && r.actual_date <= filterActualTo.value);
     }
 
     return result;
@@ -192,12 +223,94 @@ const formatDate = (date: string | null): string => {
                             <SelectItem value="red">Red</SelectItem>
                         </SelectContent>
                     </Select>
+                    <Button
+                        variant="outline"
+                        class="gap-2 relative cursor-pointer"
+                        @click="showFilters = !showFilters"
+                    >
+                        <Filter class="h-4 w-4" />
+                        Filter
+                        <Badge
+                            v-if="activeFilterCount > 0"
+                            class="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full"
+                        >
+                            {{ activeFilterCount }}
+                        </Badge>
+                    </Button>
                     <RestrictedAction>
                         <Button variant="cta" @click="showCreateDialog = true" class="cursor-pointer gap-2">
                             <Plus class="h-4 w-4" />
                             Create Release
                         </Button>
                     </RestrictedAction>
+                </div>
+            </div>
+
+            <!-- Filter Panel -->
+            <div class="relative -mt-3">
+                <div v-if="showFilters" class="fixed inset-0 z-10" @click="showFilters = false" />
+                <div v-if="showFilters" class="absolute top-0 right-0 z-20 w-full md:w-[calc(50%-0.3125rem)] rounded-xl border bg-card shadow-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-medium flex items-center gap-2">
+                            <Filter class="h-4 w-4 text-primary" />
+                            Date Filters
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <Button
+                                v-if="activeFilterCount > 0"
+                                variant="ghost"
+                                size="sm"
+                                class="h-6 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer gap-1"
+                                @click="clearFilters"
+                            >
+                                <X class="h-3 w-3" />
+                                Clear All
+                            </Button>
+                            <button @click="showFilters = false" class="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer">
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Row 1: Planned From, Planned To -->
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-2.5">
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Planned From</Label>
+                            <Input v-model="filterPlannedFrom" type="date" class="h-8 text-xs" :class="filterPlannedFrom ? 'pr-7' : ''" />
+                            <button v-if="filterPlannedFrom" @click="filterPlannedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Planned To</Label>
+                            <Input v-model="filterPlannedTo" type="date" class="h-8 text-xs" :class="filterPlannedTo ? 'pr-7' : ''" />
+                            <button v-if="filterPlannedTo" @click="filterPlannedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Row 2: Actual From, Actual To -->
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-2.5 mt-2.5">
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Actual From</Label>
+                            <Input v-model="filterActualFrom" type="date" class="h-8 text-xs" :class="filterActualFrom ? 'pr-7' : ''" />
+                            <button v-if="filterActualFrom" @click="filterActualFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Actual To</Label>
+                            <Input v-model="filterActualTo" type="date" class="h-8 text-xs" :class="filterActualTo ? 'pr-7' : ''" />
+                            <button v-if="filterActualTo" @click="filterActualTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Results count -->
+                    <div class="flex items-center justify-end mt-3">
+                        <span class="text-sm text-muted-foreground">
+                            Found <span class="font-semibold text-foreground">{{ filteredReleases.length }}</span> {{ filteredReleases.length === 1 ? 'release' : 'releases' }}
+                        </span>
+                    </div>
                 </div>
             </div>
 

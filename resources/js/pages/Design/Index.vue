@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { writeToClipboard } from '@/composables/useClipboard';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +43,7 @@ import {
     FileDown,
     Link2,
     Globe,
+    Filter,
 } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 
@@ -97,31 +99,52 @@ const getDomain = (url: string): string => {
 const copiedLinkId = ref<number | null>(null);
 
 const copyToClipboard = (link: DesignLink) => {
-    const textArea = document.createElement('textarea');
-    textArea.value = link.url;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-9999px';
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    copiedLinkId.value = link.id;
-    setTimeout(() => { copiedLinkId.value = null; }, 2000);
+    writeToClipboard(link.url).then(() => {
+        copiedLinkId.value = link.id;
+        setTimeout(() => { copiedLinkId.value = null; }, 2000);
+    });
 };
 
-// Search
+// Search & Filters
 const searchQuery = ref('');
+const showFilters = ref(false);
+const filterCategory = ref('');
+const filterCreatedFrom = ref('');
+const filterCreatedTo = ref('');
+
+const activeFilterCount = computed(() => {
+    return [filterCreatedFrom, filterCreatedTo].filter(f => f.value !== '').length
+        + (filterCategory.value && filterCategory.value !== 'all' ? 1 : 0);
+});
+
+const clearFilters = () => {
+    filterCategory.value = 'all';
+    filterCreatedFrom.value = '';
+    filterCreatedTo.value = '';
+};
+
+const uniqueCategories = computed(() => {
+    const cats = new Set<string>();
+    props.designLinks.forEach(link => {
+        if (link.category) cats.add(link.category);
+    });
+    return Array.from(cats).sort();
+});
 
 const filteredLinks = computed(() => {
-    if (!searchQuery.value.trim()) return props.designLinks;
-    const q = searchQuery.value.toLowerCase();
-    return props.designLinks.filter(
-        (link) =>
-            link.title.toLowerCase().includes(q) ||
-            (link.description && link.description.toLowerCase().includes(q)) ||
-            link.url.toLowerCase().includes(q) ||
-            (link.category && link.category.toLowerCase().includes(q)),
-    );
+    const q = searchQuery.value.trim().toLowerCase();
+    const hasSearch = q.length > 0;
+    const hasFilters = activeFilterCount.value > 0;
+
+    if (!hasSearch && !hasFilters) return props.designLinks;
+
+    return props.designLinks.filter((link) => {
+        if (hasSearch && !link.title.toLowerCase().includes(q) && !(link.description && link.description.toLowerCase().includes(q)) && !link.url.toLowerCase().includes(q) && !(link.category && link.category.toLowerCase().includes(q))) return false;
+        if (filterCategory.value && filterCategory.value !== 'all' && link.category !== filterCategory.value) return false;
+        if (filterCreatedFrom.value && link.created_at < filterCreatedFrom.value) return false;
+        if (filterCreatedTo.value && link.created_at.slice(0, 10) > filterCreatedTo.value) return false;
+        return true;
+    });
 });
 
 // Add/Edit Dialog
@@ -228,27 +251,109 @@ const categoryOptions = [
                     Design Resources
                 </h1>
                 <div class="flex items-center gap-3">
-                    <div v-if="designLinks.length > 0" class="relative">
-                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            v-model="searchQuery"
-                            placeholder="Search links..."
-                            class="w-48 pl-9 pr-8 bg-background/60"
-                        />
-                        <button
-                            v-if="searchQuery"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
-                            @click="searchQuery = ''"
+                    <template v-if="designLinks.length > 0">
+                        <div class="relative">
+                            <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                v-model="searchQuery"
+                                placeholder="Search links..."
+                                class="w-48 pl-9 pr-8 bg-background/60"
+                            />
+                            <button
+                                v-if="searchQuery"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                                @click="searchQuery = ''"
+                            >
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
+                        <Button
+                            variant="outline"
+                            class="gap-2 relative cursor-pointer"
+                            @click="showFilters = !showFilters"
                         >
-                            <X class="h-4 w-4" />
-                        </button>
-                    </div>
+                            <Filter class="h-4 w-4" />
+                            Filter
+                            <Badge
+                                v-if="activeFilterCount > 0"
+                                class="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full"
+                            >
+                                {{ activeFilterCount }}
+                            </Badge>
+                        </Button>
+                    </template>
                     <RestrictedAction>
                         <Button variant="cta" class="gap-2 cursor-pointer" @click="openAddDialog">
                             <Plus class="h-4 w-4" />
                             Add Link
                         </Button>
                     </RestrictedAction>
+                </div>
+            </div>
+
+            <!-- Filter Panel -->
+            <div class="relative -mt-3">
+                <div v-if="showFilters" class="fixed inset-0 z-10" @click="showFilters = false" />
+                <div v-if="showFilters" class="absolute top-0 right-0 z-20 w-full md:w-[calc(50%-0.3125rem)] rounded-xl border bg-card shadow-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-medium flex items-center gap-2">
+                            <Filter class="h-4 w-4 text-primary" />
+                            Filters
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <Button
+                                v-if="activeFilterCount > 0"
+                                variant="ghost"
+                                size="sm"
+                                class="h-6 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer gap-1"
+                                @click="clearFilters"
+                            >
+                                <X class="h-3 w-3" />
+                                Clear All
+                            </Button>
+                            <button @click="showFilters = false" class="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer">
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Row 1: Category -->
+                    <div class="grid grid-cols-3 gap-x-3 gap-y-2.5">
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Category</Label>
+                            <Select v-model="filterCategory">
+                                <SelectTrigger class="h-8 text-xs cursor-pointer">
+                                    <SelectValue placeholder="All" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All</SelectItem>
+                                    <SelectItem v-for="cat in uniqueCategories" :key="cat" :value="cat">{{ cat }}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <button v-if="filterCategory && filterCategory !== 'all'" @click="filterCategory = 'all'" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Created From</Label>
+                            <Input v-model="filterCreatedFrom" type="date" class="h-8 text-xs" :class="filterCreatedFrom ? 'pr-7' : ''" />
+                            <button v-if="filterCreatedFrom" @click="filterCreatedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <Label class="text-[11px] text-muted-foreground mb-1 block">Created To</Label>
+                            <Input v-model="filterCreatedTo" type="date" class="h-8 text-xs" :class="filterCreatedTo ? 'pr-7' : ''" />
+                            <button v-if="filterCreatedTo" @click="filterCreatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Results count -->
+                    <div class="flex items-center justify-end mt-3">
+                        <span class="text-sm text-muted-foreground">
+                            Found <span class="font-semibold text-foreground">{{ filteredLinks.length }}</span> {{ filteredLinks.length === 1 ? 'link' : 'links' }}
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -283,12 +388,9 @@ const categoryOptions = [
                     <p class="mt-2 text-sm text-muted-foreground">
                         No design links match "{{ searchQuery }}".
                     </p>
-                    <Button
-                        variant="secondary"
-                        class="mt-4 cursor-pointer"
-                        @click="searchQuery = ''"
-                    >
-                        Clear search
+                    <Button variant="outline" size="sm" class="mt-4 gap-2 cursor-pointer" @click="searchQuery = ''">
+                        <X class="h-3.5 w-3.5" />
+                        Clear Search
                     </Button>
                 </div>
             </div>

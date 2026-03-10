@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { writeToClipboard } from '@/composables/useClipboard';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,16 +67,10 @@ const titleEnd = computed(() => {
 const copyLink = () => {
     const route = `/projects/${props.project.id}/documentations/${props.documentation.id}`;
     const url = window.location.origin + route;
-    const textArea = document.createElement('textarea');
-    textArea.value = url;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-9999px';
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    copied.value = true;
-    setTimeout(() => { copied.value = false; }, 2000);
+    writeToClipboard(url).then(() => {
+        copied.value = true;
+        setTimeout(() => { copied.value = false; }, 2000);
+    });
 };
 
 const { searchQuery } = useSearch();

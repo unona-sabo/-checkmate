@@ -51,6 +51,7 @@ import {
     TrendingUp,
     TrendingDown,
     Minus,
+    Search,
 } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { releaseStatusVariant, releaseDecisionVariant } from '@/lib/badge-variants';
@@ -311,6 +312,16 @@ const deleteChecklistItem = () => {
 
 // Test run linking
 const showLinkTestRunDialog = ref(false);
+const testRunSearch = ref('');
+watch(showLinkTestRunDialog, (open) => { if (!open) testRunSearch.value = ''; });
+
+const filteredProjectTestRuns = computed(() => {
+    if (!props.projectTestRuns || !testRunSearch.value) {
+        return props.projectTestRuns ?? [];
+    }
+    const query = testRunSearch.value.toLowerCase();
+    return props.projectTestRuns.filter((tr) => tr.name.toLowerCase().includes(query));
+});
 
 const isTestRunLinked = (testRunId: number): boolean => {
     return linkedTestRuns.value.some((tr) => tr.id === testRunId);
@@ -1134,9 +1145,24 @@ const breakdownLabels: Record<string, string> = {
                             <div v-for="i in 3" :key="i" class="h-10 w-full animate-pulse rounded-md bg-muted" />
                         </div>
                     </template>
-                    <div class="max-h-96 space-y-1 overflow-y-auto py-4">
+                    <div class="relative py-4">
+                        <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            v-model="testRunSearch"
+                            placeholder="Search test runs..."
+                            class="pl-9 pr-9"
+                        />
+                        <button
+                            v-if="testRunSearch"
+                            @click="testRunSearch = ''"
+                            class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
+                    <div class="max-h-96 space-y-1 overflow-y-auto">
                         <div
-                            v-for="tr in projectTestRuns"
+                            v-for="tr in filteredProjectTestRuns"
                             :key="tr.id"
                             class="flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-muted/30"
                         >
@@ -1166,8 +1192,8 @@ const breakdownLabels: Record<string, string> = {
                                 Link
                             </Button>
                         </div>
-                        <p v-if="projectTestRuns?.length === 0" class="py-8 text-center text-sm text-muted-foreground">
-                            No test runs available.
+                        <p v-if="filteredProjectTestRuns.length === 0" class="py-8 text-center text-sm text-muted-foreground">
+                            {{ testRunSearch ? 'No test runs match your search.' : 'No test runs available.' }}
                         </p>
                     </div>
                 </Deferred>

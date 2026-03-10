@@ -34,7 +34,7 @@ class HomeController extends Controller
 
             return array_values(
                 array_map(
-                    fn (array $config) => $this->buildSection($config['key'], $config['title'], $config['description'], $config['features'], $config['model']),
+                    fn (array $config) => $this->buildSection($config['key'], $config['title'], $config['description'], $config['features'], $config['model'] ?? null),
                     $configs,
                 ),
             );
@@ -55,7 +55,7 @@ class HomeController extends Controller
 
         $this->syncFeatures($section, $config['features']);
 
-        $sectionData = $this->buildSection($config['key'], $config['title'], $config['description'], $config['features'], $config['model']);
+        $sectionData = $this->buildSection($config['key'], $config['title'], $config['description'], $config['features'], $config['model'] ?? null);
 
         $features = FeatureDescription::query()
             ->where('section_key', $section)
@@ -166,7 +166,7 @@ class HomeController extends Controller
     }
 
     /**
-     * @return array<string, array{key: string, title: string, description: string, features: list<string>, model: class-string<\Illuminate\Database\Eloquent\Model>}>
+     * @return array<string, array{key: string, title: string, description: string, features: list<string>, model?: class-string<\Illuminate\Database\Eloquent\Model>}>
      */
     private function getSectionConfigs(): array
     {
@@ -215,6 +215,7 @@ class HomeController extends Controller
                     'Sticky header shadow on scroll for visual depth',
                     'Clear status per select column in bulk Change Status action',
                     'Infinite scroll auto-loading rows on scroll while search and filters work across all rows',
+                    'Rich text editing in cells: bold, italic, strikethrough, and color formatting via inline toolbar',
                 ],
                 'model' => Checklist::class,
             ],
@@ -248,6 +249,8 @@ class HomeController extends Controller
                     'Import test cases from CSV/Excel with auto field mapping and alias support',
                     'AI-powered translation for quick-add steps via TranslateButtons',
                     'Create note with quick-add dialog from test suite page',
+                    'Bot icon indicator for automated test cases on index and suite pages',
+                    'Feature badges displayed on test cases in suite view',
                 ],
                 'model' => TestSuite::class,
             ],
@@ -284,6 +287,8 @@ class HomeController extends Controller
                     'Create bug report directly from any check with pre-filled fields',
                     'Manual time adjustment: click elapsed time to add hours/minutes to total',
                     'Search test cases by name when creating runs or adding cases',
+                    'Source indicator with dropdown links to originating test suites or checklist',
+                    'Rich text title rendering for checklist-based test run items',
                 ],
                 'model' => TestRun::class,
             ],
@@ -325,6 +330,7 @@ class HomeController extends Controller
                     'Copy link to clipboard',
                     'Open in new tab with external link indicator',
                     'Creator tracking per link',
+                    'Filter by category and created date range with collapsible filter panel',
                 ],
                 'model' => DesignLink::class,
             ],
@@ -370,6 +376,8 @@ class HomeController extends Controller
                     'Planned vs actual release date tracking',
                     'Release-level notes and metadata',
                     'Releases section on project dashboard with latest 5 releases',
+                    'Feature-scoped bug metrics instead of project-wide timeframe filtering',
+                    'Filter releases by planned and actual date ranges',
                 ],
                 'model' => Release::class,
             ],
@@ -453,6 +461,31 @@ class HomeController extends Controller
                 ],
                 'model' => TestUser::class,
             ],
+            'payout-monitor' => [
+                'key' => 'payout-monitor',
+                'title' => 'Payout Monitor',
+                'description' => 'Real-time log analysis tool for payment transaction monitoring with structured parsing, anomaly detection, and visual data presentation.',
+                'features' => [
+                    'Paste raw log data for instant structured parsing',
+                    'Fetch latest logs from configured endpoint',
+                    'Group events by payout ID with timeline view',
+                    'Structured sender/recipient data extraction from senderKyc and recipientKyc',
+                    'B2B and B2C transaction type support',
+                    'Credit party and debit party field extraction',
+                    'Bank account, IBAN, and MSISDN display in recipient section',
+                    'Color-coded sections: sender (blue), recipient (emerald), transfer (purple)',
+                    'Anomaly detection: FX rate, IBAN-country mismatch, currency-country mismatch',
+                    'Anomaly detection: cross-step data mismatches, missing responses, suspicious amounts',
+                    'Anomaly preview in collapsed payout header',
+                    'Collapsible event timeline with raw JSON payload viewer',
+                    'Search payouts by ID and beneficiary name',
+                    'Filter by status: completed, pending, error',
+                    'Clear Results with filter reset',
+                    'Summary badges: total payouts, events, anomalies',
+                    'Persistent log data in localStorage per project',
+                    'Copy values to clipboard with HTTP fallback',
+                ],
+            ],
             'documentations' => [
                 'key' => 'documentations',
                 'title' => 'Documentation',
@@ -493,6 +526,7 @@ class HomeController extends Controller
                     'Delete confirmation dialog',
                     'Copy link to clipboard',
                     'AI-powered translation for note content via TranslateButtons',
+                    'Fully clickable note cards for quick editing',
                 ],
                 'model' => Note::class,
             ],
@@ -500,11 +534,11 @@ class HomeController extends Controller
     }
 
     /**
-     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>|null  $modelClass
      * @param  list<string>  $features
      * @return array{key: string, title: string, description: string, features: list<string>, author: string, count: int, latest_created_at: string|null, latest_updated_at: string|null}
      */
-    private function buildSection(string $key, string $title, string $description, array $configFeatures, string $modelClass): array
+    private function buildSection(string $key, string $title, string $description, array $configFeatures, ?string $modelClass = null): array
     {
         $featureQuery = FeatureDescription::query()->where('section_key', $key);
 

@@ -40,6 +40,7 @@ import {
     Rocket,
     BarChart3,
     Sparkles,
+    Activity,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -65,6 +66,7 @@ const sectionIcons: Record<string, typeof ClipboardList> = {
     'test-data': Database,
     documentations: FileText,
     notes: StickyNote,
+    'payout-monitor': Activity,
 };
 
 // Search

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, Deferred } from '@inertiajs/vue3';
+import { writeToClipboard } from '@/composables/useClipboard';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestRun, type TestRunCase, type TestSuite, type Checklist, type ChecklistRow } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
     Play, Edit, CheckCircle2, XCircle, AlertTriangle,
     SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check, Pause, Timer, ChevronDown, ChevronUp,
@@ -19,7 +21,7 @@ import {
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
-import { useSearch } from '@/composables/useSearch';
+import { useSearch, stripHtml } from '@/composables/useSearch';
 import { testResultVariant } from '@/lib/badge-variants';
 
 const props = defineProps<{
@@ -50,16 +52,10 @@ const titleEnd = computed(() => {
 const copyLink = () => {
     const route = `/projects/${props.project.id}/test-runs/${props.testRun.id}`;
     const url = window.location.origin + route;
-    const textArea = document.createElement('textarea');
-    textArea.value = url;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-9999px';
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    copied.value = true;
-    setTimeout(() => { copied.value = false; }, 2000);
+    writeToClipboard(url).then(() => {
+        copied.value = true;
+        setTimeout(() => { copied.value = false; }, 2000);
+    });
 };
 
 const selectedCase = ref<TestRunCase | null>(null);
@@ -234,6 +230,18 @@ const liveElapsed = computed((): number | null => {
     return timerElapsed + adjustment + totalCaseTimeSpent.value;
 });
 
+const sourceSuites = computed(() => {
+    if (props.testRun.source !== 'test-cases') return [];
+    const map = new Map<number, { id: number; name: string }>();
+    props.testRun.test_run_cases?.forEach(trc => {
+        const suite = trc.test_case?.test_suite;
+        if (suite && !map.has(suite.id)) {
+            map.set(suite.id, suite);
+        }
+    });
+    return Array.from(map.values());
+});
+
 const groupedCases = computed(() => {
     const groups: Record<string, TestRunCase[]> = {};
     props.testRun.test_run_cases?.forEach(trc => {
@@ -280,14 +288,14 @@ const createBugReportUrl = (trc: TestRunCase): string => {
         if (trc.actual_result) params.set('actual_result', trc.actual_result);
         params.set('test_case_id', String(trc.test_case.id));
     } else {
-        if (trc.title) params.set('title', trc.title);
+        if (trc.title) params.set('title', stripHtml(trc.title));
         if (trc.expected_result) params.set('expected_result', trc.expected_result);
         if (trc.actual_result) params.set('actual_result', trc.actual_result);
     }
     return `/projects/${props.project.id}/bugreports/create?${params.toString()}`;
 };
 
-const { searchQuery, highlight } = useSearch();
+const { searchQuery, highlight, highlightRich } = useSearch();
 
 const filteredGroupedCases = computed(() => {
     if (!searchQuery.value.trim()) return groupedCases.value;
@@ -295,8 +303,8 @@ const filteredGroupedCases = computed(() => {
     const filtered: Record<string, TestRunCase[]> = {};
     for (const [suiteName, cases] of Object.entries(groupedCases.value)) {
         const matched = cases.filter(trc =>
-            trc.test_case?.title?.toLowerCase().includes(query) ||
-            trc.title?.toLowerCase().includes(query) ||
+            stripHtml(trc.test_case?.title ?? '').toLowerCase().includes(query) ||
+            stripHtml(trc.title ?? '').toLowerCase().includes(query) ||
             trc.status.toLowerCase().includes(query) ||
             trc.assigned_user?.name?.toLowerCase().includes(query)
         );
@@ -538,6 +546,46 @@ const addCasesCount = computed(() => {
                         <Badge v-if="testRun.environment" variant="blue">
                             {{ testRun.environment }}
                         </Badge>
+                        <DropdownMenu v-if="testRun.source === 'checklist' && testRun.checklist">
+                            <DropdownMenuTrigger as-child>
+                                <button class="inline-flex items-center gap-1 rounded-md bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer">
+                                    <ListChecks class="h-3 w-3" />
+                                    Source: Checklist
+                                    <ChevronDown class="h-3 w-3" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" class="min-w-40">
+                                <DropdownMenuItem as-child>
+                                    <Link
+                                        :href="`/projects/${project.id}/checklists/${testRun.checklist.id}`"
+                                        class="flex items-center gap-2 cursor-pointer"
+                                    >
+                                        <ListChecks class="h-3.5 w-3.5" />
+                                        {{ testRun.checklist.name }}
+                                    </Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <DropdownMenu v-else-if="testRun.source === 'test-cases' && sourceSuites.length > 0">
+                            <DropdownMenuTrigger as-child>
+                                <button class="inline-flex items-center gap-1 rounded-md bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer">
+                                    <Layers class="h-3 w-3" />
+                                    Source: {{ sourceSuites.length }} {{ sourceSuites.length === 1 ? 'suite' : 'suites' }}
+                                    <ChevronDown class="h-3 w-3" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" class="min-w-40">
+                                <DropdownMenuItem v-for="suite in sourceSuites" :key="suite.id" as-child>
+                                    <Link
+                                        :href="`/projects/${project.id}/test-suites/${suite.id}`"
+                                        class="flex items-center gap-2 cursor-pointer"
+                                    >
+                                        <Layers class="h-3.5 w-3.5" />
+                                        {{ suite.name }}
+                                    </Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <span v-if="testRun.milestone" class="text-sm text-muted-foreground">
                             {{ testRun.milestone }}
                         </span>
@@ -694,7 +742,7 @@ const addCasesCount = computed(() => {
                                         />
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-2">
-                                                <p class="text-sm font-medium truncate" v-html="highlight(trc.test_case?.title ?? trc.title ?? '')" />
+                                                <p class="text-sm font-medium truncate" v-html="highlightRich(trc.test_case?.title ?? trc.title ?? '')" />
                                                 <Badge :variant="testResultVariant(trc.status)" class="text-[10px] px-1.5 h-4 shrink-0">
                                                     {{ trc.status }}
                                                 </Badge>
@@ -1025,7 +1073,7 @@ const addCasesCount = computed(() => {
                                             @update:model-value="toggleAddRowTitle(item.title)"
                                         />
                                         <ListChecks class="h-3 w-3 text-muted-foreground" />
-                                        <span>{{ item.title }}</span>
+                                        <span v-html="item.title" />
                                         <Badge v-if="existingTitles.has(item.title)" variant="secondary" class="text-[10px] px-1.5 h-4">
                                             already added
                                         </Badge>
