@@ -3,13 +3,14 @@ import { ref } from 'vue';
 import { Eye, EyeOff } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 
-defineProps<{
+const props = defineProps<{
     id?: string;
     name?: string;
     placeholder?: string;
     autocomplete?: string;
     required?: boolean;
     tabindex?: number;
+    class?: string;
 }>();
 
 const visible = ref(false);
@@ -25,7 +26,7 @@ const visible = ref(false);
             :autocomplete="autocomplete"
             :required="required"
             :tabindex="tabindex"
-            class="pr-10"
+            :class="['pr-10', props.class]"
         />
         <button
             type="button"
