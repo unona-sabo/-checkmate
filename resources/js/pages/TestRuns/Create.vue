@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestSuite, type Checklist, type ChecklistRow } from '@/types';
+import { type BreadcrumbItem, type Project, type TestSuite, type TestCase, type Checklist, type ChecklistRow, type ColumnConfig } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Play, Layers, FileText, Boxes, ListChecks, Search, X } from 'lucide-vue-next';
+import { Play, Layers, FileText, Boxes, ListChecks, Search, X, SlidersHorizontal } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 
@@ -68,6 +68,10 @@ watch([envPreset, envNotes], () => {
 // --- Test Cases mode helpers ---
 const testCaseSearch = ref('');
 const expandedSuites = ref<Record<number, boolean>>({});
+
+// Quick filter for test cases
+const quickFilterType = ref('');
+const quickFilterPriority = ref('');
 
 const toggleSuite = (suiteId: number) => {
     expandedSuites.value[suiteId] = !expandedSuites.value[suiteId];
@@ -126,15 +130,24 @@ const allTestCaseIds = computed(() => {
 
 const filteredTestSuites = computed(() => {
     const query = testCaseSearch.value.trim().toLowerCase();
-    if (!query) return props.testSuites;
+    const hasQuickFilter = quickFilterType.value || quickFilterPriority.value;
+
+    if (!query && !hasQuickFilter) return props.testSuites;
 
     return props.testSuites
         .map(suite => {
-            const filteredCases = suite.test_cases?.filter(tc => tc.title.toLowerCase().includes(query)) ?? [];
+            const matchesCase = (tc: TestCase) => {
+                const textMatch = !query || tc.title.toLowerCase().includes(query);
+                const typeMatch = !quickFilterType.value || tc.type === quickFilterType.value;
+                const priorityMatch = !quickFilterPriority.value || tc.priority === quickFilterPriority.value;
+                return textMatch && typeMatch && priorityMatch;
+            };
+
+            const filteredCases = suite.test_cases?.filter(matchesCase) ?? [];
             const filteredChildren = (suite.children ?? [])
                 .map(child => ({
                     ...child,
-                    test_cases: child.test_cases?.filter(tc => tc.title.toLowerCase().includes(query)) ?? [],
+                    test_cases: child.test_cases?.filter(matchesCase) ?? [],
                 }))
                 .filter(child => child.test_cases.length > 0);
 
@@ -151,7 +164,35 @@ const toggleAllTestCases = () => {
     form.test_case_ids = allTestCasesSelected.value ? [] : [...allTestCaseIds.value];
 };
 
+// Auto-select test cases when quick filter changes
+watch([quickFilterType, quickFilterPriority], ([type, priority]) => {
+    if (!type && !priority) return;
+
+    const matchingIds: number[] = [];
+    const collect = (suite: TestSuite) => {
+        suite.test_cases?.forEach((tc: TestCase) => {
+            const typeOk = !type || tc.type === type;
+            const priorityOk = !priority || tc.priority === priority;
+            if (typeOk && priorityOk) matchingIds.push(tc.id);
+        });
+        suite.children?.forEach(child => collect(child));
+    };
+    props.testSuites.forEach(suite => collect(suite));
+    form.test_case_ids = matchingIds;
+});
+
+const clearQuickFilter = () => {
+    quickFilterType.value = '';
+    quickFilterPriority.value = '';
+};
+
 // --- Checklist mode helpers ---
+const stripHtml = (html: string): string => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return (tmp.textContent || tmp.innerText || '').trim();
+};
+
 const selectedChecklistId = ref('');
 
 const selectedChecklist = computed(() => {
@@ -161,8 +202,13 @@ const selectedChecklist = computed(() => {
 
 const textColumnKey = computed((): string | null => {
     if (!selectedChecklist.value?.columns_config) return null;
-    const col = selectedChecklist.value.columns_config.find(col => col.type === 'text');
-    return col?.key ?? null;
+    const textCols = selectedChecklist.value.columns_config.filter(col => col.type === 'text');
+    if (!textCols.length) return null;
+    // Prefer a column explicitly labelled "Check" or with key "item"
+    const checkCol = textCols.find(col => /^check$/i.test(col.label) || col.key === 'item');
+    if (checkCol) return checkCol.key;
+    // Fallback: widest text column (typically the main content column)
+    return textCols.reduce((a, b) => ((a.width ?? 0) >= (b.width ?? 0) ? a : b)).key;
 });
 
 const expectedResultColumnKey = computed((): string | null => {
@@ -177,18 +223,71 @@ const checklistRows = computed((): { title: string; row: ChecklistRow }[] => {
     return selectedChecklist.value.rows
         .filter(r => r.row_type !== 'section_header')
         .map(r => ({
-            title: String((r.data as Record<string, unknown>)?.[textColumnKey.value!] ?? ''),
+            title: stripHtml(String((r.data as Record<string, unknown>)?.[textColumnKey.value!] ?? '')),
             row: r,
         }))
-        .filter(r => r.title.trim() !== '');
+        .filter(r => r.title !== '');
+});
+
+// Checklist column filters
+const columnFilters = ref<Record<string, string>>({});
+
+const selectColumns = computed((): ColumnConfig[] => {
+    if (!selectedChecklist.value?.columns_config) return [];
+    return selectedChecklist.value.columns_config.filter(
+        (col): col is ColumnConfig & { type: 'select' } => col.type === 'select',
+    );
+});
+
+const hasActiveColumnFilters = computed(() =>
+    Object.values(columnFilters.value).some(v => v !== ''),
+);
+
+const filteredChecklistRows = computed(() => {
+    if (!hasActiveColumnFilters.value) return checklistRows.value;
+    return checklistRows.value.filter(item =>
+        Object.entries(columnFilters.value).every(([key, value]) => {
+            if (!value) return true;
+            const cellValue = String((item.row.data as Record<string, unknown>)?.[key] ?? '');
+            return cellValue === value;
+        }),
+    );
 });
 
 const selectedRowTitles = ref<Set<string>>(new Set());
 
 watch(selectedChecklistId, () => {
     selectedRowTitles.value = new Set();
+    columnFilters.value = {};
     checklistForm.checklist_id = selectedChecklistId.value ? Number(selectedChecklistId.value) : null;
 });
+
+// Auto-select matching rows when column filter changes
+watch(
+    columnFilters,
+    newFilters => {
+        const hasFilters = Object.values(newFilters).some(v => v !== '');
+        if (!hasFilters) return;
+
+        const filteredTitles = new Set(
+            checklistRows.value
+                .filter(item =>
+                    Object.entries(newFilters).every(([key, value]) => {
+                        if (!value) return true;
+                        const cellValue = String((item.row.data as Record<string, unknown>)?.[key] ?? '');
+                        return cellValue === value;
+                    }),
+                )
+                .map(r => r.title),
+        );
+        selectedRowTitles.value = filteredTitles;
+    },
+    { deep: true },
+);
+
+const rowsToDisplay = computed(() =>
+    hasActiveColumnFilters.value ? filteredChecklistRows.value : checklistRows.value,
+);
 
 const toggleRowTitle = (title: string) => {
     const set = new Set(selectedRowTitles.value);
@@ -201,13 +300,24 @@ const toggleRowTitle = (title: string) => {
 };
 
 const allRowsSelected = computed(() => {
-    return checklistRows.value.length > 0 && checklistRows.value.every(r => selectedRowTitles.value.has(r.title));
+    return rowsToDisplay.value.length > 0 && rowsToDisplay.value.every(r => selectedRowTitles.value.has(r.title));
 });
 
 const toggleAllRows = () => {
-    selectedRowTitles.value = allRowsSelected.value
-        ? new Set()
-        : new Set(checklistRows.value.map(r => r.title));
+    const rows = rowsToDisplay.value;
+    if (allRowsSelected.value) {
+        const newSet = new Set(selectedRowTitles.value);
+        rows.forEach(r => newSet.delete(r.title));
+        selectedRowTitles.value = newSet;
+    } else {
+        const newSet = new Set(selectedRowTitles.value);
+        rows.forEach(r => newSet.add(r.title));
+        selectedRowTitles.value = newSet;
+    }
+};
+
+const clearColumnFilters = () => {
+    columnFilters.value = {};
 };
 
 // --- Submit ---
@@ -331,6 +441,74 @@ const isSubmitDisabled = computed(() => {
 
                             <!-- Test Case Selection (default mode) -->
                             <div v-if="!isChecklistMode" class="space-y-3">
+                                <!-- Quick filter by type / priority -->
+                                <div class="rounded-lg border bg-muted/30 px-3 py-2.5 space-y-2">
+                                    <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                        <SlidersHorizontal class="h-3.5 w-3.5" />
+                                        Quick select by
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <div class="relative min-w-36 flex-1">
+                                            <Select v-model="quickFilterType">
+                                                <SelectTrigger class="h-8 text-xs cursor-pointer" :class="quickFilterType ? 'pr-7' : ''">
+                                                    <SelectValue placeholder="Type: All" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="functional">Functional</SelectItem>
+                                                    <SelectItem value="smoke">Smoke</SelectItem>
+                                                    <SelectItem value="regression">Regression</SelectItem>
+                                                    <SelectItem value="integration">Integration</SelectItem>
+                                                    <SelectItem value="acceptance">Acceptance</SelectItem>
+                                                    <SelectItem value="performance">Performance</SelectItem>
+                                                    <SelectItem value="security">Security</SelectItem>
+                                                    <SelectItem value="usability">Usability</SelectItem>
+                                                    <SelectItem value="other">Other</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <button
+                                                v-if="quickFilterType"
+                                                type="button"
+                                                @click="quickFilterType = ''"
+                                                class="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10"
+                                            >
+                                                <X class="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                        <div class="relative min-w-36 flex-1">
+                                            <Select v-model="quickFilterPriority">
+                                                <SelectTrigger class="h-8 text-xs cursor-pointer" :class="quickFilterPriority ? 'pr-7' : ''">
+                                                    <SelectValue placeholder="Priority: All" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="critical">Critical</SelectItem>
+                                                    <SelectItem value="high">High</SelectItem>
+                                                    <SelectItem value="medium">Medium</SelectItem>
+                                                    <SelectItem value="low">Low</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <button
+                                                v-if="quickFilterPriority"
+                                                type="button"
+                                                @click="quickFilterPriority = ''"
+                                                class="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10"
+                                            >
+                                                <X class="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                        <Button
+                                            v-if="quickFilterType || quickFilterPriority"
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-8 text-xs text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                                            @click="clearQuickFilter"
+                                        >
+                                            <X class="h-3 w-3 mr-1" />
+                                            Clear filter
+                                        </Button>
+                                    </div>
+                                </div>
+
                                 <div class="flex items-center justify-between">
                                     <Label>Select Test Cases</Label>
                                     <label class="flex items-center gap-2 cursor-pointer">
@@ -362,9 +540,12 @@ const isSubmitDisabled = computed(() => {
                                     <p class="mt-2 text-sm text-muted-foreground">No test suites found. Create test cases first.</p>
                                 </div>
 
-                                <div v-else-if="filteredTestSuites.length === 0 && testCaseSearch" class="rounded-lg border border-dashed p-6 text-center">
+                                <div v-else-if="filteredTestSuites.length === 0" class="rounded-lg border border-dashed p-6 text-center">
                                     <Search class="mx-auto h-8 w-8 text-muted-foreground" />
-                                    <p class="mt-2 text-sm text-muted-foreground">No test cases matching "{{ testCaseSearch }}"</p>
+                                    <p class="mt-2 text-sm text-muted-foreground">
+                                        <template v-if="testCaseSearch">No test cases matching "{{ testCaseSearch }}"</template>
+                                        <template v-else>No test cases match the selected filters.</template>
+                                    </p>
                                 </div>
 
                                 <div v-else class="space-y-2 rounded-lg border p-4 max-h-96 overflow-y-auto">
@@ -459,18 +640,79 @@ const isSubmitDisabled = computed(() => {
                                     <InputError :message="checklistForm.errors.checklist_id" />
                                 </div>
 
+                                <!-- Column filters (shown when checklist has select-type columns) -->
+                                <div v-if="selectedChecklist && selectColumns.length > 0" class="rounded-lg border bg-muted/30 px-3 py-2.5 space-y-2">
+                                    <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                        <SlidersHorizontal class="h-3.5 w-3.5" />
+                                        Filter rows by
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <div
+                                            v-for="col in selectColumns"
+                                            :key="col.key"
+                                            class="relative min-w-36 flex-1"
+                                        >
+                                            <Select v-model="columnFilters[col.key]">
+                                                <SelectTrigger class="h-8 text-xs cursor-pointer" :class="columnFilters[col.key] ? 'pr-7' : ''">
+                                                    <SelectValue :placeholder="`${col.label}: All`" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem
+                                                        v-for="opt in col.options"
+                                                        :key="opt.value"
+                                                        :value="opt.value"
+                                                    >
+                                                        {{ opt.label }}
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <button
+                                                v-if="columnFilters[col.key]"
+                                                type="button"
+                                                @click="columnFilters[col.key] = ''"
+                                                class="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10"
+                                            >
+                                                <X class="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                        <Button
+                                            v-if="hasActiveColumnFilters"
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-8 text-xs text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                                            @click="clearColumnFilters"
+                                        >
+                                            <X class="h-3 w-3 mr-1" />
+                                            Clear filter
+                                        </Button>
+                                    </div>
+                                </div>
+
                                 <div v-if="selectedChecklist && checklistRows.length > 0" class="space-y-2">
                                     <div class="flex items-center justify-between">
-                                        <Label>Select Rows</Label>
+                                        <Label>
+                                            Select Rows
+                                            <span v-if="hasActiveColumnFilters" class="ml-1.5 text-xs font-normal text-muted-foreground">
+                                                ({{ filteredChecklistRows.length }} of {{ checklistRows.length }} shown)
+                                            </span>
+                                        </Label>
                                         <label class="flex items-center gap-2 cursor-pointer">
                                             <Checkbox :model-value="allRowsSelected" @update:model-value="toggleAllRows" />
-                                            <span class="text-sm text-muted-foreground">{{ allRowsSelected ? 'Deselect All' : 'Select All' }}</span>
+                                            <span class="text-sm text-muted-foreground">
+                                                {{ allRowsSelected ? 'Deselect All' : (hasActiveColumnFilters ? 'Select Filtered' : 'Select All') }}
+                                            </span>
                                         </label>
                                     </div>
 
-                                    <div class="space-y-1 rounded-lg border p-4 max-h-96 overflow-y-auto">
+                                    <div v-if="rowsToDisplay.length === 0" class="rounded-lg border border-dashed p-6 text-center">
+                                        <Search class="mx-auto h-8 w-8 text-muted-foreground" />
+                                        <p class="mt-2 text-sm text-muted-foreground">No rows match the selected filters.</p>
+                                    </div>
+
+                                    <div v-else class="space-y-1 rounded-lg border p-4 max-h-96 overflow-y-auto">
                                         <div
-                                            v-for="item in checklistRows"
+                                            v-for="item in rowsToDisplay"
                                             :key="item.row.id"
                                             class="flex items-center gap-2 py-1 text-sm"
                                         >

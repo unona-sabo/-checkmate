@@ -67,6 +67,10 @@ const onDragStart = (e: DragEvent, doc: Documentation) => {
     isDragging.value = true;
     e.dataTransfer!.effectAllowed = 'move';
     e.dataTransfer!.setData('text/plain', String(doc.id));
+    const rowEl = (e.currentTarget as HTMLElement).parentElement;
+    if (rowEl) {
+        e.dataTransfer!.setDragImage(rowEl, 0, 0);
+    }
 };
 
 const onDragEnd = () => {
@@ -285,17 +289,16 @@ const highlightDescription = (content: string): string => {
                                                 'opacity-50': isDragging && draggedDoc?.id === doc.id,
                                                 'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === doc.id && draggedDoc?.id !== doc.id,
                                             }"
-                                            :draggable="canDrag"
-                                            @dragstart="onDragStart($event, doc)"
-                                            @dragend="onDragEnd"
                                             @dragover="onDragOverDoc($event, doc)"
                                             @dragleave="onDragLeaveDoc($event, doc)"
                                             @drop="onDropOnDoc($event, doc, null)"
                                         >
                                             <div
                                                 v-if="canDrag"
+                                                draggable="true"
                                                 class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
-                                                @mousedown.stop
+                                                @dragstart="onDragStart($event, doc)"
+                                                @dragend="onDragEnd"
                                             >
                                                 <GripVertical class="h-3.5 w-3.5 text-muted-foreground" />
                                             </div>
@@ -323,17 +326,16 @@ const highlightDescription = (content: string): string => {
                                                         'opacity-50': isDragging && draggedDoc?.id === child.id,
                                                         'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === child.id && draggedDoc?.id !== child.id,
                                                     }"
-                                                    :draggable="canDrag"
-                                                    @dragstart="onDragStart($event, child)"
-                                                    @dragend="onDragEnd"
                                                     @dragover="onDragOverDoc($event, child)"
                                                     @dragleave="onDragLeaveDoc($event, child)"
                                                     @drop="onDropOnDoc($event, child, doc.id)"
                                                 >
                                                     <div
                                                         v-if="canDrag"
+                                                        draggable="true"
                                                         class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
-                                                        @mousedown.stop
+                                                        @dragstart="onDragStart($event, child)"
+                                                        @dragend="onDragEnd"
                                                     >
                                                         <GripVertical class="h-3 w-3 text-muted-foreground" />
                                                     </div>

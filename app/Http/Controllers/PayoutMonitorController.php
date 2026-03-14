@@ -52,6 +52,16 @@ class PayoutMonitorController extends Controller
             $parser = new PayoutLogParser;
 
             return response()->json($parser->parse($rawLog));
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            return response()->json(['error' => 'Could not connect to Grafana. Check your Grafana URL in settings and ensure the server is reachable.'], 422);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $status = $e->response?->status();
+
+            return response()->json(['error' => match (true) {
+                $status === 401 || $status === 403 => 'Grafana authentication failed. Check your API token in settings.',
+                $status === 404 => 'Grafana datasource not found. Check your datasource ID in settings.',
+                default => 'Grafana returned an error ('.$status.'): '.$e->getMessage(),
+            }], 422);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch logs: '.$e->getMessage()], 422);
         }

@@ -9,6 +9,7 @@ use App\Http\Requests\Documentation\UpdateDocumentationRequest;
 use App\Models\Attachment;
 use App\Models\Documentation;
 use App\Models\Project;
+use App\Services\AttachmentService;
 use App\Services\DocumentParserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentationController extends Controller
 {
+    public function __construct(private readonly AttachmentService $attachmentService) {}
+
     public function index(Project $project): Response
     {
         $this->authorize('view', $project);
@@ -76,17 +79,7 @@ class DocumentationController extends Controller
             collect($validated)->except('attachments')->toArray()
         );
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('attachments/documentations', 'public');
-                $documentation->attachments()->create([
-                    'original_filename' => $file->getClientOriginalName(),
-                    'stored_path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ]);
-            }
-        }
+        $this->attachmentService->storeFromRequest($documentation, $request, 'attachments/documentations');
 
         return redirect()->route('documentations.show', [$project, $documentation])
             ->with('success', 'Documentation created successfully.');
@@ -140,17 +133,7 @@ class DocumentationController extends Controller
             collect($validated)->except('attachments')->toArray()
         );
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('attachments/documentations', 'public');
-                $documentation->attachments()->create([
-                    'original_filename' => $file->getClientOriginalName(),
-                    'stored_path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ]);
-            }
-        }
+        $this->attachmentService->storeFromRequest($documentation, $request, 'attachments/documentations');
 
         return redirect()->route('documentations.show', [$project, $documentation])
             ->with('success', 'Documentation updated successfully.');
@@ -160,10 +143,7 @@ class DocumentationController extends Controller
     {
         $this->authorize('update', $project);
 
-        foreach ($documentation->attachments as $attachment) {
-            Storage::disk('public')->delete($attachment->stored_path);
-        }
-
+        $this->attachmentService->deleteAll($documentation);
         $documentation->delete();
 
         return redirect()->route('documentations.index', $project)
@@ -174,8 +154,7 @@ class DocumentationController extends Controller
     {
         $this->authorize('update', $project);
 
-        Storage::disk('public')->delete($attachment->stored_path);
-        $attachment->delete();
+        $this->attachmentService->deleteOne($attachment);
 
         return back()->with('success', 'Attachment deleted.');
     }
@@ -186,17 +165,14 @@ class DocumentationController extends Controller
 
         $request->validated();
 
-        $path = $request->file('image')->store('attachments/documentations/images', 'public');
-
-        $documentation->attachments()->create([
-            'original_filename' => $request->file('image')->getClientOriginalName(),
-            'stored_path' => $path,
-            'mime_type' => $request->file('image')->getMimeType(),
-            'size' => $request->file('image')->getSize(),
-        ]);
+        $attachment = $this->attachmentService->storeSingleFile(
+            $documentation,
+            $request->file('image'),
+            'attachments/documentations/images'
+        );
 
         return response()->json([
-            'url' => Storage::disk('public')->url($path),
+            'url' => $attachment->url,
         ]);
     }
 

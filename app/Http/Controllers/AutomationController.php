@@ -53,13 +53,13 @@ class AutomationController extends Controller
             'project' => $project,
             'recentResults' => $recentResults,
             'latestRunStats' => $latestRunStats,
-            'environments' => Inertia::defer(fn () => $project->testEnvironments()
+            'environments' => $project->testEnvironments()
                 ->orderBy('name')
-                ->get(), 'sidebar'),
-            'templates' => Inertia::defer(fn () => $project->testRunTemplates()
+                ->get(),
+            'templates' => $project->testRunTemplates()
                 ->with('environment:id,name')
                 ->orderBy('name')
-                ->get(), 'sidebar'),
+                ->get(),
         ]);
     }
 
@@ -68,6 +68,8 @@ class AutomationController extends Controller
         $this->authorize('update', $project);
 
         $validated = $request->validated();
+
+        $validated['automation_tests_path'] = trim($validated['automation_tests_path'], '"\'');
 
         $project->update($validated);
 

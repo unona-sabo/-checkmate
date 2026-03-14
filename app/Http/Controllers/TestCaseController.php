@@ -16,14 +16,20 @@ use App\Models\ChecklistRow;
 use App\Models\Project;
 use App\Models\TestCase;
 use App\Models\TestSuite;
+use App\Services\AttachmentService;
+use App\Services\FeatureLinkingService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TestCaseController extends Controller
 {
+    public function __construct(
+        private readonly AttachmentService $attachmentService,
+        private readonly FeatureLinkingService $featureLinkingService,
+    ) {}
+
     public function create(Project $project, TestSuite $testSuite): Response
     {
         $this->authorize('update', $project);
@@ -64,20 +70,10 @@ class TestCaseController extends Controller
         $testCase = $testSuite->testCases()->create(collect($validated)->except(['attachments', 'feature_ids', ...$checklistFields])->toArray());
 
         if (! empty($validated['feature_ids'])) {
-            $testCase->projectFeatures()->sync($validated['feature_ids']);
+            $this->featureLinkingService->sync($testCase, $validated['feature_ids']);
         }
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('attachments/test-cases', 'public');
-                $testCase->attachments()->create([
-                    'original_filename' => $file->getClientOriginalName(),
-                    'stored_path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ]);
-            }
-        }
+        $this->attachmentService->storeFromRequest($testCase, $request, 'attachments/test-cases');
 
         if (! empty($validated['bugreport_id'])) {
             $this->copyBugreportAttachments($project, $testCase, (int) $validated['bugreport_id']);
@@ -127,19 +123,9 @@ class TestCaseController extends Controller
         $validated = $request->validated();
 
         $testCase->update(collect($validated)->except(['attachments', 'feature_ids'])->toArray());
-        $testCase->projectFeatures()->sync($validated['feature_ids'] ?? []);
+        $this->featureLinkingService->sync($testCase, $validated['feature_ids'] ?? []);
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('attachments/test-cases', 'public');
-                $testCase->attachments()->create([
-                    'original_filename' => $file->getClientOriginalName(),
-                    'stored_path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ]);
-            }
-        }
+        $this->attachmentService->storeFromRequest($testCase, $request, 'attachments/test-cases');
 
         return redirect("/projects/{$project->id}/test-suites/{$testSuite->id}/test-cases/{$testCase->id}")
             ->with('success', 'Test case updated successfully.');
@@ -149,10 +135,7 @@ class TestCaseController extends Controller
     {
         $this->authorize('update', $project);
 
-        foreach ($testCase->attachments as $attachment) {
-            Storage::disk('public')->delete($attachment->stored_path);
-        }
-
+        $this->attachmentService->deleteAll($testCase);
         $testCase->delete();
 
         return redirect()->route('test-suites.show', [$project, $testSuite])
@@ -163,8 +146,7 @@ class TestCaseController extends Controller
     {
         $this->authorize('update', $project);
 
-        Storage::disk('public')->delete($attachment->stored_path);
-        $attachment->delete();
+        $this->attachmentService->deleteOne($attachment);
         $testCase->touch();
 
         return back()->with('success', 'Attachment deleted successfully.');
@@ -217,9 +199,7 @@ class TestCaseController extends Controller
             ->get();
 
         foreach ($testCases as $testCase) {
-            foreach ($testCase->attachments as $attachment) {
-                Storage::disk('public')->delete($attachment->stored_path);
-            }
+            $this->attachmentService->deleteAll($testCase);
             $testCase->delete();
         }
 
@@ -278,20 +258,7 @@ class TestCaseController extends Controller
             $replica->save();
 
             if ($copyAttachments && $testCase->attachments->isNotEmpty()) {
-                foreach ($testCase->attachments as $attachment) {
-                    if (Storage::disk('public')->exists($attachment->stored_path)) {
-                        $extension = pathinfo($attachment->stored_path, PATHINFO_EXTENSION);
-                        $newPath = 'attachments/test-cases/'.uniqid().'.'.$extension;
-                        Storage::disk('public')->copy($attachment->stored_path, $newPath);
-
-                        $replica->attachments()->create([
-                            'original_filename' => $attachment->original_filename,
-                            'stored_path' => $newPath,
-                            'mime_type' => $attachment->mime_type,
-                            'size' => $attachment->size,
-                        ]);
-                    }
-                }
+                $this->attachmentService->copyTo($replica, $testCase->attachments, 'attachments/test-cases');
             }
 
             if ($copyFeatures && $testCase->projectFeatures->isNotEmpty()) {
@@ -604,20 +571,7 @@ class TestCaseController extends Controller
             return;
         }
 
-        foreach ($bugreport->attachments as $attachment) {
-            if (Storage::disk('public')->exists($attachment->stored_path)) {
-                $extension = pathinfo($attachment->stored_path, PATHINFO_EXTENSION);
-                $newPath = 'attachments/test-cases/'.uniqid().'.'.$extension;
-                Storage::disk('public')->copy($attachment->stored_path, $newPath);
-
-                $testCase->attachments()->create([
-                    'original_filename' => $attachment->original_filename,
-                    'stored_path' => $newPath,
-                    'mime_type' => $attachment->mime_type,
-                    'size' => $attachment->size,
-                ]);
-            }
-        }
+        $this->attachmentService->copyTo($testCase, $bugreport->attachments, 'attachments/test-cases');
     }
 
     /**

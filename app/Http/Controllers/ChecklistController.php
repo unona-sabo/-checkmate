@@ -12,6 +12,7 @@ use App\Http\Requests\Checklist\UpdateChecklistRequest;
 use App\Http\Requests\Checklist\UpdateChecklistRowsRequest;
 use App\Models\Checklist;
 use App\Models\Project;
+use App\Services\FeatureLinkingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
@@ -20,6 +21,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChecklistController extends Controller
 {
+    public function __construct(private readonly FeatureLinkingService $featureLinkingService) {}
+
     public function index(Project $project): Response
     {
         $this->authorize('view', $project);
@@ -100,7 +103,7 @@ class ChecklistController extends Controller
         $checklist = $project->checklists()->create(collect($validated)->except('feature_ids')->toArray());
 
         if (! empty($validated['feature_ids'])) {
-            $checklist->projectFeatures()->sync($validated['feature_ids']);
+            $this->featureLinkingService->sync($checklist, $validated['feature_ids']);
         }
 
         return redirect()->route('checklists.show', [$project, $checklist])
@@ -156,7 +159,7 @@ class ChecklistController extends Controller
         $validated = $request->validated();
 
         $checklist->update(collect($validated)->except('feature_ids')->toArray());
-        $checklist->projectFeatures()->sync($validated['feature_ids'] ?? []);
+        $this->featureLinkingService->sync($checklist, $validated['feature_ids'] ?? []);
 
         return redirect()->route('checklists.show', [$project, $checklist])
             ->with('success', 'Checklist updated successfully.');

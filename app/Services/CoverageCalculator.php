@@ -38,14 +38,21 @@ class CoverageCalculator
 
         foreach ($features as $feature) {
             $featureModules = $feature->module ?? [];
-            if ($featureModules === []) {
-                $featureModules = ['Uncategorized'];
+
+            // Collect all modules from linked test cases and checklists
+            $tcModulesAll = $feature->testCases->flatMap(fn ($tc) => $tc->module ?? [])->unique()->values()->all();
+            $clModulesAll = $feature->checklists->flatMap(fn ($cl) => $cl->module ?? [])->unique()->values()->all();
+
+            // Effective feature modules = own modules + resource modules; fall back to Uncategorized
+            $effectiveFeatureModules = array_values(array_unique(array_merge($featureModules, $tcModulesAll, $clModulesAll)));
+            if ($effectiveFeatureModules === []) {
+                $effectiveFeatureModules = ['Uncategorized'];
             }
 
             $isCovered = ($feature->test_cases_count > 0) || ($feature->checklists_count > 0);
 
-            // Initialize feature-level module stats (without checklists — counted separately below)
-            foreach ($featureModules as $mod) {
+            // Count the feature in every effective module
+            foreach ($effectiveFeatureModules as $mod) {
                 if (! isset($moduleStats[$mod])) {
                     $moduleStats[$mod] = ['total' => 0, 'covered' => 0, 'test_cases' => 0, 'checklists' => 0];
                 }
@@ -56,11 +63,11 @@ class CoverageCalculator
                 }
             }
 
-            // Count test cases by their own module (fall back to feature modules)
+            // Count test cases by their own module (fall back to effective feature modules)
             foreach ($feature->testCases as $testCase) {
                 $tcModules = $testCase->module ?? [];
                 if ($tcModules === []) {
-                    $tcModules = $featureModules;
+                    $tcModules = $effectiveFeatureModules;
                 }
 
                 foreach ($tcModules as $mod) {
@@ -71,11 +78,11 @@ class CoverageCalculator
                 }
             }
 
-            // Count checklists by their own module (fall back to feature modules)
+            // Count checklists by their own module (fall back to effective feature modules)
             foreach ($feature->checklists as $checklist) {
                 $clModules = $checklist->module ?? [];
                 if ($clModules === []) {
-                    $clModules = $featureModules;
+                    $clModules = $effectiveFeatureModules;
                 }
 
                 foreach ($clModules as $mod) {

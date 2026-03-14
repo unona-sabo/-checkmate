@@ -7,10 +7,10 @@ use App\Http\Requests\TestSuite\ReorderTestSuitesRequest;
 use App\Http\Requests\TestSuite\StoreTestSuiteRequest;
 use App\Http\Requests\TestSuite\UpdateTestSuiteRequest;
 use App\Models\Project;
-use App\Models\ProjectFeature;
 use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Models\User;
+use App\Services\FeatureLinkingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,6 +18,8 @@ use Inertia\Response;
 
 class TestSuiteController extends Controller
 {
+    public function __construct(private readonly FeatureLinkingService $featureLinkingService) {}
+
     public function index(Project $project): Response
     {
         $this->authorize('view', $project);
@@ -85,8 +87,7 @@ class TestSuiteController extends Controller
         $validated['order'] = $validated['order'] ?? ($maxOrder + 1);
 
         $testSuite = $project->testSuites()->create($validated);
-        $testSuite->projectFeatures()->sync($featureIds);
-        $this->syncTestCasesToFeatures($testSuite, $featureIds);
+        $this->featureLinkingService->syncWithCascadeToTestCases($testSuite, $featureIds);
 
         if ($testCaseIds) {
             $projectSuiteIds = $project->testSuites()->pluck('id');
@@ -169,9 +170,7 @@ class TestSuiteController extends Controller
         unset($validated['feature_ids']);
 
         $testSuite->update($validated);
-        $testSuite->projectFeatures()->sync($featureIds);
-
-        $this->syncTestCasesToFeatures($testSuite, $featureIds);
+        $this->featureLinkingService->syncWithCascadeToTestCases($testSuite, $featureIds);
 
         return redirect()->route('test-suites.show', [$project, $testSuite])
             ->with('success', 'Test suite updated successfully.');
@@ -230,28 +229,5 @@ class TestSuiteController extends Controller
         }
 
         return back()->with('success', 'Test suites reordered successfully.');
-    }
-
-    /**
-     * Link all test cases in the suite to the given features.
-     *
-     * @param  array<int, int>  $featureIds
-     */
-    private function syncTestCasesToFeatures(TestSuite $testSuite, array $featureIds): void
-    {
-        if ($featureIds === []) {
-            return;
-        }
-
-        $testCaseIds = $testSuite->testCases()->pluck('id')->toArray();
-
-        if ($testCaseIds === []) {
-            return;
-        }
-
-        foreach ($featureIds as $featureId) {
-            $feature = ProjectFeature::query()->find($featureId);
-            $feature?->testCases()->syncWithoutDetaching($testCaseIds);
-        }
     }
 }

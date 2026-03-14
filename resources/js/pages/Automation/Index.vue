@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import axios from 'axios';
-import { Head, router, Deferred } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
 import type {
@@ -78,7 +78,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // Tabs
 type TabKey = 'config' | 'run' | 'templates' | 'environments' | 'history' | 'discover';
-const activeTab = ref<TabKey>(props.project.automation_tests_path ? 'run' : 'config');
+const validTabKeys: TabKey[] = ['config', 'run', 'templates', 'environments', 'history', 'discover'];
+const storageKey = `automation_tab_${props.project.id}`;
+const storedTab = localStorage.getItem(storageKey) as TabKey | null;
+const defaultTab: TabKey = props.project.automation_tests_path ? 'run' : 'config';
+const activeTab = ref<TabKey>(storedTab && validTabKeys.includes(storedTab) ? storedTab : defaultTab);
+watch(activeTab, (newTab) => {
+    localStorage.setItem(storageKey, newTab);
+});
 const tabs: { key: TabKey; label: string; icon: typeof Settings }[] = [
     { key: 'config', label: 'Configuration', icon: Settings },
     { key: 'discover', label: 'Discover Tests', icon: FolderSearch },
@@ -129,7 +136,7 @@ const isRunning = ref(false);
 const runError = ref('');
 const runMessage = ref('');
 const runFile = ref('');
-const runEnvironmentId = ref<string>('');
+const runEnvironmentId = ref<string>('__none__');
 const runTags = ref<string[]>([]);
 const runTagMode = ref<string>('or');
 const tagInput = ref('');
@@ -153,7 +160,7 @@ const runTests = async () => {
     try {
         const { data } = await axios.post(`/projects/${props.project.id}/automation/run`, {
             file: runFile.value.trim() || null,
-            environment_id: runEnvironmentId.value ? Number(runEnvironmentId.value) : null,
+            environment_id: runEnvironmentId.value && runEnvironmentId.value !== '__none__' ? Number(runEnvironmentId.value) : null,
             tags: runTags.value.length > 0 ? runTags.value : null,
             tag_mode: runTagMode.value,
         });
@@ -591,34 +598,26 @@ const passRate = computed(() => {
                                     class="mt-1"
                                 />
                             </div>
-                            <Deferred data="environments">
-                                <template #fallback>
-                                    <div>
-                                        <Label>Environment</Label>
-                                        <div class="mt-1 h-9 w-full animate-pulse rounded-md bg-muted" />
-                                    </div>
-                                </template>
-                                <div>
-                                    <Label>Environment</Label>
-                                    <Select v-model="runEnvironmentId">
-                                        <SelectTrigger class="mt-1 cursor-pointer bg-background/60">
-                                            <SelectValue placeholder="Default (no env)" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="" class="cursor-pointer">Default (no env)</SelectItem>
-                                            <SelectItem
-                                                v-for="env in environments"
-                                                :key="env.id"
-                                                :value="String(env.id)"
-                                                class="cursor-pointer"
-                                            >
-                                                {{ env.name }}
-                                                <span v-if="env.is_default" class="text-xs text-muted-foreground ml-1">(default)</span>
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </Deferred>
+                            <div>
+                                <Label>Environment</Label>
+                                <Select v-model="runEnvironmentId">
+                                    <SelectTrigger class="mt-1 cursor-pointer bg-background/60">
+                                        <SelectValue placeholder="Default (no env)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__none__" class="cursor-pointer">Default (no env)</SelectItem>
+                                        <SelectItem
+                                            v-for="env in environments"
+                                            :key="env.id"
+                                            :value="String(env.id)"
+                                            class="cursor-pointer"
+                                        >
+                                            {{ env.name }}
+                                            <span v-if="env.is_default" class="text-xs text-muted-foreground ml-1">(default)</span>
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         <!-- Tags filter -->
@@ -700,12 +699,6 @@ const passRate = computed(() => {
                         </RestrictedAction>
                     </div>
 
-                    <Deferred data="templates">
-                        <template #fallback>
-                            <div class="space-y-3">
-                                <div v-for="i in 3" :key="i" class="h-20 w-full animate-pulse rounded-lg bg-muted" />
-                            </div>
-                        </template>
                     <div v-if="templates?.length" class="space-y-3">
                         <Card v-for="tmpl in templates" :key="tmpl.id" class="transition-colors hover:border-primary">
                             <CardContent class="px-4 py-3">
@@ -772,7 +765,6 @@ const passRate = computed(() => {
                         <BookTemplate class="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                         <p class="text-sm text-muted-foreground">No templates yet. Create one to save test run configurations.</p>
                     </div>
-                    </Deferred>
                 </div>
 
                 <!-- ==================== Environments Tab ==================== -->
@@ -790,12 +782,6 @@ const passRate = computed(() => {
                         </RestrictedAction>
                     </div>
 
-                    <Deferred data="environments">
-                        <template #fallback>
-                            <div class="space-y-3">
-                                <div v-for="i in 3" :key="i" class="h-20 w-full animate-pulse rounded-lg bg-muted" />
-                            </div>
-                        </template>
                     <div v-if="environments?.length" class="space-y-3">
                         <Card v-for="env in environments" :key="env.id" class="transition-colors hover:border-primary">
                             <CardContent class="px-4 py-3">
@@ -841,7 +827,6 @@ const passRate = computed(() => {
                         <Globe class="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                         <p class="text-sm text-muted-foreground">No environments configured. Add one to run tests against different targets.</p>
                     </div>
-                    </Deferred>
                 </div>
 
                 <!-- ==================== Results History Tab ==================== -->

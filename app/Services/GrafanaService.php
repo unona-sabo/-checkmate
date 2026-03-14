@@ -39,7 +39,7 @@ class GrafanaService
 
         $response = Http::withHeaders([
             'Authorization' => "Bearer {$this->apiToken}",
-        ])->timeout(30)->get($url, [
+        ])->timeout(15)->connectTimeout(8)->get($url, [
             'query' => $logQuery,
             'start' => $startNano,
             'end' => $endNano,

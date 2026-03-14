@@ -11,13 +11,19 @@ use App\Models\ChecklistRow;
 use App\Models\ClickupSetting;
 use App\Models\Project;
 use App\Models\TestCase;
+use App\Services\AttachmentService;
 use App\Services\ClickupService;
-use Illuminate\Support\Facades\Storage;
+use App\Services\FeatureLinkingService;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class BugreportController extends Controller
 {
+    public function __construct(
+        private readonly AttachmentService $attachmentService,
+        private readonly FeatureLinkingService $featureLinkingService,
+    ) {}
+
     public function index(Project $project): Response
     {
         $this->authorize('view', $project);
@@ -80,20 +86,10 @@ class BugreportController extends Controller
         );
 
         if (! empty($validated['feature_ids'])) {
-            $bugreport->projectFeatures()->sync($validated['feature_ids']);
+            $this->featureLinkingService->sync($bugreport, $validated['feature_ids']);
         }
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('attachments/bugreports', 'public');
-                $bugreport->attachments()->create([
-                    'original_filename' => $file->getClientOriginalName(),
-                    'stored_path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ]);
-            }
-        }
+        $this->attachmentService->storeFromRequest($bugreport, $request, 'attachments/bugreports');
 
         if (! empty($validated['test_case_id'])) {
             $this->copyTestCaseAttachments($project, $bugreport, (int) $validated['test_case_id']);
@@ -150,19 +146,9 @@ class BugreportController extends Controller
         $validated = $request->validated();
 
         $bugreport->update(collect($validated)->except(['attachments', 'feature_ids'])->toArray());
-        $bugreport->projectFeatures()->sync($validated['feature_ids'] ?? []);
+        $this->featureLinkingService->sync($bugreport, $validated['feature_ids'] ?? []);
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('attachments/bugreports', 'public');
-                $bugreport->attachments()->create([
-                    'original_filename' => $file->getClientOriginalName(),
-                    'stored_path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ]);
-            }
-        }
+        $this->attachmentService->storeFromRequest($bugreport, $request, 'attachments/bugreports');
 
         return redirect()->route('bugreports.show', [$project, $bugreport])
             ->with('success', 'Bug report updated successfully.');
@@ -172,10 +158,7 @@ class BugreportController extends Controller
     {
         $this->authorize('update', $project);
 
-        foreach ($bugreport->attachments as $attachment) {
-            Storage::disk('public')->delete($attachment->stored_path);
-        }
-
+        $this->attachmentService->deleteAll($bugreport);
         $bugreport->delete();
 
         return redirect()->route('bugreports.index', $project)
@@ -240,8 +223,7 @@ class BugreportController extends Controller
     {
         $this->authorize('update', $project);
 
-        Storage::disk('public')->delete($attachment->stored_path);
-        $attachment->delete();
+        $this->attachmentService->deleteOne($attachment);
 
         return back()->with('success', 'Attachment deleted successfully.');
     }
@@ -259,20 +241,7 @@ class BugreportController extends Controller
             return;
         }
 
-        foreach ($testCase->attachments as $attachment) {
-            if (Storage::disk('public')->exists($attachment->stored_path)) {
-                $extension = pathinfo($attachment->stored_path, PATHINFO_EXTENSION);
-                $newPath = 'attachments/bugreports/'.uniqid().'.'.$extension;
-                Storage::disk('public')->copy($attachment->stored_path, $newPath);
-
-                $bugreport->attachments()->create([
-                    'original_filename' => $attachment->original_filename,
-                    'stored_path' => $newPath,
-                    'mime_type' => $attachment->mime_type,
-                    'size' => $attachment->size,
-                ]);
-            }
-        }
+        $this->attachmentService->copyTo($bugreport, $testCase->attachments, 'attachments/bugreports');
     }
 
     /**

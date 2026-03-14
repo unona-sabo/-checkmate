@@ -233,6 +233,10 @@ const onDragStart = (e: DragEvent, doc: Documentation) => {
     isDragging.value = true;
     e.dataTransfer!.effectAllowed = 'move';
     e.dataTransfer!.setData('text/plain', String(doc.id));
+    const rowEl = (e.currentTarget as HTMLElement).parentElement;
+    if (rowEl) {
+        e.dataTransfer!.setDragImage(rowEl, 0, 0);
+    }
 };
 
 const onDragEnd = () => {
@@ -472,17 +476,16 @@ const saveChildReorder = () => {
                                             'opacity-50': isDragging && draggedDoc?.id === child.id,
                                             'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === child.id && draggedDoc?.id !== child.id,
                                         }"
-                                        :draggable="canDrag"
-                                        @dragstart="onDragStart($event, child)"
-                                        @dragend="onDragEnd"
                                         @dragover="onDragOverDoc($event, child)"
                                         @dragleave="onDragLeaveDoc($event, child)"
                                         @drop="onDropOnChild($event, child, documentation.id)"
                                     >
                                         <div
                                             v-if="canDrag"
+                                            draggable="true"
                                             class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
-                                            @mousedown.stop
+                                            @dragstart="onDragStart($event, child)"
+                                            @dragend="onDragEnd"
                                         >
                                             <GripVertical class="h-3.5 w-3.5 text-muted-foreground" />
                                         </div>
@@ -510,17 +513,16 @@ const saveChildReorder = () => {
                                                     'opacity-50': isDragging && draggedDoc?.id === grandchild.id,
                                                     'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === grandchild.id && draggedDoc?.id !== grandchild.id,
                                                 }"
-                                                :draggable="canDrag"
-                                                @dragstart="onDragStart($event, grandchild)"
-                                                @dragend="onDragEnd"
                                                 @dragover="onDragOverDoc($event, grandchild)"
                                                 @dragleave="onDragLeaveDoc($event, grandchild)"
                                                 @drop="onDropOnChild($event, grandchild, child.id)"
                                             >
                                                 <div
                                                     v-if="canDrag"
+                                                    draggable="true"
                                                     class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
-                                                    @mousedown.stop
+                                                    @dragstart="onDragStart($event, grandchild)"
+                                                    @dragend="onDragEnd"
                                                 >
                                                     <GripVertical class="h-3 w-3 text-muted-foreground" />
                                                 </div>
@@ -548,17 +550,16 @@ const saveChildReorder = () => {
                                                     'opacity-50': isDragging && draggedDoc?.id === deep.id,
                                                     'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === deep.id && draggedDoc?.id !== deep.id,
                                                 }"
-                                                :draggable="canDrag"
-                                                @dragstart="onDragStart($event, deep)"
-                                                @dragend="onDragEnd"
                                                 @dragover="onDragOverDoc($event, deep)"
                                                 @dragleave="onDragLeaveDoc($event, deep)"
                                                 @drop="onDropOnChild($event, deep, grandchild.id)"
                                             >
                                                 <div
                                                     v-if="canDrag"
+                                                    draggable="true"
                                                     class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
-                                                    @mousedown.stop
+                                                    @dragstart="onDragStart($event, deep)"
+                                                    @dragend="onDragEnd"
                                                 >
                                                     <GripVertical class="h-2.5 w-2.5 text-muted-foreground" />
                                                 </div>
