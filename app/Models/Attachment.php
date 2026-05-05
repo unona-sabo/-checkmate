@@ -23,6 +23,6 @@ class Attachment extends Model
 
     public function getUrlAttribute(): string
     {
-        return url('storage/'.$this->stored_path);
+        return '/storage/'.$this->stored_path;
     }
 }

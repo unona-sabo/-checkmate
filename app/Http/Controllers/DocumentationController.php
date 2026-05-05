@@ -184,7 +184,7 @@ class DocumentationController extends Controller
         $path = $request->file('image')->store('attachments/documentations/images', 'public');
 
         return response()->json([
-            'url' => url('storage/'.$path),
+            'url' => '/storage/'.$path,
         ]);
     }
 
