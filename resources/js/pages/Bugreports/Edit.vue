@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Bug, Paperclip, X, Download, Trash2 } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 interface User {
     id: number;
@@ -87,6 +87,24 @@ const onFilesSelected = (event: Event) => {
 const removeFile = (index: number) => {
     form.attachments.splice(index, 1);
 };
+
+const handlePaste = (event: ClipboardEvent) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+            const blob = item.getAsFile();
+            if (blob) {
+                const ext = item.type.split('/')[1] || 'png';
+                const file = new File([blob], `screenshot-${Date.now()}.${ext}`, { type: item.type });
+                form.attachments.push(file);
+            }
+        }
+    }
+};
+
+onMounted(() => window.addEventListener('paste', handlePaste));
+onUnmounted(() => window.removeEventListener('paste', handlePaste));
 
 const attachmentErrors = computed(() => {
     return Object.entries(form.errors)
@@ -319,7 +337,7 @@ const submit = () => {
                                         <Paperclip class="h-4 w-4" />
                                         Add Files
                                     </Button>
-                                    <span class="text-xs text-muted-foreground">Max 10MB per file</span>
+                                    <span class="text-xs text-muted-foreground">Max 10MB per file — or paste a screenshot with Ctrl+V</span>
                                 </div>
                                 <input
                                     ref="fileInput"
