@@ -1,35 +1,5 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import {
-    type BreadcrumbItem,
-    type Project,
-    type ColumnConfig,
-    type Checklist,
-    type SelectOption,
-} from '@/types';
-import { type ProjectFeature } from '@/types/checkmate';
-import FeatureSelector from '@/components/FeatureSelector.vue';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
-import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     ClipboardList,
     Plus,
@@ -39,6 +9,36 @@ import {
     ChevronUp,
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
+import FeatureSelector from '@/components/FeatureSelector.vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type ColumnConfig,
+    type Checklist,
+    type SelectOption,
+} from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 
 const MODULE_OPTIONS = [
     'UI',

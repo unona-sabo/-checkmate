@@ -1,51 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { writeToClipboard } from '@/composables/useClipboard';
-import AppLayout from '@/layouts/AppLayout.vue';
-import {
-    type BreadcrumbItem,
-    type Project,
-    type Checklist,
-    type ChecklistRow,
-    type ColumnConfig,
-    type SelectOption,
-    type TestSuite,
-} from '@/types';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-    DropdownMenuSub,
-    DropdownMenuSubTrigger,
-    DropdownMenuSubContent,
-} from '@/components/ui/dropdown-menu';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import TranslateButtons from '@/components/TranslateButtons.vue';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import {
     ClipboardList,
     Edit,
@@ -80,21 +36,65 @@ import {
     Filter,
     LocateFixed,
 } from 'lucide-vue-next';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
+} from '@/components/ui/dropdown-menu';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
 import CellEditor from '@/components/CellEditor.vue';
+import TranslateButtons from '@/components/TranslateButtons.vue';
+import { Badge } from '@/components/ui/badge';
 import { useCanEdit } from '@/composables/useCanEdit';
-import { useSearch } from '@/composables/useSearch';
 import {
     useChecklistClipboard,
     type ClipboardData,
 } from '@/composables/useChecklistClipboard';
-import { useChecklistFilters } from '@/composables/useChecklistFilters';
 import { useChecklistDragDrop } from '@/composables/useChecklistDragDrop';
+import { useChecklistFilters } from '@/composables/useChecklistFilters';
+import { writeToClipboard } from '@/composables/useClipboard';
 import { useLocalStorageDraft } from '@/composables/useLocalStorageDraft';
-import axios from 'axios';
+import { useSearch } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type Checklist,
+    type ChecklistRow,
+    type ColumnConfig,
+    type SelectOption,
+    type TestSuite,
+} from '@/types';
 
 const { canEdit } = useCanEdit();
 

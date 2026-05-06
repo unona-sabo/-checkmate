@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, useForm, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
+import { Edit, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -9,11 +11,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import InputError from '@/components/InputError.vue';
-import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import {
     Dialog,
     DialogContent,
@@ -23,8 +20,11 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Edit, Trash2 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project } from '@/types';
 
 const props = defineProps<{
     project: Project;

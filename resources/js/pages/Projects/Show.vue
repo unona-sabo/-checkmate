@@ -1,16 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import {
-    type BreadcrumbItem,
-    type Project,
-    type ProjectSearchResponse,
-    type ProjectSearchResultGroup,
-} from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import axios from 'axios';
 import {
     ClipboardList,
     Layers,
@@ -32,11 +22,21 @@ import {
     Terminal,
     Link2,
 } from 'lucide-vue-next';
-import { releaseStatusVariant } from '@/lib/badge-variants';
 import { ref, watch, computed } from 'vue';
-import axios from 'axios';
-import { escapeHtml, escapeRegExp } from '@/composables/useSearch';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { escapeHtml, escapeRegExp } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { releaseStatusVariant } from '@/lib/badge-variants';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type ProjectSearchResponse,
+    type ProjectSearchResultGroup,
+} from '@/types';
 
 const props = defineProps<{
     project: Project;

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { useEditor, EditorContent } from '@tiptap/vue-3';
-import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import { watch } from 'vue';
+import StarterKit from '@tiptap/starter-kit';
+import { useEditor, EditorContent } from '@tiptap/vue-3';
 import axios from 'axios';
 import {
     Bold,
@@ -24,6 +23,7 @@ import {
     Unlink,
     ImagePlus,
 } from 'lucide-vue-next';
+import { watch } from 'vue';
 
 const props = defineProps<{
     modelValue: string;

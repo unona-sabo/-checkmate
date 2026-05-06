@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Eye, EyeOff } from 'lucide-vue-next';
+import { ref } from 'vue';
 import { Input } from '@/components/ui/input';
 
 const props = defineProps<{

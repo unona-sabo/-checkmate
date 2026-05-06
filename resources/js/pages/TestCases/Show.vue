@@ -1,24 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { writeToClipboard } from '@/composables/useClipboard';
-import AppLayout from '@/layouts/AppLayout.vue';
-import {
-    type BreadcrumbItem,
-    type Project,
-    type TestSuite,
-    type TestCase,
-} from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogFooter,
-} from '@/components/ui/dialog';
+import { router } from '@inertiajs/vue3';
 import {
     Edit,
     FileText,
@@ -33,15 +15,33 @@ import {
     Check,
     Bug,
 } from 'lucide-vue-next';
-import RestrictedAction from '@/components/RestrictedAction.vue';
+import { ref, computed } from 'vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import { writeToClipboard } from '@/composables/useClipboard';
+import AppLayout from '@/layouts/AppLayout.vue';
 import {
     priorityVariant,
     severityVariant,
     automationVariant,
 } from '@/lib/badge-variants';
-import { ref, computed } from 'vue';
-import { router } from '@inertiajs/vue3';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type TestSuite,
+    type TestCase,
+} from '@/types';
 
 const props = defineProps<{
     project: Project;

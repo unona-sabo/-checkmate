@@ -1,5 +1,5 @@
-import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import type { AppPageProps } from '@/types';
 
 export function useCanEdit() {

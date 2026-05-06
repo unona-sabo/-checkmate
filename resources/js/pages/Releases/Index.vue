@@ -1,23 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
-import type { Release } from '@/types/checkmate';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Rocket, Plus, Search, X, Calendar, Filter } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -26,12 +14,24 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Rocket, Plus, Search, X, Calendar, Filter } from 'lucide-vue-next';
-import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import AppLayout from '@/layouts/AppLayout.vue';
 import {
     releaseStatusVariant,
     releaseDecisionVariant,
 } from '@/lib/badge-variants';
+import { type BreadcrumbItem, type Project } from '@/types';
+import type { Release } from '@/types/checkmate';
+import { Progress } from '@/components/ui/progress';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 const props = defineProps<{
     project: Project;

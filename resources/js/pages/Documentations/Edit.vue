@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, useForm, Link } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
+import { FileText, Upload, X, Trash2, Download } from 'lucide-vue-next';
+import InputError from '@/components/InputError.vue';
+import RichTextEditor from '@/components/RichTextEditor.vue';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -9,7 +11,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -19,10 +20,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import RichTextEditor from '@/components/RichTextEditor.vue';
-import { FileText, Upload, X, Trash2, Download } from 'lucide-vue-next';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 
 interface ParentOption {
     id: number;

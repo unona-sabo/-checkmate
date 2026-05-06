@@ -1,40 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
 import { Head, router, Deferred, Link } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
-import type {
-    Release,
-    ReleaseFeature,
-    ReleaseChecklistItem,
-    ReleaseMetricsSnapshot,
-    ProjectFeature,
-    TestRun,
-    ReleaseLiveMetrics,
-} from '@/types/checkmate';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     Rocket,
     Pencil,
@@ -61,11 +26,46 @@ import {
     Minus,
     Search,
 } from 'lucide-vue-next';
+import { ref, computed, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
 import {
     releaseStatusVariant,
     releaseDecisionVariant,
 } from '@/lib/badge-variants';
+import { type BreadcrumbItem, type Project } from '@/types';
+import type {
+    Release,
+    ReleaseFeature,
+    ReleaseChecklistItem,
+    ReleaseMetricsSnapshot,
+    ProjectFeature,
+    TestRun,
+    ReleaseLiveMetrics,
+} from '@/types/checkmate';
+import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 interface WorkspaceMember {
     id: number;

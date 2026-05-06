@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
+import { ArrowLeft } from 'lucide-vue-next';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem } from '@/types';
-import { ArrowLeft } from 'lucide-vue-next';
-import { router } from '@inertiajs/vue3';
 
 const props = withDefaults(
     defineProps<{

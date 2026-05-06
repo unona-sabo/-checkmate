@@ -1,22 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, Deferred } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
-import { useSearch } from '@/composables/useSearch';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestRun } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import {
     Plus,
     Play,
@@ -33,6 +17,11 @@ import {
     ListChecks,
     ChevronDown,
 } from 'lucide-vue-next';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -40,8 +29,19 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { useSearch } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { priorityVariant, testRunStatusVariant } from '@/lib/badge-variants';
+import { type BreadcrumbItem, type Project, type TestRun } from '@/types';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 const props = defineProps<{
     project: Project;
@@ -255,7 +255,7 @@ const getLiveElapsed = (run: TestRun): number | null => {
     if (!start) return null;
     const startMs = new Date(start).getTime();
     const nowMs = Date.now();
-    let total = Math.floor((nowMs - startMs) / 1000);
+    const total = Math.floor((nowMs - startMs) / 1000);
     let paused = run.total_paused_seconds ?? 0;
     if (run.is_paused && run.paused_at) {
         paused += Math.floor(

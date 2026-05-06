@@ -1,40 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import axios from 'axios';
 import { Head, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
-import type {
-    AutomationTestResult,
-    AutomationScanResult,
-    AutomationScanTest,
-    AutomationRunStats,
-    TestEnvironment,
-    TestRunTemplate,
-    CursorPagination,
-} from '@/types/checkmate';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import axios from 'axios';
 import {
     Drama,
     Settings,
@@ -59,8 +25,42 @@ import {
     Tag,
     Server,
 } from 'lucide-vue-next';
+import { ref, computed, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { automationResultVariant } from '@/lib/badge-variants';
+import { type BreadcrumbItem, type Project } from '@/types';
+import type {
+    AutomationTestResult,
+    AutomationScanResult,
+    AutomationScanTest,
+    AutomationRunStats,
+    TestEnvironment,
+    TestRunTemplate,
+    CursorPagination,
+} from '@/types/checkmate';
 
 const props = defineProps<{
     project: Project & { automation_tests_path?: string | null };

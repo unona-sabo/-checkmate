@@ -1,45 +1,5 @@
 <script setup lang="ts">
 import { Head, Link, router, Deferred } from '@inertiajs/vue3';
-import { writeToClipboard } from '@/composables/useClipboard';
-import AppLayout from '@/layouts/AppLayout.vue';
-import {
-    type BreadcrumbItem,
-    type Project,
-    type TestRun,
-    type TestRunCase,
-    type TestSuite,
-    type Checklist,
-    type ChecklistRow,
-} from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Play,
     Edit,
@@ -70,8 +30,48 @@ import {
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { writeToClipboard } from '@/composables/useClipboard';
 import { useSearch, stripHtml } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { testResultVariant } from '@/lib/badge-variants';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type TestRun,
+    type TestRunCase,
+    type TestSuite,
+    type Checklist,
+    type ChecklistRow,
+} from '@/types';
 
 const props = defineProps<{
     project: Project;
@@ -307,7 +307,7 @@ const liveElapsed = computed((): number | null => {
     if (!start) return null;
     const startMs = new Date(start).getTime();
     const nowMs = Date.now();
-    let total = Math.floor((nowMs - startMs) / 1000);
+    const total = Math.floor((nowMs - startMs) / 1000);
     let paused = run.total_paused_seconds ?? 0;
     if (run.is_paused && run.paused_at) {
         paused += Math.floor(

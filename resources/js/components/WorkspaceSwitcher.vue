@@ -2,14 +2,7 @@
 import { router, useForm, usePage } from '@inertiajs/vue3';
 import { Building2, Check, ChevronsUpDown, Plus } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -18,11 +11,18 @@ import {
     DialogFooter,
     DialogDescription,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { AppPageProps } from '@/types';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
+import type { AppPageProps } from '@/types';
 
 const page = usePage<AppPageProps>();
 

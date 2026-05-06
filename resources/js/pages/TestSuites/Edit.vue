@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, useForm, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestSuite } from '@/types';
-import { type ProjectFeature } from '@/types/checkmate';
+import { Edit, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
+import FeatureSelector from '@/components/FeatureSelector.vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -10,17 +12,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -30,12 +22,20 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import InputError from '@/components/InputError.vue';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project, type TestSuite } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
+import { Textarea } from '@/components/ui/textarea';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { Checkbox } from '@/components/ui/checkbox';
-import FeatureSelector from '@/components/FeatureSelector.vue';
-import { Edit, Trash2 } from 'lucide-vue-next';
-import { ref } from 'vue';
 
 const MODULE_OPTIONS = [
     'UI',

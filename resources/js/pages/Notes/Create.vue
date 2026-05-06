@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
+import { StickyNote } from 'lucide-vue-next';
+import InputError from '@/components/InputError.vue';
+import TranslateButtons from '@/components/TranslateButtons.vue';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -9,10 +11,8 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -20,10 +20,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
+import { Textarea } from '@/components/ui/textarea';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import TranslateButtons from '@/components/TranslateButtons.vue';
-import { StickyNote } from 'lucide-vue-next';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project } from '@/types';
 
 interface Documentation {
     id: number;

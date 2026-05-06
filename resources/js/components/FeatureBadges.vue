@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { Tag } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
-import { Tag } from 'lucide-vue-next';
 
 interface Feature {
     id: number;

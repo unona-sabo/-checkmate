@@ -1,15 +1,5 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { writeToClipboard } from '@/composables/useClipboard';
-import AppLayout from '@/layouts/AppLayout.vue';
-import {
-    type BreadcrumbItem,
-    type Project,
-    type TestSuite,
-    type TestCase,
-} from '@/types';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
     Plus,
     Edit,
@@ -38,10 +28,22 @@ import {
     Pencil,
     Bot,
 } from 'lucide-vue-next';
+import { ref, computed, watch, onMounted } from 'vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
+import FeatureSelector from '@/components/FeatureSelector.vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
+import TranslateButtons from '@/components/TranslateButtons.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type TestSuite,
+    type TestCase,
+} from '@/types';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import TranslateButtons from '@/components/TranslateButtons.vue';
 import { Textarea } from '@/components/ui/textarea';
 import {
     DropdownMenu,
@@ -66,12 +68,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import RestrictedAction from '@/components/RestrictedAction.vue';
-import FeatureBadges from '@/components/FeatureBadges.vue';
-import FeatureSelector from '@/components/FeatureSelector.vue';
+import { writeToClipboard } from '@/composables/useClipboard';
 import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
-import { ref, computed, watch, onMounted } from 'vue';
 import { useSearch } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
 
 const props = defineProps<{
     project: Project;

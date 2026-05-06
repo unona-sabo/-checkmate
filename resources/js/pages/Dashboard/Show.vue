@@ -1,20 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useSearch } from '@/composables/useSearch';
 import { Head, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { home } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
-import { type HomeSection, type SectionFeature } from '@/types/checkmate';
-import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     ClipboardList,
     Layers,
@@ -42,6 +27,21 @@ import {
     Sparkles,
     Activity,
 } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { useSearch } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem } from '@/types';
+import { type HomeSection, type SectionFeature } from '@/types/checkmate';
+import { home } from '@/routes';
 
 const props = defineProps<{
     section: HomeSection;

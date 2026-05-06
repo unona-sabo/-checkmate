@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, Deferred } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Bug, Plus, Search, X, Filter, Tag } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -15,11 +16,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ref, computed } from 'vue';
-import RestrictedAction from '@/components/RestrictedAction.vue';
-import FeatureBadges from '@/components/FeatureBadges.vue';
-import { severityVariant, bugStatusVariant } from '@/lib/badge-variants';
 import { useSearch } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { severityVariant, bugStatusVariant } from '@/lib/badge-variants';
+import { type BreadcrumbItem, type Project } from '@/types';
 
 interface Bugreport {
     id: number;

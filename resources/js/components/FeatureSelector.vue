@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import axios from 'axios';
+import { Search, X, Plus, Tag } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
-import { type ProjectFeature } from '@/types/checkmate';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
@@ -15,6 +15,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -22,9 +24,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
-import { Search, X, Plus, Tag } from 'lucide-vue-next';
-import axios from 'axios';
+import { type ProjectFeature } from '@/types/checkmate';
 
 type FeatureSummary = Pick<
     ProjectFeature,

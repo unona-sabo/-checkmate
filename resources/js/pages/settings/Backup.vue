@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import BackupController from '@/actions/App/Http/Controllers/Settings/BackupController';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,8 +13,9 @@ import {
 } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { show } from '@/routes/backup';
 import { type BreadcrumbItem } from '@/types';
+import BackupController from '@/actions/App/Http/Controllers/Settings/BackupController';
+import { show } from '@/routes/backup';
 
 interface Snapshot {
     name: string;

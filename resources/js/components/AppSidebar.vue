@@ -18,9 +18,9 @@ import {
     Sparkles,
     Activity,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
-import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.vue';
 import {
     Sidebar,
     SidebarContent,
@@ -32,11 +32,11 @@ import {
     SidebarGroup,
     SidebarGroupLabel,
 } from '@/components/ui/sidebar';
-import { home } from '@/routes';
+import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.vue';
+import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { type NavItem, type Project } from '@/types';
 import AppLogo from './AppLogo.vue';
-import { computed } from 'vue';
-import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { home } from '@/routes';
 
 const page = usePage();
 const { isCurrentUrl, isCurrentUrlPrefix } = useCurrentUrl();

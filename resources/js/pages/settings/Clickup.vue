@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import ClickupController from '@/actions/App/Http/Controllers/Settings/ClickupController';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,8 +14,9 @@ import {
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { show } from '@/routes/clickup';
 import { type BreadcrumbItem } from '@/types';
+import ClickupController from '@/actions/App/Http/Controllers/Settings/ClickupController';
+import { show } from '@/routes/clickup';
 
 interface ClickupStatus {
     status: string;

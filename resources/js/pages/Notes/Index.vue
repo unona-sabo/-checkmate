@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { StickyNote, Plus, FileText, Trash2, Search, X } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -14,10 +15,9 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { StickyNote, Plus, FileText, Trash2, Search, X } from 'lucide-vue-next';
-import RestrictedAction from '@/components/RestrictedAction.vue';
 import { useSearch } from '@/composables/useSearch';
-import { ref, computed } from 'vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project } from '@/types';
 
 interface Documentation {
     id: number;

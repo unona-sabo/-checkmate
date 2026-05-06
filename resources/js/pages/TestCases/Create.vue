@@ -1,5 +1,21 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { FileText, Plus, Trash2, Paperclip, X, Bug } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import FeatureSelector from '@/components/FeatureSelector.vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     type BreadcrumbItem,
@@ -9,18 +25,6 @@ import {
     type Attachment,
 } from '@/types';
 import { type ProjectFeature } from '@/types/checkmate';
-import FeatureSelector from '@/components/FeatureSelector.vue';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -28,11 +32,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { FileText, Plus, Trash2, Paperclip, X, Bug } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
 
 const MODULE_OPTIONS = [
     'UI',

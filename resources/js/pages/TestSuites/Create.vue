@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestSuite } from '@/types';
-import { type ProjectFeature } from '@/types/checkmate';
+import { Layers, Boxes } from 'lucide-vue-next';
+import FeatureSelector from '@/components/FeatureSelector.vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -10,10 +11,9 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -21,11 +21,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
+import { Textarea } from '@/components/ui/textarea';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project, type TestSuite } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { Checkbox } from '@/components/ui/checkbox';
-import FeatureSelector from '@/components/FeatureSelector.vue';
-import { Layers, Boxes } from 'lucide-vue-next';
 
 const MODULE_OPTIONS = [
     'UI',

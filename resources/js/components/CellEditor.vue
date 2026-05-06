@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount, onMounted } from 'vue';
-import { useEditor, EditorContent } from '@tiptap/vue-3';
-import StarterKit from '@tiptap/starter-kit';
-import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
+import { TextStyle } from '@tiptap/extension-text-style';
+import StarterKit from '@tiptap/starter-kit';
+import { useEditor, EditorContent } from '@tiptap/vue-3';
+import { ref, watch, onBeforeUnmount, onMounted } from 'vue';
 import CellColorPicker from './CellColorPicker.vue';
 
 const props = withDefaults(

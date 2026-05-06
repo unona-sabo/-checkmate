@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import axios from 'axios';
+import { Loader2, RotateCcw } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
-import { Loader2, RotateCcw } from 'lucide-vue-next';
-import axios from 'axios';
 
 const props = defineProps<{
     projectId: number;

@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useSearch } from '@/composables/useSearch';
 import { Head, Link } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { home } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
-import { type HomeSection } from '@/types/checkmate';
-import { Input } from '@/components/ui/input';
 import {
     ClipboardList,
     Layers,
@@ -31,6 +24,13 @@ import {
     Sparkles,
     Activity,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
+import { Input } from '@/components/ui/input';
+import { useSearch } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem } from '@/types';
+import { type HomeSection } from '@/types/checkmate';
+import { home } from '@/routes';
 
 const props = defineProps<{
     sections: HomeSection[];

@@ -1,40 +1,5 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
-import type {
-    ProjectFeature,
-    CoverageAnalysis,
-    CoverageModuleStats,
-    CoverageStatistics,
-    CoverageGap,
-    AIGap,
-    AIAnalysisData,
-    TestCaseSummary,
-    Checklist,
-} from '@/types/checkmate';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     BarChart3,
     Plus,
@@ -60,10 +25,45 @@ import {
     FileText,
     ClipboardList,
 } from 'lucide-vue-next';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ref, computed, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { priorityVariant } from '@/lib/badge-variants';
+import { type BreadcrumbItem, type Project } from '@/types';
+import type {
+    ProjectFeature,
+    CoverageAnalysis,
+    CoverageModuleStats,
+    CoverageStatistics,
+    CoverageGap,
+    AIGap,
+    AIAnalysisData,
+    TestCaseSummary,
+    Checklist,
+} from '@/types/checkmate';
 
 const MODULE_OPTIONS = [
     'UI',
