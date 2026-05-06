@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { FileText, Plus, Trash2, Paperclip, X, Bug } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { FileText, Plus, Trash2, Bug } from 'lucide-vue-next';
+import FileDropZone from '@/components/FileDropZone.vue';
+import { computed } from 'vue';
 
 const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;
 
@@ -79,24 +80,6 @@ const form = useForm({
     bugreport_id: urlParams.get('bugreport_id') || null as string | null,
 });
 useClearErrorsOnInput(form);
-
-const fileInput = ref<HTMLInputElement | null>(null);
-
-const onFilesSelected = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    if (target.files) {
-        for (const file of Array.from(target.files)) {
-            form.attachments.push(file);
-        }
-    }
-    if (fileInput.value) {
-        fileInput.value.value = '';
-    }
-};
-
-const removeFile = (index: number) => {
-    form.attachments.splice(index, 1);
-};
 
 const attachmentErrors = computed(() => {
     return Object.entries(form.errors)
@@ -345,36 +328,7 @@ const submit = () => {
                             <!-- Attachments -->
                             <div class="space-y-2">
                                 <Label>Attachments</Label>
-                                <div class="flex items-center gap-2">
-                                    <Button type="button" variant="outline" size="sm" @click="fileInput?.click()" class="gap-2">
-                                        <Paperclip class="h-4 w-4" />
-                                        Add Files
-                                    </Button>
-                                    <span class="text-xs text-muted-foreground">Max 10MB per file. JPG, PNG, GIF, WebP, PDF, DOC, XLS, TXT, CSV, ZIP</span>
-                                </div>
-                                <input
-                                    ref="fileInput"
-                                    type="file"
-                                    multiple
-                                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
-                                    class="hidden"
-                                    @change="onFilesSelected"
-                                />
-                                <div v-if="form.attachments.length" class="space-y-2">
-                                    <div v-for="(file, index) in form.attachments" :key="index" class="flex items-center justify-between rounded-lg border p-2">
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <Paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
-                                            <span class="truncate text-sm">{{ file.name }}</span>
-                                            <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(file.size) }}</span>
-                                        </div>
-                                        <Button type="button" variant="ghost" size="sm" @click="removeFile(index)" class="h-6 w-6 p-0 shrink-0">
-                                            <X class="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div v-if="attachmentErrors.length" class="space-y-1">
-                                    <p v-for="(error, i) in attachmentErrors" :key="i" class="text-sm text-destructive">{{ error }}</p>
-                                </div>
+                                <FileDropZone v-model="form.attachments" :errors="attachmentErrors" />
                             </div>
 
                             <div class="flex gap-2">
