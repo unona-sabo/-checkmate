@@ -41,9 +41,13 @@ watch(showCreateDialog, (open) => {
 });
 
 function switchWorkspace(workspaceId: number) {
-    router.post('/workspaces/switch', { workspace_id: workspaceId }, {
-        preserveState: false,
-    });
+    router.post(
+        '/workspaces/switch',
+        { workspace_id: workspaceId },
+        {
+            preserveState: false,
+        },
+    );
 }
 
 function createWorkspace() {
@@ -60,9 +64,13 @@ function createWorkspace() {
 <template>
     <DropdownMenu>
         <DropdownMenuTrigger as-child>
-            <button class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-sidebar-accent cursor-pointer">
+            <button
+                class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-sidebar-accent"
+            >
                 <Building2 class="h-4 w-4 shrink-0" />
-                <span class="truncate font-medium">{{ currentWorkspace?.name ?? 'No Workspace' }}</span>
+                <span class="truncate font-medium">{{
+                    currentWorkspace?.name ?? 'No Workspace'
+                }}</span>
                 <ChevronsUpDown class="ml-auto h-4 w-4 shrink-0 opacity-50" />
             </button>
         </DropdownMenuTrigger>
@@ -77,12 +85,23 @@ function createWorkspace() {
             >
                 <Check
                     class="mr-2 h-4 w-4"
-                    :class="ws.id === currentWorkspace?.id ? 'opacity-100' : 'opacity-0'"
+                    :class="
+                        ws.id === currentWorkspace?.id
+                            ? 'opacity-100'
+                            : 'opacity-0'
+                    "
                 />
                 <span class="truncate">{{ ws.name }}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem class="cursor-pointer" @click="createForm.reset(); createForm.clearErrors(); showCreateDialog = true">
+            <DropdownMenuItem
+                class="cursor-pointer"
+                @click="
+                    createForm.reset();
+                    createForm.clearErrors();
+                    showCreateDialog = true;
+                "
+            >
                 <Plus class="mr-2 h-4 w-4" />
                 Create Workspace
             </DropdownMenuItem>
@@ -93,7 +112,10 @@ function createWorkspace() {
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Create Workspace</DialogTitle>
-                <DialogDescription>Create a new workspace to organize projects and collaborate with your team.</DialogDescription>
+                <DialogDescription
+                    >Create a new workspace to organize projects and collaborate
+                    with your team.</DialogDescription
+                >
             </DialogHeader>
             <form @submit.prevent="createWorkspace">
                 <div class="space-y-4 py-4">
@@ -103,14 +125,28 @@ function createWorkspace() {
                             id="workspace-name"
                             v-model="createForm.name"
                             placeholder="My Workspace"
-                            :class="{ 'border-destructive': createForm.errors.name }"
+                            :class="{
+                                'border-destructive': createForm.errors.name,
+                            }"
                         />
-                        <p v-if="createForm.errors.name" class="text-sm text-destructive">{{ createForm.errors.name }}</p>
+                        <p
+                            v-if="createForm.errors.name"
+                            class="text-sm text-destructive"
+                        >
+                            {{ createForm.errors.name }}
+                        </p>
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button type="button" variant="outline" @click="showCreateDialog = false">Cancel</Button>
-                    <Button type="submit" :disabled="createForm.processing">Create</Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="showCreateDialog = false"
+                        >Cancel</Button
+                    >
+                    <Button type="submit" :disabled="createForm.processing"
+                        >Create</Button
+                    >
                 </DialogFooter>
             </form>
         </DialogContent>

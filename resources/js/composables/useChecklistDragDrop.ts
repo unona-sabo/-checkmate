@@ -79,13 +79,24 @@ export function useChecklistDragDrop<TRow, TCol extends ColumnWithWidth>(
 
     const onColDrop = (visibleIndex: number, event: DragEvent) => {
         event.preventDefault();
-        if (draggedColIndex.value !== null && draggedColIndex.value !== visibleIndex) {
+        if (
+            draggedColIndex.value !== null &&
+            draggedColIndex.value !== visibleIndex
+        ) {
             const draggedKey = visibleColumns.value[draggedColIndex.value]?.key;
             const targetKey = visibleColumns.value[visibleIndex]?.key;
-            const actualFrom = columns.value.findIndex(c => c.key === draggedKey);
-            const actualTo = columns.value.findIndex(c => c.key === targetKey);
+            const actualFrom = columns.value.findIndex(
+                (c) => c.key === draggedKey,
+            );
+            const actualTo = columns.value.findIndex(
+                (c) => c.key === targetKey,
+            );
 
-            if (actualFrom !== -1 && actualTo !== -1 && actualFrom !== actualTo) {
+            if (
+                actualFrom !== -1 &&
+                actualTo !== -1 &&
+                actualFrom !== actualTo
+            ) {
                 const draggedCol = columns.value[actualFrom];
                 columns.value.splice(actualFrom, 1);
                 columns.value.splice(actualTo, 0, draggedCol);
@@ -108,7 +119,7 @@ export function useChecklistDragDrop<TRow, TCol extends ColumnWithWidth>(
 
     const startResize = (visibleIndex: number, event: MouseEvent) => {
         const colKey = visibleColumns.value[visibleIndex]?.key;
-        const actualIndex = columns.value.findIndex(c => c.key === colKey);
+        const actualIndex = columns.value.findIndex((c) => c.key === colKey);
         if (actualIndex === -1) return;
         resizingCol.value = actualIndex;
         resizeStartX.value = event.clientX;

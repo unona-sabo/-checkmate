@@ -2,15 +2,44 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { writeToClipboard } from '@/composables/useClipboard';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestSuite, type TestCase } from '@/types';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type TestSuite,
+    type TestCase,
+} from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Edit, FileText, AlertCircle, ListOrdered, Target, Tag, Paperclip, Download, Trash2, Link2, Check, Bug } from 'lucide-vue-next';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import {
+    Edit,
+    FileText,
+    AlertCircle,
+    ListOrdered,
+    Target,
+    Tag,
+    Paperclip,
+    Download,
+    Trash2,
+    Link2,
+    Check,
+    Bug,
+} from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
-import { priorityVariant, severityVariant, automationVariant } from '@/lib/badge-variants';
+import {
+    priorityVariant,
+    severityVariant,
+    automationVariant,
+} from '@/lib/badge-variants';
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 
@@ -24,8 +53,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Test Suites', href: `/projects/${props.project.id}/test-suites` },
-    { title: props.testSuite.name, href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}` },
-    { title: props.testCase.title, href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}/test-cases/${props.testCase.id}` },
+    {
+        title: props.testSuite.name,
+        href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}`,
+    },
+    {
+        title: props.testCase.title,
+        href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}/test-cases/${props.testCase.id}`,
+    },
 ];
 
 const copied = ref(false);
@@ -45,7 +80,9 @@ const copyLink = () => {
     const url = window.location.origin + route;
     writeToClipboard(url).then(() => {
         copied.value = true;
-        setTimeout(() => { copied.value = false; }, 2000);
+        setTimeout(() => {
+            copied.value = false;
+        }, 2000);
     });
 };
 
@@ -60,13 +97,22 @@ const formatFileSize = (bytes: number): string => {
 };
 
 const formatDate = (date: string): string => {
-    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 };
 
 const formatStepsToText = (): string => {
     if (!props.testCase.steps?.length) return '';
     return props.testCase.steps
-        .map((step, i) => `${i + 1}. ${step.action}${step.expected ? ` (Expected: ${step.expected})` : ''}`)
+        .map(
+            (step, i) =>
+                `${i + 1}. ${step.action}${step.expected ? ` (Expected: ${step.expected})` : ''}`,
+        )
         .join('\n');
 };
 
@@ -83,15 +129,21 @@ const hasContent = computed(() => {
 const navigateToCreateBugreport = () => {
     const params = new URLSearchParams();
     if (props.testCase.title) params.set('title', props.testCase.title);
-    if (props.testCase.description) params.set('description', props.testCase.description);
+    if (props.testCase.description)
+        params.set('description', props.testCase.description);
     const stepsText = formatStepsToText();
     if (stepsText) params.set('steps_to_reproduce', stepsText);
-    if (props.testCase.expected_result) params.set('expected_result', props.testCase.expected_result);
-    if (props.testCase.priority) params.set('priority', props.testCase.priority);
-    if (props.testCase.severity) params.set('severity', props.testCase.severity);
+    if (props.testCase.expected_result)
+        params.set('expected_result', props.testCase.expected_result);
+    if (props.testCase.priority)
+        params.set('priority', props.testCase.priority);
+    if (props.testCase.severity)
+        params.set('severity', props.testCase.severity);
     params.set('test_case_id', String(props.testCase.id));
 
-    router.visit(`/projects/${props.project.id}/bugreports/create?${params.toString()}`);
+    router.visit(
+        `/projects/${props.project.id}/bugreports/create?${params.toString()}`,
+    );
 };
 </script>
 
@@ -102,24 +154,44 @@ const navigateToCreateBugreport = () => {
         <div class="flex h-full flex-1 flex-col gap-[15px] p-6">
             <div class="flex items-start justify-between">
                 <div>
-                    <div class="flex items-center gap-3 flex-wrap">
+                    <div class="flex flex-wrap items-center gap-3">
                         <h1 class="text-2xl font-bold tracking-tight">
-                            <FileText class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
-                                @click="copyLink"
-                                class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
-                                :title="copied ? 'Copied!' : 'Copy link'"
-                            ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
+                            <FileText
+                                class="mr-2 inline-block h-6 w-6 align-text-top text-primary"
+                            />{{ titleStart
+                            }}<span class="whitespace-nowrap"
+                                >{{ titleEnd
+                                }}<button
+                                    @click="copyLink"
+                                    class="ml-1.5 inline-flex cursor-pointer rounded-md p-1 align-middle text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+                                    :title="copied ? 'Copied!' : 'Copy link'"
+                                >
+                                    <Check
+                                        v-if="copied"
+                                        class="h-4 w-4 text-green-500"
+                                    /><Link2 v-else class="h-4 w-4" /></button
+                            ></span>
                         </h1>
-                        <FeatureBadges v-if="testCase.project_features?.length" :features="testCase.project_features" :max-visible="3" />
+                        <FeatureBadges
+                            v-if="testCase.project_features?.length"
+                            :features="testCase.project_features"
+                            :max-visible="3"
+                        />
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <Button variant="outline" class="gap-2 cursor-pointer" @click="navigateToCreateBugreport">
+                    <Button
+                        variant="outline"
+                        class="cursor-pointer gap-2"
+                        @click="navigateToCreateBugreport"
+                    >
                         <Bug class="h-4 w-4" />
                         Create Bug Report
                     </Button>
                     <RestrictedAction>
-                        <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/edit`">
+                        <Link
+                            :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/edit`"
+                        >
                             <Button variant="outline" class="gap-2">
                                 <Edit class="h-4 w-4" />
                                 Edit
@@ -127,7 +199,11 @@ const navigateToCreateBugreport = () => {
                         </Link>
                     </RestrictedAction>
                     <RestrictedAction>
-                        <Button variant="destructive" class="gap-2" @click="showDeleteConfirm = true">
+                        <Button
+                            variant="destructive"
+                            class="gap-2"
+                            @click="showDeleteConfirm = true"
+                        >
                             <Trash2 class="h-4 w-4" />
                             Delete
                         </Button>
@@ -136,47 +212,71 @@ const navigateToCreateBugreport = () => {
             </div>
 
             <div class="grid gap-[15px] lg:grid-cols-3">
-                <div class="lg:col-span-2 space-y-[15px]">
+                <div class="space-y-[15px] lg:col-span-2">
                     <!-- Description -->
                     <Card v-if="testCase.description">
                         <CardHeader>
                             <CardTitle class="text-base">Description</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p class="text-sm text-muted-foreground whitespace-pre-wrap">{{ testCase.description }}</p>
+                            <p
+                                class="text-sm whitespace-pre-wrap text-muted-foreground"
+                            >
+                                {{ testCase.description }}
+                            </p>
                         </CardContent>
                     </Card>
 
                     <!-- Preconditions -->
                     <Card v-if="testCase.preconditions">
                         <CardHeader>
-                            <CardTitle class="flex items-center gap-2 text-base">
+                            <CardTitle
+                                class="flex items-center gap-2 text-base"
+                            >
                                 <AlertCircle class="h-4 w-4 text-yellow-500" />
                                 Preconditions
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p class="text-sm text-muted-foreground whitespace-pre-wrap">{{ testCase.preconditions }}</p>
+                            <p
+                                class="text-sm whitespace-pre-wrap text-muted-foreground"
+                            >
+                                {{ testCase.preconditions }}
+                            </p>
                         </CardContent>
                     </Card>
 
                     <!-- Test Steps -->
                     <Card v-if="testCase.steps?.length">
                         <CardHeader>
-                            <CardTitle class="flex items-center gap-2 text-base">
+                            <CardTitle
+                                class="flex items-center gap-2 text-base"
+                            >
                                 <ListOrdered class="h-4 w-4 text-primary" />
                                 Test Steps
                             </CardTitle>
                         </CardHeader>
                         <CardContent class="space-y-3">
-                            <div v-for="(step, index) in testCase.steps" :key="index" class="flex gap-3 rounded-lg border p-3">
-                                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                            <div
+                                v-for="(step, index) in testCase.steps"
+                                :key="index"
+                                class="flex gap-3 rounded-lg border p-3"
+                            >
+                                <div
+                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground"
+                                >
                                     {{ index + 1 }}
                                 </div>
                                 <div class="flex-1 space-y-2">
                                     <p class="text-sm">{{ step.action }}</p>
-                                    <p v-if="step.expected" class="text-sm text-muted-foreground">
-                                        <span class="font-medium text-green-500">Expected:</span> {{ step.expected }}
+                                    <p
+                                        v-if="step.expected"
+                                        class="text-sm text-muted-foreground"
+                                    >
+                                        <span class="font-medium text-green-500"
+                                            >Expected:</span
+                                        >
+                                        {{ step.expected }}
                                     </p>
                                 </div>
                             </div>
@@ -186,25 +286,48 @@ const navigateToCreateBugreport = () => {
                     <!-- Expected Result -->
                     <Card v-if="testCase.expected_result">
                         <CardHeader>
-                            <CardTitle class="flex items-center gap-2 text-base">
+                            <CardTitle
+                                class="flex items-center gap-2 text-base"
+                            >
                                 <Target class="h-4 w-4 text-green-500" />
                                 Expected Result
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p class="text-sm text-muted-foreground whitespace-pre-wrap">{{ testCase.expected_result }}</p>
+                            <p
+                                class="text-sm whitespace-pre-wrap text-muted-foreground"
+                            >
+                                {{ testCase.expected_result }}
+                            </p>
                         </CardContent>
                     </Card>
 
                     <!-- Empty state -->
                     <Card v-if="!hasContent">
-                        <CardContent class="flex flex-col items-center justify-center py-12 text-center">
-                            <FileText class="h-10 w-10 text-muted-foreground/40" />
-                            <p class="mt-3 text-sm font-medium text-muted-foreground">No content added yet</p>
-                            <p class="mt-1 text-xs text-muted-foreground/70">Add a description, preconditions, test steps, or expected result to this test case.</p>
+                        <CardContent
+                            class="flex flex-col items-center justify-center py-12 text-center"
+                        >
+                            <FileText
+                                class="h-10 w-10 text-muted-foreground/40"
+                            />
+                            <p
+                                class="mt-3 text-sm font-medium text-muted-foreground"
+                            >
+                                No content added yet
+                            </p>
+                            <p class="mt-1 text-xs text-muted-foreground/70">
+                                Add a description, preconditions, test steps, or
+                                expected result to this test case.
+                            </p>
                             <RestrictedAction>
-                                <Link :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/edit`">
-                                    <Button variant="outline" size="sm" class="mt-4 gap-2">
+                                <Link
+                                    :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/edit`"
+                                >
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        class="mt-4 gap-2"
+                                    >
                                         <Edit class="h-3.5 w-3.5" />
                                         Edit Test Case
                                     </Button>
@@ -216,30 +339,56 @@ const navigateToCreateBugreport = () => {
                     <!-- Attachments -->
                     <Card v-if="testCase.attachments?.length">
                         <CardHeader>
-                            <CardTitle class="flex items-center gap-2 text-base">
+                            <CardTitle
+                                class="flex items-center gap-2 text-base"
+                            >
                                 <Paperclip class="h-4 w-4" />
                                 Attachments
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <!-- Image previews -->
-                            <div v-if="testCase.attachments.some(a => isImage(a.mime_type))" class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            <div
+                                v-if="
+                                    testCase.attachments.some((a) =>
+                                        isImage(a.mime_type),
+                                    )
+                                "
+                                class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3"
+                            >
                                 <div
-                                    v-for="attachment in testCase.attachments.filter(a => isImage(a.mime_type))"
+                                    v-for="attachment in testCase.attachments.filter(
+                                        (a) => isImage(a.mime_type),
+                                    )"
                                     :key="attachment.id"
                                     class="group relative overflow-hidden rounded-lg border"
                                 >
-                                    <a :href="attachment.url" target="_blank" class="block">
-                                        <img :src="attachment.url" :alt="attachment.original_filename" class="aspect-video w-full object-cover transition-transform group-hover:scale-105" />
+                                    <a
+                                        :href="attachment.url"
+                                        target="_blank"
+                                        class="block"
+                                    >
+                                        <img
+                                            :src="attachment.url"
+                                            :alt="attachment.original_filename"
+                                            class="aspect-video w-full object-cover transition-transform group-hover:scale-105"
+                                        />
                                     </a>
-                                    <div class="flex items-center justify-between p-2">
-                                        <span class="truncate text-xs text-muted-foreground">{{ attachment.original_filename }}</span>
+                                    <div
+                                        class="flex items-center justify-between p-2"
+                                    >
+                                        <span
+                                            class="truncate text-xs text-muted-foreground"
+                                            >{{
+                                                attachment.original_filename
+                                            }}</span
+                                        >
                                         <RestrictedAction>
                                             <Link
                                                 :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/attachments/${attachment.id}`"
                                                 method="delete"
                                                 as="button"
-                                                class="p-1 text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                                                class="shrink-0 cursor-pointer p-1 text-muted-foreground hover:text-destructive"
                                             >
                                                 <Trash2 class="h-3.5 w-3.5" />
                                             </Link>
@@ -249,15 +398,43 @@ const navigateToCreateBugreport = () => {
                             </div>
                             <!-- File list -->
                             <div class="space-y-2">
-                                <div v-for="attachment in testCase.attachments.filter(a => !isImage(a.mime_type))" :key="attachment.id" class="flex items-center justify-between rounded-lg border p-2">
-                                    <div class="flex items-center gap-2 min-w-0">
-                                        <Paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
-                                        <span class="truncate text-sm">{{ attachment.original_filename }}</span>
-                                        <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(attachment.size) }}</span>
+                                <div
+                                    v-for="attachment in testCase.attachments.filter(
+                                        (a) => !isImage(a.mime_type),
+                                    )"
+                                    :key="attachment.id"
+                                    class="flex items-center justify-between rounded-lg border p-2"
+                                >
+                                    <div
+                                        class="flex min-w-0 items-center gap-2"
+                                    >
+                                        <Paperclip
+                                            class="h-4 w-4 shrink-0 text-muted-foreground"
+                                        />
+                                        <span class="truncate text-sm">{{
+                                            attachment.original_filename
+                                        }}</span>
+                                        <span
+                                            class="shrink-0 text-xs text-muted-foreground"
+                                            >{{
+                                                formatFileSize(attachment.size)
+                                            }}</span
+                                        >
                                     </div>
-                                    <div class="flex items-center gap-1 shrink-0">
-                                        <a :href="attachment.url" target="_blank" download>
-                                            <Button type="button" variant="ghost" size="icon-sm" class="p-0">
+                                    <div
+                                        class="flex shrink-0 items-center gap-1"
+                                    >
+                                        <a
+                                            :href="attachment.url"
+                                            target="_blank"
+                                            download
+                                        >
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                class="p-0"
+                                            >
                                                 <Download class="h-4 w-4" />
                                             </Button>
                                         </a>
@@ -266,7 +443,7 @@ const navigateToCreateBugreport = () => {
                                                 :href="`/projects/${project.id}/test-suites/${testSuite.id}/test-cases/${testCase.id}/attachments/${attachment.id}`"
                                                 method="delete"
                                                 as="button"
-                                                class="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
+                                                class="cursor-pointer p-1 text-muted-foreground hover:text-destructive"
                                             >
                                                 <Trash2 class="h-4 w-4" />
                                             </Link>
@@ -287,42 +464,88 @@ const navigateToCreateBugreport = () => {
                         </CardHeader>
                         <CardContent class="space-y-3">
                             <div>
-                                <p class="text-xs text-muted-foreground">Priority</p>
-                                <Badge :variant="priorityVariant(testCase.priority)" class="mt-1">
+                                <p class="text-xs text-muted-foreground">
+                                    Priority
+                                </p>
+                                <Badge
+                                    :variant="
+                                        priorityVariant(testCase.priority)
+                                    "
+                                    class="mt-1"
+                                >
                                     {{ testCase.priority }}
                                 </Badge>
                             </div>
                             <div>
-                                <p class="text-xs text-muted-foreground">Severity</p>
-                                <Badge :variant="severityVariant(testCase.severity)" class="mt-1">
+                                <p class="text-xs text-muted-foreground">
+                                    Severity
+                                </p>
+                                <Badge
+                                    :variant="
+                                        severityVariant(testCase.severity)
+                                    "
+                                    class="mt-1"
+                                >
                                     {{ testCase.severity }}
                                 </Badge>
                             </div>
                             <div>
-                                <p class="text-xs text-muted-foreground">Type</p>
-                                <p class="text-sm font-medium">{{ testCase.type }}</p>
+                                <p class="text-xs text-muted-foreground">
+                                    Type
+                                </p>
+                                <p class="text-sm font-medium">
+                                    {{ testCase.type }}
+                                </p>
                             </div>
                             <div v-if="testCase.module?.length">
-                                <p class="text-xs text-muted-foreground">Module</p>
-                                <div class="flex flex-wrap gap-1 mt-1">
-                                    <Badge v-for="mod in testCase.module" :key="mod" variant="outline">
+                                <p class="text-xs text-muted-foreground">
+                                    Module
+                                </p>
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    <Badge
+                                        v-for="mod in testCase.module"
+                                        :key="mod"
+                                        variant="outline"
+                                    >
                                         {{ mod }}
                                     </Badge>
                                 </div>
                             </div>
                             <div>
-                                <p class="text-xs text-muted-foreground">Automation</p>
-                                <Badge :variant="automationVariant(testCase.automation_status)" class="mt-1">
-                                    {{ testCase.automation_status.replace(/_/g, ' ') }}
+                                <p class="text-xs text-muted-foreground">
+                                    Automation
+                                </p>
+                                <Badge
+                                    :variant="
+                                        automationVariant(
+                                            testCase.automation_status,
+                                        )
+                                    "
+                                    class="mt-1"
+                                >
+                                    {{
+                                        testCase.automation_status.replace(
+                                            /_/g,
+                                            ' ',
+                                        )
+                                    }}
                                 </Badge>
                             </div>
                             <div>
-                                <p class="text-xs text-muted-foreground">Created</p>
-                                <p class="text-sm font-medium">{{ formatDate(testCase.created_at) }}</p>
+                                <p class="text-xs text-muted-foreground">
+                                    Created
+                                </p>
+                                <p class="text-sm font-medium">
+                                    {{ formatDate(testCase.created_at) }}
+                                </p>
                             </div>
                             <div>
-                                <p class="text-xs text-muted-foreground">Updated</p>
-                                <p class="text-sm font-medium">{{ formatDate(testCase.updated_at) }}</p>
+                                <p class="text-xs text-muted-foreground">
+                                    Updated
+                                </p>
+                                <p class="text-sm font-medium">
+                                    {{ formatDate(testCase.updated_at) }}
+                                </p>
                             </div>
                         </CardContent>
                     </Card>
@@ -330,14 +553,20 @@ const navigateToCreateBugreport = () => {
                     <!-- Tags -->
                     <Card v-if="testCase.tags?.length">
                         <CardHeader>
-                            <CardTitle class="flex items-center gap-2 text-base">
+                            <CardTitle
+                                class="flex items-center gap-2 text-base"
+                            >
                                 <Tag class="h-4 w-4" />
                                 Tags
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div class="flex flex-wrap gap-2">
-                                <Badge v-for="tag in testCase.tags" :key="tag" variant="secondary">
+                                <Badge
+                                    v-for="tag in testCase.tags"
+                                    :key="tag"
+                                    variant="secondary"
+                                >
                                     {{ tag }}
                                 </Badge>
                             </div>
@@ -350,7 +579,11 @@ const navigateToCreateBugreport = () => {
                             <CardTitle class="text-base">Notes</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p class="text-sm text-muted-foreground whitespace-pre-wrap">{{ testCase.note.content }}</p>
+                            <p
+                                class="text-sm whitespace-pre-wrap text-muted-foreground"
+                            >
+                                {{ testCase.note.content }}
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
@@ -363,11 +596,16 @@ const navigateToCreateBugreport = () => {
                 <DialogHeader>
                     <DialogTitle>Delete Test Case?</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete this test case? This action cannot be undone.
+                        Are you sure you want to delete this test case? This
+                        action cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="flex gap-4 sm:justify-end">
-                    <Button variant="secondary" @click="showDeleteConfirm = false" class="flex-1 sm:flex-none">
+                    <Button
+                        variant="secondary"
+                        @click="showDeleteConfirm = false"
+                        class="flex-1 sm:flex-none"
+                    >
                         No
                     </Button>
                     <Link
@@ -375,7 +613,10 @@ const navigateToCreateBugreport = () => {
                         method="delete"
                         as="button"
                     >
-                        <Button variant="destructive" class="flex-1 sm:flex-none">
+                        <Button
+                            variant="destructive"
+                            class="flex-1 sm:flex-none"
+                        >
                             Yes
                         </Button>
                     </Link>

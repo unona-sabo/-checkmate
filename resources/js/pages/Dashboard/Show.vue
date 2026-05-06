@@ -84,11 +84,14 @@ const filteredFeatures = computed(() => {
     if (searchQuery.value.trim()) {
         const query = searchQuery.value.toLowerCase();
         result = result.filter(
-            (f) => f.title.toLowerCase().includes(query) || (f.description && f.description.toLowerCase().includes(query)),
+            (f) =>
+                f.title.toLowerCase().includes(query) ||
+                (f.description && f.description.toLowerCase().includes(query)),
         );
     }
     result.sort((a, b) => {
-        const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        const diff =
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         return sortDirection.value === 'asc' ? diff : -diff;
     });
     return result;
@@ -114,16 +117,20 @@ function cancelEditing(): void {
 
 function saveFeature(feature: SectionFeature): void {
     saving.value = true;
-    router.put(`/home/${props.section.key}/features/${feature.id}`, {
-        title: editTitle.value,
-        description: editDescription.value || null,
-    }, {
-        preserveScroll: true,
-        onFinish: () => {
-            saving.value = false;
-            editingId.value = null;
+    router.put(
+        `/home/${props.section.key}/features/${feature.id}`,
+        {
+            title: editTitle.value,
+            description: editDescription.value || null,
         },
-    });
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                saving.value = false;
+                editingId.value = null;
+            },
+        },
+    );
 }
 
 // Creating new feature
@@ -134,18 +141,22 @@ const creating = ref(false);
 
 function createFeature(): void {
     creating.value = true;
-    router.post(`/home/${props.section.key}/features`, {
-        title: newTitle.value,
-        description: newDescription.value || null,
-    }, {
-        preserveScroll: true,
-        onFinish: () => {
-            creating.value = false;
-            showNewForm.value = false;
-            newTitle.value = '';
-            newDescription.value = '';
+    router.post(
+        `/home/${props.section.key}/features`,
+        {
+            title: newTitle.value,
+            description: newDescription.value || null,
         },
-    });
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                creating.value = false;
+                showNewForm.value = false;
+                newTitle.value = '';
+                newDescription.value = '';
+            },
+        },
+    );
 }
 
 // Delete
@@ -159,13 +170,16 @@ function confirmDelete(feature: SectionFeature): void {
 
 function deleteFeature(): void {
     if (!featureToDelete.value) return;
-    router.delete(`/home/${props.section.key}/features/${featureToDelete.value.id}`, {
-        preserveScroll: true,
-        onFinish: () => {
-            showDeleteConfirm.value = false;
-            featureToDelete.value = null;
+    router.delete(
+        `/home/${props.section.key}/features/${featureToDelete.value.id}`,
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                showDeleteConfirm.value = false;
+                featureToDelete.value = null;
+            },
         },
-    });
+    );
 }
 
 function formatDate(dateString: string | null): string {
@@ -197,16 +211,25 @@ function formatDateTime(dateString: string | null): string {
             <!-- Section header -->
             <div class="mb-6 rounded-xl border border-border bg-card p-6">
                 <div class="mb-4 flex items-center gap-3">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                        <component :is="sectionIcons[section.key]" class="h-6 w-6 text-primary" />
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10"
+                    >
+                        <component
+                            :is="sectionIcons[section.key]"
+                            class="h-6 w-6 text-primary"
+                        />
                     </div>
                     <h1 class="text-2xl font-bold">{{ section.title }}</h1>
                 </div>
 
-                <p class="mb-4 text-sm leading-relaxed text-muted-foreground">{{ section.description }}</p>
+                <p class="mb-4 text-sm leading-relaxed text-muted-foreground">
+                    {{ section.description }}
+                </p>
 
                 <!-- Metadata bar -->
-                <div class="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-4 text-xs text-muted-foreground">
+                <div
+                    class="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-4 text-xs text-muted-foreground"
+                >
                     <span class="inline-flex items-center gap-1.5">
                         <User class="h-3.5 w-3.5" />
                         {{ section.author }}
@@ -229,25 +252,31 @@ function formatDateTime(dateString: string | null): string {
             <!-- Toolbar: Search + Add -->
             <div class="mb-4 flex items-center gap-3">
                 <div class="relative flex-1">
-                    <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Search
+                        class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                    />
                     <input
                         v-model="searchQuery"
                         type="text"
                         placeholder="Search features..."
-                        class="h-10 w-full rounded-lg border border-border bg-background pl-10 pr-9 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+                        class="h-10 w-full rounded-lg border border-border bg-background pr-9 pl-10 text-sm transition-colors outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
                     />
                     <button
                         v-if="searchQuery"
                         @click="searchQuery = ''"
-                        class="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                        class="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                     >
                         <X class="h-4 w-4" />
                     </button>
                 </div>
                 <button
                     @click="toggleSort"
-                    class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium transition-colors hover:bg-accent cursor-pointer"
-                    :title="sortDirection === 'asc' ? 'Oldest first' : 'Newest first'"
+                    class="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium transition-colors hover:bg-accent"
+                    :title="
+                        sortDirection === 'asc'
+                            ? 'Oldest first'
+                            : 'Newest first'
+                    "
                 >
                     <ArrowUp v-if="sortDirection === 'asc'" class="h-4 w-4" />
                     <ArrowDown v-else class="h-4 w-4" />
@@ -255,7 +284,7 @@ function formatDateTime(dateString: string | null): string {
                 </button>
                 <button
                     @click="showNewForm = !showNewForm"
-                    class="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer"
+                    class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                     <Plus class="h-4 w-4" />
                     Add Feature
@@ -263,32 +292,39 @@ function formatDateTime(dateString: string | null): string {
             </div>
 
             <!-- New feature form -->
-            <div v-if="showNewForm" class="mb-4 rounded-lg border border-primary/30 bg-card p-4">
+            <div
+                v-if="showNewForm"
+                class="mb-4 rounded-lg border border-primary/30 bg-card p-4"
+            >
                 <h3 class="mb-3 text-sm font-semibold">New Feature</h3>
                 <input
                     v-model="newTitle"
                     type="text"
                     placeholder="Feature title..."
-                    class="mb-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+                    class="mb-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm transition-colors outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
                 />
                 <textarea
                     v-model="newDescription"
                     rows="2"
                     placeholder="Description (optional)..."
-                    class="mb-3 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+                    class="mb-3 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
                 />
                 <div class="flex items-center gap-2">
                     <button
                         @click="createFeature"
                         :disabled="creating || !newTitle.trim()"
-                        class="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer disabled:opacity-50"
+                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                     >
                         Save
                     </button>
                     <button
-                        @click="showNewForm = false; newTitle = ''; newDescription = ''"
+                        @click="
+                            showNewForm = false;
+                            newTitle = '';
+                            newDescription = '';
+                        "
                         :disabled="creating"
-                        class="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent cursor-pointer disabled:opacity-50"
+                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-50"
                     >
                         Cancel
                     </button>
@@ -297,14 +333,25 @@ function formatDateTime(dateString: string | null): string {
 
             <!-- Features list -->
             <div class="space-y-3">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                <h2
+                    class="text-sm font-semibold tracking-wider text-muted-foreground uppercase"
+                >
                     Features ({{ features.length }})
-                    <span v-if="searchQuery && filteredFeatures.length !== features.length" class="font-normal normal-case">
+                    <span
+                        v-if="
+                            searchQuery &&
+                            filteredFeatures.length !== features.length
+                        "
+                        class="font-normal normal-case"
+                    >
                         — {{ filteredFeatures.length }} found
                     </span>
                 </h2>
 
-                <p v-if="filteredFeatures.length === 0" class="py-8 text-center text-sm text-muted-foreground">
+                <p
+                    v-if="filteredFeatures.length === 0"
+                    class="py-8 text-center text-sm text-muted-foreground"
+                >
                     No features match your search.
                 </p>
 
@@ -316,28 +363,33 @@ function formatDateTime(dateString: string | null): string {
                     <!-- View mode -->
                     <template v-if="editingId !== feature.id">
                         <div class="flex items-start justify-between gap-3">
-                            <div class="flex items-start gap-3 min-w-0">
-                                <CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+                            <div class="flex min-w-0 items-start gap-3">
+                                <CheckCircle2
+                                    class="mt-0.5 h-5 w-5 shrink-0 text-emerald-500"
+                                />
                                 <div class="min-w-0">
-                                    <span class="text-sm font-medium" v-html="highlight(feature.title)" />
+                                    <span
+                                        class="text-sm font-medium"
+                                        v-html="highlight(feature.title)"
+                                    />
                                     <p
                                         v-if="feature.description"
-                                        class="mt-1 text-sm text-muted-foreground whitespace-pre-line"
+                                        class="mt-1 text-sm whitespace-pre-line text-muted-foreground"
                                         v-html="highlight(feature.description)"
                                     />
                                 </div>
                             </div>
-                            <div class="shrink-0 flex items-center gap-1">
+                            <div class="flex shrink-0 items-center gap-1">
                                 <button
                                     @click="startEditing(feature)"
-                                    class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground cursor-pointer"
+                                    class="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                                 >
                                     <Pencil class="h-3.5 w-3.5" />
                                     Edit
                                 </button>
                                 <button
                                     @click="confirmDelete(feature)"
-                                    class="inline-flex items-center rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+                                    class="inline-flex cursor-pointer items-center rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                                 >
                                     <Trash2 class="h-3.5 w-3.5" />
                                 </button>
@@ -345,20 +397,30 @@ function formatDateTime(dateString: string | null): string {
                         </div>
 
                         <!-- Meta: dates + author -->
-                        <div class="mt-2 ml-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/70">
+                        <div
+                            class="mt-2 ml-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/70"
+                        >
                             <span class="inline-flex items-center gap-1">
                                 <Calendar class="h-3 w-3" />
-                                Created: {{ formatDateTime(feature.created_at) }}
+                                Created:
+                                {{ formatDateTime(feature.created_at) }}
                             </span>
                             <span class="inline-flex items-center gap-1">
                                 <User class="h-3 w-3" />
                                 {{ feature.creator?.name ?? 'System' }}
                             </span>
-                            <span v-if="feature.updated_by" class="inline-flex items-center gap-1">
+                            <span
+                                v-if="feature.updated_by"
+                                class="inline-flex items-center gap-1"
+                            >
                                 <Clock class="h-3 w-3" />
-                                Updated: {{ formatDateTime(feature.updated_at) }}
+                                Updated:
+                                {{ formatDateTime(feature.updated_at) }}
                             </span>
-                            <span v-if="feature.updater" class="inline-flex items-center gap-1">
+                            <span
+                                v-if="feature.updater"
+                                class="inline-flex items-center gap-1"
+                            >
                                 <Pencil class="h-3 w-3" />
                                 {{ feature.updater.name }}
                             </span>
@@ -378,26 +440,26 @@ function formatDateTime(dateString: string | null): string {
                                 v-model="editTitle"
                                 type="text"
                                 placeholder="Feature title..."
-                                class="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+                                class="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm transition-colors outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
                             />
                             <textarea
                                 v-model="editDescription"
                                 rows="3"
                                 placeholder="Description (optional)..."
-                                class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+                                class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
                             />
                             <div class="flex items-center gap-2">
                                 <button
                                     @click="saveFeature(feature)"
                                     :disabled="saving || !editTitle.trim()"
-                                    class="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer disabled:opacity-50"
+                                    class="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                                 >
                                     Save
                                 </button>
                                 <button
                                     @click="cancelEditing"
                                     :disabled="saving"
-                                    class="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent cursor-pointer disabled:opacity-50"
+                                    class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-50"
                                 >
                                     <X class="h-3.5 w-3.5" />
                                     Cancel
@@ -413,14 +475,24 @@ function formatDateTime(dateString: string | null): string {
                     <DialogHeader>
                         <DialogTitle>Delete Feature?</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete "{{ featureToDelete?.title }}"? This action cannot be undone.
+                            Are you sure you want to delete "{{
+                                featureToDelete?.title
+                            }}"? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter class="flex gap-4 sm:justify-end">
-                        <Button variant="secondary" @click="showDeleteConfirm = false" class="flex-1 sm:flex-none">
+                        <Button
+                            variant="secondary"
+                            @click="showDeleteConfirm = false"
+                            class="flex-1 sm:flex-none"
+                        >
                             No
                         </Button>
-                        <Button variant="destructive" @click="deleteFeature" class="flex-1 sm:flex-none">
+                        <Button
+                            variant="destructive"
+                            @click="deleteFeature"
+                            class="flex-1 sm:flex-none"
+                        >
                             Yes
                         </Button>
                     </DialogFooter>

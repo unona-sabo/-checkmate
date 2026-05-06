@@ -3,13 +3,33 @@ import { Head, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite } from '@/types';
 import { type ProjectFeature } from '@/types/checkmate';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,7 +37,13 @@ import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Edit, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
 
-const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;
+const MODULE_OPTIONS = [
+    'UI',
+    'API',
+    'Backend',
+    'Database',
+    'Integration',
+] as const;
 
 const props = defineProps<{
     project: Project;
@@ -30,17 +56,23 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Test Suites', href: `/projects/${props.project.id}/test-suites` },
-    { title: props.testSuite.name, href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}` },
-    { title: 'Edit', href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}/edit` },
+    {
+        title: props.testSuite.name,
+        href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}`,
+    },
+    {
+        title: 'Edit',
+        href: `/projects/${props.project.id}/test-suites/${props.testSuite.id}/edit`,
+    },
 ];
 
 const form = useForm({
     name: props.testSuite.name,
     description: props.testSuite.description || '',
     type: props.testSuite.type || 'functional',
-    module: props.testSuite.module ?? [] as string[],
+    module: props.testSuite.module ?? ([] as string[]),
     parent_id: props.testSuite.parent_id,
-    feature_ids: (props.testSuite.project_features ?? []).map(f => f.id),
+    feature_ids: (props.testSuite.project_features ?? []).map((f) => f.id),
 });
 useClearErrorsOnInput(form);
 
@@ -51,7 +83,9 @@ const submit = () => {
 };
 
 const deleteSuite = () => {
-    router.delete(`/projects/${props.project.id}/test-suites/${props.testSuite.id}`);
+    router.delete(
+        `/projects/${props.project.id}/test-suites/${props.testSuite.id}`,
+    );
 };
 </script>
 
@@ -79,7 +113,9 @@ const deleteSuite = () => {
                                     id="name"
                                     v-model="form.name"
                                     type="text"
-                                    :class="{ 'border-destructive': form.errors.name }"
+                                    :class="{
+                                        'border-destructive': form.errors.name,
+                                    }"
                                 />
                                 <InputError :message="form.errors.name" />
                             </div>
@@ -91,7 +127,9 @@ const deleteSuite = () => {
                                     v-model="form.description"
                                     rows="3"
                                 />
-                                <InputError :message="form.errors.description" />
+                                <InputError
+                                    :message="form.errors.description"
+                                />
                             </div>
 
                             <div class="space-y-2">
@@ -101,15 +139,33 @@ const deleteSuite = () => {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="functional">Functional</SelectItem>
-                                        <SelectItem value="smoke">Smoke</SelectItem>
-                                        <SelectItem value="regression">Regression</SelectItem>
-                                        <SelectItem value="integration">Integration</SelectItem>
-                                        <SelectItem value="acceptance">Acceptance</SelectItem>
-                                        <SelectItem value="performance">Performance</SelectItem>
-                                        <SelectItem value="security">Security</SelectItem>
-                                        <SelectItem value="usability">Usability</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
+                                        <SelectItem value="functional"
+                                            >Functional</SelectItem
+                                        >
+                                        <SelectItem value="smoke"
+                                            >Smoke</SelectItem
+                                        >
+                                        <SelectItem value="regression"
+                                            >Regression</SelectItem
+                                        >
+                                        <SelectItem value="integration"
+                                            >Integration</SelectItem
+                                        >
+                                        <SelectItem value="acceptance"
+                                            >Acceptance</SelectItem
+                                        >
+                                        <SelectItem value="performance"
+                                            >Performance</SelectItem
+                                        >
+                                        <SelectItem value="security"
+                                            >Security</SelectItem
+                                        >
+                                        <SelectItem value="usability"
+                                            >Usability</SelectItem
+                                        >
+                                        <SelectItem value="other"
+                                            >Other</SelectItem
+                                        >
                                     </SelectContent>
                                 </Select>
                                 <InputError :message="form.errors.type" />
@@ -119,17 +175,46 @@ const deleteSuite = () => {
                             <div class="space-y-2">
                                 <Label>Module</Label>
                                 <div class="flex items-center gap-4">
-                                    <button type="button" class="text-xs text-primary hover:underline cursor-pointer" @click="form.module = [...MODULE_OPTIONS]">Select All</button>
-                                    <button type="button" class="text-xs text-muted-foreground hover:underline cursor-pointer" @click="form.module = []">Clear</button>
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer text-xs text-primary hover:underline"
+                                        @click="
+                                            form.module = [...MODULE_OPTIONS]
+                                        "
+                                    >
+                                        Select All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer text-xs text-muted-foreground hover:underline"
+                                        @click="form.module = []"
+                                    >
+                                        Clear
+                                    </button>
                                 </div>
                                 <div class="flex flex-wrap gap-3">
-                                    <label v-for="opt in MODULE_OPTIONS" :key="opt" class="flex items-center gap-2 cursor-pointer">
+                                    <label
+                                        v-for="opt in MODULE_OPTIONS"
+                                        :key="opt"
+                                        class="flex cursor-pointer items-center gap-2"
+                                    >
                                         <Checkbox
-                                            :model-value="form.module.includes(opt)"
-                                            @update:model-value="(checked: boolean) => {
-                                                if (checked) { form.module.push(opt); }
-                                                else { form.module = form.module.filter(m => m !== opt); }
-                                            }"
+                                            :model-value="
+                                                form.module.includes(opt)
+                                            "
+                                            @update:model-value="
+                                                (checked: boolean) => {
+                                                    if (checked) {
+                                                        form.module.push(opt);
+                                                    } else {
+                                                        form.module =
+                                                            form.module.filter(
+                                                                (m) =>
+                                                                    m !== opt,
+                                                            );
+                                                    }
+                                                }
+                                            "
                                         />
                                         <span class="text-sm">{{ opt }}</span>
                                     </label>
@@ -137,17 +222,29 @@ const deleteSuite = () => {
                                 <InputError :message="form.errors.module" />
                             </div>
 
-                            <FeatureSelector v-model="form.feature_ids" :features="features" :project-id="project.id" />
+                            <FeatureSelector
+                                v-model="form.feature_ids"
+                                :features="features"
+                                :project-id="project.id"
+                            />
 
                             <div v-if="parentSuites.length" class="space-y-2">
                                 <Label for="parent">Parent Suite</Label>
                                 <Select v-model="form.parent_id">
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select parent suite" />
+                                        <SelectValue
+                                            placeholder="Select parent suite"
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem :value="null">None (top-level suite)</SelectItem>
-                                        <SelectItem v-for="suite in parentSuites" :key="suite.id" :value="suite.id">
+                                        <SelectItem :value="null"
+                                            >None (top-level suite)</SelectItem
+                                        >
+                                        <SelectItem
+                                            v-for="suite in parentSuites"
+                                            :key="suite.id"
+                                            :value="suite.id"
+                                        >
                                             {{ suite.name }}
                                         </SelectItem>
                                     </SelectContent>
@@ -156,10 +253,21 @@ const deleteSuite = () => {
                             </div>
 
                             <div class="flex gap-2">
-                                <Button type="submit" :disabled="form.processing">
+                                <Button
+                                    type="submit"
+                                    :disabled="form.processing"
+                                >
                                     Save Changes
                                 </Button>
-                                <Button type="button" variant="outline" @click="$inertia.visit(`/projects/${project.id}/test-suites/${testSuite.id}`)">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="
+                                        $inertia.visit(
+                                            `/projects/${project.id}/test-suites/${testSuite.id}`,
+                                        )
+                                    "
+                                >
                                     Cancel
                                 </Button>
                             </div>
@@ -169,30 +277,47 @@ const deleteSuite = () => {
 
                 <Card class="border-destructive/50">
                     <CardHeader>
-                        <CardTitle class="flex items-center gap-2 text-destructive">
+                        <CardTitle
+                            class="flex items-center gap-2 text-destructive"
+                        >
                             <Trash2 class="h-5 w-5" />
                             Danger Zone
                         </CardTitle>
                         <CardDescription>
-                            Permanently delete this test suite and all its test cases.
+                            Permanently delete this test suite and all its test
+                            cases.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Dialog v-model:open="showDeleteDialog">
                             <DialogTrigger as-child>
-                                <Button variant="destructive">Delete Test Suite</Button>
+                                <Button variant="destructive"
+                                    >Delete Test Suite</Button
+                                >
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Are you absolutely sure?</DialogTitle>
+                                    <DialogTitle
+                                        >Are you absolutely sure?</DialogTitle
+                                    >
                                     <DialogDescription>
-                                        This action cannot be undone. This will permanently delete the test suite
-                                        "{{ testSuite.name }}" and all of its test cases.
+                                        This action cannot be undone. This will
+                                        permanently delete the test suite "{{
+                                            testSuite.name
+                                        }}" and all of its test cases.
                                     </DialogDescription>
                                 </DialogHeader>
                                 <DialogFooter>
-                                    <Button variant="outline" @click="showDeleteDialog = false">Cancel</Button>
-                                    <Button variant="destructive" @click="deleteSuite">Delete Test Suite</Button>
+                                    <Button
+                                        variant="outline"
+                                        @click="showDeleteDialog = false"
+                                        >Cancel</Button
+                                    >
+                                    <Button
+                                        variant="destructive"
+                                        @click="deleteSuite"
+                                        >Delete Test Suite</Button
+                                    >
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>

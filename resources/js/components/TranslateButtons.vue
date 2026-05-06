@@ -27,11 +27,14 @@ const translate = async (targetLanguage: 'en' | 'uk') => {
 
     try {
         const provider = localStorage.getItem('ai_provider');
-        const response = await axios.post(`/projects/${props.projectId}/translate`, {
-            text: props.text,
-            target_language: targetLanguage,
-            ...(provider ? { provider } : {}),
-        });
+        const response = await axios.post(
+            `/projects/${props.projectId}/translate`,
+            {
+                text: props.text,
+                target_language: targetLanguage,
+                ...(provider ? { provider } : {}),
+            },
+        );
 
         if (response.data.translated_text) {
             emit('translated', response.data.translated_text);
@@ -58,7 +61,7 @@ const restore = () => {
             type="button"
             variant="ghost"
             size="sm"
-            class="h-6 px-1.5 text-xs cursor-pointer"
+            class="h-6 cursor-pointer px-1.5 text-xs"
             :disabled="translating !== null"
             @click="restore"
         >
@@ -68,7 +71,7 @@ const restore = () => {
             type="button"
             variant="ghost"
             size="sm"
-            class="h-6 px-1.5 text-xs cursor-pointer"
+            class="h-6 cursor-pointer px-1.5 text-xs"
             :disabled="!text.trim() || translating !== null"
             @click="translate('en')"
         >
@@ -79,7 +82,7 @@ const restore = () => {
             type="button"
             variant="ghost"
             size="sm"
-            class="h-6 px-1.5 text-xs cursor-pointer"
+            class="h-6 cursor-pointer px-1.5 text-xs"
             :disabled="!text.trim() || translating !== null"
             @click="translate('uk')"
         >

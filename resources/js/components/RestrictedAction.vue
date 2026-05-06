@@ -20,9 +20,7 @@ const { canEdit } = useCanEdit();
                     </span>
                 </span>
             </TooltipTrigger>
-            <TooltipContent>
-                You don't have permission to edit
-            </TooltipContent>
+            <TooltipContent> You don't have permission to edit </TooltipContent>
         </Tooltip>
     </TooltipProvider>
     <slot v-else />

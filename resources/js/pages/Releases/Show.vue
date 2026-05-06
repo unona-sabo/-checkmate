@@ -3,7 +3,15 @@ import { ref, computed, watch } from 'vue';
 import { Head, router, Deferred, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
-import type { Release, ReleaseFeature, ReleaseChecklistItem, ReleaseMetricsSnapshot, ProjectFeature, TestRun, ReleaseLiveMetrics } from '@/types/checkmate';
+import type {
+    Release,
+    ReleaseFeature,
+    ReleaseChecklistItem,
+    ReleaseMetricsSnapshot,
+    ProjectFeature,
+    TestRun,
+    ReleaseLiveMetrics,
+} from '@/types/checkmate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +62,10 @@ import {
     Search,
 } from 'lucide-vue-next';
 import RestrictedAction from '@/components/RestrictedAction.vue';
-import { releaseStatusVariant, releaseDecisionVariant } from '@/lib/badge-variants';
+import {
+    releaseStatusVariant,
+    releaseDecisionVariant,
+} from '@/lib/badge-variants';
 
 interface WorkspaceMember {
     id: number;
@@ -68,7 +79,12 @@ const props = defineProps<{
     blockers: number;
     liveMetrics: ReleaseLiveMetrics;
     projectFeatures?: { id: number; name: string; module: string[] | null }[];
-    projectTestRuns?: { id: number; name: string; status: string; environment: string | null }[];
+    projectTestRuns?: {
+        id: number;
+        name: string;
+        status: string;
+        environment: string | null;
+    }[];
     workspaceMembers?: WorkspaceMember[];
 }>();
 
@@ -76,7 +92,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Releases', href: `/projects/${props.project.id}/releases` },
-    { title: `v${props.release.version}`, href: `/projects/${props.project.id}/releases/${props.release.id}` },
+    {
+        title: `v${props.release.version}`,
+        href: `/projects/${props.project.id}/releases/${props.release.id}`,
+    },
 ];
 
 // Tabs
@@ -100,49 +119,71 @@ const editForm = ref({
     status: props.release.status,
 });
 
-watch(() => props.release, (r) => {
-    editForm.value = {
-        version: r.version,
-        name: r.name,
-        description: r.description || '',
-        planned_date: r.planned_date?.split('T')[0] || '',
-        actual_date: r.actual_date?.split('T')[0] || '',
-        status: r.status,
-    };
-});
+watch(
+    () => props.release,
+    (r) => {
+        editForm.value = {
+            version: r.version,
+            name: r.name,
+            description: r.description || '',
+            planned_date: r.planned_date?.split('T')[0] || '',
+            actual_date: r.actual_date?.split('T')[0] || '',
+            status: r.status,
+        };
+    },
+);
 
 const updateRelease = () => {
-    router.put(`/projects/${props.project.id}/releases/${props.release.id}`, {
-        ...editForm.value,
-        description: editForm.value.description || null,
-        planned_date: editForm.value.planned_date || null,
-        actual_date: editForm.value.actual_date || null,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => { showEditDialog.value = false; },
-    });
+    router.put(
+        `/projects/${props.project.id}/releases/${props.release.id}`,
+        {
+            ...editForm.value,
+            description: editForm.value.description || null,
+            planned_date: editForm.value.planned_date || null,
+            actual_date: editForm.value.actual_date || null,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showEditDialog.value = false;
+            },
+        },
+    );
 };
 
 // Refresh metrics
 const refreshing = ref(false);
 const refreshMetrics = () => {
     refreshing.value = true;
-    router.post(`/projects/${props.project.id}/releases/${props.release.id}/refresh-metrics`, {}, {
-        preserveScroll: true,
-        onFinish: () => { refreshing.value = false; },
-    });
+    router.post(
+        `/projects/${props.project.id}/releases/${props.release.id}/refresh-metrics`,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                refreshing.value = false;
+            },
+        },
+    );
 };
 
 // Stats
 const features = computed(() => props.release.features || []);
 const checklistItems = computed(() => props.release.checklist_items || []);
-const latestMetrics = computed(() => props.release.latest_metrics || props.release.metrics_snapshots?.[0] || null);
+const latestMetrics = computed(
+    () =>
+        props.release.latest_metrics ||
+        props.release.metrics_snapshots?.[0] ||
+        null,
+);
 const linkedTestRuns = computed(() => props.release.test_runs || []);
 
 const checklistProgress = computed(() => {
     const total = checklistItems.value.length;
     if (total === 0) return 0;
-    const completed = checklistItems.value.filter((i) => i.status === 'completed').length;
+    const completed = checklistItems.value.filter(
+        (i) => i.status === 'completed',
+    ).length;
     return Math.round((completed / total) * 100);
 });
 
@@ -151,20 +192,37 @@ const showAddFeatureDialog = ref(false);
 const featureForm = ref({ feature_id: '', feature_name: '', description: '' });
 const showEditFeatureDialog = ref(false);
 const editingFeature = ref<ReleaseFeature | null>(null);
-const editFeatureForm = ref({ feature_name: '', description: '', status: 'planned', tests_planned: 0, tests_executed: 0, tests_passed: 0 });
+const editFeatureForm = ref({
+    feature_name: '',
+    description: '',
+    status: 'planned',
+    tests_planned: 0,
+    tests_executed: 0,
+    tests_passed: 0,
+});
 
 const addFeature = () => {
-    router.post(`/projects/${props.project.id}/releases/${props.release.id}/features`, {
-        feature_id: featureForm.value.feature_id ? Number(featureForm.value.feature_id) : null,
-        feature_name: featureForm.value.feature_name,
-        description: featureForm.value.description || null,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            showAddFeatureDialog.value = false;
-            featureForm.value = { feature_id: '', feature_name: '', description: '' };
+    router.post(
+        `/projects/${props.project.id}/releases/${props.release.id}/features`,
+        {
+            feature_id: featureForm.value.feature_id
+                ? Number(featureForm.value.feature_id)
+                : null,
+            feature_name: featureForm.value.feature_name,
+            description: featureForm.value.description || null,
         },
-    });
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showAddFeatureDialog.value = false;
+                featureForm.value = {
+                    feature_id: '',
+                    feature_name: '',
+                    description: '',
+                };
+            },
+        },
+    );
 };
 
 const startEditFeature = (f: ReleaseFeature) => {
@@ -182,22 +240,29 @@ const startEditFeature = (f: ReleaseFeature) => {
 
 const updateFeature = () => {
     if (!editingFeature.value) return;
-    router.put(`/projects/${props.project.id}/releases/${props.release.id}/features/${editingFeature.value.id}`, {
-        ...editFeatureForm.value,
-        description: editFeatureForm.value.description || null,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            showEditFeatureDialog.value = false;
-            editingFeature.value = null;
+    router.put(
+        `/projects/${props.project.id}/releases/${props.release.id}/features/${editingFeature.value.id}`,
+        {
+            ...editFeatureForm.value,
+            description: editFeatureForm.value.description || null,
         },
-    });
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showEditFeatureDialog.value = false;
+                editingFeature.value = null;
+            },
+        },
+    );
 };
 
 const deleteFeature = (featureId: number) => {
-    router.delete(`/projects/${props.project.id}/releases/${props.release.id}/features/${featureId}`, {
-        preserveScroll: true,
-    });
+    router.delete(
+        `/projects/${props.project.id}/releases/${props.release.id}/features/${featureId}`,
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 const onProjectFeatureSelect = (val: string) => {
@@ -227,10 +292,17 @@ const categorizedChecklist = computed(() => {
     return groups;
 });
 
-const updateChecklistItem = (item: ReleaseChecklistItem, data: Partial<ReleaseChecklistItem>) => {
-    router.put(`/projects/${props.project.id}/releases/${props.release.id}/checklist-items/${item.id}`, data, {
-        preserveScroll: true,
-    });
+const updateChecklistItem = (
+    item: ReleaseChecklistItem,
+    data: Partial<ReleaseChecklistItem>,
+) => {
+    router.put(
+        `/projects/${props.project.id}/releases/${props.release.id}/checklist-items/${item.id}`,
+        data,
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 const cycleStatus = (item: ReleaseChecklistItem) => {
@@ -242,25 +314,48 @@ const cycleStatus = (item: ReleaseChecklistItem) => {
 
 // Add checklist item
 const showAddChecklistDialog = ref(false);
-const checklistForm = ref({ title: '', category: 'testing', description: '', priority: 'medium', is_blocker: false });
+const checklistForm = ref({
+    title: '',
+    category: 'testing',
+    description: '',
+    priority: 'medium',
+    is_blocker: false,
+});
 
 const addChecklistItem = () => {
-    router.post(`/projects/${props.project.id}/releases/${props.release.id}/checklist-items`, {
-        ...checklistForm.value,
-        description: checklistForm.value.description || null,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            showAddChecklistDialog.value = false;
-            checklistForm.value = { title: '', category: 'testing', description: '', priority: 'medium', is_blocker: false };
+    router.post(
+        `/projects/${props.project.id}/releases/${props.release.id}/checklist-items`,
+        {
+            ...checklistForm.value,
+            description: checklistForm.value.description || null,
         },
-    });
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showAddChecklistDialog.value = false;
+                checklistForm.value = {
+                    title: '',
+                    category: 'testing',
+                    description: '',
+                    priority: 'medium',
+                    is_blocker: false,
+                };
+            },
+        },
+    );
 };
 
 // Edit checklist item
 const showEditChecklistDialog = ref(false);
 const editingChecklistItem = ref<ReleaseChecklistItem | null>(null);
-const editChecklistForm = ref({ title: '', category: '', description: '', priority: 'medium', is_blocker: false, notes: '' });
+const editChecklistForm = ref({
+    title: '',
+    category: '',
+    description: '',
+    priority: 'medium',
+    is_blocker: false,
+    notes: '',
+});
 
 const startEditChecklistItem = (item: ReleaseChecklistItem) => {
     editingChecklistItem.value = item;
@@ -277,17 +372,21 @@ const startEditChecklistItem = (item: ReleaseChecklistItem) => {
 
 const saveChecklistItem = () => {
     if (!editingChecklistItem.value) return;
-    router.put(`/projects/${props.project.id}/releases/${props.release.id}/checklist-items/${editingChecklistItem.value.id}`, {
-        ...editChecklistForm.value,
-        description: editChecklistForm.value.description || null,
-        notes: editChecklistForm.value.notes || null,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            showEditChecklistDialog.value = false;
-            editingChecklistItem.value = null;
+    router.put(
+        `/projects/${props.project.id}/releases/${props.release.id}/checklist-items/${editingChecklistItem.value.id}`,
+        {
+            ...editChecklistForm.value,
+            description: editChecklistForm.value.description || null,
+            notes: editChecklistForm.value.notes || null,
         },
-    });
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showEditChecklistDialog.value = false;
+                editingChecklistItem.value = null;
+            },
+        },
+    );
 };
 
 // Delete checklist item
@@ -301,26 +400,33 @@ const confirmDeleteChecklistItem = (item: ReleaseChecklistItem) => {
 
 const deleteChecklistItem = () => {
     if (!checklistItemToDelete.value) return;
-    router.delete(`/projects/${props.project.id}/releases/${props.release.id}/checklist-items/${checklistItemToDelete.value.id}`, {
-        preserveScroll: true,
-        onFinish: () => {
-            showDeleteChecklistDialog.value = false;
-            checklistItemToDelete.value = null;
+    router.delete(
+        `/projects/${props.project.id}/releases/${props.release.id}/checklist-items/${checklistItemToDelete.value.id}`,
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                showDeleteChecklistDialog.value = false;
+                checklistItemToDelete.value = null;
+            },
         },
-    });
+    );
 };
 
 // Test run linking
 const showLinkTestRunDialog = ref(false);
 const testRunSearch = ref('');
-watch(showLinkTestRunDialog, (open) => { if (!open) testRunSearch.value = ''; });
+watch(showLinkTestRunDialog, (open) => {
+    if (!open) testRunSearch.value = '';
+});
 
 const filteredProjectTestRuns = computed(() => {
     if (!props.projectTestRuns || !testRunSearch.value) {
         return props.projectTestRuns ?? [];
     }
     const query = testRunSearch.value.toLowerCase();
-    return props.projectTestRuns.filter((tr) => tr.name.toLowerCase().includes(query));
+    return props.projectTestRuns.filter((tr) =>
+        tr.name.toLowerCase().includes(query),
+    );
 });
 
 const isTestRunLinked = (testRunId: number): boolean => {
@@ -329,13 +435,20 @@ const isTestRunLinked = (testRunId: number): boolean => {
 
 const toggleTestRunLink = (testRunId: number) => {
     if (isTestRunLinked(testRunId)) {
-        router.delete(`/projects/${props.project.id}/releases/${props.release.id}/test-runs/${testRunId}`, {
-            preserveScroll: true,
-        });
+        router.delete(
+            `/projects/${props.project.id}/releases/${props.release.id}/test-runs/${testRunId}`,
+            {
+                preserveScroll: true,
+            },
+        );
     } else {
-        router.post(`/projects/${props.project.id}/releases/${props.release.id}/test-runs`, {
-            test_run_id: testRunId,
-        }, { preserveScroll: true });
+        router.post(
+            `/projects/${props.project.id}/releases/${props.release.id}/test-runs`,
+            {
+                test_run_id: testRunId,
+            },
+            { preserveScroll: true },
+        );
     }
 };
 
@@ -348,11 +461,14 @@ const confirmDeleteRelease = () => {
 };
 
 const deleteRelease = () => {
-    router.delete(`/projects/${props.project.id}/releases/${props.release.id}`, {
-        onFinish: () => {
-            showDeleteReleaseDialog.value = false;
+    router.delete(
+        `/projects/${props.project.id}/releases/${props.release.id}`,
+        {
+            onFinish: () => {
+                showDeleteReleaseDialog.value = false;
+            },
         },
-    });
+    );
 };
 
 // Decision
@@ -362,19 +478,42 @@ const decisionForm = ref({
 });
 
 const saveDecision = () => {
-    router.put(`/projects/${props.project.id}/releases/${props.release.id}`, {
-        decision: decisionForm.value.decision,
-        decision_notes: decisionForm.value.decision_notes || null,
-    }, { preserveScroll: true });
+    router.put(
+        `/projects/${props.project.id}/releases/${props.release.id}`,
+        {
+            decision: decisionForm.value.decision,
+            decision_notes: decisionForm.value.decision_notes || null,
+        },
+        { preserveScroll: true },
+    );
 };
 
 const autoRecommendation = computed(() => {
     const m = latestMetrics.value;
-    if (!m) return { decision: 'pending', reason: 'No metrics available. Refresh metrics to get a recommendation.' };
-    if (m.critical_bugs > 0) return { decision: 'no_go', reason: `${m.critical_bugs} critical bug(s) remain open.` };
-    if (m.test_pass_rate < 70) return { decision: 'no_go', reason: `Test pass rate is ${m.test_pass_rate}% (below 70% threshold).` };
-    if (m.test_pass_rate >= 95 && m.critical_bugs === 0) return { decision: 'go', reason: `Pass rate ${m.test_pass_rate}%, no critical bugs.` };
-    return { decision: 'conditional', reason: `Pass rate ${m.test_pass_rate}%. Review remaining items.` };
+    if (!m)
+        return {
+            decision: 'pending',
+            reason: 'No metrics available. Refresh metrics to get a recommendation.',
+        };
+    if (m.critical_bugs > 0)
+        return {
+            decision: 'no_go',
+            reason: `${m.critical_bugs} critical bug(s) remain open.`,
+        };
+    if (m.test_pass_rate < 70)
+        return {
+            decision: 'no_go',
+            reason: `Test pass rate is ${m.test_pass_rate}% (below 70% threshold).`,
+        };
+    if (m.test_pass_rate >= 95 && m.critical_bugs === 0)
+        return {
+            decision: 'go',
+            reason: `Pass rate ${m.test_pass_rate}%, no critical bugs.`,
+        };
+    return {
+        decision: 'conditional',
+        reason: `Pass rate ${m.test_pass_rate}%. Review remaining items.`,
+    };
 });
 
 // Helpers
@@ -408,23 +547,34 @@ const getChecklistStatusColor = (status: string): string => {
 };
 
 const getDecisionLabel = (d: string): string => {
-    const labels: Record<string, string> = { pending: 'Pending', go: 'Go', no_go: 'No-Go', conditional: 'Conditional' };
+    const labels: Record<string, string> = {
+        pending: 'Pending',
+        go: 'Go',
+        no_go: 'No-Go',
+        conditional: 'Conditional',
+    };
     return labels[d] || d;
 };
 
 const formatDate = (d: string | null): string => {
     if (!d) return 'Not set';
-    return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(d).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
 };
 
 // Live metrics helpers
-const securityBadgeVariant = computed((): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    const s = props.liveMetrics.blockers_and_risks.security_status;
-    if (s === 'passed') return 'default';
-    if (s === 'pending') return 'secondary';
-    if (s === 'in_progress') return 'outline';
-    return 'secondary';
-});
+const securityBadgeVariant = computed(
+    (): 'default' | 'secondary' | 'destructive' | 'outline' => {
+        const s = props.liveMetrics.blockers_and_risks.security_status;
+        if (s === 'passed') return 'default';
+        if (s === 'pending') return 'secondary';
+        if (s === 'in_progress') return 'outline';
+        return 'secondary';
+    },
+);
 
 const formatDiff = (val: number): string => {
     if (val > 0) return `+${val}`;
@@ -456,7 +606,10 @@ const trendVariant = computed((): 'default' | 'secondary' | 'destructive' => {
 // Test run progress helpers
 const getTestRunTotal = (tr: TestRun): number => {
     if (!tr.stats) return 0;
-    return Object.values(tr.stats).reduce((sum: number, v) => sum + (Number(v) || 0), 0);
+    return Object.values(tr.stats).reduce(
+        (sum: number, v) => sum + (Number(v) || 0),
+        0,
+    );
 };
 
 const getTestRunPassRate = (tr: TestRun): number => {
@@ -489,29 +642,57 @@ const breakdownLabels: Record<string, string> = {
                 <div>
                     <div class="flex items-center gap-3">
                         <Rocket class="h-6 w-6" />
-                        <Badge variant="outline" class="font-mono text-sm">v{{ release.version }}</Badge>
-                        <h1 class="text-2xl font-bold text-foreground">{{ release.name }}</h1>
+                        <Badge variant="outline" class="font-mono text-sm"
+                            >v{{ release.version }}</Badge
+                        >
+                        <h1 class="text-2xl font-bold text-foreground">
+                            {{ release.name }}
+                        </h1>
                     </div>
                     <div class="mt-2 flex items-center gap-3">
-                        <Badge :variant="releaseStatusVariant(release.status)">{{ release.status }}</Badge>
+                        <Badge
+                            :variant="releaseStatusVariant(release.status)"
+                            >{{ release.status }}</Badge
+                        >
                         <div class="flex items-center gap-1.5">
-                            <div class="h-3 w-3 rounded-full" :class="getHealthColor(release.health)" />
-                            <span class="text-sm font-medium capitalize" :class="getHealthText(release.health)">{{ release.health }}</span>
+                            <div
+                                class="h-3 w-3 rounded-full"
+                                :class="getHealthColor(release.health)"
+                            />
+                            <span
+                                class="text-sm font-medium capitalize"
+                                :class="getHealthText(release.health)"
+                                >{{ release.health }}</span
+                            >
                         </div>
-                        <Badge :variant="releaseDecisionVariant(release.decision)">
+                        <Badge
+                            :variant="releaseDecisionVariant(release.decision)"
+                        >
                             {{ getDecisionLabel(release.decision) }}
                         </Badge>
                     </div>
                 </div>
                 <div class="flex gap-2">
                     <RestrictedAction>
-                        <Button variant="outline" @click="refreshMetrics" :disabled="refreshing" class="cursor-pointer">
-                            <RefreshCw class="mr-1 h-4 w-4" :class="{ 'animate-spin': refreshing }" />
+                        <Button
+                            variant="outline"
+                            @click="refreshMetrics"
+                            :disabled="refreshing"
+                            class="cursor-pointer"
+                        >
+                            <RefreshCw
+                                class="mr-1 h-4 w-4"
+                                :class="{ 'animate-spin': refreshing }"
+                            />
                             Refresh Metrics
                         </Button>
                     </RestrictedAction>
                     <RestrictedAction>
-                        <Button variant="outline" @click="showEditDialog = true" class="cursor-pointer">
+                        <Button
+                            variant="outline"
+                            @click="showEditDialog = true"
+                            class="cursor-pointer"
+                        >
                             <Pencil class="mr-1 h-4 w-4" />
                             Edit
                         </Button>
@@ -527,8 +708,15 @@ const breakdownLabels: Record<string, string> = {
                             <BarChart3 class="h-6 w-6 text-blue-500" />
                         </div>
                         <div>
-                            <p class="text-sm text-muted-foreground">Test Completion</p>
-                            <p class="text-2xl font-bold">{{ latestMetrics?.test_completion_percentage ?? 0 }}%</p>
+                            <p class="text-sm text-muted-foreground">
+                                Test Completion
+                            </p>
+                            <p class="text-2xl font-bold">
+                                {{
+                                    latestMetrics?.test_completion_percentage ??
+                                    0
+                                }}%
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
@@ -538,8 +726,12 @@ const breakdownLabels: Record<string, string> = {
                             <CheckCircle class="h-6 w-6 text-emerald-500" />
                         </div>
                         <div>
-                            <p class="text-sm text-muted-foreground">Pass Rate</p>
-                            <p class="text-2xl font-bold">{{ latestMetrics?.test_pass_rate ?? 0 }}%</p>
+                            <p class="text-sm text-muted-foreground">
+                                Pass Rate
+                            </p>
+                            <p class="text-2xl font-bold">
+                                {{ latestMetrics?.test_pass_rate ?? 0 }}%
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
@@ -549,9 +741,19 @@ const breakdownLabels: Record<string, string> = {
                             <Bug class="h-6 w-6 text-red-500" />
                         </div>
                         <div>
-                            <p class="text-sm text-muted-foreground">Open Bugs</p>
-                            <p class="text-2xl font-bold">{{ latestMetrics?.total_bugs ?? 0 }}</p>
-                            <p v-if="latestMetrics && latestMetrics.critical_bugs > 0" class="text-xs text-red-500">
+                            <p class="text-sm text-muted-foreground">
+                                Open Bugs
+                            </p>
+                            <p class="text-2xl font-bold">
+                                {{ latestMetrics?.total_bugs ?? 0 }}
+                            </p>
+                            <p
+                                v-if="
+                                    latestMetrics &&
+                                    latestMetrics.critical_bugs > 0
+                                "
+                                class="text-xs text-red-500"
+                            >
                                 {{ latestMetrics.critical_bugs }} critical
                             </p>
                         </div>
@@ -563,10 +765,18 @@ const breakdownLabels: Record<string, string> = {
                             <ClipboardCheck class="h-6 w-6 text-amber-500" />
                         </div>
                         <div>
-                            <p class="text-sm text-muted-foreground">Checklist</p>
+                            <p class="text-sm text-muted-foreground">
+                                Checklist
+                            </p>
                             <div class="flex items-center gap-2">
-                                <p class="text-2xl font-bold">{{ checklistProgress }}%</p>
-                                <span v-if="blockers > 0" class="text-xs text-red-500">({{ blockers }} blockers)</span>
+                                <p class="text-2xl font-bold">
+                                    {{ checklistProgress }}%
+                                </p>
+                                <span
+                                    v-if="blockers > 0"
+                                    class="text-xs text-red-500"
+                                    >({{ blockers }} blockers)</span
+                                >
                             </div>
                         </div>
                     </CardContent>
@@ -576,13 +786,20 @@ const breakdownLabels: Record<string, string> = {
             <!-- Tabs -->
             <Card>
                 <div class="border-b">
-                    <nav class="flex gap-0 overflow-x-auto px-4" aria-label="Tabs">
+                    <nav
+                        class="flex gap-0 overflow-x-auto px-4"
+                        aria-label="Tabs"
+                    >
                         <button
                             v-for="tab in tabs"
                             :key="tab.key"
                             @click="activeTab = tab.key"
                             class="flex cursor-pointer items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors"
-                            :class="activeTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'"
+                            :class="
+                                activeTab === tab.key
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'
+                            "
                         >
                             <component :is="tab.icon" class="h-4 w-4" />
                             {{ tab.label }}
@@ -591,110 +808,269 @@ const breakdownLabels: Record<string, string> = {
                 </div>
 
                 <!-- Tab: Overview -->
-                <div v-if="activeTab === 'overview'" class="p-6 space-y-6">
+                <div v-if="activeTab === 'overview'" class="space-y-6 p-6">
                     <!-- Decision-Support Cards -->
                     <div class="grid gap-4 md:grid-cols-3">
                         <!-- Card 1: Release Readiness -->
-                        <div class="rounded-lg border p-4 space-y-3">
+                        <div class="space-y-3 rounded-lg border p-4">
                             <div class="flex items-center justify-between">
-                                <p class="text-sm font-medium text-muted-foreground">Release Readiness</p>
-                                <Badge :variant="liveMetrics.readiness.color === 'green' ? 'default' : liveMetrics.readiness.color === 'red' ? 'destructive' : 'secondary'">
+                                <p
+                                    class="text-sm font-medium text-muted-foreground"
+                                >
+                                    Release Readiness
+                                </p>
+                                <Badge
+                                    :variant="
+                                        liveMetrics.readiness.color === 'green'
+                                            ? 'default'
+                                            : liveMetrics.readiness.color ===
+                                                'red'
+                                              ? 'destructive'
+                                              : 'secondary'
+                                    "
+                                >
                                     {{ liveMetrics.readiness.score }}%
                                 </Badge>
                             </div>
-                            <Progress :model-value="liveMetrics.readiness.score" class="h-2" />
+                            <Progress
+                                :model-value="liveMetrics.readiness.score"
+                                class="h-2"
+                            />
                             <div class="space-y-1">
                                 <div
-                                    v-for="(item, key) in liveMetrics.readiness.breakdown"
+                                    v-for="(item, key) in liveMetrics.readiness
+                                        .breakdown"
                                     :key="key"
                                     class="flex items-center justify-between text-xs"
                                 >
-                                    <span class="text-muted-foreground">{{ breakdownLabels[key] || key }}</span>
-                                    <span class="font-medium">{{ item.weighted }}/{{ item.weight }}</span>
+                                    <span class="text-muted-foreground">{{
+                                        breakdownLabels[key] || key
+                                    }}</span>
+                                    <span class="font-medium"
+                                        >{{ item.weighted }}/{{
+                                            item.weight
+                                        }}</span
+                                    >
                                 </div>
                             </div>
-                            <div v-if="liveMetrics.readiness.days_to_deadline !== null" class="flex items-center gap-1.5 text-xs pt-1 border-t">
-                                <Clock class="h-3.5 w-3.5" :class="liveMetrics.readiness.on_track ? 'text-muted-foreground' : 'text-red-500'" />
-                                <span :class="liveMetrics.readiness.on_track ? 'text-muted-foreground' : 'text-red-600 dark:text-red-400 font-medium'">
-                                    {{ liveMetrics.readiness.on_track
-                                        ? `${liveMetrics.readiness.days_to_deadline} days to deadline`
-                                        : `${Math.abs(liveMetrics.readiness.days_to_deadline)} days overdue`
+                            <div
+                                v-if="
+                                    liveMetrics.readiness.days_to_deadline !==
+                                    null
+                                "
+                                class="flex items-center gap-1.5 border-t pt-1 text-xs"
+                            >
+                                <Clock
+                                    class="h-3.5 w-3.5"
+                                    :class="
+                                        liveMetrics.readiness.on_track
+                                            ? 'text-muted-foreground'
+                                            : 'text-red-500'
+                                    "
+                                />
+                                <span
+                                    :class="
+                                        liveMetrics.readiness.on_track
+                                            ? 'text-muted-foreground'
+                                            : 'font-medium text-red-600 dark:text-red-400'
+                                    "
+                                >
+                                    {{
+                                        liveMetrics.readiness.on_track
+                                            ? `${liveMetrics.readiness.days_to_deadline} days to deadline`
+                                            : `${Math.abs(liveMetrics.readiness.days_to_deadline)} days overdue`
                                     }}
                                 </span>
                             </div>
                         </div>
 
                         <!-- Card 2: Blockers & Risks -->
-                        <div class="rounded-lg border p-4 space-y-3">
-                            <p class="text-sm font-medium text-muted-foreground">Blockers & Risks</p>
+                        <div class="space-y-3 rounded-lg border p-4">
+                            <p
+                                class="text-sm font-medium text-muted-foreground"
+                            >
+                                Blockers & Risks
+                            </p>
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-sm">Checklist Blockers</span>
-                                    <Badge :variant="liveMetrics.blockers_and_risks.blocker_count > 0 ? 'destructive' : 'default'">
-                                        {{ liveMetrics.blockers_and_risks.blocker_count }}
+                                    <span class="text-sm"
+                                        >Checklist Blockers</span
+                                    >
+                                    <Badge
+                                        :variant="
+                                            liveMetrics.blockers_and_risks
+                                                .blocker_count > 0
+                                                ? 'destructive'
+                                                : 'default'
+                                        "
+                                    >
+                                        {{
+                                            liveMetrics.blockers_and_risks
+                                                .blocker_count
+                                        }}
                                     </Badge>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm">Critical Bugs</span>
-                                    <Badge :variant="liveMetrics.blockers_and_risks.critical_bugs > 0 ? 'destructive' : 'default'">
-                                        {{ liveMetrics.blockers_and_risks.critical_bugs }}
+                                    <Badge
+                                        :variant="
+                                            liveMetrics.blockers_and_risks
+                                                .critical_bugs > 0
+                                                ? 'destructive'
+                                                : 'default'
+                                        "
+                                    >
+                                        {{
+                                            liveMetrics.blockers_and_risks
+                                                .critical_bugs
+                                        }}
                                     </Badge>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-1.5">
-                                        <Shield class="h-4 w-4 text-muted-foreground" />
+                                        <Shield
+                                            class="h-4 w-4 text-muted-foreground"
+                                        />
                                         <span class="text-sm">Security</span>
                                     </div>
-                                    <Badge :variant="securityBadgeVariant" class="capitalize">
-                                        {{ liveMetrics.blockers_and_risks.security_status.replace('_', ' ') }}
+                                    <Badge
+                                        :variant="securityBadgeVariant"
+                                        class="capitalize"
+                                    >
+                                        {{
+                                            liveMetrics.blockers_and_risks.security_status.replace(
+                                                '_',
+                                                ' ',
+                                            )
+                                        }}
                                     </Badge>
                                 </div>
                             </div>
-                            <div v-if="liveMetrics.blockers_and_risks.risks.length" class="space-y-1 pt-2 border-t">
+                            <div
+                                v-if="
+                                    liveMetrics.blockers_and_risks.risks.length
+                                "
+                                class="space-y-1 border-t pt-2"
+                            >
                                 <div
-                                    v-for="(risk, i) in liveMetrics.blockers_and_risks.risks"
+                                    v-for="(risk, i) in liveMetrics
+                                        .blockers_and_risks.risks"
                                     :key="i"
                                     class="flex items-start gap-1.5 text-xs"
                                 >
-                                    <AlertTriangle class="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-                                    <span class="text-muted-foreground">{{ risk }}</span>
+                                    <AlertTriangle
+                                        class="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500"
+                                    />
+                                    <span class="text-muted-foreground">{{
+                                        risk
+                                    }}</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Card 3: vs Previous Release -->
-                        <div class="rounded-lg border p-4 space-y-3">
-                            <p class="text-sm font-medium text-muted-foreground">vs Previous Release</p>
+                        <div class="space-y-3 rounded-lg border p-4">
+                            <p
+                                class="text-sm font-medium text-muted-foreground"
+                            >
+                                vs Previous Release
+                            </p>
                             <template v-if="liveMetrics.comparison">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="text-xs text-muted-foreground">Compared to v{{ liveMetrics.comparison.previous_version }}</span>
-                                    <Badge :variant="trendVariant" class="capitalize text-xs">
-                                        <component :is="trendIcon" class="mr-1 h-3 w-3" />
+                                <div class="mb-2 flex items-center gap-2">
+                                    <span class="text-xs text-muted-foreground"
+                                        >Compared to v{{
+                                            liveMetrics.comparison
+                                                .previous_version
+                                        }}</span
+                                    >
+                                    <Badge
+                                        :variant="trendVariant"
+                                        class="text-xs capitalize"
+                                    >
+                                        <component
+                                            :is="trendIcon"
+                                            class="mr-1 h-3 w-3"
+                                        />
                                         {{ liveMetrics.comparison.trend }}
                                     </Badge>
                                 </div>
                                 <div class="space-y-2">
-                                    <div class="flex items-center justify-between text-sm">
-                                        <span class="text-muted-foreground">Pass Rate</span>
-                                        <span class="font-medium" :class="diffColor(liveMetrics.comparison.pass_rate_diff)">
-                                            {{ formatDiff(liveMetrics.comparison.pass_rate_diff) }}%
+                                    <div
+                                        class="flex items-center justify-between text-sm"
+                                    >
+                                        <span class="text-muted-foreground"
+                                            >Pass Rate</span
+                                        >
+                                        <span
+                                            class="font-medium"
+                                            :class="
+                                                diffColor(
+                                                    liveMetrics.comparison
+                                                        .pass_rate_diff,
+                                                )
+                                            "
+                                        >
+                                            {{
+                                                formatDiff(
+                                                    liveMetrics.comparison
+                                                        .pass_rate_diff,
+                                                )
+                                            }}%
                                         </span>
                                     </div>
-                                    <div class="flex items-center justify-between text-sm">
-                                        <span class="text-muted-foreground">Open Bugs</span>
-                                        <span class="font-medium" :class="diffColor(liveMetrics.comparison.bugs_diff, true)">
-                                            {{ formatDiff(liveMetrics.comparison.bugs_diff) }}
+                                    <div
+                                        class="flex items-center justify-between text-sm"
+                                    >
+                                        <span class="text-muted-foreground"
+                                            >Open Bugs</span
+                                        >
+                                        <span
+                                            class="font-medium"
+                                            :class="
+                                                diffColor(
+                                                    liveMetrics.comparison
+                                                        .bugs_diff,
+                                                    true,
+                                                )
+                                            "
+                                        >
+                                            {{
+                                                formatDiff(
+                                                    liveMetrics.comparison
+                                                        .bugs_diff,
+                                                )
+                                            }}
                                         </span>
                                     </div>
-                                    <div class="flex items-center justify-between text-sm">
-                                        <span class="text-muted-foreground">Completion</span>
-                                        <span class="font-medium" :class="diffColor(liveMetrics.comparison.test_completion_diff)">
-                                            {{ formatDiff(liveMetrics.comparison.test_completion_diff) }}%
+                                    <div
+                                        class="flex items-center justify-between text-sm"
+                                    >
+                                        <span class="text-muted-foreground"
+                                            >Completion</span
+                                        >
+                                        <span
+                                            class="font-medium"
+                                            :class="
+                                                diffColor(
+                                                    liveMetrics.comparison
+                                                        .test_completion_diff,
+                                                )
+                                            "
+                                        >
+                                            {{
+                                                formatDiff(
+                                                    liveMetrics.comparison
+                                                        .test_completion_diff,
+                                                )
+                                            }}%
                                         </span>
                                     </div>
                                 </div>
                             </template>
-                            <div v-else class="flex items-center justify-center py-4 text-sm text-muted-foreground">
+                            <div
+                                v-else
+                                class="flex items-center justify-center py-4 text-sm text-muted-foreground"
+                            >
                                 <p>No previous release to compare</p>
                             </div>
                         </div>
@@ -702,10 +1078,17 @@ const breakdownLabels: Record<string, string> = {
 
                     <!-- Linked Test Runs -->
                     <div>
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-lg font-semibold">Linked Test Runs</h3>
+                        <div class="mb-3 flex items-center justify-between">
+                            <h3 class="text-lg font-semibold">
+                                Linked Test Runs
+                            </h3>
                             <RestrictedAction>
-                                <Button variant="outline" size="sm" @click="showLinkTestRunDialog = true" class="cursor-pointer">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    @click="showLinkTestRunDialog = true"
+                                    class="cursor-pointer"
+                                >
                                     <Link2 class="mr-1 h-4 w-4" />
                                     Link Test Run
                                 </Button>
@@ -718,60 +1101,156 @@ const breakdownLabels: Record<string, string> = {
                                 class="rounded-lg border p-3 transition-colors hover:border-primary"
                             >
                                 <div class="flex items-center justify-between">
-                                    <Link :href="`/projects/${project.id}/test-runs/${tr.id}`" class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
-                                        <Play class="h-4 w-4 text-muted-foreground shrink-0" />
-                                        <span class="font-medium text-sm truncate">{{ tr.name }}</span>
-                                        <Badge :variant="releaseStatusVariant(tr.status)" class="text-xs shrink-0">{{ tr.status }}</Badge>
-                                        <span v-if="tr.environment" class="text-xs text-muted-foreground shrink-0">{{ tr.environment }}</span>
+                                    <Link
+                                        :href="`/projects/${project.id}/test-runs/${tr.id}`"
+                                        class="flex min-w-0 flex-1 cursor-pointer items-center gap-3"
+                                    >
+                                        <Play
+                                            class="h-4 w-4 shrink-0 text-muted-foreground"
+                                        />
+                                        <span
+                                            class="truncate text-sm font-medium"
+                                            >{{ tr.name }}</span
+                                        >
+                                        <Badge
+                                            :variant="
+                                                releaseStatusVariant(tr.status)
+                                            "
+                                            class="shrink-0 text-xs"
+                                            >{{ tr.status }}</Badge
+                                        >
+                                        <span
+                                            v-if="tr.environment"
+                                            class="shrink-0 text-xs text-muted-foreground"
+                                            >{{ tr.environment }}</span
+                                        >
                                     </Link>
                                     <RestrictedAction>
-                                        <Button variant="ghost" size="sm" @click.prevent="toggleTestRunLink(tr.id)" class="cursor-pointer text-muted-foreground hover:text-destructive shrink-0">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click.prevent="
+                                                toggleTestRunLink(tr.id)
+                                            "
+                                            class="shrink-0 cursor-pointer text-muted-foreground hover:text-destructive"
+                                        >
                                             <X class="h-4 w-4" />
                                         </Button>
                                     </RestrictedAction>
                                 </div>
-                                <div v-if="tr.stats && getTestRunTotal(tr) > 0" class="mt-2 space-y-1.5 pl-7">
+                                <div
+                                    v-if="tr.stats && getTestRunTotal(tr) > 0"
+                                    class="mt-2 space-y-1.5 pl-7"
+                                >
                                     <div class="flex items-center gap-3">
                                         <div class="flex-1">
-                                            <Progress :model-value="getTestRunPassRate(tr)" class="h-1.5" />
+                                            <Progress
+                                                :model-value="
+                                                    getTestRunPassRate(tr)
+                                                "
+                                                class="h-1.5"
+                                            />
                                         </div>
-                                        <span class="text-xs font-medium min-w-[70px] text-right" :class="getTestRunPassRateColor(tr)">
-                                            {{ getTestRunPassRate(tr) }}% ({{ tr.stats.passed ?? 0 }}/{{ getTestRunTotal(tr) }})
+                                        <span
+                                            class="min-w-[70px] text-right text-xs font-medium"
+                                            :class="getTestRunPassRateColor(tr)"
+                                        >
+                                            {{ getTestRunPassRate(tr) }}% ({{
+                                                tr.stats.passed ?? 0
+                                            }}/{{ getTestRunTotal(tr) }})
                                         </span>
                                     </div>
-                                    <div class="flex items-center gap-3 text-xs text-muted-foreground">
-                                        <span class="text-emerald-600 dark:text-emerald-400">{{ tr.stats.passed ?? 0 }} passed</span>
-                                        <span v-if="(tr.stats.failed ?? 0) > 0" class="text-red-600 dark:text-red-400">{{ tr.stats.failed }} failed</span>
-                                        <span v-if="(tr.stats.blocked ?? 0) > 0" class="text-amber-600 dark:text-amber-400">{{ tr.stats.blocked }} blocked</span>
-                                        <span v-if="(tr.stats.skipped ?? 0) > 0">{{ tr.stats.skipped }} skipped</span>
-                                        <span v-if="(tr.stats.untested ?? 0) + (tr.stats.retest ?? 0) > 0">{{ (tr.stats.untested ?? 0) + (tr.stats.retest ?? 0) }} remaining</span>
+                                    <div
+                                        class="flex items-center gap-3 text-xs text-muted-foreground"
+                                    >
+                                        <span
+                                            class="text-emerald-600 dark:text-emerald-400"
+                                            >{{
+                                                tr.stats.passed ?? 0
+                                            }}
+                                            passed</span
+                                        >
+                                        <span
+                                            v-if="(tr.stats.failed ?? 0) > 0"
+                                            class="text-red-600 dark:text-red-400"
+                                            >{{ tr.stats.failed }} failed</span
+                                        >
+                                        <span
+                                            v-if="(tr.stats.blocked ?? 0) > 0"
+                                            class="text-amber-600 dark:text-amber-400"
+                                            >{{
+                                                tr.stats.blocked
+                                            }}
+                                            blocked</span
+                                        >
+                                        <span v-if="(tr.stats.skipped ?? 0) > 0"
+                                            >{{
+                                                tr.stats.skipped
+                                            }}
+                                            skipped</span
+                                        >
+                                        <span
+                                            v-if="
+                                                (tr.stats.untested ?? 0) +
+                                                    (tr.stats.retest ?? 0) >
+                                                0
+                                            "
+                                            >{{
+                                                (tr.stats.untested ?? 0) +
+                                                (tr.stats.retest ?? 0)
+                                            }}
+                                            remaining</span
+                                        >
                                     </div>
                                 </div>
-                                <p v-else-if="!tr.stats || getTestRunTotal(tr) === 0" class="mt-1.5 pl-7 text-xs text-muted-foreground italic">No tests executed yet</p>
+                                <p
+                                    v-else-if="
+                                        !tr.stats || getTestRunTotal(tr) === 0
+                                    "
+                                    class="mt-1.5 pl-7 text-xs text-muted-foreground italic"
+                                >
+                                    No tests executed yet
+                                </p>
                             </div>
                         </div>
-                        <p v-else class="text-sm text-muted-foreground">No test runs linked yet.</p>
+                        <p v-else class="text-sm text-muted-foreground">
+                            No test runs linked yet.
+                        </p>
                     </div>
 
                     <!-- Release info -->
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="rounded-lg border p-4">
-                            <p class="text-sm text-muted-foreground mb-1">Planned Date</p>
-                            <p class="font-medium">{{ formatDate(release.planned_date) }}</p>
+                            <p class="mb-1 text-sm text-muted-foreground">
+                                Planned Date
+                            </p>
+                            <p class="font-medium">
+                                {{ formatDate(release.planned_date) }}
+                            </p>
                         </div>
                         <div class="rounded-lg border p-4">
-                            <p class="text-sm text-muted-foreground mb-1">Actual Date</p>
-                            <p class="font-medium">{{ formatDate(release.actual_date) }}</p>
+                            <p class="mb-1 text-sm text-muted-foreground">
+                                Actual Date
+                            </p>
+                            <p class="font-medium">
+                                {{ formatDate(release.actual_date) }}
+                            </p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tab: Features -->
                 <div v-if="activeTab === 'features'" class="p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold">Release Features ({{ features.length }})</h3>
+                    <div class="mb-4 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold">
+                            Release Features ({{ features.length }})
+                        </h3>
                         <RestrictedAction>
-                            <Button variant="outline" @click="showAddFeatureDialog = true" class="cursor-pointer">
+                            <Button
+                                variant="outline"
+                                @click="showAddFeatureDialog = true"
+                                class="cursor-pointer"
+                            >
                                 <Plus class="mr-1 h-4 w-4" />
                                 Add Feature
                             </Button>
@@ -785,24 +1264,56 @@ const breakdownLabels: Record<string, string> = {
                             class="flex items-center justify-between rounded-lg border p-4"
                         >
                             <div class="flex-1">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="font-medium">{{ f.feature_name }}</span>
-                                    <Badge :variant="releaseStatusVariant(f.status)" class="text-xs">{{ f.status }}</Badge>
+                                <div class="mb-1 flex items-center gap-2">
+                                    <span class="font-medium">{{
+                                        f.feature_name
+                                    }}</span>
+                                    <Badge
+                                        :variant="
+                                            releaseStatusVariant(f.status)
+                                        "
+                                        class="text-xs"
+                                        >{{ f.status }}</Badge
+                                    >
                                 </div>
-                                <p v-if="f.description" class="text-sm text-muted-foreground mb-2">{{ f.description }}</p>
-                                <div class="flex items-center gap-4 text-xs text-muted-foreground">
-                                    <span>Tests: {{ f.tests_passed }}/{{ f.tests_executed }}/{{ f.tests_planned }}</span>
-                                    <span>Coverage: {{ f.test_coverage_percentage }}%</span>
+                                <p
+                                    v-if="f.description"
+                                    class="mb-2 text-sm text-muted-foreground"
+                                >
+                                    {{ f.description }}
+                                </p>
+                                <div
+                                    class="flex items-center gap-4 text-xs text-muted-foreground"
+                                >
+                                    <span
+                                        >Tests: {{ f.tests_passed }}/{{
+                                            f.tests_executed
+                                        }}/{{ f.tests_planned }}</span
+                                    >
+                                    <span
+                                        >Coverage:
+                                        {{ f.test_coverage_percentage }}%</span
+                                    >
                                 </div>
                             </div>
                             <div class="flex items-center gap-1">
                                 <RestrictedAction>
-                                    <Button variant="ghost" size="sm" @click="startEditFeature(f)" class="cursor-pointer">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        @click="startEditFeature(f)"
+                                        class="cursor-pointer"
+                                    >
                                         <Pencil class="h-4 w-4" />
                                     </Button>
                                 </RestrictedAction>
                                 <RestrictedAction>
-                                    <Button variant="ghost" size="sm" @click="deleteFeature(f.id)" class="cursor-pointer text-muted-foreground hover:text-destructive">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        @click="deleteFeature(f.id)"
+                                        class="cursor-pointer text-muted-foreground hover:text-destructive"
+                                    >
                                         <Trash2 class="h-4 w-4" />
                                     </Button>
                                 </RestrictedAction>
@@ -812,21 +1323,33 @@ const breakdownLabels: Record<string, string> = {
                     <div v-else class="py-12 text-center text-muted-foreground">
                         <Target class="mx-auto mb-3 h-12 w-12 opacity-30" />
                         <p class="text-lg font-medium">No features added yet</p>
-                        <p class="mt-1 text-sm">Add features to track for this release</p>
+                        <p class="mt-1 text-sm">
+                            Add features to track for this release
+                        </p>
                     </div>
                 </div>
 
                 <!-- Tab: Checklist -->
                 <div v-if="activeTab === 'checklist'" class="p-6">
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="mb-4 flex items-center justify-between">
                         <h3 class="text-lg font-semibold">Quality Checklist</h3>
                         <div class="flex items-center gap-3">
-                            <div class="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Progress :model-value="checklistProgress" class="h-2 w-24" />
+                            <div
+                                class="flex items-center gap-2 text-sm text-muted-foreground"
+                            >
+                                <Progress
+                                    :model-value="checklistProgress"
+                                    class="h-2 w-24"
+                                />
                                 <span>{{ checklistProgress }}%</span>
                             </div>
                             <RestrictedAction>
-                                <Button variant="outline" size="sm" @click="showAddChecklistDialog = true" class="cursor-pointer">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    @click="showAddChecklistDialog = true"
+                                    class="cursor-pointer"
+                                >
                                     <Plus class="mr-1 h-4 w-4" />
                                     Add Item
                                 </Button>
@@ -835,52 +1358,121 @@ const breakdownLabels: Record<string, string> = {
                     </div>
 
                     <div class="space-y-4">
-                        <div v-for="(items, category) in categorizedChecklist" :key="category">
+                        <div
+                            v-for="(items, category) in categorizedChecklist"
+                            :key="category"
+                        >
                             <button
                                 @click="toggleCategory(category)"
-                                class="flex w-full items-center gap-2 rounded-lg bg-muted/50 px-4 py-2 text-sm font-semibold cursor-pointer hover:bg-muted/70 transition-colors"
+                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg bg-muted/50 px-4 py-2 text-sm font-semibold transition-colors hover:bg-muted/70"
                             >
-                                <component :is="collapsedCategories.has(category) ? ChevronRight : ChevronDown" class="h-4 w-4" />
+                                <component
+                                    :is="
+                                        collapsedCategories.has(category)
+                                            ? ChevronRight
+                                            : ChevronDown
+                                    "
+                                    class="h-4 w-4"
+                                />
                                 {{ getCategoryLabel(category) }}
-                                <span class="text-xs font-normal text-muted-foreground">
-                                    ({{ items.filter((i: ReleaseChecklistItem) => i.status === 'completed').length }}/{{ items.length }})
+                                <span
+                                    class="text-xs font-normal text-muted-foreground"
+                                >
+                                    ({{
+                                        items.filter(
+                                            (i: ReleaseChecklistItem) =>
+                                                i.status === 'completed',
+                                        ).length
+                                    }}/{{ items.length }})
                                 </span>
                             </button>
-                            <div v-if="!collapsedCategories.has(category)" class="mt-2 space-y-1 pl-2">
+                            <div
+                                v-if="!collapsedCategories.has(category)"
+                                class="mt-2 space-y-1 pl-2"
+                            >
                                 <div
                                     v-for="item in items"
                                     :key="item.id"
                                     class="group flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted/30"
-                                    :class="{ 'border-l-2 border-red-500 bg-red-50/50 dark:bg-red-950/10': item.is_blocker && item.status !== 'completed' }"
+                                    :class="{
+                                        'border-l-2 border-red-500 bg-red-50/50 dark:bg-red-950/10':
+                                            item.is_blocker &&
+                                            item.status !== 'completed',
+                                    }"
                                 >
                                     <RestrictedAction>
-                                        <button @click="cycleStatus(item)" class="cursor-pointer shrink-0">
+                                        <button
+                                            @click="cycleStatus(item)"
+                                            class="shrink-0 cursor-pointer"
+                                        >
                                             <component
-                                                :is="getChecklistStatusIcon(item.status)"
+                                                :is="
+                                                    getChecklistStatusIcon(
+                                                        item.status,
+                                                    )
+                                                "
                                                 class="h-5 w-5"
-                                                :class="getChecklistStatusColor(item.status)"
+                                                :class="
+                                                    getChecklistStatusColor(
+                                                        item.status,
+                                                    )
+                                                "
                                             />
                                         </button>
                                     </RestrictedAction>
-                                    <div class="flex-1 min-w-0">
+                                    <div class="min-w-0 flex-1">
                                         <span
                                             class="text-sm"
-                                            :class="{ 'line-through text-muted-foreground': item.status === 'completed' }"
+                                            :class="{
+                                                'text-muted-foreground line-through':
+                                                    item.status === 'completed',
+                                            }"
                                         >
                                             {{ item.title }}
                                         </span>
-                                        <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5">{{ item.description }}</p>
-                                        <div class="flex items-center gap-2 mt-0.5">
-                                            <Badge v-if="item.is_blocker && item.status !== 'completed'" variant="destructive" class="text-[10px]">Blocker</Badge>
-                                            <span v-if="item.assignee" class="text-xs text-muted-foreground">{{ item.assignee.name }}</span>
-                                            <span v-if="item.notes" class="text-xs text-muted-foreground italic truncate max-w-[200px]">{{ item.notes }}</span>
+                                        <p
+                                            v-if="item.description"
+                                            class="mt-0.5 text-xs text-muted-foreground"
+                                        >
+                                            {{ item.description }}
+                                        </p>
+                                        <div
+                                            class="mt-0.5 flex items-center gap-2"
+                                        >
+                                            <Badge
+                                                v-if="
+                                                    item.is_blocker &&
+                                                    item.status !== 'completed'
+                                                "
+                                                variant="destructive"
+                                                class="text-[10px]"
+                                                >Blocker</Badge
+                                            >
+                                            <span
+                                                v-if="item.assignee"
+                                                class="text-xs text-muted-foreground"
+                                                >{{ item.assignee.name }}</span
+                                            >
+                                            <span
+                                                v-if="item.notes"
+                                                class="max-w-[200px] truncate text-xs text-muted-foreground italic"
+                                                >{{ item.notes }}</span
+                                            >
                                         </div>
                                     </div>
-                                    <Badge variant="outline" class="text-xs capitalize shrink-0">{{ item.priority }}</Badge>
-                                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                    <Badge
+                                        variant="outline"
+                                        class="shrink-0 text-xs capitalize"
+                                        >{{ item.priority }}</Badge
+                                    >
+                                    <div
+                                        class="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+                                    >
                                         <RestrictedAction>
                                             <button
-                                                @click="startEditChecklistItem(item)"
+                                                @click="
+                                                    startEditChecklistItem(item)
+                                                "
                                                 class="cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                                                 title="Edit"
                                             >
@@ -889,7 +1481,11 @@ const breakdownLabels: Record<string, string> = {
                                         </RestrictedAction>
                                         <RestrictedAction>
                                             <button
-                                                @click="confirmDeleteChecklistItem(item)"
+                                                @click="
+                                                    confirmDeleteChecklistItem(
+                                                        item,
+                                                    )
+                                                "
                                                 class="cursor-pointer rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                                 title="Delete"
                                             >
@@ -904,7 +1500,7 @@ const breakdownLabels: Record<string, string> = {
                 </div>
 
                 <!-- Tab: Decision -->
-                <div v-if="activeTab === 'decision'" class="p-6 space-y-6">
+                <div v-if="activeTab === 'decision'" class="space-y-6 p-6">
                     <!-- Auto recommendation -->
                     <Card>
                         <CardHeader>
@@ -914,12 +1510,25 @@ const breakdownLabels: Record<string, string> = {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div class="flex items-center gap-3 mb-2">
-                                <Badge :variant="releaseDecisionVariant(autoRecommendation.decision)" class="text-sm">
-                                    {{ getDecisionLabel(autoRecommendation.decision) }}
+                            <div class="mb-2 flex items-center gap-3">
+                                <Badge
+                                    :variant="
+                                        releaseDecisionVariant(
+                                            autoRecommendation.decision,
+                                        )
+                                    "
+                                    class="text-sm"
+                                >
+                                    {{
+                                        getDecisionLabel(
+                                            autoRecommendation.decision,
+                                        )
+                                    }}
                                 </Badge>
                             </div>
-                            <p class="text-sm text-muted-foreground">{{ autoRecommendation.reason }}</p>
+                            <p class="text-sm text-muted-foreground">
+                                {{ autoRecommendation.reason }}
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -933,22 +1542,38 @@ const breakdownLabels: Record<string, string> = {
                                 <Label>Decision</Label>
                                 <Select v-model="decisionForm.decision">
                                     <SelectTrigger class="mt-1">
-                                        <SelectValue placeholder="Select decision" />
+                                        <SelectValue
+                                            placeholder="Select decision"
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="pending"
+                                            >Pending</SelectItem
+                                        >
                                         <SelectItem value="go">Go</SelectItem>
-                                        <SelectItem value="no_go">No-Go</SelectItem>
-                                        <SelectItem value="conditional">Conditional</SelectItem>
+                                        <SelectItem value="no_go"
+                                            >No-Go</SelectItem
+                                        >
+                                        <SelectItem value="conditional"
+                                            >Conditional</SelectItem
+                                        >
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div>
                                 <Label>Decision Notes</Label>
-                                <Textarea v-model="decisionForm.decision_notes" placeholder="Add notes about this decision..." class="mt-1" rows="4" />
+                                <Textarea
+                                    v-model="decisionForm.decision_notes"
+                                    placeholder="Add notes about this decision..."
+                                    class="mt-1"
+                                    rows="4"
+                                />
                             </div>
                             <RestrictedAction>
-                                <Button @click="saveDecision" class="cursor-pointer">
+                                <Button
+                                    @click="saveDecision"
+                                    class="cursor-pointer"
+                                >
                                     <Save class="mr-1 h-4 w-4" />
                                     Save Decision
                                 </Button>
@@ -964,7 +1589,9 @@ const breakdownLabels: Record<string, string> = {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Edit Release</DialogTitle>
-                    <DialogDescription>Update release details.</DialogDescription>
+                    <DialogDescription
+                        >Update release details.</DialogDescription
+                    >
                 </DialogHeader>
                 <div class="space-y-4 py-4">
                     <div class="grid grid-cols-2 gap-4">
@@ -975,15 +1602,29 @@ const breakdownLabels: Record<string, string> = {
                         <div>
                             <Label>Status</Label>
                             <Select v-model="editForm.status">
-                                <SelectTrigger class="mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger class="mt-1"
+                                    ><SelectValue
+                                /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="planning">Planning</SelectItem>
-                                    <SelectItem value="development">Development</SelectItem>
-                                    <SelectItem value="testing">Testing</SelectItem>
-                                    <SelectItem value="staging">Staging</SelectItem>
+                                    <SelectItem value="planning"
+                                        >Planning</SelectItem
+                                    >
+                                    <SelectItem value="development"
+                                        >Development</SelectItem
+                                    >
+                                    <SelectItem value="testing"
+                                        >Testing</SelectItem
+                                    >
+                                    <SelectItem value="staging"
+                                        >Staging</SelectItem
+                                    >
                                     <SelectItem value="ready">Ready</SelectItem>
-                                    <SelectItem value="released">Released</SelectItem>
-                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                    <SelectItem value="released"
+                                        >Released</SelectItem
+                                    >
+                                    <SelectItem value="cancelled"
+                                        >Cancelled</SelectItem
+                                    >
                                 </SelectContent>
                             </Select>
                         </div>
@@ -994,31 +1635,52 @@ const breakdownLabels: Record<string, string> = {
                     </div>
                     <div>
                         <Label>Description</Label>
-                        <Textarea v-model="editForm.description" class="mt-1" rows="3" />
+                        <Textarea
+                            v-model="editForm.description"
+                            class="mt-1"
+                            rows="3"
+                        />
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Planned Date</Label>
-                            <Input v-model="editForm.planned_date" type="date" class="mt-1" />
+                            <Input
+                                v-model="editForm.planned_date"
+                                type="date"
+                                class="mt-1"
+                            />
                         </div>
                         <div>
                             <Label>Actual Date</Label>
-                            <Input v-model="editForm.actual_date" type="date" class="mt-1" />
+                            <Input
+                                v-model="editForm.actual_date"
+                                type="date"
+                                class="mt-1"
+                            />
                         </div>
                     </div>
                 </div>
-                <DialogFooter class="flex items-center justify-between sm:justify-between">
+                <DialogFooter
+                    class="flex items-center justify-between sm:justify-between"
+                >
                     <Button
                         variant="ghost"
-                        class="cursor-pointer text-destructive hover:text-destructive hover:bg-destructive/10"
+                        class="cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
                         @click="confirmDeleteRelease"
                     >
                         <Trash2 class="mr-1 h-4 w-4" />
                         Delete
                     </Button>
                     <div class="flex gap-2">
-                        <Button variant="outline" @click="showEditDialog = false" class="cursor-pointer">Cancel</Button>
-                        <Button @click="updateRelease" class="cursor-pointer">Save</Button>
+                        <Button
+                            variant="outline"
+                            @click="showEditDialog = false"
+                            class="cursor-pointer"
+                            >Cancel</Button
+                        >
+                        <Button @click="updateRelease" class="cursor-pointer"
+                            >Save</Button
+                        >
                     </div>
                 </DialogFooter>
             </DialogContent>
@@ -1030,14 +1692,23 @@ const breakdownLabels: Record<string, string> = {
                 <DialogHeader>
                     <DialogTitle>Delete Release?</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete "{{ release.name }}" (v{{ release.version }})? This action cannot be undone.
+                        Are you sure you want to delete "{{ release.name }}"
+                        (v{{ release.version }})? This action cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="flex gap-4 sm:justify-end">
-                    <Button variant="secondary" @click="showDeleteReleaseDialog = false" class="flex-1 sm:flex-none cursor-pointer">
+                    <Button
+                        variant="secondary"
+                        @click="showDeleteReleaseDialog = false"
+                        class="flex-1 cursor-pointer sm:flex-none"
+                    >
                         No
                     </Button>
-                    <Button variant="destructive" @click="deleteRelease" class="flex-1 sm:flex-none cursor-pointer">
+                    <Button
+                        variant="destructive"
+                        @click="deleteRelease"
+                        class="flex-1 cursor-pointer sm:flex-none"
+                    >
                         Yes
                     </Button>
                 </DialogFooter>
@@ -1049,15 +1720,25 @@ const breakdownLabels: Record<string, string> = {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Add Release Feature</DialogTitle>
-                    <DialogDescription>Add a feature to track in this release.</DialogDescription>
+                    <DialogDescription
+                        >Add a feature to track in this
+                        release.</DialogDescription
+                    >
                 </DialogHeader>
                 <div class="space-y-4 py-4">
                     <div v-if="projectFeatures?.length">
                         <Label>From Project Features</Label>
                         <Select @update:model-value="onProjectFeatureSelect">
-                            <SelectTrigger class="mt-1"><SelectValue placeholder="Select a feature (optional)" /></SelectTrigger>
+                            <SelectTrigger class="mt-1"
+                                ><SelectValue
+                                    placeholder="Select a feature (optional)"
+                            /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem v-for="pf in projectFeatures" :key="pf.id" :value="String(pf.id)">
+                                <SelectItem
+                                    v-for="pf in projectFeatures"
+                                    :key="pf.id"
+                                    :value="String(pf.id)"
+                                >
                                     {{ pf.name }}
                                 </SelectItem>
                             </SelectContent>
@@ -1065,16 +1746,35 @@ const breakdownLabels: Record<string, string> = {
                     </div>
                     <div>
                         <Label>Feature Name *</Label>
-                        <Input v-model="featureForm.feature_name" placeholder="Feature name" class="mt-1" />
+                        <Input
+                            v-model="featureForm.feature_name"
+                            placeholder="Feature name"
+                            class="mt-1"
+                        />
                     </div>
                     <div>
                         <Label>Description</Label>
-                        <Textarea v-model="featureForm.description" placeholder="Description..." class="mt-1" rows="2" />
+                        <Textarea
+                            v-model="featureForm.description"
+                            placeholder="Description..."
+                            class="mt-1"
+                            rows="2"
+                        />
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" @click="showAddFeatureDialog = false" class="cursor-pointer">Cancel</Button>
-                    <Button @click="addFeature" :disabled="!featureForm.feature_name" class="cursor-pointer">Add</Button>
+                    <Button
+                        variant="outline"
+                        @click="showAddFeatureDialog = false"
+                        class="cursor-pointer"
+                        >Cancel</Button
+                    >
+                    <Button
+                        @click="addFeature"
+                        :disabled="!featureForm.feature_name"
+                        class="cursor-pointer"
+                        >Add</Button
+                    >
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1084,47 +1784,87 @@ const breakdownLabels: Record<string, string> = {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Edit Feature</DialogTitle>
-                    <DialogDescription>Update feature details and test counts.</DialogDescription>
+                    <DialogDescription
+                        >Update feature details and test
+                        counts.</DialogDescription
+                    >
                 </DialogHeader>
                 <div class="space-y-4 py-4">
                     <div>
                         <Label>Feature Name</Label>
-                        <Input v-model="editFeatureForm.feature_name" class="mt-1" />
+                        <Input
+                            v-model="editFeatureForm.feature_name"
+                            class="mt-1"
+                        />
                     </div>
                     <div>
                         <Label>Description</Label>
-                        <Textarea v-model="editFeatureForm.description" class="mt-1" rows="2" />
+                        <Textarea
+                            v-model="editFeatureForm.description"
+                            class="mt-1"
+                            rows="2"
+                        />
                     </div>
                     <div>
                         <Label>Status</Label>
                         <Select v-model="editFeatureForm.status">
-                            <SelectTrigger class="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectTrigger class="mt-1"
+                                ><SelectValue
+                            /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="planned">Planned</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                                <SelectItem value="deferred">Deferred</SelectItem>
+                                <SelectItem value="in_progress"
+                                    >In Progress</SelectItem
+                                >
+                                <SelectItem value="completed"
+                                    >Completed</SelectItem
+                                >
+                                <SelectItem value="deferred"
+                                    >Deferred</SelectItem
+                                >
                             </SelectContent>
                         </Select>
                     </div>
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <Label>Tests Planned</Label>
-                            <Input v-model.number="editFeatureForm.tests_planned" type="number" min="0" class="mt-1" />
+                            <Input
+                                v-model.number="editFeatureForm.tests_planned"
+                                type="number"
+                                min="0"
+                                class="mt-1"
+                            />
                         </div>
                         <div>
                             <Label>Tests Executed</Label>
-                            <Input v-model.number="editFeatureForm.tests_executed" type="number" min="0" class="mt-1" />
+                            <Input
+                                v-model.number="editFeatureForm.tests_executed"
+                                type="number"
+                                min="0"
+                                class="mt-1"
+                            />
                         </div>
                         <div>
                             <Label>Tests Passed</Label>
-                            <Input v-model.number="editFeatureForm.tests_passed" type="number" min="0" class="mt-1" />
+                            <Input
+                                v-model.number="editFeatureForm.tests_passed"
+                                type="number"
+                                min="0"
+                                class="mt-1"
+                            />
                         </div>
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" @click="showEditFeatureDialog = false" class="cursor-pointer">Cancel</Button>
-                    <Button @click="updateFeature" class="cursor-pointer">Save</Button>
+                    <Button
+                        variant="outline"
+                        @click="showEditFeatureDialog = false"
+                        class="cursor-pointer"
+                        >Cancel</Button
+                    >
+                    <Button @click="updateFeature" class="cursor-pointer"
+                        >Save</Button
+                    >
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1137,20 +1877,29 @@ const breakdownLabels: Record<string, string> = {
                         <Link2 class="h-5 w-5" />
                         Link Test Runs
                     </DialogTitle>
-                    <DialogDescription>Toggle test runs to link or unlink from this release.</DialogDescription>
+                    <DialogDescription
+                        >Toggle test runs to link or unlink from this
+                        release.</DialogDescription
+                    >
                 </DialogHeader>
                 <Deferred data="projectTestRuns">
                     <template #fallback>
                         <div class="space-y-2 py-4">
-                            <div v-for="i in 3" :key="i" class="h-10 w-full animate-pulse rounded-md bg-muted" />
+                            <div
+                                v-for="i in 3"
+                                :key="i"
+                                class="h-10 w-full animate-pulse rounded-md bg-muted"
+                            />
                         </div>
                     </template>
                     <div class="relative py-4">
-                        <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search
+                            class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
                         <Input
                             v-model="testRunSearch"
                             placeholder="Search test runs..."
-                            class="pl-9 pr-9"
+                            class="pr-9 pl-9"
                         />
                         <button
                             v-if="testRunSearch"
@@ -1169,7 +1918,9 @@ const breakdownLabels: Record<string, string> = {
                             <div class="flex items-center gap-2">
                                 <Play class="h-4 w-4 text-muted-foreground" />
                                 <span class="text-sm">{{ tr.name }}</span>
-                                <Badge variant="outline" class="text-xs">{{ tr.status }}</Badge>
+                                <Badge variant="outline" class="text-xs">{{
+                                    tr.status
+                                }}</Badge>
                             </div>
                             <Button
                                 v-if="isTestRunLinked(tr.id)"
@@ -1192,13 +1943,24 @@ const breakdownLabels: Record<string, string> = {
                                 Link
                             </Button>
                         </div>
-                        <p v-if="filteredProjectTestRuns.length === 0" class="py-8 text-center text-sm text-muted-foreground">
-                            {{ testRunSearch ? 'No test runs match your search.' : 'No test runs available.' }}
+                        <p
+                            v-if="filteredProjectTestRuns.length === 0"
+                            class="py-8 text-center text-sm text-muted-foreground"
+                        >
+                            {{
+                                testRunSearch
+                                    ? 'No test runs match your search.'
+                                    : 'No test runs available.'
+                            }}
                         </p>
                     </div>
                 </Deferred>
                 <DialogFooter>
-                    <Button @click="showLinkTestRunDialog = false" class="cursor-pointer">Close</Button>
+                    <Button
+                        @click="showLinkTestRunDialog = false"
+                        class="cursor-pointer"
+                        >Close</Button
+                    >
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1208,35 +1970,60 @@ const breakdownLabels: Record<string, string> = {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Add Checklist Item</DialogTitle>
-                    <DialogDescription>Add a new item to the release checklist.</DialogDescription>
+                    <DialogDescription
+                        >Add a new item to the release
+                        checklist.</DialogDescription
+                    >
                 </DialogHeader>
                 <div class="space-y-4 py-4">
                     <div>
                         <Label>Title *</Label>
-                        <Input v-model="checklistForm.title" placeholder="Checklist item title" class="mt-1" />
+                        <Input
+                            v-model="checklistForm.title"
+                            placeholder="Checklist item title"
+                            class="mt-1"
+                        />
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Category</Label>
                             <Select v-model="checklistForm.category">
-                                <SelectTrigger class="mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger class="mt-1"
+                                    ><SelectValue
+                                /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="testing">Testing</SelectItem>
-                                    <SelectItem value="security">Security</SelectItem>
-                                    <SelectItem value="performance">Performance</SelectItem>
-                                    <SelectItem value="deployment">Deployment</SelectItem>
-                                    <SelectItem value="documentation">Documentation</SelectItem>
+                                    <SelectItem value="testing"
+                                        >Testing</SelectItem
+                                    >
+                                    <SelectItem value="security"
+                                        >Security</SelectItem
+                                    >
+                                    <SelectItem value="performance"
+                                        >Performance</SelectItem
+                                    >
+                                    <SelectItem value="deployment"
+                                        >Deployment</SelectItem
+                                    >
+                                    <SelectItem value="documentation"
+                                        >Documentation</SelectItem
+                                    >
                                 </SelectContent>
                             </Select>
                         </div>
                         <div>
                             <Label>Priority</Label>
                             <Select v-model="checklistForm.priority">
-                                <SelectTrigger class="mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger class="mt-1"
+                                    ><SelectValue
+                                /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="critical">Critical</SelectItem>
+                                    <SelectItem value="critical"
+                                        >Critical</SelectItem
+                                    >
                                     <SelectItem value="high">High</SelectItem>
-                                    <SelectItem value="medium">Medium</SelectItem>
+                                    <SelectItem value="medium"
+                                        >Medium</SelectItem
+                                    >
                                     <SelectItem value="low">Low</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -1244,7 +2031,12 @@ const breakdownLabels: Record<string, string> = {
                     </div>
                     <div>
                         <Label>Description</Label>
-                        <Textarea v-model="checklistForm.description" placeholder="Optional description..." class="mt-1" rows="2" />
+                        <Textarea
+                            v-model="checklistForm.description"
+                            placeholder="Optional description..."
+                            class="mt-1"
+                            rows="2"
+                        />
                     </div>
                     <div class="flex items-center gap-2">
                         <Checkbox
@@ -1252,12 +2044,24 @@ const breakdownLabels: Record<string, string> = {
                             @update:checked="checklistForm.is_blocker = $event"
                             id="add-is-blocker"
                         />
-                        <Label for="add-is-blocker" class="cursor-pointer">Release blocker</Label>
+                        <Label for="add-is-blocker" class="cursor-pointer"
+                            >Release blocker</Label
+                        >
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" @click="showAddChecklistDialog = false" class="cursor-pointer">Cancel</Button>
-                    <Button @click="addChecklistItem" :disabled="!checklistForm.title.trim()" class="cursor-pointer">Add</Button>
+                    <Button
+                        variant="outline"
+                        @click="showAddChecklistDialog = false"
+                        class="cursor-pointer"
+                        >Cancel</Button
+                    >
+                    <Button
+                        @click="addChecklistItem"
+                        :disabled="!checklistForm.title.trim()"
+                        class="cursor-pointer"
+                        >Add</Button
+                    >
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1267,7 +2071,9 @@ const breakdownLabels: Record<string, string> = {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Edit Checklist Item</DialogTitle>
-                    <DialogDescription>Update the checklist item details.</DialogDescription>
+                    <DialogDescription
+                        >Update the checklist item details.</DialogDescription
+                    >
                 </DialogHeader>
                 <div class="space-y-4 py-4">
                     <div>
@@ -1278,24 +2084,42 @@ const breakdownLabels: Record<string, string> = {
                         <div>
                             <Label>Category</Label>
                             <Select v-model="editChecklistForm.category">
-                                <SelectTrigger class="mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger class="mt-1"
+                                    ><SelectValue
+                                /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="testing">Testing</SelectItem>
-                                    <SelectItem value="security">Security</SelectItem>
-                                    <SelectItem value="performance">Performance</SelectItem>
-                                    <SelectItem value="deployment">Deployment</SelectItem>
-                                    <SelectItem value="documentation">Documentation</SelectItem>
+                                    <SelectItem value="testing"
+                                        >Testing</SelectItem
+                                    >
+                                    <SelectItem value="security"
+                                        >Security</SelectItem
+                                    >
+                                    <SelectItem value="performance"
+                                        >Performance</SelectItem
+                                    >
+                                    <SelectItem value="deployment"
+                                        >Deployment</SelectItem
+                                    >
+                                    <SelectItem value="documentation"
+                                        >Documentation</SelectItem
+                                    >
                                 </SelectContent>
                             </Select>
                         </div>
                         <div>
                             <Label>Priority</Label>
                             <Select v-model="editChecklistForm.priority">
-                                <SelectTrigger class="mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger class="mt-1"
+                                    ><SelectValue
+                                /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="critical">Critical</SelectItem>
+                                    <SelectItem value="critical"
+                                        >Critical</SelectItem
+                                    >
                                     <SelectItem value="high">High</SelectItem>
-                                    <SelectItem value="medium">Medium</SelectItem>
+                                    <SelectItem value="medium"
+                                        >Medium</SelectItem
+                                    >
                                     <SelectItem value="low">Low</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -1303,24 +2127,45 @@ const breakdownLabels: Record<string, string> = {
                     </div>
                     <div>
                         <Label>Description</Label>
-                        <Textarea v-model="editChecklistForm.description" placeholder="Optional description..." class="mt-1" rows="2" />
+                        <Textarea
+                            v-model="editChecklistForm.description"
+                            placeholder="Optional description..."
+                            class="mt-1"
+                            rows="2"
+                        />
                     </div>
                     <div>
                         <Label>Notes</Label>
-                        <Textarea v-model="editChecklistForm.notes" placeholder="Add notes..." class="mt-1" rows="2" />
+                        <Textarea
+                            v-model="editChecklistForm.notes"
+                            placeholder="Add notes..."
+                            class="mt-1"
+                            rows="2"
+                        />
                     </div>
                     <div class="flex items-center gap-2">
                         <Checkbox
                             :checked="editChecklistForm.is_blocker"
-                            @update:checked="editChecklistForm.is_blocker = $event"
+                            @update:checked="
+                                editChecklistForm.is_blocker = $event
+                            "
                             id="edit-is-blocker"
                         />
-                        <Label for="edit-is-blocker" class="cursor-pointer">Release blocker</Label>
+                        <Label for="edit-is-blocker" class="cursor-pointer"
+                            >Release blocker</Label
+                        >
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" @click="showEditChecklistDialog = false" class="cursor-pointer">Cancel</Button>
-                    <Button @click="saveChecklistItem" class="cursor-pointer">Save</Button>
+                    <Button
+                        variant="outline"
+                        @click="showEditChecklistDialog = false"
+                        class="cursor-pointer"
+                        >Cancel</Button
+                    >
+                    <Button @click="saveChecklistItem" class="cursor-pointer"
+                        >Save</Button
+                    >
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1331,14 +2176,24 @@ const breakdownLabels: Record<string, string> = {
                 <DialogHeader>
                     <DialogTitle>Delete Checklist Item?</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete "{{ checklistItemToDelete?.title }}"? This action cannot be undone.
+                        Are you sure you want to delete "{{
+                            checklistItemToDelete?.title
+                        }}"? This action cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="flex gap-4 sm:justify-end">
-                    <Button variant="secondary" @click="showDeleteChecklistDialog = false" class="flex-1 sm:flex-none cursor-pointer">
+                    <Button
+                        variant="secondary"
+                        @click="showDeleteChecklistDialog = false"
+                        class="flex-1 cursor-pointer sm:flex-none"
+                    >
                         No
                     </Button>
-                    <Button variant="destructive" @click="deleteChecklistItem" class="flex-1 sm:flex-none cursor-pointer">
+                    <Button
+                        variant="destructive"
+                        @click="deleteChecklistItem"
+                        class="flex-1 cursor-pointer sm:flex-none"
+                    >
                         Yes
                     </Button>
                 </DialogFooter>

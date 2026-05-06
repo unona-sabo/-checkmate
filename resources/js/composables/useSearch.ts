@@ -5,7 +5,10 @@ export function escapeRegExp(str: string): string {
 }
 
 export function escapeHtml(str: string): string {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
 
 export function stripHtml(html: string): string {
@@ -29,7 +32,10 @@ export function useSearch() {
         const safe = escapeHtml(text);
         if (!searchQuery.value.trim()) return safe;
         const query = escapeRegExp(searchQuery.value.trim());
-        return safe.replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+        return safe.replace(
+            new RegExp(`(${query})`, 'gi'),
+            '<mark class="search-highlight">$1</mark>',
+        );
     };
 
     const highlightRich = (text: string): string => {
@@ -38,11 +44,24 @@ export function useSearch() {
         const query = escapeRegExp(searchQuery.value.trim());
         const regex = new RegExp(`(${query})`, 'gi');
         return text.replace(/>([^<]+)</g, (match, content) => {
-            return '>' + content.replace(regex, '<mark class="search-highlight">$1</mark>') + '<';
+            return (
+                '>' +
+                content.replace(
+                    regex,
+                    '<mark class="search-highlight">$1</mark>',
+                ) +
+                '<'
+            );
         });
     };
 
-    return { searchQuery, clearSearch, isSearchActive, highlight, highlightRich };
+    return {
+        searchQuery,
+        clearSearch,
+        isSearchActive,
+        highlight,
+        highlightRich,
+    };
 }
 
 export function useFilteredList<T>(

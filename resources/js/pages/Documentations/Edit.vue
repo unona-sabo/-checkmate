@@ -2,11 +2,23 @@
 import { Head, useForm, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import RichTextEditor from '@/components/RichTextEditor.vue';
@@ -37,9 +49,18 @@ const props = defineProps<{
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
-    { title: 'Documentations', href: `/projects/${props.project.id}/documentations` },
-    { title: props.documentation.title, href: `/projects/${props.project.id}/documentations/${props.documentation.id}` },
-    { title: 'Edit', href: `/projects/${props.project.id}/documentations/${props.documentation.id}/edit` },
+    {
+        title: 'Documentations',
+        href: `/projects/${props.project.id}/documentations`,
+    },
+    {
+        title: props.documentation.title,
+        href: `/projects/${props.project.id}/documentations/${props.documentation.id}`,
+    },
+    {
+        title: 'Edit',
+        href: `/projects/${props.project.id}/documentations/${props.documentation.id}/edit`,
+    },
 ];
 
 const form = useForm({
@@ -75,9 +96,12 @@ const formatFileSize = (bytes: number): string => {
 const isImage = (mimeType: string): boolean => mimeType.startsWith('image/');
 
 const submit = () => {
-    form.post(`/projects/${props.project.id}/documentations/${props.documentation.id}`, {
-        forceFormData: true,
-    });
+    form.post(
+        `/projects/${props.project.id}/documentations/${props.documentation.id}`,
+        {
+            forceFormData: true,
+        },
+    );
 };
 </script>
 
@@ -94,7 +118,8 @@ const submit = () => {
                             Edit Documentation
                         </CardTitle>
                         <CardDescription>
-                            Update the documentation content. Paste screenshots directly into the editor.
+                            Update the documentation content. Paste screenshots
+                            directly into the editor.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -105,7 +130,9 @@ const submit = () => {
                                     id="title"
                                     v-model="form.title"
                                     type="text"
-                                    :class="{ 'border-destructive': form.errors.title }"
+                                    :class="{
+                                        'border-destructive': form.errors.title,
+                                    }"
                                 />
                                 <InputError :message="form.errors.title" />
                             </div>
@@ -118,19 +145,36 @@ const submit = () => {
                                         v-model="form.category"
                                         type="text"
                                     />
-                                    <InputError :message="form.errors.category" />
+                                    <InputError
+                                        :message="form.errors.category"
+                                    />
                                 </div>
 
                                 <div class="space-y-2">
                                     <Label>Parent Document</Label>
                                     <Select v-model="form.parent_id">
                                         <SelectTrigger>
-                                            <SelectValue placeholder="None (top level)" />
+                                            <SelectValue
+                                                placeholder="None (top level)"
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem :value="null">None (top level)</SelectItem>
-                                            <SelectItem v-for="opt in parentOptions" :key="opt.id" :value="opt.id">
-                                                <span v-if="opt.parent" class="text-muted-foreground">{{ opt.parent.title }} / </span>{{ opt.title }}
+                                            <SelectItem :value="null"
+                                                >None (top level)</SelectItem
+                                            >
+                                            <SelectItem
+                                                v-for="opt in parentOptions"
+                                                :key="opt.id"
+                                                :value="opt.id"
+                                            >
+                                                <span
+                                                    v-if="opt.parent"
+                                                    class="text-muted-foreground"
+                                                    >{{
+                                                        opt.parent.title
+                                                    }}
+                                                    / </span
+                                                >{{ opt.title }}
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -148,34 +192,64 @@ const submit = () => {
                             </div>
 
                             <!-- Existing Attachments -->
-                            <div v-if="documentation.attachments && documentation.attachments.length > 0" class="space-y-2">
+                            <div
+                                v-if="
+                                    documentation.attachments &&
+                                    documentation.attachments.length > 0
+                                "
+                                class="space-y-2"
+                            >
                                 <Label>Existing Attachments</Label>
                                 <div class="space-y-2">
                                     <div
                                         v-for="attachment in documentation.attachments"
                                         :key="attachment.id"
-                                        class="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2"
+                                        class="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
                                     >
-                                        <div class="flex items-center gap-2 min-w-0">
+                                        <div
+                                            class="flex min-w-0 items-center gap-2"
+                                        >
                                             <img
-                                                v-if="isImage(attachment.mime_type)"
+                                                v-if="
+                                                    isImage(
+                                                        attachment.mime_type,
+                                                    )
+                                                "
                                                 :src="attachment.url"
-                                                :alt="attachment.original_filename"
-                                                class="h-10 w-10 rounded object-cover shrink-0"
+                                                :alt="
+                                                    attachment.original_filename
+                                                "
+                                                class="h-10 w-10 shrink-0 rounded object-cover"
                                             />
-                                            <FileText v-else class="h-4 w-4 text-muted-foreground shrink-0" />
-                                            <span class="text-sm truncate">{{ attachment.original_filename }}</span>
-                                            <span class="text-xs text-muted-foreground shrink-0">{{ formatFileSize(attachment.size) }}</span>
+                                            <FileText
+                                                v-else
+                                                class="h-4 w-4 shrink-0 text-muted-foreground"
+                                            />
+                                            <span class="truncate text-sm">{{
+                                                attachment.original_filename
+                                            }}</span>
+                                            <span
+                                                class="shrink-0 text-xs text-muted-foreground"
+                                                >{{
+                                                    formatFileSize(
+                                                        attachment.size,
+                                                    )
+                                                }}</span
+                                            >
                                         </div>
                                         <div class="flex items-center gap-1">
-                                            <a :href="attachment.url" target="_blank" class="p-1 text-muted-foreground hover:text-foreground">
+                                            <a
+                                                :href="attachment.url"
+                                                target="_blank"
+                                                class="p-1 text-muted-foreground hover:text-foreground"
+                                            >
                                                 <Download class="h-4 w-4" />
                                             </a>
                                             <Link
                                                 :href="`/projects/${project.id}/documentations/${documentation.id}/attachments/${attachment.id}`"
                                                 method="delete"
                                                 as="button"
-                                                class="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
+                                                class="cursor-pointer p-1 text-muted-foreground hover:text-destructive"
                                             >
                                                 <Trash2 class="h-4 w-4" />
                                             </Link>
@@ -187,11 +261,19 @@ const submit = () => {
                             <!-- New Attachments -->
                             <div class="space-y-2">
                                 <Label>Add Attachments</Label>
-                                <div class="border border-dashed border-input rounded-md p-4">
-                                    <label class="flex flex-col items-center gap-2 cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                                <div
+                                    class="rounded-md border border-dashed border-input p-4"
+                                >
+                                    <label
+                                        class="flex cursor-pointer flex-col items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+                                    >
                                         <Upload class="h-8 w-8" />
-                                        <span class="text-sm">Click to upload files</span>
-                                        <span class="text-xs">(Max 10MB per file)</span>
+                                        <span class="text-sm"
+                                            >Click to upload files</span
+                                        >
+                                        <span class="text-xs"
+                                            >(Max 10MB per file)</span
+                                        >
                                         <input
                                             type="file"
                                             multiple
@@ -200,18 +282,38 @@ const submit = () => {
                                         />
                                     </label>
                                 </div>
-                                <div v-if="form.attachments.length > 0" class="space-y-2 mt-2">
+                                <div
+                                    v-if="form.attachments.length > 0"
+                                    class="mt-2 space-y-2"
+                                >
                                     <div
-                                        v-for="(file, index) in form.attachments"
+                                        v-for="(
+                                            file, index
+                                        ) in form.attachments"
                                         :key="index"
-                                        class="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2"
+                                        class="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
                                     >
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <FileText class="h-4 w-4 text-muted-foreground shrink-0" />
-                                            <span class="text-sm truncate">{{ file.name }}</span>
-                                            <span class="text-xs text-muted-foreground shrink-0">{{ formatFileSize(file.size) }}</span>
+                                        <div
+                                            class="flex min-w-0 items-center gap-2"
+                                        >
+                                            <FileText
+                                                class="h-4 w-4 shrink-0 text-muted-foreground"
+                                            />
+                                            <span class="truncate text-sm">{{
+                                                file.name
+                                            }}</span>
+                                            <span
+                                                class="shrink-0 text-xs text-muted-foreground"
+                                                >{{
+                                                    formatFileSize(file.size)
+                                                }}</span
+                                            >
                                         </div>
-                                        <button type="button" @click="removeFile(index)" class="text-muted-foreground hover:text-destructive cursor-pointer">
+                                        <button
+                                            type="button"
+                                            @click="removeFile(index)"
+                                            class="cursor-pointer text-muted-foreground hover:text-destructive"
+                                        >
                                             <X class="h-4 w-4" />
                                         </button>
                                     </div>
@@ -219,10 +321,21 @@ const submit = () => {
                             </div>
 
                             <div class="flex gap-2">
-                                <Button type="submit" :disabled="form.processing">
+                                <Button
+                                    type="submit"
+                                    :disabled="form.processing"
+                                >
                                     Update Documentation
                                 </Button>
-                                <Button type="button" variant="outline" @click="$inertia.visit(`/projects/${project.id}/documentations/${documentation.id}`)">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="
+                                        $inertia.visit(
+                                            `/projects/${project.id}/documentations/${documentation.id}`,
+                                        )
+                                    "
+                                >
                                     Cancel
                                 </Button>
                             </div>

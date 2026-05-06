@@ -43,7 +43,10 @@ function save() {
         <Head title="Grafana Settings" />
         <SettingsLayout>
             <div class="flex flex-col gap-6">
-                <Heading title="Grafana / Loki" description="Configure Grafana connection for the Payout Monitor." />
+                <Heading
+                    title="Grafana / Loki"
+                    description="Configure Grafana connection for the Payout Monitor."
+                />
 
                 <form class="space-y-6" @submit.prevent="save">
                     <div class="grid gap-4 rounded-lg border p-4">
@@ -53,29 +56,58 @@ function save() {
                                 id="api_token"
                                 v-model="form.api_token"
                                 type="password"
-                                :placeholder="settings.has_token ? '••••••••••••••••' : 'glsa_...'"
+                                :placeholder="
+                                    settings.has_token
+                                        ? '••••••••••••••••'
+                                        : 'glsa_...'
+                                "
                             />
-                            <p v-if="form.errors.api_token" class="text-destructive text-sm">
+                            <p
+                                v-if="form.errors.api_token"
+                                class="text-sm text-destructive"
+                            >
                                 {{ form.errors.api_token }}
                             </p>
-                            <p class="text-xs text-muted-foreground">Bearer token for Grafana API. Will be stored encrypted. Leave empty to keep current token.</p>
+                            <p class="text-xs text-muted-foreground">
+                                Bearer token for Grafana API. Will be stored
+                                encrypted. Leave empty to keep current token.
+                            </p>
                         </div>
 
                         <div class="space-y-2">
                             <Label for="base_url">Grafana Base URL</Label>
-                            <Input id="base_url" v-model="form.base_url" placeholder="https://logging.air.io" />
-                            <p v-if="form.errors.base_url" class="text-destructive text-sm">
+                            <Input
+                                id="base_url"
+                                v-model="form.base_url"
+                                placeholder="https://logging.air.io"
+                            />
+                            <p
+                                v-if="form.errors.base_url"
+                                class="text-sm text-destructive"
+                            >
                                 {{ form.errors.base_url }}
                             </p>
                         </div>
 
                         <div class="space-y-2">
-                            <Label for="datasource_id">Loki Datasource ID or UID</Label>
-                            <Input id="datasource_id" v-model="form.datasource_id" placeholder="1 or Q111_7" />
-                            <p v-if="form.errors.datasource_id" class="text-destructive text-sm">
+                            <Label for="datasource_id"
+                                >Loki Datasource ID or UID</Label
+                            >
+                            <Input
+                                id="datasource_id"
+                                v-model="form.datasource_id"
+                                placeholder="1 or Q111_7"
+                            />
+                            <p
+                                v-if="form.errors.datasource_id"
+                                class="text-sm text-destructive"
+                            >
                                 {{ form.errors.datasource_id }}
                             </p>
-                            <p class="text-xs text-muted-foreground">Numeric ID or alphanumeric UID of the Loki datasource in Grafana.</p>
+                            <p class="text-xs text-muted-foreground">
+                                Numeric ID or alphanumeric UID of the Loki
+                                datasource in Grafana.
+                            </p>
                         </div>
 
                         <div class="space-y-2">
@@ -85,16 +117,28 @@ function save() {
                                 v-model="form.log_path"
                                 placeholder="/home/accountant/app/storage/logs/payouts-{YYYY-MM-DD}.log"
                             />
-                            <p v-if="form.errors.log_path" class="text-destructive text-sm">
+                            <p
+                                v-if="form.errors.log_path"
+                                class="text-sm text-destructive"
+                            >
                                 {{ form.errors.log_path }}
                             </p>
-                            <p class="text-xs text-muted-foreground">Use {YYYY-MM-DD} as a date placeholder. Will be auto-replaced.</p>
+                            <p class="text-xs text-muted-foreground">
+                                Use {YYYY-MM-DD} as a date placeholder. Will be
+                                auto-replaced.
+                            </p>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <Button type="submit" :disabled="form.processing" class="cursor-pointer">
-                            {{ form.processing ? 'Saving...' : 'Save Settings' }}
+                        <Button
+                            type="submit"
+                            :disabled="form.processing"
+                            class="cursor-pointer"
+                        >
+                            {{
+                                form.processing ? 'Saving...' : 'Save Settings'
+                            }}
                         </Button>
 
                         <Transition
@@ -103,7 +147,10 @@ function save() {
                             leave-active-class="transition ease-in-out"
                             leave-to-class="opacity-0"
                         >
-                            <p v-show="form.recentlySuccessful" class="text-sm text-neutral-600">
+                            <p
+                                v-show="form.recentlySuccessful"
+                                class="text-sm text-neutral-600"
+                            >
                                 Saved.
                             </p>
                         </Transition>

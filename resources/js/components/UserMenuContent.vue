@@ -38,7 +38,10 @@ defineProps<Props>();
             </Link>
         </DropdownMenuItem>
         <DropdownMenuItem :as-child="true">
-            <Link class="block w-full cursor-pointer" href="/workspaces/settings">
+            <Link
+                class="block w-full cursor-pointer"
+                href="/workspaces/settings"
+            >
                 <Building2 class="mr-2 h-4 w-4" />
                 Workspace Settings
             </Link>

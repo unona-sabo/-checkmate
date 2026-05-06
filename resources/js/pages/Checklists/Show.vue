@@ -2,7 +2,15 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { writeToClipboard } from '@/composables/useClipboard';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type Checklist, type ChecklistRow, type ColumnConfig, type SelectOption, type TestSuite } from '@/types';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type Checklist,
+    type ChecklistRow,
+    type ColumnConfig,
+    type SelectOption,
+    type TestSuite,
+} from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,13 +39,46 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import TranslateButtons from '@/components/TranslateButtons.vue';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-    ClipboardList, Edit, Plus, Trash2, Save, GripVertical,
-    Bold, Heading, GripHorizontal, StickyNote, Import, Pencil, X, Search,
-    MoreHorizontal, Copy, Layers, Play, Download, Upload, FileSpreadsheet,
-    ArrowUp, ArrowDown, Bug, RefreshCw, Undo2, AlertCircle, Columns3, Check, Link2, Filter,
-    LocateFixed
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    ClipboardList,
+    Edit,
+    Plus,
+    Trash2,
+    Save,
+    GripVertical,
+    Bold,
+    Heading,
+    GripHorizontal,
+    StickyNote,
+    Import,
+    Pencil,
+    X,
+    Search,
+    MoreHorizontal,
+    Copy,
+    Layers,
+    Play,
+    Download,
+    Upload,
+    FileSpreadsheet,
+    ArrowUp,
+    ArrowDown,
+    Bug,
+    RefreshCw,
+    Undo2,
+    AlertCircle,
+    Columns3,
+    Check,
+    Link2,
+    Filter,
+    LocateFixed,
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
@@ -46,7 +87,10 @@ import FeatureBadges from '@/components/FeatureBadges.vue';
 import CellEditor from '@/components/CellEditor.vue';
 import { useCanEdit } from '@/composables/useCanEdit';
 import { useSearch } from '@/composables/useSearch';
-import { useChecklistClipboard, type ClipboardData } from '@/composables/useChecklistClipboard';
+import {
+    useChecklistClipboard,
+    type ClipboardData,
+} from '@/composables/useChecklistClipboard';
 import { useChecklistFilters } from '@/composables/useChecklistFilters';
 import { useChecklistDragDrop } from '@/composables/useChecklistDragDrop';
 import { useLocalStorageDraft } from '@/composables/useLocalStorageDraft';
@@ -66,7 +110,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Checklists', href: `/projects/${props.project.id}/checklists` },
-    { title: props.checklist.name, href: `/projects/${props.project.id}/checklists/${props.checklist.id}` },
+    {
+        title: props.checklist.name,
+        href: `/projects/${props.project.id}/checklists/${props.checklist.id}`,
+    },
 ];
 
 interface ExtendedChecklistRow extends ChecklistRow {
@@ -104,14 +151,22 @@ const copyLink = () => {
     const url = window.location.origin + route;
     writeToClipboard(url).then(() => {
         copied.value = true;
-        setTimeout(() => { copied.value = false; }, 2000);
+        setTimeout(() => {
+            copied.value = false;
+        }, 2000);
     });
 };
 
-const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;
+const MODULE_OPTIONS = [
+    'UI',
+    'API',
+    'Backend',
+    'Database',
+    'Integration',
+] as const;
 
 const mapRows = (raw: ChecklistRow[] | undefined): ExtendedChecklistRow[] =>
-    (raw ?? []).map(r => ({
+    (raw ?? []).map((r) => ({
         ...r,
         row_type: r.row_type || 'normal',
         background_color: r.background_color || null,
@@ -123,19 +178,29 @@ const mapRows = (raw: ChecklistRow[] | undefined): ExtendedChecklistRow[] =>
 const rows = ref<ExtendedChecklistRow[]>(mapRows(props.rows));
 const hasLoadedRows = ref(!!props.rows);
 
-watch(() => props.rows, (newRows) => {
-    if (newRows) {
-        hasLoadedRows.value = true;
-        rows.value = mapRows(newRows);
-        resizeAllTextareas();
-    }
-});
+watch(
+    () => props.rows,
+    (newRows) => {
+        if (newRows) {
+            hasLoadedRows.value = true;
+            rows.value = mapRows(newRows);
+            resizeAllTextareas();
+        }
+    },
+);
 
 const columns = ref<ExtendedColumnConfig[]>(
-    (props.checklist.columns_config || [
-        { key: 'item', label: 'Item', type: 'text' as const, width: 200 },
-        { key: 'status', label: 'Status', type: 'checkbox' as const, width: 80 },
-    ]).map(col => ({ ...col, width: col.width || 150 }))
+    (
+        props.checklist.columns_config || [
+            { key: 'item', label: 'Item', type: 'text' as const, width: 200 },
+            {
+                key: 'status',
+                label: 'Status',
+                type: 'checkbox' as const,
+                width: 80,
+            },
+        ]
+    ).map((col) => ({ ...col, width: col.width || 150 })),
 );
 
 // Column visibility
@@ -147,8 +212,8 @@ const loadHiddenColumns = () => {
         const saved = localStorage.getItem(HIDDEN_COLS_KEY);
         if (saved) {
             const parsed = JSON.parse(saved) as string[];
-            const validKeys = columns.value.map(c => c.key);
-            hiddenColumns.value = parsed.filter(k => validKeys.includes(k));
+            const validKeys = columns.value.map((c) => c.key);
+            hiddenColumns.value = parsed.filter((k) => validKeys.includes(k));
             if (hiddenColumns.value.length !== parsed.length) {
                 saveHiddenColumns();
             }
@@ -160,7 +225,10 @@ const loadHiddenColumns = () => {
 
 const saveHiddenColumns = () => {
     try {
-        localStorage.setItem(HIDDEN_COLS_KEY, JSON.stringify(hiddenColumns.value));
+        localStorage.setItem(
+            HIDDEN_COLS_KEY,
+            JSON.stringify(hiddenColumns.value),
+        );
     } catch (e) {
         console.error('Failed to save hidden columns:', e);
     }
@@ -176,7 +244,9 @@ const toggleColumnVisibility = (key: string) => {
     saveHiddenColumns();
 };
 
-const visibleColumns = computed(() => columns.value.filter(c => !hiddenColumns.value.includes(c.key)));
+const visibleColumns = computed(() =>
+    columns.value.filter((c) => !hiddenColumns.value.includes(c.key)),
+);
 const hasHiddenColumns = computed(() => hiddenColumns.value.length > 0);
 
 const showDeleteConfirm = ref(false);
@@ -188,19 +258,25 @@ const copyTargetChecklistId = ref<number | null>(null);
 const copyTargetSectionId = ref<number | null>(null);
 const isCopying = ref(false);
 
-const otherChecklists = computed(() => props.checklists.filter(c => c.id !== props.checklist.id));
+const otherChecklists = computed(() =>
+    props.checklists.filter((c) => c.id !== props.checklist.id),
+);
 
 const targetSectionHeaders = computed(() => {
     if (!copyTargetChecklistId.value) return [];
-    const target = props.checklists.find(c => c.id === copyTargetChecklistId.value);
+    const target = props.checklists.find(
+        (c) => c.id === copyTargetChecklistId.value,
+    );
     if (!target?.section_headers?.length) return [];
 
-    const cols = target.columns_config || [{ key: 'item', label: 'Item', type: 'text' as const }];
+    const cols = target.columns_config || [
+        { key: 'item', label: 'Item', type: 'text' as const },
+    ];
     const labelKey = cols[0]?.key || 'item';
 
     return target.section_headers
         .sort((a, b) => a.order - b.order)
-        .map(sh => ({
+        .map((sh) => ({
             id: sh.id,
             label: String(sh.data[labelKey] || `Section ${sh.order}`),
         }));
@@ -219,10 +295,15 @@ const addRowsType = ref<'normal' | 'section_header'>('normal');
 
 // Track content changes (excluding checkbox changes)
 const hasContentChanges = ref(false);
-const checkboxKeys = computed(() => columns.value.filter(c => c.type === 'checkbox').map(c => c.key));
+const checkboxKeys = computed(() =>
+    columns.value.filter((c) => c.type === 'checkbox').map((c) => c.key),
+);
 
 // Undo last save — tracks the state after each successful save
-type Snapshot = { rows: ExtendedChecklistRow[]; columns: ExtendedColumnConfig[] };
+type Snapshot = {
+    rows: ExtendedChecklistRow[];
+    columns: ExtendedColumnConfig[];
+};
 // State after the last successful save (current "clean" state)
 let lastSavedState: Snapshot = {
     rows: JSON.parse(JSON.stringify(rows.value)),
@@ -279,20 +360,27 @@ const {
     canDragRows,
     INITIAL_ROWS,
     LOAD_MORE_COUNT,
-} = useChecklistFilters(rows, searchQuery, computed(() => {
-    const cbKeys = columns.value.filter(col => col.type === 'checkbox').map(col => col.key);
-    if (cbKeys.length === 0) return new Set<number>();
-    const ids = new Set<number>();
-    for (const row of rows.value) {
-        if (row.row_type === 'section_header') continue;
-        if (cbKeys.some(key => !!row.data[key])) {
-            ids.add(row.id);
+} = useChecklistFilters(
+    rows,
+    searchQuery,
+    computed(() => {
+        const cbKeys = columns.value
+            .filter((col) => col.type === 'checkbox')
+            .map((col) => col.key);
+        if (cbKeys.length === 0) return new Set<number>();
+        const ids = new Set<number>();
+        for (const row of rows.value) {
+            if (row.row_type === 'section_header') continue;
+            if (cbKeys.some((key) => !!row.data[key])) {
+                ids.add(row.id);
+            }
         }
-    }
-    return ids;
-}));
+        return ids;
+    }),
+);
 
-const navigateToRow = (row: ExtendedChecklistRow) => _navigateToRow(row, resizeAllTextareas);
+const navigateToRow = (row: ExtendedChecklistRow) =>
+    _navigateToRow(row, resizeAllTextareas);
 
 // Resize textareas when visible rows change (load more, show all, search)
 watch(visibleRowCount, () => {
@@ -315,7 +403,9 @@ const {
     saveDraft: _saveDraft,
     deleteDraft,
     getDraft,
-} = useLocalStorageDraft<NoteDraft>(`checklist-note-draft-${props.checklist.id}`);
+} = useLocalStorageDraft<NoteDraft>(
+    `checklist-note-draft-${props.checklist.id}`,
+);
 
 const saveDraft = () => {
     _saveDraft({
@@ -355,7 +445,9 @@ const onNoteDialogChange = (open: boolean) => {
 
 // Get selected checklist
 const selectedChecklist = computed(() => {
-    return props.checklists.find(c => c.id === selectedChecklistId.value) || null;
+    return (
+        props.checklists.find((c) => c.id === selectedChecklistId.value) || null
+    );
 });
 
 // Get available text columns for the selected checklist
@@ -363,18 +455,24 @@ const availableColumns = computed(() => {
     if (!selectedChecklist.value?.columns_config) {
         return [{ key: 'item', label: 'Item', type: 'text' as const }];
     }
-    return selectedChecklist.value.columns_config.filter(col => col.type === 'text');
+    return selectedChecklist.value.columns_config.filter(
+        (col) => col.type === 'text',
+    );
 });
 
 // Find default column key (prefer "check" or "item")
 const getDefaultColumnKey = (cols: ColumnConfig[]) => {
     const checkColumn = cols.find(
-        col => col.key.toLowerCase().includes('check') || col.label.toLowerCase().includes('check')
+        (col) =>
+            col.key.toLowerCase().includes('check') ||
+            col.label.toLowerCase().includes('check'),
     );
     if (checkColumn) return checkColumn.key;
 
     const itemColumn = cols.find(
-        col => col.key.toLowerCase().includes('item') || col.label.toLowerCase().includes('item')
+        (col) =>
+            col.key.toLowerCase().includes('item') ||
+            col.label.toLowerCase().includes('item'),
     );
     if (itemColumn) return itemColumn.key;
 
@@ -382,12 +480,18 @@ const getDefaultColumnKey = (cols: ColumnConfig[]) => {
 };
 
 // Initialize with default column for current checklist
-const selectedColumnKey = ref<string>(getDefaultColumnKey(columns.value.filter(col => col.type === 'text')));
+const selectedColumnKey = ref<string>(
+    getDefaultColumnKey(columns.value.filter((col) => col.type === 'text')),
+);
 
 // Set default column when checklist changes
-watch(selectedChecklistId, () => {
-    selectedColumnKey.value = getDefaultColumnKey(availableColumns.value);
-}, { immediate: true });
+watch(
+    selectedChecklistId,
+    () => {
+        selectedColumnKey.value = getDefaultColumnKey(availableColumns.value);
+    },
+    { immediate: true },
+);
 
 // Parse notes into array of items
 const parsedNotes = computed(() => {
@@ -395,18 +499,23 @@ const parsedNotes = computed(() => {
 
     return noteContent.value
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .map(line => {
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => {
             // Remove leading numbers, dots, dashes, etc.
             return line.replace(/^[\d]+[.\)\-:\s]+/, '').trim();
         })
-        .filter(line => line.length > 0);
+        .filter((line) => line.length > 0);
 });
 
 // Import notes to checklist
 const importNotes = () => {
-    if (parsedNotes.value.length === 0 || !selectedChecklistId.value || !selectedColumnKey.value) return;
+    if (
+        parsedNotes.value.length === 0 ||
+        !selectedChecklistId.value ||
+        !selectedColumnKey.value
+    )
+        return;
 
     isImporting.value = true;
 
@@ -428,10 +537,9 @@ const importNotes = () => {
             onError: () => {
                 isImporting.value = false;
             },
-        }
+        },
     );
 };
-
 
 // Drag and drop + column resize
 const {
@@ -466,13 +574,18 @@ const predefinedColors = [
 
 const getTextColorForBg = (bgColor: string | undefined): string => {
     if (!bgColor) return '#2563eb';
-    const found = predefinedColors.find(c => c.value === bgColor);
+    const found = predefinedColors.find((c) => c.value === bgColor);
     return found?.text || '#2563eb';
 };
 
-const getSelectedOption = (column: ExtendedColumnConfig, value: unknown): SelectOption | undefined => {
+const getSelectedOption = (
+    column: ExtendedColumnConfig,
+    value: unknown,
+): SelectOption | undefined => {
     if (!column.options || !value) return undefined;
-    return column.options.find(opt => opt.value === value || opt.label === value);
+    return column.options.find(
+        (opt) => opt.value === value || opt.label === value,
+    );
 };
 
 const fontColors = [
@@ -495,7 +608,7 @@ const fontWeights = [
 
 const addRow = (type: 'normal' | 'section_header' = 'normal') => {
     const newData: Record<string, unknown> = {};
-    columns.value.forEach(col => {
+    columns.value.forEach((col) => {
         newData[col.key] = col.type === 'checkbox' ? false : '';
     });
     rows.value.push({
@@ -519,7 +632,11 @@ const addRow = (type: 'normal' | 'section_header' = 'normal') => {
     nextTick(() => saveRows());
 };
 
-const openAddRowsDialog = (index: number, position: 'above' | 'below' | 'end', type: 'normal' | 'section_header' = 'normal') => {
+const openAddRowsDialog = (
+    index: number,
+    position: 'above' | 'below' | 'end',
+    type: 'normal' | 'section_header' = 'normal',
+) => {
     addRowsAtIndex.value = index;
     addRowsPosition.value = position;
     addRowsType.value = type;
@@ -543,7 +660,7 @@ const insertRows = () => {
     const newRows: ExtendedChecklistRow[] = [];
     for (let i = 0; i < count; i++) {
         const newData: Record<string, unknown> = {};
-        columns.value.forEach(col => {
+        columns.value.forEach((col) => {
             newData[col.key] = col.type === 'checkbox' ? false : '';
         });
         newRows.push({
@@ -579,8 +696,8 @@ const insertRows = () => {
 const showDeleteSelectedConfirm = ref(false);
 
 const removeSelectedRows = () => {
-    const selectedIds = new Set(selectedRows.value.map(r => r.id));
-    rows.value = rows.value.filter(r => !selectedIds.has(r.id));
+    const selectedIds = new Set(selectedRows.value.map((r) => r.id));
+    rows.value = rows.value.filter((r) => !selectedIds.has(r.id));
     clearManualSelection();
     showDeleteSelectedConfirm.value = false;
     hasContentChanges.value = false;
@@ -644,7 +761,7 @@ const saveRows = () => {
                 saveError.value = true;
                 isSaving.value = false;
             },
-        }
+        },
     );
 };
 
@@ -655,7 +772,7 @@ const saveDirtyRows = async () => {
     isSaving.value = true;
 
     const dirtyRows = rows.value
-        .filter(row => dirtyRowIds.has(row.id))
+        .filter((row) => dirtyRowIds.has(row.id))
         .map((row) => ({
             id: row.id,
             data: row.data,
@@ -692,7 +809,9 @@ const saveDirtyRows = async () => {
     }
 };
 
-const selectColumnKeys = computed(() => columns.value.filter(c => c.type === 'select').map(c => c.key));
+const selectColumnKeys = computed(() =>
+    columns.value.filter((c) => c.type === 'select').map((c) => c.key),
+);
 
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -703,7 +822,10 @@ const updateCell = (row: ExtendedChecklistRow, key: string, value: unknown) => {
 
     // Auto-save immediately for select columns
     if (selectColumnKeys.value.includes(key)) {
-        if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+        if (autoSaveTimer) {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = null;
+        }
         nextTick(() => saveDirtyRows());
     } else {
         // Debounced save for checkboxes and text/date — 1.5s after last change
@@ -718,14 +840,20 @@ const updateCell = (row: ExtendedChecklistRow, key: string, value: unknown) => {
 
 const saveOnBlur = () => {
     if (dirtyRowIds.size > 0) {
-        if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+        if (autoSaveTimer) {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = null;
+        }
         saveDirtyRows();
     } else if (hasContentChanges.value) {
         saveRows();
     }
 };
 
-const setBackgroundColor = (row: ExtendedChecklistRow, color: string | null) => {
+const setBackgroundColor = (
+    row: ExtendedChecklistRow,
+    color: string | null,
+) => {
     row.background_color = color;
     dirtyRowIds.add(row.id);
     hasContentChanges.value = true;
@@ -737,7 +865,10 @@ const setFontColor = (row: ExtendedChecklistRow, color: string | null) => {
     hasContentChanges.value = true;
 };
 
-const setFontWeight = (row: ExtendedChecklistRow, weight: 'normal' | 'medium' | 'semibold' | 'bold') => {
+const setFontWeight = (
+    row: ExtendedChecklistRow,
+    weight: 'normal' | 'medium' | 'semibold' | 'bold',
+) => {
     row.font_weight = weight;
     dirtyRowIds.add(row.id);
     hasContentChanges.value = true;
@@ -785,16 +916,22 @@ const getRowStyles = (row: ExtendedChecklistRow) => {
 
 const getFontWeightClass = (weight: string) => {
     switch (weight) {
-        case 'medium': return 'font-medium';
-        case 'semibold': return 'font-semibold';
-        case 'bold': return 'font-bold';
-        default: return 'font-normal';
+        case 'medium':
+            return 'font-medium';
+        case 'semibold':
+            return 'font-semibold';
+        case 'bold':
+            return 'font-bold';
+        default:
+            return 'font-normal';
     }
 };
 
 // Get all checkbox column keys
 const checkboxColumnKeys = computed(() => {
-    return columns.value.filter(col => col.type === 'checkbox').map(col => col.key);
+    return columns.value
+        .filter((col) => col.type === 'checkbox')
+        .map((col) => col.key);
 });
 
 // Manual row selection by clicking row numbers
@@ -802,12 +939,14 @@ const manualSelectedIds = ref<Set<number>>(new Set());
 let lastClickedRowId: number | null = null;
 
 const toggleRowSelection = (row: ExtendedChecklistRow, event?: MouseEvent) => {
-    const dataRows = filteredRows.value.filter(r => r.row_type !== 'section_header');
+    const dataRows = filteredRows.value.filter(
+        (r) => r.row_type !== 'section_header',
+    );
 
     // Shift+Click: select range from last clicked to current
     if (event?.shiftKey && lastClickedRowId !== null) {
-        const lastIdx = dataRows.findIndex(r => r.id === lastClickedRowId);
-        const curIdx = dataRows.findIndex(r => r.id === row.id);
+        const lastIdx = dataRows.findIndex((r) => r.id === lastClickedRowId);
+        const curIdx = dataRows.findIndex((r) => r.id === row.id);
         if (lastIdx !== -1 && curIdx !== -1) {
             const start = Math.min(lastIdx, curIdx);
             const end = Math.max(lastIdx, curIdx);
@@ -831,8 +970,10 @@ const toggleRowSelection = (row: ExtendedChecklistRow, event?: MouseEvent) => {
 };
 
 const selectAllRows = () => {
-    const dataRows = filteredRows.value.filter(r => r.row_type !== 'section_header');
-    manualSelectedIds.value = new Set(dataRows.map(r => r.id));
+    const dataRows = filteredRows.value.filter(
+        (r) => r.row_type !== 'section_header',
+    );
+    manualSelectedIds.value = new Set(dataRows.map((r) => r.id));
 };
 
 const clearManualSelection = () => {
@@ -859,10 +1000,10 @@ const selectedRows = computed(() => {
     const checkboxKeys = checkboxColumnKeys.value;
     const manualIds = manualSelectedIds.value;
 
-    return filteredRows.value.filter(row => {
+    return filteredRows.value.filter((row) => {
         if (row.row_type === 'section_header') return false;
         if (manualIds.has(row.id)) return true;
-        return checkboxKeys.some(key => !!row.data[key]);
+        return checkboxKeys.some((key) => !!row.data[key]);
     });
 });
 
@@ -870,27 +1011,38 @@ const selectedRows = computed(() => {
 const hasSelectedRows = computed(() => selectedRows.value.length > 0);
 
 // Get select columns for "Change Status" action
-const selectColumns = computed(() => columns.value.filter(col => col.type === 'select' && col.options?.length));
+const selectColumns = computed(() =>
+    columns.value.filter((col) => col.type === 'select' && col.options?.length),
+);
 
 // Clean up filter values when select columns change
-watch(selectColumns, (newCols) => {
-    const validKeys = new Set(newCols.map(c => c.key));
-    for (const key of Object.keys(filterValues.value)) {
-        if (!validKeys.has(key)) {
-            delete filterValues.value[key];
-        } else {
-            const col = newCols.find(c => c.key === key);
-            const validOptions = new Set(col?.options?.map(o => o.value) || []);
-            if (filterValues.value[key] && !validOptions.has(filterValues.value[key])) {
-                filterValues.value[key] = '';
+watch(
+    selectColumns,
+    (newCols) => {
+        const validKeys = new Set(newCols.map((c) => c.key));
+        for (const key of Object.keys(filterValues.value)) {
+            if (!validKeys.has(key)) {
+                delete filterValues.value[key];
+            } else {
+                const col = newCols.find((c) => c.key === key);
+                const validOptions = new Set(
+                    col?.options?.map((o) => o.value) || [],
+                );
+                if (
+                    filterValues.value[key] &&
+                    !validOptions.has(filterValues.value[key])
+                ) {
+                    filterValues.value[key] = '';
+                }
             }
         }
-    }
-}, { deep: true });
+    },
+    { deep: true },
+);
 
 // Change status of selected rows for a given column
 const changeSelectedStatus = (columnKey: string, value: string) => {
-    selectedRows.value.forEach(row => {
+    selectedRows.value.forEach((row) => {
         row.data[columnKey] = value;
     });
     rows.value = [...rows.value];
@@ -912,7 +1064,7 @@ const copyToChecklist = () => {
 
     isCopying.value = true;
 
-    const rowsPayload = selectedRows.value.map(row => ({
+    const rowsPayload = selectedRows.value.map((row) => ({
         data: row.data,
         row_type: row.row_type || 'normal',
         background_color: row.background_color || null,
@@ -926,7 +1078,11 @@ const copyToChecklist = () => {
         {
             rows: rowsPayload,
             section_row_id: copyTargetSectionId.value,
-            source_columns_config: columns.value.map(c => ({ key: c.key, label: c.label, type: c.type })),
+            source_columns_config: columns.value.map((c) => ({
+                key: c.key,
+                label: c.label,
+                type: c.type,
+            })),
         },
         {
             preserveState: false,
@@ -937,7 +1093,7 @@ const copyToChecklist = () => {
             onError: () => {
                 isCopying.value = false;
             },
-        }
+        },
     );
 };
 
@@ -946,7 +1102,7 @@ const copyRowsToClipboard = () => {
     if (selectedRows.value.length === 0) return;
 
     saveToClipboard({
-        rows: selectedRows.value.map(row => ({
+        rows: selectedRows.value.map((row) => ({
             data: { ...row.data },
             row_type: row.row_type || 'normal',
             background_color: row.background_color || null,
@@ -954,7 +1110,12 @@ const copyRowsToClipboard = () => {
             font_weight: row.font_weight || 'normal',
             module: row.module || [],
         })),
-        source_columns_config: columns.value.map(c => ({ key: c.key, label: c.label, type: c.type, options: c.options })),
+        source_columns_config: columns.value.map((c) => ({
+            key: c.key,
+            label: c.label,
+            type: c.type,
+            options: c.options,
+        })),
         source_checklist_name: props.checklist.name,
         timestamp: Date.now(),
     });
@@ -967,8 +1128,8 @@ const isPasting = ref(false);
 
 const currentSectionHeaders = computed(() => {
     return rows.value
-        .filter(r => r.row_type === 'section_header')
-        .map(r => {
+        .filter((r) => r.row_type === 'section_header')
+        .map((r) => {
             const labelKey = columns.value[0]?.key || 'item';
             return {
                 id: r.id,
@@ -997,7 +1158,8 @@ const pasteRows = () => {
 
     const payload = {
         rows: clipboardData.value.rows,
-        section_row_id: pastePosition.value === 'section' ? pasteSectionId.value : null,
+        section_row_id:
+            pastePosition.value === 'section' ? pasteSectionId.value : null,
         source_columns_config: clipboardData.value.source_columns_config,
     };
 
@@ -1017,18 +1179,18 @@ const pasteRows = () => {
                 }
                 isPasting.value = false;
             },
-        }
+        },
     );
 };
 
 // Create bugreport from selected rows
 const createBugreportFromSelected = () => {
-    const textColumns = columns.value.filter(col => col.type === 'text');
+    const textColumns = columns.value.filter((col) => col.type === 'text');
     const lines: string[] = [];
 
     selectedRows.value.forEach((row, idx) => {
         const parts: string[] = [];
-        textColumns.forEach(col => {
+        textColumns.forEach((col) => {
             const val = row.data[col.key];
             if (typeof val === 'string' && val.trim()) {
                 parts.push(val.trim());
@@ -1050,20 +1212,24 @@ const createBugreportFromSelected = () => {
     params.set('checklist_id', String(props.checklist.id));
 
     const persistedRowIds = selectedRows.value
-        .filter(row => !row._isNew && row.id)
-        .map(row => row.id);
+        .filter((row) => !row._isNew && row.id)
+        .map((row) => row.id);
     if (persistedRowIds.length > 0) {
         params.set('checklist_row_ids', persistedRowIds.join(','));
     }
 
-    const bugreportColumn = columns.value.find(col =>
-        col.key.toLowerCase().includes('bugreport') || col.label.toLowerCase().includes('bugreport'),
+    const bugreportColumn = columns.value.find(
+        (col) =>
+            col.key.toLowerCase().includes('bugreport') ||
+            col.label.toLowerCase().includes('bugreport'),
     );
     if (bugreportColumn) {
         params.set('checklist_link_column', bugreportColumn.key);
     }
 
-    router.get(`/projects/${props.project.id}/bugreports/create?${params.toString()}`);
+    router.get(
+        `/projects/${props.project.id}/bugreports/create?${params.toString()}`,
+    );
 };
 
 // Create test case from selected rows
@@ -1073,7 +1239,9 @@ const testCaseTargetChildId = ref<number | null>(null);
 
 const selectedParentSuiteChildren = computed(() => {
     if (!testCaseTargetSuiteId.value) return [];
-    const parent = props.testSuites.find(s => s.id === testCaseTargetSuiteId.value);
+    const parent = props.testSuites.find(
+        (s) => s.id === testCaseTargetSuiteId.value,
+    );
     if (!parent?.children?.length) return [];
     return [...parent.children].sort((a, b) => a.order - b.order);
 });
@@ -1082,7 +1250,9 @@ watch(testCaseTargetSuiteId, () => {
     testCaseTargetChildId.value = null;
 });
 
-const effectiveTestSuiteId = computed(() => testCaseTargetChildId.value ?? testCaseTargetSuiteId.value);
+const effectiveTestSuiteId = computed(
+    () => testCaseTargetChildId.value ?? testCaseTargetSuiteId.value,
+);
 
 const openTestCaseDialog = () => {
     if (props.testSuites.length === 0) return;
@@ -1094,17 +1264,19 @@ const openTestCaseDialog = () => {
 const createTestCaseFromSelected = () => {
     if (!effectiveTestSuiteId.value) return;
 
-    const textColumns = columns.value.filter(col => col.type === 'text');
-    const steps = selectedRows.value.map(row => {
-        const parts: string[] = [];
-        textColumns.forEach(col => {
-            const val = row.data[col.key];
-            if (typeof val === 'string' && val.trim()) {
-                parts.push(val.trim());
-            }
-        });
-        return { action: parts.join(' — '), expected: '' };
-    }).filter(s => s.action);
+    const textColumns = columns.value.filter((col) => col.type === 'text');
+    const steps = selectedRows.value
+        .map((row) => {
+            const parts: string[] = [];
+            textColumns.forEach((col) => {
+                const val = row.data[col.key];
+                if (typeof val === 'string' && val.trim()) {
+                    parts.push(val.trim());
+                }
+            });
+            return { action: parts.join(' — '), expected: '' };
+        })
+        .filter((s) => s.action);
 
     const params = new URLSearchParams();
     params.set('title', `[${props.checklist.name}] Test Case`);
@@ -1116,28 +1288,34 @@ const createTestCaseFromSelected = () => {
     params.set('checklist_id', String(props.checklist.id));
 
     const persistedRowIds = selectedRows.value
-        .filter(row => !row._isNew && row.id)
-        .map(row => row.id);
+        .filter((row) => !row._isNew && row.id)
+        .map((row) => row.id);
     if (persistedRowIds.length > 0) {
         params.set('checklist_row_ids', persistedRowIds.join(','));
     }
 
     // Auto-detect test case link column
-    const testCaseColumn = columns.value.find(col =>
-        col.key.toLowerCase().includes('testcase') ||
-        col.key.toLowerCase().includes('test_case') ||
-        col.label.toLowerCase().includes('testcase') ||
-        col.label.toLowerCase().includes('test case'),
-    ) || columns.value.find(col =>
-        col.key.toLowerCase().includes('test') ||
-        col.label.toLowerCase().includes('test'),
-    );
+    const testCaseColumn =
+        columns.value.find(
+            (col) =>
+                col.key.toLowerCase().includes('testcase') ||
+                col.key.toLowerCase().includes('test_case') ||
+                col.label.toLowerCase().includes('testcase') ||
+                col.label.toLowerCase().includes('test case'),
+        ) ||
+        columns.value.find(
+            (col) =>
+                col.key.toLowerCase().includes('test') ||
+                col.label.toLowerCase().includes('test'),
+        );
     if (testCaseColumn) {
         params.set('checklist_link_column', testCaseColumn.key);
     }
 
     showTestCaseDialog.value = false;
-    router.get(`/projects/${props.project.id}/test-suites/${effectiveTestSuiteId.value}/test-cases/create?${params.toString()}`);
+    router.get(
+        `/projects/${props.project.id}/test-suites/${effectiveTestSuiteId.value}/test-cases/create?${params.toString()}`,
+    );
 };
 
 // Create test run from selected rows
@@ -1151,17 +1329,23 @@ const testRunPriority = ref('');
 const testRunColumnKey = ref('');
 const isCreatingTestRun = ref(false);
 
-const textColumnsForTestRun = computed(() => columns.value.filter(col => col.type === 'text'));
+const textColumnsForTestRun = computed(() =>
+    columns.value.filter((col) => col.type === 'text'),
+);
 
 const findCheckColumn = (): string => {
     const text = textColumnsForTestRun.value;
-    const match = text.find(col =>
-        col.key.toLowerCase() === 'check' ||
-        col.label.toLowerCase() === 'check',
-    ) ?? text.find(col =>
-        col.key.toLowerCase().includes('check') ||
-        col.label.toLowerCase().includes('check'),
-    );
+    const match =
+        text.find(
+            (col) =>
+                col.key.toLowerCase() === 'check' ||
+                col.label.toLowerCase() === 'check',
+        ) ??
+        text.find(
+            (col) =>
+                col.key.toLowerCase().includes('check') ||
+                col.label.toLowerCase().includes('check'),
+        );
     return match?.key ?? text[0]?.key ?? '';
 };
 
@@ -1179,33 +1363,45 @@ const openTestRunDialog = () => {
 const createTestRunFromSelected = () => {
     if (isCreatingTestRun.value || !testRunColumnKey.value) return;
 
-    const titles = selectedRows.value.map(row => {
-        const val = row.data[testRunColumnKey.value];
-        return typeof val === 'string' ? val.trim() : '';
-    }).filter(t => t.length > 0);
+    const titles = selectedRows.value
+        .map((row) => {
+            const val = row.data[testRunColumnKey.value];
+            return typeof val === 'string' ? val.trim() : '';
+        })
+        .filter((t) => t.length > 0);
 
     if (titles.length === 0) return;
 
     isCreatingTestRun.value = true;
-    const envParts = [testRunEnvPreset.value, testRunEnvNotes.value.trim()].filter(Boolean);
-    router.post(`/projects/${props.project.id}/test-runs/from-checklist`, {
-        name: testRunName.value,
-        description: testRunDescription.value || null,
-        priority: testRunPriority.value || null,
-        environment: envParts.join(' — ') || null,
-        milestone: testRunMilestone.value || null,
-        checklist_id: props.checklist.id,
-        titles,
-    }, {
-        onFinish: () => {
-            isCreatingTestRun.value = false;
-            showTestRunDialog.value = false;
+    const envParts = [
+        testRunEnvPreset.value,
+        testRunEnvNotes.value.trim(),
+    ].filter(Boolean);
+    router.post(
+        `/projects/${props.project.id}/test-runs/from-checklist`,
+        {
+            name: testRunName.value,
+            description: testRunDescription.value || null,
+            priority: testRunPriority.value || null,
+            environment: envParts.join(' — ') || null,
+            milestone: testRunMilestone.value || null,
+            checklist_id: props.checklist.id,
+            titles,
         },
-    });
+        {
+            onFinish: () => {
+                isCreatingTestRun.value = false;
+                showTestRunDialog.value = false;
+            },
+        },
+    );
 };
 
 // Check if row has any content (non-empty text fields)
-const rowHasContent = (row: ExtendedChecklistRow, checkboxColumnKey: string): boolean => {
+const rowHasContent = (
+    row: ExtendedChecklistRow,
+    checkboxColumnKey: string,
+): boolean => {
     return Object.entries(row.data).some(([key, value]) => {
         // Skip the checkbox column itself
         if (key === checkboxColumnKey) return false;
@@ -1221,15 +1417,19 @@ const rowHasContent = (row: ExtendedChecklistRow, checkboxColumnKey: string): bo
 };
 
 // Get checkbox header state: true, false, or 'indeterminate' (respects active filters/search)
-const getHeaderCheckboxState = (columnKey: string): boolean | 'indeterminate' => {
+const getHeaderCheckboxState = (
+    columnKey: string,
+): boolean | 'indeterminate' => {
     const sourceRows = filteredRows.value;
-    const rowsWithContent = sourceRows.filter(r =>
-        r.row_type !== 'section_header' && rowHasContent(r, columnKey)
+    const rowsWithContent = sourceRows.filter(
+        (r) => r.row_type !== 'section_header' && rowHasContent(r, columnKey),
     );
 
     if (rowsWithContent.length === 0) return false;
 
-    const checkedCount = rowsWithContent.filter(row => !!row.data[columnKey]).length;
+    const checkedCount = rowsWithContent.filter(
+        (row) => !!row.data[columnKey],
+    ).length;
 
     if (checkedCount === 0) return false;
     if (checkedCount === rowsWithContent.length) return true;
@@ -1239,18 +1439,20 @@ const getHeaderCheckboxState = (columnKey: string): boolean | 'indeterminate' =>
 // Toggle all checkboxes in a column (only for visible/filtered rows with content)
 const toggleAllCheckboxes = (columnKey: string) => {
     const sourceRows = filteredRows.value;
-    const rowsWithContent = sourceRows.filter(r =>
-        r.row_type !== 'section_header' && rowHasContent(r, columnKey)
+    const rowsWithContent = sourceRows.filter(
+        (r) => r.row_type !== 'section_header' && rowHasContent(r, columnKey),
     );
 
     if (rowsWithContent.length === 0) return;
 
-    const checkedCount = rowsWithContent.filter(row => !!row.data[columnKey]).length;
+    const checkedCount = rowsWithContent.filter(
+        (row) => !!row.data[columnKey],
+    ).length;
     const allChecked = checkedCount === rowsWithContent.length;
     const newValue = !allChecked;
 
     // Update only filtered rows with content
-    rowsWithContent.forEach(row => {
+    rowsWithContent.forEach((row) => {
         updateCell(row, columnKey, newValue);
     });
 
@@ -1310,9 +1512,15 @@ const handleFileSelect = (event: Event) => {
 
     if (file) {
         // Validate file type
-        const validTypes = ['text/csv', 'application/vnd.ms-excel', 'text/plain'];
+        const validTypes = [
+            'text/csv',
+            'application/vnd.ms-excel',
+            'text/plain',
+        ];
         const validExtensions = ['.csv', '.txt'];
-        const hasValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+        const hasValidExtension = validExtensions.some((ext) =>
+            file.name.toLowerCase().endsWith(ext),
+        );
 
         if (!validTypes.includes(file.type) && !hasValidExtension) {
             importError.value = 'Please select a valid CSV file.';
@@ -1366,7 +1574,7 @@ const submitImport = () => {
                     importError.value = 'An error occurred during import.';
                 }
             },
-        }
+        },
     );
 };
 
@@ -1390,7 +1598,7 @@ const exportChecklist = () => {
 
 const exportSelectedChecklist = () => {
     if (selectedRows.value.length === 0) return;
-    const ids = selectedRows.value.map(r => r.id).join(',');
+    const ids = selectedRows.value.map((r) => r.id).join(',');
     window.location.href = `/projects/${props.project.id}/checklists/${props.checklist.id}/export?ids=${ids}`;
 };
 
@@ -1400,19 +1608,25 @@ const focusedRowIndex = ref<number | null>(null);
 const onCellFocus = (displayIndex: number) => {
     const row = displayRows.value[displayIndex];
     if (row) {
-        focusedRowIndex.value = rows.value.findIndex(r => r.id === row.id);
+        focusedRowIndex.value = rows.value.findIndex((r) => r.id === row.id);
     }
 };
 
 // Build a column mapping from source columns to target columns (key match → label match)
-const buildColumnMap = (sourceColumns: ColumnConfig[], targetColumns: ExtendedColumnConfig[]): Record<string, string> => {
+const buildColumnMap = (
+    sourceColumns: ColumnConfig[],
+    targetColumns: ExtendedColumnConfig[],
+): Record<string, string> => {
     const columnMap: Record<string, string> = {};
     const mappedTargetKeys: string[] = [];
 
     // Pass 1: match by key
     for (const srcCol of sourceColumns) {
         for (const tgtCol of targetColumns) {
-            if (srcCol.key === tgtCol.key && !mappedTargetKeys.includes(tgtCol.key)) {
+            if (
+                srcCol.key === tgtCol.key &&
+                !mappedTargetKeys.includes(tgtCol.key)
+            ) {
                 columnMap[srcCol.key] = tgtCol.key;
                 mappedTargetKeys.push(tgtCol.key);
                 break;
@@ -1437,7 +1651,11 @@ const buildColumnMap = (sourceColumns: ColumnConfig[], targetColumns: ExtendedCo
 };
 
 // Map row data from source columns to target columns using a column map
-const mapRowData = (data: Record<string, unknown>, columnMap: Record<string, string>, targetColumns: ExtendedColumnConfig[]): Record<string, unknown> => {
+const mapRowData = (
+    data: Record<string, unknown>,
+    columnMap: Record<string, string>,
+    targetColumns: ExtendedColumnConfig[],
+): Record<string, unknown> => {
     const mapped: Record<string, unknown> = {};
     for (const tgtCol of targetColumns) {
         mapped[tgtCol.key] = tgtCol.type === 'checkbox' ? false : '';
@@ -1457,35 +1675,40 @@ const pastePosition = ref<'end' | 'cursor' | 'section'>('end');
 const pasteRowsAtCursor = () => {
     if (!clipboardData.value || clipboardData.value.rows.length === 0) return;
 
-    const insertIndex = focusedRowIndex.value !== null
-        ? focusedRowIndex.value
-        : rows.value.length;
+    const insertIndex =
+        focusedRowIndex.value !== null
+            ? focusedRowIndex.value
+            : rows.value.length;
 
     // Build column mapping if source columns differ
     const sourceColumns = clipboardData.value.source_columns_config;
     const needsMapping = sourceColumns && sourceColumns.length > 0;
-    const columnMap = needsMapping ? buildColumnMap(sourceColumns, columns.value) : null;
+    const columnMap = needsMapping
+        ? buildColumnMap(sourceColumns, columns.value)
+        : null;
 
-    const newRows: ExtendedChecklistRow[] = clipboardData.value.rows.map((clipRow, i) => {
-        const data = columnMap
-            ? mapRowData(clipRow.data, columnMap, columns.value)
-            : { ...clipRow.data };
+    const newRows: ExtendedChecklistRow[] = clipboardData.value.rows.map(
+        (clipRow, i) => {
+            const data = columnMap
+                ? mapRowData(clipRow.data, columnMap, columns.value)
+                : { ...clipRow.data };
 
-        return {
-            id: Date.now() + i,
-            checklist_id: props.checklist.id,
-            data,
-            order: 0,
-            row_type: clipRow.row_type || 'normal',
-            background_color: clipRow.background_color || null,
-            font_color: clipRow.font_color || null,
-            font_weight: clipRow.font_weight || 'normal',
-            module: clipRow.module || [],
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            _isNew: true,
-        };
-    });
+            return {
+                id: Date.now() + i,
+                checklist_id: props.checklist.id,
+                data,
+                order: 0,
+                row_type: clipRow.row_type || 'normal',
+                background_color: clipRow.background_color || null,
+                font_color: clipRow.font_color || null,
+                font_weight: clipRow.font_weight || 'normal',
+                module: clipRow.module || [],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                _isNew: true,
+            };
+        },
+    );
 
     rows.value.splice(insertIndex, 0, ...newRows);
 
@@ -1535,7 +1758,9 @@ const navigateCell = (direction: 'up' | 'down' | 'left' | 'right') => {
     const targetCell = targetRow.querySelectorAll('td')[nextCol];
     if (!targetCell) return false;
 
-    const focusable = targetCell.querySelector('textarea, input, button, [tabindex], [contenteditable]') as HTMLElement;
+    const focusable = targetCell.querySelector(
+        'textarea, input, button, [tabindex], [contenteditable]',
+    ) as HTMLElement;
     if (focusable) {
         focusable.focus();
         return true;
@@ -1548,12 +1773,20 @@ const handleKeyDown = (e: KeyboardEvent) => {
     // Skip if inside a dialog
     if ((e.target as HTMLElement)?.closest('[role="dialog"]')) return;
 
-    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && hasSelectedRows.value) {
+    if (
+        (e.ctrlKey || e.metaKey) &&
+        e.code === 'KeyC' &&
+        hasSelectedRows.value
+    ) {
         // Don't preventDefault — allow native text copy to still work
         copyRowsToClipboard();
     }
 
-    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && hasClipboardRows.value) {
+    if (
+        (e.ctrlKey || e.metaKey) &&
+        e.code === 'KeyV' &&
+        hasClipboardRows.value
+    ) {
         e.preventDefault();
         pasteRowsAtCursor();
     }
@@ -1562,7 +1795,11 @@ const handleKeyDown = (e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {
         // Only intercept when not typing in a text field
         const tag = (e.target as HTMLElement)?.tagName;
-        if (tag !== 'TEXTAREA' && tag !== 'INPUT' && !(e.target as HTMLElement)?.closest('[contenteditable]')) {
+        if (
+            tag !== 'TEXTAREA' &&
+            tag !== 'INPUT' &&
+            !(e.target as HTMLElement)?.closest('[contenteditable]')
+        ) {
             e.preventDefault();
             selectAllRows();
         }
@@ -1603,14 +1840,15 @@ onMounted(() => {
     resizeAllTextareas();
     loadClipboard();
     document.addEventListener('keydown', handleKeyDown, true);
-    scrollContainerRef.value?.addEventListener('scroll', onScroll, { passive: true });
+    scrollContainerRef.value?.addEventListener('scroll', onScroll, {
+        passive: true,
+    });
 });
 
 onUnmounted(() => {
     document.removeEventListener('keydown', handleKeyDown, true);
     scrollContainerRef.value?.removeEventListener('scroll', onScroll);
 });
-
 </script>
 
 <template>
@@ -1618,32 +1856,57 @@ onUnmounted(() => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
-            <div class="flex items-center gap-3 flex-wrap">
+            <div class="flex flex-wrap items-center gap-3">
                 <h1 class="text-2xl font-bold tracking-tight">
-                    <ClipboardList class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
-                        @click="copyLink"
-                        class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
-                        :title="copied ? 'Copied!' : 'Copy link'"
-                    ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
+                    <ClipboardList
+                        class="mr-2 inline-block h-6 w-6 align-text-top text-primary"
+                    />{{ titleStart
+                    }}<span class="whitespace-nowrap"
+                        >{{ titleEnd
+                        }}<button
+                            @click="copyLink"
+                            class="ml-1.5 inline-flex cursor-pointer rounded-md p-1 align-middle text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+                            :title="copied ? 'Copied!' : 'Copy link'"
+                        >
+                            <Check
+                                v-if="copied"
+                                class="h-4 w-4 text-green-500"
+                            /><Link2 v-else class="h-4 w-4" /></button
+                    ></span>
                 </h1>
-                <FeatureBadges v-if="checklist.project_features?.length" :features="checklist.project_features" :max-visible="3" />
-                <div v-if="checklist.module?.length" class="flex items-center gap-1 flex-wrap">
-                    <Badge v-for="mod in checklist.module" :key="mod" variant="outline" class="text-xs">{{ mod }}</Badge>
+                <FeatureBadges
+                    v-if="checklist.project_features?.length"
+                    :features="checklist.project_features"
+                    :max-visible="3"
+                />
+                <div
+                    v-if="checklist.module?.length"
+                    class="flex flex-wrap items-center gap-1"
+                >
+                    <Badge
+                        v-for="mod in checklist.module"
+                        :key="mod"
+                        variant="outline"
+                        class="text-xs"
+                        >{{ mod }}</Badge
+                    >
                 </div>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
+            <div class="flex flex-wrap items-center gap-2">
                 <div class="relative">
-                    <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Search
+                        class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                    />
                     <Input
                         v-model="searchQuery"
                         type="text"
                         placeholder="Search content..."
-                        class="pl-9 pr-8 w-56 bg-background/60"
+                        class="w-56 bg-background/60 pr-8 pl-9"
                     />
                     <button
                         v-if="searchQuery"
                         @click="searchQuery = ''"
-                        class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        class="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                     >
                         <X class="h-4 w-4" />
                     </button>
@@ -1651,25 +1914,32 @@ onUnmounted(() => {
                 <Button
                     variant="outline"
                     size="sm"
-                    class="gap-1.5 relative text-xs"
+                    class="relative gap-1.5 text-xs"
                     @click="showFilters = !showFilters"
                 >
                     <Filter class="h-3.5 w-3.5" />
                     Filter
                     <Badge
                         v-if="activeFilterCount > 0"
-                        class="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full"
+                        class="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full p-0 text-[10px]"
                     >
                         {{ activeFilterCount }}
                     </Badge>
                 </Button>
-                <span v-if="isSearchActive && filteredDataRowCount > 0" class="text-xs text-muted-foreground whitespace-nowrap">
+                <span
+                    v-if="isSearchActive && filteredDataRowCount > 0"
+                    class="text-xs whitespace-nowrap text-muted-foreground"
+                >
                     {{ filteredDataRowCount }} found — click to navigate
                 </span>
-                <span v-else-if="activeFilterCount > 0" class="text-xs text-muted-foreground whitespace-nowrap">
-                    {{ filteredDataRowCount }} {{ filteredDataRowCount === 1 ? 'row' : 'rows' }} found
+                <span
+                    v-else-if="activeFilterCount > 0"
+                    class="text-xs whitespace-nowrap text-muted-foreground"
+                >
+                    {{ filteredDataRowCount }}
+                    {{ filteredDataRowCount === 1 ? 'row' : 'rows' }} found
                 </span>
-                <div class="flex items-center gap-1.5 ml-auto">
+                <div class="ml-auto flex items-center gap-1.5">
                     <!-- Undo last save -->
                     <RestrictedAction>
                         <Button
@@ -1693,62 +1963,101 @@ onUnmounted(() => {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Selected Rows</DropdownMenuLabel>
+                                <DropdownMenuLabel
+                                    >Selected Rows</DropdownMenuLabel
+                                >
                                 <DropdownMenuSeparator />
-                                <DropdownMenuSub v-if="selectColumns.length > 0">
+                                <DropdownMenuSub
+                                    v-if="selectColumns.length > 0"
+                                >
                                     <DropdownMenuSubTrigger>
-                                        <RefreshCw class="h-4 w-4 mr-2" />
+                                        <RefreshCw class="mr-2 h-4 w-4" />
                                         Change Status
                                     </DropdownMenuSubTrigger>
                                     <DropdownMenuSubContent>
-                                        <template v-for="col in selectColumns" :key="col.key">
-                                            <DropdownMenuLabel v-if="selectColumns.length > 1">{{ col.label }}</DropdownMenuLabel>
+                                        <template
+                                            v-for="col in selectColumns"
+                                            :key="col.key"
+                                        >
+                                            <DropdownMenuLabel
+                                                v-if="selectColumns.length > 1"
+                                                >{{
+                                                    col.label
+                                                }}</DropdownMenuLabel
+                                            >
                                             <DropdownMenuItem
                                                 v-for="option in col.options"
                                                 :key="option.value"
-                                                @click="changeSelectedStatus(col.key, option.value)"
+                                                @click="
+                                                    changeSelectedStatus(
+                                                        col.key,
+                                                        option.value,
+                                                    )
+                                                "
                                             >
                                                 <span
-                                                    class="px-2 py-0.5 rounded text-xs font-medium"
+                                                    class="rounded px-2 py-0.5 text-xs font-medium"
                                                     :style="{
-                                                        backgroundColor: option.color || '#dbeafe',
-                                                        color: getTextColorForBg(option.color)
+                                                        backgroundColor:
+                                                            option.color ||
+                                                            '#dbeafe',
+                                                        color: getTextColorForBg(
+                                                            option.color,
+                                                        ),
                                                     }"
                                                 >
                                                     {{ option.label }}
                                                 </span>
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                @click="changeSelectedStatus(col.key, '')"
+                                                @click="
+                                                    changeSelectedStatus(
+                                                        col.key,
+                                                        '',
+                                                    )
+                                                "
                                                 class="text-muted-foreground"
                                             >
-                                                <X class="h-3 w-3 mr-1.5" />
+                                                <X class="mr-1.5 h-3 w-3" />
                                                 Clear {{ col.label }}
                                             </DropdownMenuItem>
-                                            <DropdownMenuSeparator v-if="selectColumns.length > 1" />
+                                            <DropdownMenuSeparator
+                                                v-if="selectColumns.length > 1"
+                                            />
                                         </template>
                                     </DropdownMenuSubContent>
                                 </DropdownMenuSub>
-                                <DropdownMenuItem @click="createBugreportFromSelected">
-                                    <Bug class="h-4 w-4 mr-2" />
+                                <DropdownMenuItem
+                                    @click="createBugreportFromSelected"
+                                >
+                                    <Bug class="mr-2 h-4 w-4" />
                                     Create Bugreport
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem @click="openCopyToChecklistDialog" :disabled="otherChecklists.length === 0">
-                                    <Copy class="h-4 w-4 mr-2" />
+                                <DropdownMenuItem
+                                    @click="openCopyToChecklistDialog"
+                                    :disabled="otherChecklists.length === 0"
+                                >
+                                    <Copy class="mr-2 h-4 w-4" />
                                     Copy to Checklist
                                 </DropdownMenuItem>
-                                <DropdownMenuItem @click="openTestCaseDialog" :disabled="testSuites.length === 0">
-                                    <Layers class="h-4 w-4 mr-2" />
+                                <DropdownMenuItem
+                                    @click="openTestCaseDialog"
+                                    :disabled="testSuites.length === 0"
+                                >
+                                    <Layers class="mr-2 h-4 w-4" />
                                     Create Test Case
                                 </DropdownMenuItem>
                                 <DropdownMenuItem @click="openTestRunDialog">
-                                    <Play class="h-4 w-4 mr-2" />
+                                    <Play class="mr-2 h-4 w-4" />
                                     Create Test Run
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem class="text-destructive focus:text-destructive" @click="showDeleteSelectedConfirm = true">
-                                    <Trash2 class="h-4 w-4 mr-2" />
+                                <DropdownMenuItem
+                                    class="text-destructive focus:text-destructive"
+                                    @click="showDeleteSelectedConfirm = true"
+                                >
+                                    <Trash2 class="mr-2 h-4 w-4" />
                                     Delete Rows
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -1760,7 +2069,7 @@ onUnmounted(() => {
                         variant="outline"
                         size="sm"
                         @click="openPasteDialog"
-                        class="gap-1.5 text-xs cursor-pointer"
+                        class="cursor-pointer gap-1.5 text-xs"
                     >
                         <ClipboardList class="h-3.5 w-3.5" />
                         Paste ({{ clipboardData?.rows.length }})
@@ -1770,7 +2079,7 @@ onUnmounted(() => {
                         variant="outline"
                         size="sm"
                         @click="copyRowsToClipboard"
-                        class="gap-1.5 text-xs cursor-pointer"
+                        class="cursor-pointer gap-1.5 text-xs"
                     >
                         <Copy class="h-3.5 w-3.5" />
                         {{ copiedRows ? 'Copied!' : 'Copy Row' }}
@@ -1791,25 +2100,31 @@ onUnmounted(() => {
                     <RestrictedAction>
                         <DropdownMenu>
                             <DropdownMenuTrigger as-child>
-                                <Button variant="outline" size="sm" class="gap-1.5 text-xs">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="gap-1.5 text-xs"
+                                >
                                     <FileSpreadsheet class="h-3.5 w-3.5" />
                                     File
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem @click="showImportDialog = true">
-                                    <Download class="h-4 w-4 mr-2" />
+                                <DropdownMenuItem
+                                    @click="showImportDialog = true"
+                                >
+                                    <Download class="mr-2 h-4 w-4" />
                                     Import
                                 </DropdownMenuItem>
                                 <DropdownMenuItem @click="exportChecklist">
-                                    <Upload class="h-4 w-4 mr-2" />
+                                    <Upload class="mr-2 h-4 w-4" />
                                     Export All
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     v-if="hasSelectedRows"
                                     @click="exportSelectedChecklist"
                                 >
-                                    <Upload class="h-4 w-4 mr-2" />
+                                    <Upload class="mr-2 h-4 w-4" />
                                     Export Selected ({{ selectedRows.length }})
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -1818,29 +2133,48 @@ onUnmounted(() => {
                     <!-- Columns visibility dropdown -->
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
-                            <Button :variant="hasHiddenColumns ? 'default' : 'outline'" size="sm" class="gap-1.5 text-xs">
+                            <Button
+                                :variant="
+                                    hasHiddenColumns ? 'default' : 'outline'
+                                "
+                                size="sm"
+                                class="gap-1.5 text-xs"
+                            >
                                 <Columns3 class="h-3.5 w-3.5" />
                                 Cols
-                                <span v-if="hasHiddenColumns" class="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background/20 text-[10px] font-medium">
+                                <span
+                                    v-if="hasHiddenColumns"
+                                    class="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background/20 text-[10px] font-medium"
+                                >
                                     {{ hiddenColumns.length }}
                                 </span>
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                            <DropdownMenuLabel
+                                >Toggle Columns</DropdownMenuLabel
+                            >
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                                 v-for="column in columns"
                                 :key="column.key"
-                                @select.prevent="toggleColumnVisibility(column.key)"
+                                @select.prevent="
+                                    toggleColumnVisibility(column.key)
+                                "
                             >
-                                <Check v-if="!hiddenColumns.includes(column.key)" class="h-4 w-4 mr-2" />
-                                <span v-else class="h-4 w-4 mr-2" />
+                                <Check
+                                    v-if="!hiddenColumns.includes(column.key)"
+                                    class="mr-2 h-4 w-4"
+                                />
+                                <span v-else class="mr-2 h-4 w-4" />
                                 {{ column.label }}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Dialog v-model:open="showNoteDialog" @update:open="onNoteDialogChange">
+                    <Dialog
+                        v-model:open="showNoteDialog"
+                        @update:open="onNoteDialogChange"
+                    >
                         <RestrictedAction>
                             <DialogTrigger as-child>
                                 <Button
@@ -1848,65 +2182,123 @@ onUnmounted(() => {
                                     size="sm"
                                     class="gap-1.5 text-xs"
                                 >
-                                    <Pencil v-if="hasDraft" class="h-3.5 w-3.5" />
+                                    <Pencil
+                                        v-if="hasDraft"
+                                        class="h-3.5 w-3.5"
+                                    />
                                     <StickyNote v-else class="h-3.5 w-3.5" />
                                     {{ hasDraft ? 'Draft' : 'Note' }}
                                 </Button>
                             </DialogTrigger>
                         </RestrictedAction>
-                        <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
+                        <DialogContent
+                            class="flex max-h-[75vh] max-w-2xl flex-col"
+                            style="
+                                overflow: hidden !important;
+                                max-width: min(
+                                    42rem,
+                                    calc(100vw - 2rem)
+                                ) !important;
+                            "
+                        >
                             <DialogHeader>
                                 <DialogTitle class="flex items-center gap-2">
                                     <StickyNote class="h-5 w-5 text-primary" />
-                                    {{ hasDraft ? 'Edit Draft' : 'Create a Note' }}
+                                    {{
+                                        hasDraft
+                                            ? 'Edit Draft'
+                                            : 'Create a Note'
+                                    }}
                                 </DialogTitle>
                                 <DialogDescription>
-                                    Write your notes below. Each line will become a separate row in the selected checklist.
+                                    Write your notes below. Each line will
+                                    become a separate row in the selected
+                                    checklist.
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div class="space-y-4 py-4 px-0.5 overflow-y-auto min-h-0 flex-1">
+                            <div
+                                class="min-h-0 flex-1 space-y-4 overflow-y-auto px-0.5 py-4"
+                            >
                                 <div class="space-y-2">
-                                    <div class="flex items-center justify-between">
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
                                         <Label>Notes</Label>
-                                        <TranslateButtons :project-id="project.id" :text="noteContent" @translated="noteContent = $event" />
+                                        <TranslateButtons
+                                            :project-id="project.id"
+                                            :text="noteContent"
+                                            @translated="noteContent = $event"
+                                        />
                                     </div>
                                     <Textarea
                                         :model-value="noteContent"
-                                        @update:model-value="noteContent = $event"
+                                        @update:model-value="
+                                            noteContent = $event
+                                        "
                                         placeholder="1. First item&#10;2. Second item&#10;3. Third item&#10;&#10;Or just write each item on a new line..."
                                         rows="10"
-                                        class="font-mono text-sm resize-y"
-                                        style="white-space: pre-wrap; overflow-wrap: break-word; overflow-y: auto; max-height: 400px;"
+                                        class="resize-y font-mono text-sm"
+                                        style="
+                                            white-space: pre-wrap;
+                                            overflow-wrap: break-word;
+                                            overflow-y: auto;
+                                            max-height: 400px;
+                                        "
                                     />
-                                    <p v-if="parsedNotes.length > 0" class="text-sm text-muted-foreground">
-                                        {{ parsedNotes.length }} item(s) will be imported
+                                    <p
+                                        v-if="parsedNotes.length > 0"
+                                        class="text-sm text-muted-foreground"
+                                    >
+                                        {{ parsedNotes.length }} item(s) will be
+                                        imported
                                     </p>
                                 </div>
 
-                                <div v-if="parsedNotes.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30">
+                                <div
+                                    v-if="parsedNotes.length > 0"
+                                    class="space-y-4 rounded-lg border bg-muted/30 p-4"
+                                >
                                     <div class="space-y-2">
                                         <Label>Import to Checklist</Label>
                                         <Select v-model="selectedChecklistId">
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Select a checklist..." />
+                                                <SelectValue
+                                                    placeholder="Select a checklist..."
+                                                />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem v-for="cl in checklists" :key="cl.id" :value="cl.id">
+                                                <SelectItem
+                                                    v-for="cl in checklists"
+                                                    :key="cl.id"
+                                                    :value="cl.id"
+                                                >
                                                     {{ cl.name }}
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
 
-                                    <div v-if="selectedChecklistId && availableColumns.length > 0" class="space-y-2">
+                                    <div
+                                        v-if="
+                                            selectedChecklistId &&
+                                            availableColumns.length > 0
+                                        "
+                                        class="space-y-2"
+                                    >
                                         <Label>Column</Label>
                                         <Select v-model="selectedColumnKey">
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Select a column..." />
+                                                <SelectValue
+                                                    placeholder="Select a column..."
+                                                />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem v-for="col in availableColumns" :key="col.key" :value="col.key">
+                                                <SelectItem
+                                                    v-for="col in availableColumns"
+                                                    :key="col.key"
+                                                    :value="col.key"
+                                                >
                                                     {{ col.label }}
                                                 </SelectItem>
                                             </SelectContent>
@@ -1915,13 +2307,43 @@ onUnmounted(() => {
 
                                     <div class="space-y-2 overflow-hidden">
                                         <Label>Preview</Label>
-                                        <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word;">
-                                            <ol class="list-decimal list-inside space-y-1">
-                                                <li v-for="(note, index) in parsedNotes.slice(0, 10)" :key="index" class="break-words whitespace-pre-wrap" style="overflow-wrap: break-word; word-break: break-all;">
+                                        <div
+                                            class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm"
+                                            style="
+                                                word-wrap: break-word;
+                                                overflow-wrap: break-word;
+                                            "
+                                        >
+                                            <ol
+                                                class="list-inside list-decimal space-y-1"
+                                            >
+                                                <li
+                                                    v-for="(
+                                                        note, index
+                                                    ) in parsedNotes.slice(
+                                                        0,
+                                                        10,
+                                                    )"
+                                                    :key="index"
+                                                    class="break-words whitespace-pre-wrap"
+                                                    style="
+                                                        overflow-wrap: break-word;
+                                                        word-break: break-all;
+                                                    "
+                                                >
                                                     {{ note }}
                                                 </li>
-                                                <li v-if="parsedNotes.length > 10" class="text-muted-foreground">
-                                                    ... and {{ parsedNotes.length - 10 }} more
+                                                <li
+                                                    v-if="
+                                                        parsedNotes.length > 10
+                                                    "
+                                                    class="text-muted-foreground"
+                                                >
+                                                    ... and
+                                                    {{
+                                                        parsedNotes.length - 10
+                                                    }}
+                                                    more
                                                 </li>
                                             </ol>
                                         </div>
@@ -1929,7 +2351,9 @@ onUnmounted(() => {
                                 </div>
                             </div>
 
-                            <DialogFooter class="flex justify-between sm:justify-between">
+                            <DialogFooter
+                                class="flex justify-between sm:justify-between"
+                            >
                                 <Button
                                     v-if="noteContent.trim()"
                                     variant="ghost"
@@ -1941,13 +2365,21 @@ onUnmounted(() => {
                                 </Button>
                                 <div v-else></div>
                                 <div class="flex gap-2">
-                                    <Button variant="outline" @click="showNoteDialog = false">
+                                    <Button
+                                        variant="outline"
+                                        @click="showNoteDialog = false"
+                                    >
                                         Cancel
                                     </Button>
                                     <RestrictedAction>
                                         <Button
                                             @click="importNotes"
-                                            :disabled="!selectedChecklistId || parsedNotes.length === 0 || !selectedColumnKey || isImporting"
+                                            :disabled="
+                                                !selectedChecklistId ||
+                                                parsedNotes.length === 0 ||
+                                                !selectedColumnKey ||
+                                                isImporting
+                                            "
                                             class="gap-2"
                                         >
                                             <Import class="h-4 w-4" />
@@ -1961,26 +2393,52 @@ onUnmounted(() => {
                     <RestrictedAction>
                         <DropdownMenu>
                             <DropdownMenuTrigger as-child>
-                                <Button variant="outline" size="sm" class="gap-1.5 text-xs">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="gap-1.5 text-xs"
+                                >
                                     <Plus class="h-3.5 w-3.5" />
                                     Add Row
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem @click="openAddRowsDialog(rows.length, 'end', 'normal')">
-                                    <Plus class="h-4 w-4 mr-2" />
+                                <DropdownMenuItem
+                                    @click="
+                                        openAddRowsDialog(
+                                            rows.length,
+                                            'end',
+                                            'normal',
+                                        )
+                                    "
+                                >
+                                    <Plus class="mr-2 h-4 w-4" />
                                     Normal Row
                                 </DropdownMenuItem>
-                                <DropdownMenuItem @click="openAddRowsDialog(rows.length, 'end', 'section_header')">
-                                    <Heading class="h-4 w-4 mr-2" />
+                                <DropdownMenuItem
+                                    @click="
+                                        openAddRowsDialog(
+                                            rows.length,
+                                            'end',
+                                            'section_header',
+                                        )
+                                    "
+                                >
+                                    <Heading class="mr-2 h-4 w-4" />
                                     Section Header
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </RestrictedAction>
                     <RestrictedAction>
-                        <Link :href="`/projects/${project.id}/checklists/${checklist.id}/edit`">
-                            <Button variant="outline" size="sm" class="gap-1.5 text-xs">
+                        <Link
+                            :href="`/projects/${project.id}/checklists/${checklist.id}/edit`"
+                        >
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                class="gap-1.5 text-xs"
+                            >
                                 <Edit class="h-3.5 w-3.5" />
                                 Edit
                             </Button>
@@ -1996,7 +2454,10 @@ onUnmounted(() => {
             >
                 <div class="flex items-center gap-2 text-sm text-destructive">
                     <AlertCircle class="h-4 w-4 shrink-0" />
-                    <span>Failed to save changes. You can undo to restore the previous state.</span>
+                    <span
+                        >Failed to save changes. You can undo to restore the
+                        previous state.</span
+                    >
                 </div>
                 <div class="flex items-center gap-2">
                     <Button
@@ -2020,13 +2481,26 @@ onUnmounted(() => {
 
             <!-- Filter Dropdown -->
             <div class="relative -mt-3">
-                <div v-if="showFilters" class="fixed inset-0 z-10" @click="showFilters = false" />
-                <div v-if="showFilters" class="absolute top-0 right-0 z-20 w-full md:w-[calc(66%-0.3125rem)] rounded-xl border bg-card shadow-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-medium flex items-center gap-2">
+                <div
+                    v-if="showFilters"
+                    class="fixed inset-0 z-10"
+                    @click="showFilters = false"
+                />
+                <div
+                    v-if="showFilters"
+                    class="absolute top-0 right-0 z-20 w-full animate-in rounded-xl border bg-card p-4 shadow-lg duration-200 fade-in slide-in-from-top-2 md:w-[calc(66%-0.3125rem)]"
+                >
+                    <div class="mb-3 flex items-center justify-between">
+                        <span
+                            class="flex items-center gap-2 text-sm font-medium"
+                        >
                             <Filter class="h-4 w-4 text-primary" />
                             Filters
-                            <Badge v-if="activeFilterCount > 0" class="h-5 px-1.5 text-[10px] rounded-full">{{ activeFilterCount }}</Badge>
+                            <Badge
+                                v-if="activeFilterCount > 0"
+                                class="h-5 rounded-full px-1.5 text-[10px]"
+                                >{{ activeFilterCount }}</Badge
+                            >
                         </span>
                         <div class="flex items-center gap-2">
                             <Button
@@ -2039,16 +2513,29 @@ onUnmounted(() => {
                                 <X class="h-3 w-3" />
                                 Clear All
                             </Button>
-                            <button @click="showFilters = false" class="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer">
+                            <button
+                                @click="showFilters = false"
+                                class="cursor-pointer rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            >
                                 <X class="h-4 w-4" />
                             </button>
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-x-3 gap-y-2.5">
-                        <div v-for="col in selectColumns" :key="col.key" class="relative min-w-[150px]">
-                            <Label class="text-[11px] text-muted-foreground mb-1 block">{{ col.label }}</Label>
+                        <div
+                            v-for="col in selectColumns"
+                            :key="col.key"
+                            class="relative min-w-[150px]"
+                        >
+                            <Label
+                                class="mb-1 block text-[11px] text-muted-foreground"
+                                >{{ col.label }}</Label
+                            >
                             <Select v-model="filterValues[col.key]">
-                                <SelectTrigger class="h-8 text-xs" :class="filterValues[col.key] ? 'pr-7' : ''">
+                                <SelectTrigger
+                                    class="h-8 text-xs"
+                                    :class="filterValues[col.key] ? 'pr-7' : ''"
+                                >
                                     <SelectValue placeholder="All" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -2058,10 +2545,13 @@ onUnmounted(() => {
                                         :value="option.value"
                                     >
                                         <span
-                                            class="px-2 py-0.5 rounded text-xs font-medium"
+                                            class="rounded px-2 py-0.5 text-xs font-medium"
                                             :style="{
-                                                backgroundColor: option.color || '#dbeafe',
-                                                color: getTextColorForBg(option.color)
+                                                backgroundColor:
+                                                    option.color || '#dbeafe',
+                                                color: getTextColorForBg(
+                                                    option.color,
+                                                ),
                                             }"
                                         >
                                             {{ option.label }}
@@ -2069,60 +2559,108 @@ onUnmounted(() => {
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
-                            <button v-if="filterValues[col.key]" @click="filterValues[col.key] = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <button
+                                v-if="filterValues[col.key]"
+                                @click="filterValues[col.key] = ''"
+                                class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            >
                                 <X class="h-3 w-3" />
                             </button>
                         </div>
                         <!-- Updated From -->
                         <div class="relative">
-                            <Label class="text-[11px] text-muted-foreground mb-1 block">Updated From</Label>
+                            <Label
+                                class="mb-1 block text-[11px] text-muted-foreground"
+                                >Updated From</Label
+                            >
                             <input
                                 :value="filterUpdatedFrom"
-                                @input="filterUpdatedFrom = ($event.target as HTMLInputElement).value"
+                                @input="
+                                    filterUpdatedFrom = (
+                                        $event.target as HTMLInputElement
+                                    ).value
+                                "
                                 type="date"
                                 data-slot="input"
-                                class="border-input dark:bg-input/30 h-8 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                                class="h-8 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
                                 :class="filterUpdatedFrom ? 'pr-7' : ''"
                             />
-                            <button v-if="filterUpdatedFrom" @click="filterUpdatedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <button
+                                v-if="filterUpdatedFrom"
+                                @click="filterUpdatedFrom = ''"
+                                class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            >
                                 <X class="h-3 w-3" />
                             </button>
                         </div>
                         <!-- Updated To -->
                         <div class="relative">
-                            <Label class="text-[11px] text-muted-foreground mb-1 block">Updated To</Label>
+                            <Label
+                                class="mb-1 block text-[11px] text-muted-foreground"
+                                >Updated To</Label
+                            >
                             <input
                                 :value="filterUpdatedTo"
-                                @input="filterUpdatedTo = ($event.target as HTMLInputElement).value"
+                                @input="
+                                    filterUpdatedTo = (
+                                        $event.target as HTMLInputElement
+                                    ).value
+                                "
                                 type="date"
                                 data-slot="input"
-                                class="border-input dark:bg-input/30 h-8 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                                class="h-8 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
                                 :class="filterUpdatedTo ? 'pr-7' : ''"
                             />
-                            <button v-if="filterUpdatedTo" @click="filterUpdatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <button
+                                v-if="filterUpdatedTo"
+                                @click="filterUpdatedTo = ''"
+                                class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            >
                                 <X class="h-3 w-3" />
                             </button>
                         </div>
                         <!-- Module -->
                         <div class="relative min-w-[130px]">
-                            <Label class="text-[11px] text-muted-foreground mb-1 block">Module</Label>
+                            <Label
+                                class="mb-1 block text-[11px] text-muted-foreground"
+                                >Module</Label
+                            >
                             <Select v-model="filterModule">
-                                <SelectTrigger class="h-8 text-xs" :class="filterModule ? 'pr-7' : ''">
+                                <SelectTrigger
+                                    class="h-8 text-xs"
+                                    :class="filterModule ? 'pr-7' : ''"
+                                >
                                     <SelectValue placeholder="All" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="__none__">No module</SelectItem>
-                                    <SelectItem v-for="mod in MODULE_OPTIONS" :key="mod" :value="mod">{{ mod }}</SelectItem>
+                                    <SelectItem value="__none__"
+                                        >No module</SelectItem
+                                    >
+                                    <SelectItem
+                                        v-for="mod in MODULE_OPTIONS"
+                                        :key="mod"
+                                        :value="mod"
+                                        >{{ mod }}</SelectItem
+                                    >
                                 </SelectContent>
                             </Select>
-                            <button v-if="filterModule" @click="filterModule = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
+                            <button
+                                v-if="filterModule"
+                                @click="filterModule = ''"
+                                class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            >
                                 <X class="h-3 w-3" />
                             </button>
                         </div>
                         <!-- Results count -->
-                        <div class="flex items-end pb-1 ml-auto">
+                        <div class="ml-auto flex items-end pb-1">
                             <span class="text-sm text-muted-foreground">
-                                Found <span class="font-semibold text-foreground">{{ filteredDataRowCount }}</span> of {{ totalDataRowCount }} {{ totalDataRowCount === 1 ? 'row' : 'rows' }}
+                                Found
+                                <span class="font-semibold text-foreground">{{
+                                    filteredDataRowCount
+                                }}</span>
+                                of {{ totalDataRowCount }}
+                                {{ totalDataRowCount === 1 ? 'row' : 'rows' }}
                             </span>
                         </div>
                     </div>
@@ -2133,16 +2671,36 @@ onUnmounted(() => {
             <Card v-if="!hasLoadedRows">
                 <CardContent class="p-0">
                     <div class="space-y-0">
-                        <div class="flex items-center gap-2 border-b bg-muted px-3 py-2.5">
-                            <div class="h-4 w-24 animate-pulse rounded bg-muted-foreground/20" />
-                            <div class="h-4 w-32 animate-pulse rounded bg-muted-foreground/20" />
-                            <div class="h-4 w-20 animate-pulse rounded bg-muted-foreground/20" />
+                        <div
+                            class="flex items-center gap-2 border-b bg-muted px-3 py-2.5"
+                        >
+                            <div
+                                class="h-4 w-24 animate-pulse rounded bg-muted-foreground/20"
+                            />
+                            <div
+                                class="h-4 w-32 animate-pulse rounded bg-muted-foreground/20"
+                            />
+                            <div
+                                class="h-4 w-20 animate-pulse rounded bg-muted-foreground/20"
+                            />
                         </div>
-                        <div v-for="i in 8" :key="i" class="flex items-center gap-2 border-b px-3 py-2.5">
-                            <div class="h-4 w-4 animate-pulse rounded bg-muted-foreground/10" />
-                            <div class="h-4 flex-1 animate-pulse rounded bg-muted-foreground/10" />
-                            <div class="h-4 w-24 animate-pulse rounded bg-muted-foreground/10" />
-                            <div class="h-4 w-16 animate-pulse rounded bg-muted-foreground/10" />
+                        <div
+                            v-for="i in 8"
+                            :key="i"
+                            class="flex items-center gap-2 border-b px-3 py-2.5"
+                        >
+                            <div
+                                class="h-4 w-4 animate-pulse rounded bg-muted-foreground/10"
+                            />
+                            <div
+                                class="h-4 flex-1 animate-pulse rounded bg-muted-foreground/10"
+                            />
+                            <div
+                                class="h-4 w-24 animate-pulse rounded bg-muted-foreground/10"
+                            />
+                            <div
+                                class="h-4 w-16 animate-pulse rounded bg-muted-foreground/10"
+                            />
                         </div>
                     </div>
                 </CardContent>
@@ -2150,50 +2708,94 @@ onUnmounted(() => {
 
             <Card v-if="hasLoadedRows">
                 <CardContent class="p-0">
-                    <div ref="scrollContainerRef" class="overflow-auto max-h-[calc(100vh-220px)]">
-                        <table class="w-full border-collapse" style="table-layout: auto;">
-                            <thead class="sticky top-0 z-10 transition-shadow" :class="isScrolled ? 'shadow-md' : ''">
+                    <div
+                        ref="scrollContainerRef"
+                        class="max-h-[calc(100vh-220px)] overflow-auto"
+                    >
+                        <table
+                            class="w-full border-collapse"
+                            style="table-layout: auto"
+                        >
+                            <thead
+                                class="sticky top-0 z-10 transition-shadow"
+                                :class="isScrolled ? 'shadow-md' : ''"
+                            >
                                 <tr class="border-b bg-muted">
                                     <th class="w-10 px-1 py-2"></th>
                                     <th
-                                        v-for="(column, colIndex) in visibleColumns"
+                                        v-for="(
+                                            column, colIndex
+                                        ) in visibleColumns"
                                         :key="column.key"
-                                        class="px-1 py-2 text-left text-sm font-medium text-muted-foreground relative select-none align-top"
+                                        class="relative px-1 py-2 text-left align-top text-sm font-medium text-muted-foreground select-none"
                                         :style="{ width: column.width + 'px' }"
-                                        @dragover="onColDragOver(colIndex, $event)"
+                                        @dragover="
+                                            onColDragOver(colIndex, $event)
+                                        "
                                         @dragleave="onColDragLeave"
                                         @drop="onColDrop(colIndex, $event)"
                                         :class="{
-                                            'bg-primary/10': dragOverColIndex === colIndex,
-                                            'opacity-50': draggedColIndex === colIndex
+                                            'bg-primary/10':
+                                                dragOverColIndex === colIndex,
+                                            'opacity-50':
+                                                draggedColIndex === colIndex,
                                         }"
                                     >
                                         <div class="flex items-center gap-1">
                                             <div
                                                 draggable="true"
-                                                class="shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-muted"
-                                                @dragstart="onColDragStart(colIndex, $event)"
+                                                class="shrink-0 cursor-grab rounded p-0.5 hover:bg-muted active:cursor-grabbing"
+                                                @dragstart="
+                                                    onColDragStart(
+                                                        colIndex,
+                                                        $event,
+                                                    )
+                                                "
                                                 @dragend="onColDragEnd"
                                             >
-                                                <GripHorizontal class="h-3 w-3 text-muted-foreground/50" />
+                                                <GripHorizontal
+                                                    class="h-3 w-3 text-muted-foreground/50"
+                                                />
                                             </div>
-                                            <template v-if="column.type === 'checkbox'">
+                                            <template
+                                                v-if="
+                                                    column.type === 'checkbox'
+                                                "
+                                            >
                                                 <input
                                                     type="checkbox"
-                                                    :checked="getHeaderCheckboxState(column.key) === true"
-                                                    :indeterminate="getHeaderCheckboxState(column.key) === 'indeterminate'"
-                                                    @click.stop="toggleAllCheckboxes(column.key)"
-                                                    class="h-4 w-4 rounded border-gray-300 mr-1 cursor-pointer"
+                                                    :checked="
+                                                        getHeaderCheckboxState(
+                                                            column.key,
+                                                        ) === true
+                                                    "
+                                                    :indeterminate="
+                                                        getHeaderCheckboxState(
+                                                            column.key,
+                                                        ) === 'indeterminate'
+                                                    "
+                                                    @click.stop="
+                                                        toggleAllCheckboxes(
+                                                            column.key,
+                                                        )
+                                                    "
+                                                    class="mr-1 h-4 w-4 cursor-pointer rounded border-gray-300"
                                                 />
                                             </template>
-                                            <span class="truncate">{{ column.label }}</span>
+                                            <span class="truncate">{{
+                                                column.label
+                                            }}</span>
                                         </div>
                                         <!-- Resize handle -->
                                         <div
-                                            class="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize group"
-                                            @mousedown.stop="startResize(colIndex, $event)"
+                                            class="group absolute top-0 -right-1 bottom-0 w-3 cursor-col-resize"
+                                            @mousedown.stop="
+                                                startResize(colIndex, $event)
+                                            "
                                         >
-                                            <div class="absolute right-1 top-0 bottom-0 w-0.5 group-hover:bg-primary/50 group-active:bg-primary" />
+                                            <div
+                                                class="absolute top-0 right-1 bottom-0 w-0.5 group-hover:bg-primary/50 group-active:bg-primary"
+                                            />
                                         </div>
                                     </th>
                                     <th class="px-1 py-2"></th>
@@ -2202,79 +2804,163 @@ onUnmounted(() => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="h-2"><td :colspan="visibleColumns.length + 4"></td></tr>
+                                <tr class="h-2">
+                                    <td
+                                        :colspan="visibleColumns.length + 4"
+                                    ></td>
+                                </tr>
                                 <tr
                                     v-for="(row, index) in displayRows"
                                     :key="row.id"
                                     :data-row-id="row.id"
-                                    class="border-b last:border-0 transition-all duration-500"
+                                    class="border-b transition-all duration-500 last:border-0"
                                     :class="[
-                                        row.row_type === 'section_header' ? '' : 'hover:bg-muted/50',
+                                        row.row_type === 'section_header'
+                                            ? ''
+                                            : 'hover:bg-muted/50',
                                         getFontWeightClass(row.font_weight),
                                         {
-                                            'border-t-2 border-t-primary': dragOverRowIndex === index && canDragRows,
-                                            'opacity-50': draggedRowIndex === index && canDragRows,
-                                            'ring-2 ring-primary/50 bg-primary/5': highlightedRowId === row.id,
-                                            'bg-primary/5': isRowManuallySelected(row),
-                                        }
+                                            'border-t-2 border-t-primary':
+                                                dragOverRowIndex === index &&
+                                                canDragRows,
+                                            'opacity-50':
+                                                draggedRowIndex === index &&
+                                                canDragRows,
+                                            'bg-primary/5 ring-2 ring-primary/50':
+                                                highlightedRowId === row.id,
+                                            'bg-primary/5':
+                                                isRowManuallySelected(row),
+                                        },
                                     ]"
                                     :style="getRowStyles(row)"
-                                    @dragover="canDragRows && onRowDragOver(index, $event)"
+                                    @dragover="
+                                        canDragRows &&
+                                        onRowDragOver(index, $event)
+                                    "
                                     @dragleave="onRowDragLeave"
-                                    @drop="canDragRows && onRowDrop(index, $event)"
+                                    @drop="
+                                        canDragRows && onRowDrop(index, $event)
+                                    "
                                 >
                                     <td class="px-1 py-0.5 align-top">
                                         <button
                                             v-if="isSearchActive"
                                             @click="navigateToRow(row)"
-                                            class="p-0.5 rounded hover:bg-primary/10 cursor-pointer"
+                                            class="cursor-pointer rounded p-0.5 hover:bg-primary/10"
                                             title="Go to row"
                                         >
-                                            <LocateFixed class="h-4 w-4 text-primary" />
+                                            <LocateFixed
+                                                class="h-4 w-4 text-primary"
+                                            />
                                         </button>
                                         <div
-                                            v-else-if="row.row_type === 'section_header'"
+                                            v-else-if="
+                                                row.row_type ===
+                                                'section_header'
+                                            "
                                             :draggable="canDragRows"
-                                            @dragstart="canDragRows && onRowDragStart(index, $event)"
+                                            @dragstart="
+                                                canDragRows &&
+                                                onRowDragStart(index, $event)
+                                            "
                                             @dragend="onRowDragEnd"
-                                            :class="canDragRows ? 'cursor-grab active:cursor-grabbing' : 'cursor-default opacity-30'"
+                                            :class="
+                                                canDragRows
+                                                    ? 'cursor-grab active:cursor-grabbing'
+                                                    : 'cursor-default opacity-30'
+                                            "
                                         >
-                                            <GripVertical class="h-4 w-4 text-muted-foreground/50" />
+                                            <GripVertical
+                                                class="h-4 w-4 text-muted-foreground/50"
+                                            />
                                         </div>
                                         <div v-else class="flex items-center">
                                             <div
                                                 :draggable="canDragRows"
-                                                @dragstart="canDragRows && onRowDragStart(index, $event)"
+                                                @dragstart="
+                                                    canDragRows &&
+                                                    onRowDragStart(
+                                                        index,
+                                                        $event,
+                                                    )
+                                                "
                                                 @dragend="onRowDragEnd"
-                                                :class="canDragRows ? 'cursor-grab active:cursor-grabbing' : 'cursor-default opacity-30'"
+                                                :class="
+                                                    canDragRows
+                                                        ? 'cursor-grab active:cursor-grabbing'
+                                                        : 'cursor-default opacity-30'
+                                                "
                                                 class="shrink-0"
                                             >
-                                                <GripVertical class="h-4 w-4 text-muted-foreground/50" />
+                                                <GripVertical
+                                                    class="h-4 w-4 text-muted-foreground/50"
+                                                />
                                             </div>
                                             <button
-                                                @click.stop="toggleRowSelection(row, $event)"
-                                                class="text-[10px] leading-none min-w-[18px] h-[18px] flex items-center justify-center rounded cursor-pointer select-none"
-                                                :class="isRowManuallySelected(row)
-                                                    ? 'bg-primary text-primary-foreground font-semibold'
-                                                    : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'"
-                                                :title="isRowManuallySelected(row) ? 'Deselect row' : 'Select row (Shift+Click for range)'"
+                                                @click.stop="
+                                                    toggleRowSelection(
+                                                        row,
+                                                        $event,
+                                                    )
+                                                "
+                                                class="flex h-[18px] min-w-[18px] cursor-pointer items-center justify-center rounded text-[10px] leading-none select-none"
+                                                :class="
+                                                    isRowManuallySelected(row)
+                                                        ? 'bg-primary font-semibold text-primary-foreground'
+                                                        : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
+                                                "
+                                                :title="
+                                                    isRowManuallySelected(row)
+                                                        ? 'Deselect row'
+                                                        : 'Select row (Shift+Click for range)'
+                                                "
                                             >
                                                 {{ getRowNumber(row) }}
                                             </button>
                                         </div>
                                     </td>
-                                    <template v-if="row.row_type === 'section_header'">
-                                        <td :colspan="visibleColumns.length" class="px-1 py-0.5 align-top">
+                                    <template
+                                        v-if="row.row_type === 'section_header'"
+                                    >
+                                        <td
+                                            :colspan="visibleColumns.length"
+                                            class="px-1 py-0.5 align-top"
+                                        >
                                             <Textarea
-                                                :model-value="row.data[columns[0]?.key] as string || ''"
-                                                @update:model-value="(val) => updateCell(row, columns[0]?.key || 'item', val)"
-                                                class="w-full h-full min-h-[28px] border-transparent bg-transparent focus:border-input text-sm resize-none overflow-hidden py-1 px-2 whitespace-pre-wrap break-words"
-                                                :class="getFontWeightClass(row.font_weight)"
-                                                :style="{ color: row.font_color || 'inherit' }"
+                                                :model-value="
+                                                    (row.data[
+                                                        columns[0]?.key
+                                                    ] as string) || ''
+                                                "
+                                                @update:model-value="
+                                                    (val) =>
+                                                        updateCell(
+                                                            row,
+                                                            columns[0]?.key ||
+                                                                'item',
+                                                            val,
+                                                        )
+                                                "
+                                                class="h-full min-h-[28px] w-full resize-none overflow-hidden border-transparent bg-transparent px-2 py-1 text-sm break-words whitespace-pre-wrap focus:border-input"
+                                                :class="
+                                                    getFontWeightClass(
+                                                        row.font_weight,
+                                                    )
+                                                "
+                                                :style="{
+                                                    color:
+                                                        row.font_color ||
+                                                        'inherit',
+                                                }"
                                                 placeholder="Section title..."
                                                 rows="1"
                                                 :readonly="!canEdit"
-                                                @input="(e: Event) => autoResizeTextarea(e.target as HTMLTextAreaElement)"
+                                                @input="
+                                                    (e: Event) =>
+                                                        autoResizeTextarea(
+                                                            e.target as HTMLTextAreaElement,
+                                                        )
+                                                "
                                                 @focus="onCellFocus(index)"
                                                 @blur="saveOnBlur"
                                             />
@@ -2285,80 +2971,216 @@ onUnmounted(() => {
                                             v-for="column in visibleColumns"
                                             :key="column.key"
                                             class="px-1 py-0.5 align-top"
-                                            :style="{ width: column.width + 'px' }"
+                                            :style="{
+                                                width: column.width + 'px',
+                                            }"
                                         >
-                                            <template v-if="column.type === 'checkbox'">
-                                                <div class="flex items-start justify-center pt-1">
+                                            <template
+                                                v-if="
+                                                    column.type === 'checkbox'
+                                                "
+                                            >
+                                                <div
+                                                    class="flex items-start justify-center pt-1"
+                                                >
                                                     <input
                                                         type="checkbox"
-                                                        :checked="!!row.data[column.key]"
-                                                        @change="(e) => updateCell(row, column.key, (e.target as HTMLInputElement).checked)"
-                                                        @focus="onCellFocus(index)"
-                                                        class="h-4 w-4 rounded border-gray-300 cursor-pointer"
+                                                        :checked="
+                                                            !!row.data[
+                                                                column.key
+                                                            ]
+                                                        "
+                                                        @change="
+                                                            (e) =>
+                                                                updateCell(
+                                                                    row,
+                                                                    column.key,
+                                                                    (
+                                                                        e.target as HTMLInputElement
+                                                                    ).checked,
+                                                                )
+                                                        "
+                                                        @focus="
+                                                            onCellFocus(index)
+                                                        "
+                                                        class="h-4 w-4 cursor-pointer rounded border-gray-300"
                                                         :disabled="!canEdit"
                                                     />
                                                 </div>
                                             </template>
-                                            <template v-else-if="column.type === 'text'">
+                                            <template
+                                                v-else-if="
+                                                    column.type === 'text'
+                                                "
+                                            >
                                                 <CellEditor
-                                                    :model-value="(row.data[column.key] as string) || ''"
-                                                    @update:model-value="(val) => updateCell(row, column.key, val)"
+                                                    :model-value="
+                                                        (row.data[
+                                                            column.key
+                                                        ] as string) || ''
+                                                    "
+                                                    @update:model-value="
+                                                        (val) =>
+                                                            updateCell(
+                                                                row,
+                                                                column.key,
+                                                                val,
+                                                            )
+                                                    "
                                                     :readonly="!canEdit"
-                                                    :font-weight="row.font_weight"
+                                                    :font-weight="
+                                                        row.font_weight
+                                                    "
                                                     :font-color="row.font_color"
                                                     @focus="onCellFocus(index)"
                                                     @blur="saveOnBlur"
                                                 />
                                             </template>
-                                            <template v-else-if="column.type === 'select'">
+                                            <template
+                                                v-else-if="
+                                                    column.type === 'select'
+                                                "
+                                            >
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger as-child>
+                                                    <DropdownMenuTrigger
+                                                        as-child
+                                                    >
                                                         <button
-                                                            class="h-7 px-2 text-sm rounded border flex items-center gap-1 min-w-[80px] hover:bg-muted/50 cursor-pointer"
-                                                            :class="{ 'pointer-events-none opacity-70': !canEdit }"
-                                                            @focus="onCellFocus(index)"
-                                                            :style="getSelectedOption(column, row.data[column.key]) ? {
-                                                                backgroundColor: getSelectedOption(column, row.data[column.key])?.color || '#dbeafe',
-                                                                color: getTextColorForBg(getSelectedOption(column, row.data[column.key])?.color)
-                                                            } : {}"
+                                                            class="flex h-7 min-w-[80px] cursor-pointer items-center gap-1 rounded border px-2 text-sm hover:bg-muted/50"
+                                                            :class="{
+                                                                'pointer-events-none opacity-70':
+                                                                    !canEdit,
+                                                            }"
+                                                            @focus="
+                                                                onCellFocus(
+                                                                    index,
+                                                                )
+                                                            "
+                                                            :style="
+                                                                getSelectedOption(
+                                                                    column,
+                                                                    row.data[
+                                                                        column
+                                                                            .key
+                                                                    ],
+                                                                )
+                                                                    ? {
+                                                                          backgroundColor:
+                                                                              getSelectedOption(
+                                                                                  column,
+                                                                                  row
+                                                                                      .data[
+                                                                                      column
+                                                                                          .key
+                                                                                  ],
+                                                                              )
+                                                                                  ?.color ||
+                                                                              '#dbeafe',
+                                                                          color: getTextColorForBg(
+                                                                              getSelectedOption(
+                                                                                  column,
+                                                                                  row
+                                                                                      .data[
+                                                                                      column
+                                                                                          .key
+                                                                                  ],
+                                                                              )
+                                                                                  ?.color,
+                                                                          ),
+                                                                      }
+                                                                    : {}
+                                                            "
                                                         >
-                                                            <span class="truncate flex-1 text-left">
-                                                                {{ getSelectedOption(column, row.data[column.key])?.label || 'Select...' }}
+                                                            <span
+                                                                class="flex-1 truncate text-left"
+                                                            >
+                                                                {{
+                                                                    getSelectedOption(
+                                                                        column,
+                                                                        row
+                                                                            .data[
+                                                                            column
+                                                                                .key
+                                                                        ],
+                                                                    )?.label ||
+                                                                    'Select...'
+                                                                }}
                                                             </span>
                                                         </button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="start" class="min-w-[120px]">
+                                                    <DropdownMenuContent
+                                                        align="start"
+                                                        class="min-w-[120px]"
+                                                    >
                                                         <DropdownMenuItem
-                                                            @click="updateCell(row, column.key, '')"
+                                                            @click="
+                                                                updateCell(
+                                                                    row,
+                                                                    column.key,
+                                                                    '',
+                                                                )
+                                                            "
                                                             class="text-muted-foreground"
                                                         >
                                                             Clear
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuSeparator v-if="column.options?.length" />
+                                                        <DropdownMenuSeparator
+                                                            v-if="
+                                                                column.options
+                                                                    ?.length
+                                                            "
+                                                        />
                                                         <DropdownMenuItem
                                                             v-for="option in column.options"
                                                             :key="option.value"
-                                                            @click="updateCell(row, column.key, option.value)"
+                                                            @click="
+                                                                updateCell(
+                                                                    row,
+                                                                    column.key,
+                                                                    option.value,
+                                                                )
+                                                            "
                                                             class="gap-2"
                                                         >
                                                             <span
-                                                                class="px-2 py-0.5 rounded text-xs font-medium"
+                                                                class="rounded px-2 py-0.5 text-xs font-medium"
                                                                 :style="{
-                                                                    backgroundColor: option.color || '#dbeafe',
-                                                                    color: getTextColorForBg(option.color)
+                                                                    backgroundColor:
+                                                                        option.color ||
+                                                                        '#dbeafe',
+                                                                    color: getTextColorForBg(
+                                                                        option.color,
+                                                                    ),
                                                                 }"
                                                             >
-                                                                {{ option.label }}
+                                                                {{
+                                                                    option.label
+                                                                }}
                                                             </span>
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </template>
-                                            <template v-else-if="column.type === 'date'">
+                                            <template
+                                                v-else-if="
+                                                    column.type === 'date'
+                                                "
+                                            >
                                                 <Input
                                                     type="date"
-                                                    :model-value="row.data[column.key] as string"
-                                                    @update:model-value="(val) => updateCell(row, column.key, val)"
+                                                    :model-value="
+                                                        row.data[
+                                                            column.key
+                                                        ] as string
+                                                    "
+                                                    @update:model-value="
+                                                        (val) =>
+                                                            updateCell(
+                                                                row,
+                                                                column.key,
+                                                                val,
+                                                            )
+                                                    "
                                                     class="h-7 text-sm"
                                                     :readonly="!canEdit"
                                                     @focus="onCellFocus(index)"
@@ -2367,8 +3189,19 @@ onUnmounted(() => {
                                             </template>
                                             <template v-else>
                                                 <Input
-                                                    :model-value="row.data[column.key] as string"
-                                                    @update:model-value="(val) => updateCell(row, column.key, val)"
+                                                    :model-value="
+                                                        row.data[
+                                                            column.key
+                                                        ] as string
+                                                    "
+                                                    @update:model-value="
+                                                        (val) =>
+                                                            updateCell(
+                                                                row,
+                                                                column.key,
+                                                                val,
+                                                            )
+                                                    "
                                                     class="h-7 text-sm"
                                                     :readonly="!canEdit"
                                                     @focus="onCellFocus(index)"
@@ -2378,12 +3211,14 @@ onUnmounted(() => {
                                         </td>
                                     </template>
                                     <td class="px-1 py-0.5 align-top">
-                                        <div class="flex items-center gap-1 flex-wrap">
+                                        <div
+                                            class="flex flex-wrap items-center gap-1"
+                                        >
                                             <Badge
-                                                v-for="mod in (row.module || [])"
+                                                v-for="mod in row.module || []"
                                                 :key="mod"
                                                 variant="outline"
-                                                class="text-[10px] px-1.5 h-4 font-normal whitespace-nowrap"
+                                                class="h-4 px-1.5 text-[10px] font-normal whitespace-nowrap"
                                             >
                                                 {{ mod }}
                                             </Badge>
@@ -2399,144 +3234,318 @@ onUnmounted(() => {
                                                         class="h-7 w-7 p-0"
                                                         title="Row Style"
                                                     >
-                                                        <Edit class="h-3.5 w-3.5" />
+                                                        <Edit
+                                                            class="h-3.5 w-3.5"
+                                                        />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" class="w-56">
-                                                <!-- Insert Rows -->
-                                                <DropdownMenuLabel>Insert Rows</DropdownMenuLabel>
-                                                <DropdownMenuItem @click="openAddRowsDialog(index, 'above', 'normal')">
-                                                    <ArrowUp class="h-4 w-4 mr-2" />
-                                                    Add rows above
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem @click="openAddRowsDialog(index, 'below', 'normal')">
-                                                    <ArrowDown class="h-4 w-4 mr-2" />
-                                                    Add rows below
-                                                </DropdownMenuItem>
-
-                                                <DropdownMenuSeparator />
-
-                                                <!-- Row Type -->
-                                                <DropdownMenuLabel>Row Type</DropdownMenuLabel>
-                                                <DropdownMenuItem
-                                                    @click="row.row_type = 'normal'"
-                                                    :class="row.row_type === 'normal' ? 'bg-accent' : ''"
+                                                <DropdownMenuContent
+                                                    align="end"
+                                                    class="w-56"
                                                 >
-                                                    <Plus class="h-4 w-4 mr-2" />
-                                                    Normal Row
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    @click="toggleRowType(row)"
-                                                    :class="row.row_type === 'section_header' ? 'bg-accent' : ''"
-                                                >
-                                                    <Heading class="h-4 w-4 mr-2" />
-                                                    Section Header
-                                                </DropdownMenuItem>
-
-                                                <DropdownMenuSeparator />
-
-                                                <!-- Background Color -->
-                                                <DropdownMenuLabel>Background Color</DropdownMenuLabel>
-                                                <div class="grid grid-cols-4 gap-1 p-2">
-                                                    <button
-                                                        v-for="color in predefinedColors"
-                                                        :key="color.value"
-                                                        @click="setBackgroundColor(row, color.value)"
-                                                        class="w-8 h-8 rounded border-2 hover:scale-110 transition-transform cursor-pointer"
-                                                        :class="row.background_color === color.value ? 'border-primary' : 'border-transparent'"
-                                                        :style="{ backgroundColor: color.value }"
-                                                        :title="color.name"
-                                                    />
-                                                </div>
-                                                <div class="px-2 pb-2 flex items-center gap-2">
-                                                    <label class="flex items-center gap-2 text-sm flex-1 cursor-pointer">
-                                                        <input
-                                                            type="color"
-                                                            :value="row.background_color || '#ffffff'"
-                                                            @input="(e) => setBackgroundColor(row, (e.target as HTMLInputElement).value)"
-                                                            class="w-6 h-6 rounded cursor-pointer"
+                                                    <!-- Insert Rows -->
+                                                    <DropdownMenuLabel
+                                                        >Insert
+                                                        Rows</DropdownMenuLabel
+                                                    >
+                                                    <DropdownMenuItem
+                                                        @click="
+                                                            openAddRowsDialog(
+                                                                index,
+                                                                'above',
+                                                                'normal',
+                                                            )
+                                                        "
+                                                    >
+                                                        <ArrowUp
+                                                            class="mr-2 h-4 w-4"
                                                         />
-                                                        Custom
-                                                    </label>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        class="h-6 text-xs"
-                                                        @click="setBackgroundColor(row, null)"
+                                                        Add rows above
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        @click="
+                                                            openAddRowsDialog(
+                                                                index,
+                                                                'below',
+                                                                'normal',
+                                                            )
+                                                        "
                                                     >
-                                                        Clear
-                                                    </Button>
-                                                </div>
-
-                                                <DropdownMenuSeparator />
-
-                                                <!-- Font Color -->
-                                                <DropdownMenuLabel>Font Color</DropdownMenuLabel>
-                                                <div class="grid grid-cols-4 gap-1 p-2">
-                                                    <button
-                                                        v-for="color in fontColors"
-                                                        :key="color.value"
-                                                        @click="setFontColor(row, color.value)"
-                                                        class="w-8 h-8 rounded border-2 hover:scale-110 transition-transform flex items-center justify-center cursor-pointer"
-                                                        :class="row.font_color === color.value ? 'border-primary' : 'border-gray-200'"
-                                                        :title="color.name"
-                                                    >
-                                                        <span class="text-lg font-bold" :style="{ color: color.value }">A</span>
-                                                    </button>
-                                                </div>
-                                                <div class="px-2 pb-2 flex items-center gap-2">
-                                                    <label class="flex items-center gap-2 text-sm flex-1 cursor-pointer">
-                                                        <input
-                                                            type="color"
-                                                            :value="row.font_color || '#000000'"
-                                                            @input="(e) => setFontColor(row, (e.target as HTMLInputElement).value)"
-                                                            class="w-6 h-6 rounded cursor-pointer"
+                                                        <ArrowDown
+                                                            class="mr-2 h-4 w-4"
                                                         />
-                                                        Custom
-                                                    </label>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        class="h-6 text-xs"
-                                                        @click="setFontColor(row, null)"
+                                                        Add rows below
+                                                    </DropdownMenuItem>
+
+                                                    <DropdownMenuSeparator />
+
+                                                    <!-- Row Type -->
+                                                    <DropdownMenuLabel
+                                                        >Row
+                                                        Type</DropdownMenuLabel
                                                     >
-                                                        Clear
-                                                    </Button>
-                                                </div>
-
-                                                <DropdownMenuSeparator />
-
-                                                <!-- Font Weight -->
-                                                <DropdownMenuLabel>Font Weight</DropdownMenuLabel>
-                                                <DropdownMenuItem
-                                                    v-for="weight in fontWeights"
-                                                    :key="weight.value"
-                                                    @click="setFontWeight(row, weight.value as 'normal' | 'medium' | 'semibold' | 'bold')"
-                                                    :class="row.font_weight === weight.value ? 'bg-accent' : ''"
-                                                >
-                                                    <Bold class="h-4 w-4 mr-2" />
-                                                    <span :class="getFontWeightClass(weight.value)">{{ weight.label }}</span>
-                                                </DropdownMenuItem>
-
-                                                <DropdownMenuSeparator />
-
-                                                <!-- Module -->
-                                                <DropdownMenuLabel>Module</DropdownMenuLabel>
-                                                <div class="px-1 pb-1">
-                                                    <label
-                                                        v-for="mod in MODULE_OPTIONS"
-                                                        :key="mod"
-                                                        class="flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm cursor-pointer hover:bg-accent"
-                                                        @click.stop
+                                                    <DropdownMenuItem
+                                                        @click="
+                                                            row.row_type =
+                                                                'normal'
+                                                        "
+                                                        :class="
+                                                            row.row_type ===
+                                                            'normal'
+                                                                ? 'bg-accent'
+                                                                : ''
+                                                        "
                                                     >
-                                                        <Checkbox
-                                                            :model-value="(row.module || []).includes(mod)"
-                                                            @update:model-value="() => toggleRowModule(row, mod)"
+                                                        <Plus
+                                                            class="mr-2 h-4 w-4"
                                                         />
-                                                        {{ mod }}
-                                                    </label>
-                                                </div>
-                                            </DropdownMenuContent>
+                                                        Normal Row
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        @click="
+                                                            toggleRowType(row)
+                                                        "
+                                                        :class="
+                                                            row.row_type ===
+                                                            'section_header'
+                                                                ? 'bg-accent'
+                                                                : ''
+                                                        "
+                                                    >
+                                                        <Heading
+                                                            class="mr-2 h-4 w-4"
+                                                        />
+                                                        Section Header
+                                                    </DropdownMenuItem>
+
+                                                    <DropdownMenuSeparator />
+
+                                                    <!-- Background Color -->
+                                                    <DropdownMenuLabel
+                                                        >Background
+                                                        Color</DropdownMenuLabel
+                                                    >
+                                                    <div
+                                                        class="grid grid-cols-4 gap-1 p-2"
+                                                    >
+                                                        <button
+                                                            v-for="color in predefinedColors"
+                                                            :key="color.value"
+                                                            @click="
+                                                                setBackgroundColor(
+                                                                    row,
+                                                                    color.value,
+                                                                )
+                                                            "
+                                                            class="h-8 w-8 cursor-pointer rounded border-2 transition-transform hover:scale-110"
+                                                            :class="
+                                                                row.background_color ===
+                                                                color.value
+                                                                    ? 'border-primary'
+                                                                    : 'border-transparent'
+                                                            "
+                                                            :style="{
+                                                                backgroundColor:
+                                                                    color.value,
+                                                            }"
+                                                            :title="color.name"
+                                                        />
+                                                    </div>
+                                                    <div
+                                                        class="flex items-center gap-2 px-2 pb-2"
+                                                    >
+                                                        <label
+                                                            class="flex flex-1 cursor-pointer items-center gap-2 text-sm"
+                                                        >
+                                                            <input
+                                                                type="color"
+                                                                :value="
+                                                                    row.background_color ||
+                                                                    '#ffffff'
+                                                                "
+                                                                @input="
+                                                                    (e) =>
+                                                                        setBackgroundColor(
+                                                                            row,
+                                                                            (
+                                                                                e.target as HTMLInputElement
+                                                                            )
+                                                                                .value,
+                                                                        )
+                                                                "
+                                                                class="h-6 w-6 cursor-pointer rounded"
+                                                            />
+                                                            Custom
+                                                        </label>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            class="h-6 text-xs"
+                                                            @click="
+                                                                setBackgroundColor(
+                                                                    row,
+                                                                    null,
+                                                                )
+                                                            "
+                                                        >
+                                                            Clear
+                                                        </Button>
+                                                    </div>
+
+                                                    <DropdownMenuSeparator />
+
+                                                    <!-- Font Color -->
+                                                    <DropdownMenuLabel
+                                                        >Font
+                                                        Color</DropdownMenuLabel
+                                                    >
+                                                    <div
+                                                        class="grid grid-cols-4 gap-1 p-2"
+                                                    >
+                                                        <button
+                                                            v-for="color in fontColors"
+                                                            :key="color.value"
+                                                            @click="
+                                                                setFontColor(
+                                                                    row,
+                                                                    color.value,
+                                                                )
+                                                            "
+                                                            class="flex h-8 w-8 cursor-pointer items-center justify-center rounded border-2 transition-transform hover:scale-110"
+                                                            :class="
+                                                                row.font_color ===
+                                                                color.value
+                                                                    ? 'border-primary'
+                                                                    : 'border-gray-200'
+                                                            "
+                                                            :title="color.name"
+                                                        >
+                                                            <span
+                                                                class="text-lg font-bold"
+                                                                :style="{
+                                                                    color: color.value,
+                                                                }"
+                                                                >A</span
+                                                            >
+                                                        </button>
+                                                    </div>
+                                                    <div
+                                                        class="flex items-center gap-2 px-2 pb-2"
+                                                    >
+                                                        <label
+                                                            class="flex flex-1 cursor-pointer items-center gap-2 text-sm"
+                                                        >
+                                                            <input
+                                                                type="color"
+                                                                :value="
+                                                                    row.font_color ||
+                                                                    '#000000'
+                                                                "
+                                                                @input="
+                                                                    (e) =>
+                                                                        setFontColor(
+                                                                            row,
+                                                                            (
+                                                                                e.target as HTMLInputElement
+                                                                            )
+                                                                                .value,
+                                                                        )
+                                                                "
+                                                                class="h-6 w-6 cursor-pointer rounded"
+                                                            />
+                                                            Custom
+                                                        </label>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            class="h-6 text-xs"
+                                                            @click="
+                                                                setFontColor(
+                                                                    row,
+                                                                    null,
+                                                                )
+                                                            "
+                                                        >
+                                                            Clear
+                                                        </Button>
+                                                    </div>
+
+                                                    <DropdownMenuSeparator />
+
+                                                    <!-- Font Weight -->
+                                                    <DropdownMenuLabel
+                                                        >Font
+                                                        Weight</DropdownMenuLabel
+                                                    >
+                                                    <DropdownMenuItem
+                                                        v-for="weight in fontWeights"
+                                                        :key="weight.value"
+                                                        @click="
+                                                            setFontWeight(
+                                                                row,
+                                                                weight.value as
+                                                                    | 'normal'
+                                                                    | 'medium'
+                                                                    | 'semibold'
+                                                                    | 'bold',
+                                                            )
+                                                        "
+                                                        :class="
+                                                            row.font_weight ===
+                                                            weight.value
+                                                                ? 'bg-accent'
+                                                                : ''
+                                                        "
+                                                    >
+                                                        <Bold
+                                                            class="mr-2 h-4 w-4"
+                                                        />
+                                                        <span
+                                                            :class="
+                                                                getFontWeightClass(
+                                                                    weight.value,
+                                                                )
+                                                            "
+                                                            >{{
+                                                                weight.label
+                                                            }}</span
+                                                        >
+                                                    </DropdownMenuItem>
+
+                                                    <DropdownMenuSeparator />
+
+                                                    <!-- Module -->
+                                                    <DropdownMenuLabel
+                                                        >Module</DropdownMenuLabel
+                                                    >
+                                                    <div class="px-1 pb-1">
+                                                        <label
+                                                            v-for="mod in MODULE_OPTIONS"
+                                                            :key="mod"
+                                                            class="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                                                            @click.stop
+                                                        >
+                                                            <Checkbox
+                                                                :model-value="
+                                                                    (
+                                                                        row.module ||
+                                                                        []
+                                                                    ).includes(
+                                                                        mod,
+                                                                    )
+                                                                "
+                                                                @update:model-value="
+                                                                    () =>
+                                                                        toggleRowModule(
+                                                                            row,
+                                                                            mod,
+                                                                        )
+                                                                "
+                                                            />
+                                                            {{ mod }}
+                                                        </label>
+                                                    </div>
+                                                </DropdownMenuContent>
                                             </DropdownMenu>
                                         </RestrictedAction>
                                     </td>
@@ -2554,15 +3563,43 @@ onUnmounted(() => {
                                     </td>
                                 </tr>
                                 <tr v-if="rows.length === 0">
-                                    <td :colspan="visibleColumns.length + 4" class="p-6 text-center text-muted-foreground text-sm">
-                                        No items yet. Click "Add Row" to add your first item.
+                                    <td
+                                        :colspan="visibleColumns.length + 4"
+                                        class="p-6 text-center text-sm text-muted-foreground"
+                                    >
+                                        No items yet. Click "Add Row" to add
+                                        your first item.
                                     </td>
                                 </tr>
-                                <tr v-else-if="(searchQuery.trim() || activeFilterCount > 0) && filteredDataRowCount === 0">
-                                    <td :colspan="visibleColumns.length + 4" class="p-6 text-center text-muted-foreground text-sm">
-                                        <span v-if="searchQuery.trim()" class="inline-block max-w-full truncate align-bottom">No items match "{{ searchQuery }}".</span>
-                                        <template v-else>No items match the selected filters.</template>
-                                        <Button v-if="activeFilterCount > 0" variant="outline" size="sm" class="mt-2 gap-2 ml-2" @click="clearFilters">
+                                <tr
+                                    v-else-if="
+                                        (searchQuery.trim() ||
+                                            activeFilterCount > 0) &&
+                                        filteredDataRowCount === 0
+                                    "
+                                >
+                                    <td
+                                        :colspan="visibleColumns.length + 4"
+                                        class="p-6 text-center text-sm text-muted-foreground"
+                                    >
+                                        <span
+                                            v-if="searchQuery.trim()"
+                                            class="inline-block max-w-full truncate align-bottom"
+                                            >No items match "{{
+                                                searchQuery
+                                            }}".</span
+                                        >
+                                        <template v-else
+                                            >No items match the selected
+                                            filters.</template
+                                        >
+                                        <Button
+                                            v-if="activeFilterCount > 0"
+                                            variant="outline"
+                                            size="sm"
+                                            class="mt-2 ml-2 gap-2"
+                                            @click="clearFilters"
+                                        >
                                             <X class="h-3.5 w-3.5" />
                                             Clear Filters
                                         </Button>
@@ -2572,10 +3609,14 @@ onUnmounted(() => {
                         </table>
 
                         <!-- Infinite scroll sentinel + Show All fallback -->
-                        <div v-if="hasMoreRows" class="flex items-center justify-center py-4 border-t">
+                        <div
+                            v-if="hasMoreRows"
+                            class="flex items-center justify-center border-t py-4"
+                        >
                             <div ref="sentinelRef" class="h-1" />
                             <span class="text-sm text-muted-foreground">
-                                Showing {{ displayRows.length }} of {{ totalRowCount }} rows
+                                Showing {{ displayRows.length }} of
+                                {{ totalRowCount }} rows
                             </span>
                         </div>
                     </div>
@@ -2588,15 +3629,24 @@ onUnmounted(() => {
                     <DialogHeader>
                         <DialogTitle>Delete Row?</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete this row? This action cannot be undone.
+                            Are you sure you want to delete this row? This
+                            action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter class="flex gap-4 sm:justify-end">
-                        <Button variant="secondary" @click="showDeleteConfirm = false" class="flex-1 sm:flex-none">
+                        <Button
+                            variant="secondary"
+                            @click="showDeleteConfirm = false"
+                            class="flex-1 sm:flex-none"
+                        >
                             No
                         </Button>
                         <RestrictedAction>
-                            <Button variant="destructive" @click="removeRow" class="flex-1 sm:flex-none">
+                            <Button
+                                variant="destructive"
+                                @click="removeRow"
+                                class="flex-1 sm:flex-none"
+                            >
                                 Yes
                             </Button>
                         </RestrictedAction>
@@ -2608,17 +3658,30 @@ onUnmounted(() => {
             <Dialog v-model:open="showDeleteSelectedConfirm">
                 <DialogContent class="max-w-sm">
                     <DialogHeader>
-                        <DialogTitle>Delete {{ selectedRows.length }} Row{{ selectedRows.length !== 1 ? 's' : '' }}?</DialogTitle>
+                        <DialogTitle
+                            >Delete {{ selectedRows.length }} Row{{
+                                selectedRows.length !== 1 ? 's' : ''
+                            }}?</DialogTitle
+                        >
                         <DialogDescription>
-                            Are you sure you want to delete the selected rows? This action cannot be undone.
+                            Are you sure you want to delete the selected rows?
+                            This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter class="flex gap-4 sm:justify-end">
-                        <Button variant="secondary" @click="showDeleteSelectedConfirm = false" class="flex-1 sm:flex-none cursor-pointer">
+                        <Button
+                            variant="secondary"
+                            @click="showDeleteSelectedConfirm = false"
+                            class="flex-1 cursor-pointer sm:flex-none"
+                        >
                             No
                         </Button>
                         <RestrictedAction>
-                            <Button variant="destructive" @click="removeSelectedRows" class="flex-1 sm:flex-none cursor-pointer">
+                            <Button
+                                variant="destructive"
+                                @click="removeSelectedRows"
+                                class="flex-1 cursor-pointer sm:flex-none"
+                            >
                                 Yes
                             </Button>
                         </RestrictedAction>
@@ -2630,7 +3693,20 @@ onUnmounted(() => {
             <Dialog v-model:open="showAddRowsDialog">
                 <DialogContent class="max-w-xs">
                     <DialogHeader>
-                        <DialogTitle>Add {{ addRowsType === 'section_header' ? 'Section Headers' : 'Rows' }}{{ addRowsPosition === 'above' ? ' Above' : addRowsPosition === 'below' ? ' Below' : '' }}</DialogTitle>
+                        <DialogTitle
+                            >Add
+                            {{
+                                addRowsType === 'section_header'
+                                    ? 'Section Headers'
+                                    : 'Rows'
+                            }}{{
+                                addRowsPosition === 'above'
+                                    ? ' Above'
+                                    : addRowsPosition === 'below'
+                                      ? ' Below'
+                                      : ''
+                            }}</DialogTitle
+                        >
                         <DialogDescription>
                             Specify the number of rows to add.
                         </DialogDescription>
@@ -2647,13 +3723,18 @@ onUnmounted(() => {
                         />
                     </div>
                     <DialogFooter class="flex gap-2 sm:justify-end">
-                        <Button variant="outline" @click="showAddRowsDialog = false">
+                        <Button
+                            variant="outline"
+                            @click="showAddRowsDialog = false"
+                        >
                             Cancel
                         </Button>
                         <RestrictedAction>
                             <Button @click="insertRows" class="gap-2">
                                 <Plus class="h-4 w-4" />
-                                Add {{ addRowsCount }} row{{ addRowsCount > 1 ? 's' : '' }}
+                                Add {{ addRowsCount }} row{{
+                                    addRowsCount > 1 ? 's' : ''
+                                }}
                             </Button>
                         </RestrictedAction>
                     </DialogFooter>
@@ -2669,15 +3750,22 @@ onUnmounted(() => {
                             Copy Rows to Checklist
                         </DialogTitle>
                         <DialogDescription>
-                            Copy {{ selectedRows.length }} selected row{{ selectedRows.length !== 1 ? 's' : '' }} to another checklist.
+                            Copy {{ selectedRows.length }} selected row{{
+                                selectedRows.length !== 1 ? 's' : ''
+                            }}
+                            to another checklist.
                         </DialogDescription>
                     </DialogHeader>
-                    <div class="py-4 space-y-4">
+                    <div class="space-y-4 py-4">
                         <div class="space-y-2">
-                            <Label for="copy-target-checklist">Target Checklist</Label>
+                            <Label for="copy-target-checklist"
+                                >Target Checklist</Label
+                            >
                             <Select v-model="copyTargetChecklistId">
                                 <SelectTrigger id="copy-target-checklist">
-                                    <SelectValue placeholder="Select checklist..." />
+                                    <SelectValue
+                                        placeholder="Select checklist..."
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem
@@ -2690,12 +3778,22 @@ onUnmounted(() => {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div v-if="targetSectionHeaders.length > 0" class="space-y-2">
-                            <Label for="copy-target-section">Insert into Section</Label>
+                        <div
+                            v-if="targetSectionHeaders.length > 0"
+                            class="space-y-2"
+                        >
+                            <Label for="copy-target-section"
+                                >Insert into Section</Label
+                            >
                             <div class="flex gap-2">
-                                <Select v-model="copyTargetSectionId" class="flex-1">
+                                <Select
+                                    v-model="copyTargetSectionId"
+                                    class="flex-1"
+                                >
                                     <SelectTrigger id="copy-target-section">
-                                        <SelectValue placeholder="End of checklist (default)" />
+                                        <SelectValue
+                                            placeholder="End of checklist (default)"
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem
@@ -2708,18 +3806,31 @@ onUnmounted(() => {
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Button v-if="copyTargetSectionId !== null" variant="ghost" size="icon" class="shrink-0" @click="copyTargetSectionId = null">
+                                <Button
+                                    v-if="copyTargetSectionId !== null"
+                                    variant="ghost"
+                                    size="icon"
+                                    class="shrink-0"
+                                    @click="copyTargetSectionId = null"
+                                >
                                     <X class="h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
                     </div>
                     <DialogFooter class="flex gap-2 sm:justify-end">
-                        <Button variant="outline" @click="showCopyToChecklistDialog = false">
+                        <Button
+                            variant="outline"
+                            @click="showCopyToChecklistDialog = false"
+                        >
                             Cancel
                         </Button>
                         <RestrictedAction>
-                            <Button @click="copyToChecklist" :disabled="!copyTargetChecklistId || isCopying" class="gap-2">
+                            <Button
+                                @click="copyToChecklist"
+                                :disabled="!copyTargetChecklistId || isCopying"
+                                class="gap-2"
+                            >
                                 <Copy class="h-4 w-4" />
                                 {{ isCopying ? 'Copying...' : 'Copy Rows' }}
                             </Button>
@@ -2737,30 +3848,71 @@ onUnmounted(() => {
                             Paste Rows
                         </DialogTitle>
                         <DialogDescription>
-                            Paste {{ clipboardData?.rows.length }} row{{ (clipboardData?.rows.length ?? 0) !== 1 ? 's' : '' }} from "{{ clipboardData?.source_checklist_name }}".
+                            Paste {{ clipboardData?.rows.length }} row{{
+                                (clipboardData?.rows.length ?? 0) !== 1
+                                    ? 's'
+                                    : ''
+                            }}
+                            from "{{ clipboardData?.source_checklist_name }}".
                         </DialogDescription>
                     </DialogHeader>
-                    <div class="py-4 space-y-4">
+                    <div class="space-y-4 py-4">
                         <div class="space-y-2">
                             <Label>Insert Position</Label>
                             <div class="space-y-1.5">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" v-model="pastePosition" value="end" class="cursor-pointer" />
-                                    <span class="text-sm">End of checklist</span>
+                                <label
+                                    class="flex cursor-pointer items-center gap-2"
+                                >
+                                    <input
+                                        type="radio"
+                                        v-model="pastePosition"
+                                        value="end"
+                                        class="cursor-pointer"
+                                    />
+                                    <span class="text-sm"
+                                        >End of checklist</span
+                                    >
                                 </label>
-                                <label v-if="focusedRowIndex !== null" class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" v-model="pastePosition" value="cursor" class="cursor-pointer" />
-                                    <span class="text-sm">At current row (row {{ focusedRowIndex + 1 }})</span>
+                                <label
+                                    v-if="focusedRowIndex !== null"
+                                    class="flex cursor-pointer items-center gap-2"
+                                >
+                                    <input
+                                        type="radio"
+                                        v-model="pastePosition"
+                                        value="cursor"
+                                        class="cursor-pointer"
+                                    />
+                                    <span class="text-sm"
+                                        >At current row (row
+                                        {{ focusedRowIndex + 1 }})</span
+                                    >
                                 </label>
-                                <template v-if="currentSectionHeaders.length > 0">
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" v-model="pastePosition" value="section" class="cursor-pointer" />
-                                        <span class="text-sm">Into section</span>
+                                <template
+                                    v-if="currentSectionHeaders.length > 0"
+                                >
+                                    <label
+                                        class="flex cursor-pointer items-center gap-2"
+                                    >
+                                        <input
+                                            type="radio"
+                                            v-model="pastePosition"
+                                            value="section"
+                                            class="cursor-pointer"
+                                        />
+                                        <span class="text-sm"
+                                            >Into section</span
+                                        >
                                     </label>
-                                    <div v-if="pastePosition === 'section'" class="ml-6">
+                                    <div
+                                        v-if="pastePosition === 'section'"
+                                        class="ml-6"
+                                    >
                                         <Select v-model="pasteSectionId">
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Select section..." />
+                                                <SelectValue
+                                                    placeholder="Select section..."
+                                                />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem
@@ -2779,18 +3931,35 @@ onUnmounted(() => {
                         </div>
                     </div>
                     <DialogFooter class="flex gap-2 sm:justify-between">
-                        <Button variant="ghost" @click="clearClipboard(); showPasteDialog = false" class="gap-2 text-muted-foreground hover:text-destructive cursor-pointer">
+                        <Button
+                            variant="ghost"
+                            @click="
+                                clearClipboard();
+                                showPasteDialog = false;
+                            "
+                            class="cursor-pointer gap-2 text-muted-foreground hover:text-destructive"
+                        >
                             <Trash2 class="h-4 w-4" />
                             Clear
                         </Button>
                         <div class="flex gap-2">
-                            <Button variant="outline" @click="showPasteDialog = false" class="cursor-pointer">
+                            <Button
+                                variant="outline"
+                                @click="showPasteDialog = false"
+                                class="cursor-pointer"
+                            >
                                 Cancel
                             </Button>
                             <RestrictedAction>
-                                <Button @click="pasteRows" :disabled="isPasting" class="gap-2 cursor-pointer">
+                                <Button
+                                    @click="pasteRows"
+                                    :disabled="isPasting"
+                                    class="cursor-pointer gap-2"
+                                >
                                     <ClipboardList class="h-4 w-4" />
-                                    {{ isPasting ? 'Pasting...' : 'Paste Rows' }}
+                                    {{
+                                        isPasting ? 'Pasting...' : 'Paste Rows'
+                                    }}
                                 </Button>
                             </RestrictedAction>
                         </div>
@@ -2807,15 +3976,22 @@ onUnmounted(() => {
                             Create Test Case
                         </DialogTitle>
                         <DialogDescription>
-                            Create a test case from {{ selectedRows.length }} selected row{{ selectedRows.length !== 1 ? 's' : '' }}. Select the target test suite.
+                            Create a test case from
+                            {{ selectedRows.length }} selected row{{
+                                selectedRows.length !== 1 ? 's' : ''
+                            }}. Select the target test suite.
                         </DialogDescription>
                     </DialogHeader>
-                    <div class="py-4 space-y-4">
+                    <div class="space-y-4 py-4">
                         <div class="space-y-2">
-                            <Label for="test-case-target-suite">Test Suite</Label>
+                            <Label for="test-case-target-suite"
+                                >Test Suite</Label
+                            >
                             <Select v-model="testCaseTargetSuiteId">
                                 <SelectTrigger id="test-case-target-suite">
-                                    <SelectValue placeholder="Select test suite..." />
+                                    <SelectValue
+                                        placeholder="Select test suite..."
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem
@@ -2828,12 +4004,22 @@ onUnmounted(() => {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div v-if="selectedParentSuiteChildren.length > 0" class="space-y-2">
-                            <Label for="test-case-target-child">Subcategory</Label>
+                        <div
+                            v-if="selectedParentSuiteChildren.length > 0"
+                            class="space-y-2"
+                        >
+                            <Label for="test-case-target-child"
+                                >Subcategory</Label
+                            >
                             <div class="flex gap-2">
-                                <Select v-model="testCaseTargetChildId" class="flex-1">
+                                <Select
+                                    v-model="testCaseTargetChildId"
+                                    class="flex-1"
+                                >
                                     <SelectTrigger id="test-case-target-child">
-                                        <SelectValue placeholder="None (save in parent)" />
+                                        <SelectValue
+                                            placeholder="None (save in parent)"
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem
@@ -2845,17 +4031,30 @@ onUnmounted(() => {
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Button v-if="testCaseTargetChildId !== null" variant="ghost" size="icon" class="shrink-0 cursor-pointer" @click="testCaseTargetChildId = null">
+                                <Button
+                                    v-if="testCaseTargetChildId !== null"
+                                    variant="ghost"
+                                    size="icon"
+                                    class="shrink-0 cursor-pointer"
+                                    @click="testCaseTargetChildId = null"
+                                >
                                     <X class="h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
                     </div>
                     <DialogFooter class="flex gap-2 sm:justify-end">
-                        <Button variant="outline" @click="showTestCaseDialog = false">
+                        <Button
+                            variant="outline"
+                            @click="showTestCaseDialog = false"
+                        >
                             Cancel
                         </Button>
-                        <Button @click="createTestCaseFromSelected" :disabled="!testCaseTargetSuiteId" class="gap-2">
+                        <Button
+                            @click="createTestCaseFromSelected"
+                            :disabled="!testCaseTargetSuiteId"
+                            class="gap-2"
+                        >
                             <Layers class="h-4 w-4" />
                             Create Test Case
                         </Button>
@@ -2872,15 +4071,20 @@ onUnmounted(() => {
                             Create Test Run
                         </DialogTitle>
                         <DialogDescription>
-                            Create a test run from {{ selectedRows.length }} selected row{{ selectedRows.length !== 1 ? 's' : '' }}. Each row becomes a check item.
+                            Create a test run from
+                            {{ selectedRows.length }} selected row{{
+                                selectedRows.length !== 1 ? 's' : ''
+                            }}. Each row becomes a check item.
                         </DialogDescription>
                     </DialogHeader>
-                    <div class="py-4 space-y-4">
+                    <div class="space-y-4 py-4">
                         <div class="space-y-2">
                             <Label for="test-run-column">Source Column</Label>
                             <Select v-model="testRunColumnKey">
                                 <SelectTrigger id="test-run-column">
-                                    <SelectValue placeholder="Select column..." />
+                                    <SelectValue
+                                        placeholder="Select column..."
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem
@@ -2895,23 +4099,39 @@ onUnmounted(() => {
                         </div>
                         <div class="space-y-2">
                             <Label for="test-run-name">Name</Label>
-                            <Input id="test-run-name" v-model="testRunName" placeholder="Test run name..." />
+                            <Input
+                                id="test-run-name"
+                                v-model="testRunName"
+                                placeholder="Test run name..."
+                            />
                         </div>
                         <div class="space-y-2">
-                            <Label for="test-run-description">Description</Label>
-                            <Input id="test-run-description" v-model="testRunDescription" placeholder="Optional description..." />
+                            <Label for="test-run-description"
+                                >Description</Label
+                            >
+                            <Input
+                                id="test-run-description"
+                                v-model="testRunDescription"
+                                placeholder="Optional description..."
+                            />
                         </div>
                         <div class="space-y-2">
                             <Label>Priority</Label>
                             <Select v-model="testRunPriority">
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select priority..." />
+                                    <SelectValue
+                                        placeholder="Select priority..."
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="low">Low</SelectItem>
-                                    <SelectItem value="medium">Medium</SelectItem>
+                                    <SelectItem value="medium"
+                                        >Medium</SelectItem
+                                    >
                                     <SelectItem value="high">High</SelectItem>
-                                    <SelectItem value="critical">Critical</SelectItem>
+                                    <SelectItem value="critical"
+                                        >Critical</SelectItem
+                                    >
                                 </SelectContent>
                             </Select>
                         </div>
@@ -2923,26 +4143,55 @@ onUnmounted(() => {
                                         <SelectValue placeholder="Select..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Develop">Develop</SelectItem>
-                                        <SelectItem value="Staging">Staging</SelectItem>
-                                        <SelectItem value="Production">Production</SelectItem>
+                                        <SelectItem value="Develop"
+                                            >Develop</SelectItem
+                                        >
+                                        <SelectItem value="Staging"
+                                            >Staging</SelectItem
+                                        >
+                                        <SelectItem value="Production"
+                                            >Production</SelectItem
+                                        >
                                     </SelectContent>
                                 </Select>
-                                <Input v-model="testRunEnvNotes" placeholder="Devices, browser..." class="col-span-2" />
+                                <Input
+                                    v-model="testRunEnvNotes"
+                                    placeholder="Devices, browser..."
+                                    class="col-span-2"
+                                />
                             </div>
                         </div>
                         <div class="space-y-2">
                             <Label for="test-run-milestone">Milestone</Label>
-                            <Input id="test-run-milestone" v-model="testRunMilestone" placeholder="e.g. v1.0, Sprint 5..." />
+                            <Input
+                                id="test-run-milestone"
+                                v-model="testRunMilestone"
+                                placeholder="e.g. v1.0, Sprint 5..."
+                            />
                         </div>
                     </div>
                     <DialogFooter class="flex gap-2 sm:justify-end">
-                        <Button variant="outline" @click="showTestRunDialog = false">
+                        <Button
+                            variant="outline"
+                            @click="showTestRunDialog = false"
+                        >
                             Cancel
                         </Button>
-                        <Button @click="createTestRunFromSelected" :disabled="!testRunName.trim() || !testRunColumnKey || isCreatingTestRun" class="gap-2">
+                        <Button
+                            @click="createTestRunFromSelected"
+                            :disabled="
+                                !testRunName.trim() ||
+                                !testRunColumnKey ||
+                                isCreatingTestRun
+                            "
+                            class="gap-2"
+                        >
                             <Play class="h-4 w-4" />
-                            {{ isCreatingTestRun ? 'Creating...' : 'Create Test Run' }}
+                            {{
+                                isCreatingTestRun
+                                    ? 'Creating...'
+                                    : 'Create Test Run'
+                            }}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -2957,8 +4206,9 @@ onUnmounted(() => {
                             Import from CSV
                         </DialogTitle>
                         <DialogDescription>
-                            Select a CSV file to import. New rows will be added below existing content.
-                            The CSV headers should match the checklist column names.
+                            Select a CSV file to import. New rows will be added
+                            below existing content. The CSV headers should match
+                            the checklist column names.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -2978,39 +4228,58 @@ onUnmounted(() => {
                                     variant="outline"
                                     size="sm"
                                     class="cursor-pointer"
-                                    @click="($refs.fileInputRef as HTMLInputElement).click()"
+                                    @click="
+                                        (
+                                            $refs.fileInputRef as HTMLInputElement
+                                        ).click()
+                                    "
                                 >
                                     <Upload class="mr-2 h-4 w-4" />
                                     Choose File
                                 </Button>
                                 <span class="text-sm text-muted-foreground">
-                                    {{ importFile ? importFile.name : 'No file selected' }}
+                                    {{
+                                        importFile
+                                            ? importFile.name
+                                            : 'No file selected'
+                                    }}
                                 </span>
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                Maximum file size: 5MB. Supported formats: CSV, TXT
+                                Maximum file size: 5MB. Supported formats: CSV,
+                                TXT
                             </p>
                         </div>
 
-                        <div v-if="importError" class="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+                        <div
+                            v-if="importError"
+                            class="rounded-md bg-destructive/15 p-3 text-sm text-destructive"
+                        >
                             {{ importError }}
                         </div>
 
                         <div v-if="importFile" class="rounded-md bg-muted p-3">
                             <div class="flex items-center gap-2 text-sm">
                                 <FileSpreadsheet class="h-4 w-4 text-primary" />
-                                <span class="font-medium">{{ importFile.name }}</span>
-                                <span class="text-muted-foreground">({{ (importFile.size / 1024).toFixed(1) }} KB)</span>
+                                <span class="font-medium">{{
+                                    importFile.name
+                                }}</span>
+                                <span class="text-muted-foreground"
+                                    >({{
+                                        (importFile.size / 1024).toFixed(1)
+                                    }}
+                                    KB)</span
+                                >
                             </div>
                         </div>
 
-                        <div class="rounded-md border p-3 space-y-2">
+                        <div class="space-y-2 rounded-md border p-3">
                             <p class="text-sm font-medium">Expected columns:</p>
                             <div class="flex flex-wrap gap-1">
                                 <span
                                     v-for="col in columns"
                                     :key="col.key"
-                                    class="px-2 py-0.5 bg-muted rounded text-xs"
+                                    class="rounded bg-muted px-2 py-0.5 text-xs"
                                 >
                                     {{ col.label }}
                                 </span>
@@ -3029,7 +4298,9 @@ onUnmounted(() => {
                                 class="gap-2"
                             >
                                 <Download class="h-4 w-4" />
-                                {{ isUploadingFile ? 'Importing...' : 'Import' }}
+                                {{
+                                    isUploadingFile ? 'Importing...' : 'Import'
+                                }}
                             </Button>
                         </RestrictedAction>
                     </DialogFooter>

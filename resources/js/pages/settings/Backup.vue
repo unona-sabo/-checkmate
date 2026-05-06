@@ -56,7 +56,8 @@ function submitForm(url: string, method: string = 'POST') {
     csrf.type = 'hidden';
     csrf.name = '_token';
     csrf.value =
-        document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+        document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+            ?.content ?? '';
     form.appendChild(csrf);
     document.body.appendChild(form);
     form.submit();
@@ -71,10 +72,14 @@ function downloadDatabase() {
 
 function createSnapshot() {
     creatingSnapshot.value = true;
-    router.post(BackupController.snapshot().url, {}, {
-        preserveScroll: true,
-        onFinish: () => (creatingSnapshot.value = false),
-    });
+    router.post(
+        BackupController.snapshot().url,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => (creatingSnapshot.value = false),
+        },
+    );
 }
 
 function downloadSnapshotFile(filename: string) {
@@ -88,13 +93,17 @@ function confirmRestore(filename: string) {
 
 function executeRestore() {
     if (!selectedSnapshot.value) return;
-    router.post(BackupController.restore({ filename: selectedSnapshot.value }).url, {}, {
-        preserveScroll: true,
-        onFinish: () => {
-            restoreDialogOpen.value = false;
-            selectedSnapshot.value = null;
+    router.post(
+        BackupController.restore({ filename: selectedSnapshot.value }).url,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                restoreDialogOpen.value = false;
+                selectedSnapshot.value = null;
+            },
         },
-    });
+    );
 }
 
 function confirmDelete(filename: string) {
@@ -105,7 +114,8 @@ function confirmDelete(filename: string) {
 function executeDelete() {
     if (!selectedSnapshot.value) return;
     router.delete(
-        BackupController.destroySnapshot({ filename: selectedSnapshot.value }).url,
+        BackupController.destroySnapshot({ filename: selectedSnapshot.value })
+            .url,
         {
             preserveScroll: true,
             onFinish: () => {
@@ -138,7 +148,11 @@ function executeDelete() {
                             :disabled="downloading"
                             @click="downloadDatabase"
                         >
-                            {{ downloading ? 'Downloading...' : 'Download current database' }}
+                            {{
+                                downloading
+                                    ? 'Downloading...'
+                                    : 'Download current database'
+                            }}
                         </Button>
                         <Button
                             variant="outline"
@@ -146,21 +160,35 @@ function executeDelete() {
                             :disabled="creatingSnapshot"
                             @click="createSnapshot"
                         >
-                            {{ creatingSnapshot ? 'Creating...' : 'Create snapshot' }}
+                            {{
+                                creatingSnapshot
+                                    ? 'Creating...'
+                                    : 'Create snapshot'
+                            }}
                         </Button>
                     </div>
                 </div>
 
                 <div v-if="snapshots.length > 0" class="space-y-3">
                     <h3 class="text-sm font-medium">Snapshots</h3>
-                    <div class="border rounded-md">
+                    <div class="rounded-md border">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b bg-muted/50">
-                                    <th class="px-4 py-2 text-left font-medium">Name</th>
-                                    <th class="px-4 py-2 text-left font-medium">Size</th>
-                                    <th class="px-4 py-2 text-left font-medium">Date</th>
-                                    <th class="px-4 py-2 text-right font-medium">Actions</th>
+                                    <th class="px-4 py-2 text-left font-medium">
+                                        Name
+                                    </th>
+                                    <th class="px-4 py-2 text-left font-medium">
+                                        Size
+                                    </th>
+                                    <th class="px-4 py-2 text-left font-medium">
+                                        Date
+                                    </th>
+                                    <th
+                                        class="px-4 py-2 text-right font-medium"
+                                    >
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -169,8 +197,12 @@ function executeDelete() {
                                     :key="snap.name"
                                     class="border-b last:border-0"
                                 >
-                                    <td class="px-4 py-2 font-mono text-xs">{{ snap.name }}</td>
-                                    <td class="px-4 py-2">{{ formatBytes(snap.size) }}</td>
+                                    <td class="px-4 py-2 font-mono text-xs">
+                                        {{ snap.name }}
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        {{ formatBytes(snap.size) }}
+                                    </td>
                                     <td class="px-4 py-2">{{ snap.date }}</td>
                                     <td class="px-4 py-2 text-right">
                                         <div class="flex justify-end gap-2">
@@ -178,7 +210,11 @@ function executeDelete() {
                                                 variant="ghost"
                                                 size="sm"
                                                 class="cursor-pointer"
-                                                @click="downloadSnapshotFile(snap.name)"
+                                                @click="
+                                                    downloadSnapshotFile(
+                                                        snap.name,
+                                                    )
+                                                "
                                             >
                                                 Download
                                             </Button>
@@ -186,7 +222,9 @@ function executeDelete() {
                                                 variant="ghost"
                                                 size="sm"
                                                 class="cursor-pointer"
-                                                @click="confirmRestore(snap.name)"
+                                                @click="
+                                                    confirmRestore(snap.name)
+                                                "
                                             >
                                                 Restore
                                             </Button>
@@ -194,7 +232,9 @@ function executeDelete() {
                                                 variant="ghost"
                                                 size="sm"
                                                 class="cursor-pointer text-destructive"
-                                                @click="confirmDelete(snap.name)"
+                                                @click="
+                                                    confirmDelete(snap.name)
+                                                "
                                             >
                                                 Delete
                                             </Button>
@@ -206,7 +246,7 @@ function executeDelete() {
                     </div>
                 </div>
 
-                <p v-else class="text-muted-foreground text-sm">
+                <p v-else class="text-sm text-muted-foreground">
                     No snapshots yet. Create one to get started.
                 </p>
             </div>
@@ -219,8 +259,9 @@ function executeDelete() {
                     <DialogTitle>Restore snapshot</DialogTitle>
                     <DialogDescription>
                         This will overwrite the current database with
-                        <strong>{{ selectedSnapshot }}</strong>. This action cannot be undone.
-                        Consider creating a snapshot of the current database first.
+                        <strong>{{ selectedSnapshot }}</strong
+                        >. This action cannot be undone. Consider creating a
+                        snapshot of the current database first.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
@@ -249,7 +290,8 @@ function executeDelete() {
                     <DialogTitle>Delete snapshot</DialogTitle>
                     <DialogDescription>
                         Are you sure you want to delete
-                        <strong>{{ selectedSnapshot }}</strong>? This cannot be undone.
+                        <strong>{{ selectedSnapshot }}</strong
+                        >? This cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>

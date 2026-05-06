@@ -10,7 +10,7 @@ defineProps<{
 
 <template>
     <div
-        class="flex min-h-svh flex-col items-center justify-center gap-6 bg-[rgba(242,246,252,0.95)] dark:bg-[rgba(10,22,40,0.95)] p-6 md:p-10"
+        class="flex min-h-svh flex-col items-center justify-center gap-6 bg-[rgba(242,246,252,0.95)] p-6 md:p-10 dark:bg-[rgba(10,22,40,0.95)]"
     >
         <div class="w-full max-w-sm">
             <div class="flex flex-col gap-8">
@@ -20,7 +20,11 @@ defineProps<{
                         class="flex flex-col items-center gap-2 font-medium"
                     >
                         <div class="mb-1">
-                            <img src="/images/logo2.png" alt="CheckMate" class="h-32 w-auto" />
+                            <img
+                                src="/images/logo2.png"
+                                alt="CheckMate"
+                                class="h-32 w-auto"
+                            />
                         </div>
                         <span class="sr-only">{{ title }}</span>
                     </Link>

@@ -47,7 +47,10 @@ const settingsForm = useForm({
 });
 
 const mappingForm = useForm({
-    status_mapping: { ...props.settings.status_mapping } as Record<string, string>,
+    status_mapping: { ...props.settings.status_mapping } as Record<
+        string,
+        string
+    >,
 });
 
 const clickupStatuses = ref<ClickupStatus[]>([]);
@@ -80,7 +83,9 @@ async function fetchStatuses() {
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN':
-                    document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
+                    document.querySelector<HTMLMetaElement>(
+                        'meta[name="csrf-token"]',
+                    )?.content ?? '',
                 Accept: 'application/json',
             },
         });
@@ -102,10 +107,14 @@ async function fetchStatuses() {
 
 function registerWebhook() {
     registeringWebhook.value = true;
-    router.post(ClickupController.registerWebhook().url, {}, {
-        preserveScroll: true,
-        onFinish: () => (registeringWebhook.value = false),
-    });
+    router.post(
+        ClickupController.registerWebhook().url,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => (registeringWebhook.value = false),
+        },
+    );
 }
 
 function formatStatus(status: string): string {
@@ -144,7 +153,7 @@ function formatStatus(status: string): string {
                             />
                             <p
                                 v-if="settingsForm.errors.api_token"
-                                class="text-destructive text-sm"
+                                class="text-sm text-destructive"
                             >
                                 {{ settingsForm.errors.api_token }}
                             </p>
@@ -159,7 +168,7 @@ function formatStatus(status: string): string {
                             />
                             <p
                                 v-if="settingsForm.errors.list_id"
-                                class="text-destructive text-sm"
+                                class="text-sm text-destructive"
                             >
                                 {{ settingsForm.errors.list_id }}
                             </p>
@@ -170,7 +179,11 @@ function formatStatus(status: string): string {
                             class="cursor-pointer"
                             :disabled="settingsForm.processing"
                         >
-                            {{ settingsForm.processing ? 'Saving...' : 'Save settings' }}
+                            {{
+                                settingsForm.processing
+                                    ? 'Saving...'
+                                    : 'Save settings'
+                            }}
                         </Button>
                     </form>
                 </div>
@@ -197,7 +210,7 @@ function formatStatus(status: string): string {
                             }}
                         </Button>
 
-                        <p v-if="fetchError" class="text-destructive text-sm">
+                        <p v-if="fetchError" class="text-sm text-destructive">
                             {{ fetchError }}
                         </p>
 
@@ -205,7 +218,7 @@ function formatStatus(status: string): string {
                             v-if="clickupStatuses.length > 0"
                             class="space-y-4"
                         >
-                            <div class="border rounded-md">
+                            <div class="rounded-md border">
                                 <table class="w-full text-sm">
                                     <thead>
                                         <tr class="border-b bg-muted/50">
@@ -284,10 +297,8 @@ function formatStatus(status: string): string {
                         </div>
 
                         <p
-                            v-else-if="
-                                !fetchingStatuses && !fetchError
-                            "
-                            class="text-muted-foreground text-sm"
+                            v-else-if="!fetchingStatuses && !fetchError"
+                            class="text-sm text-muted-foreground"
                         >
                             Save your API token and List ID first, then fetch
                             statuses to configure mapping.
@@ -325,7 +336,7 @@ function formatStatus(status: string): string {
                         >
                             Webhook active
                         </span>
-                        <span v-else class="text-muted-foreground text-sm">
+                        <span v-else class="text-sm text-muted-foreground">
                             No webhook registered
                         </span>
                     </div>

@@ -26,7 +26,9 @@ export function useClipboard() {
     const copy = (text: string, key: string) => {
         writeToClipboard(text).then(() => {
             copiedKey.value = key;
-            setTimeout(() => { copiedKey.value = null; }, 2000);
+            setTimeout(() => {
+                copiedKey.value = null;
+            }, 2000);
         });
     };
 

@@ -2,9 +2,24 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, FolderKanban, CheckSquare, Layers, PlayCircle, Calendar, Sparkles, GripVertical } from 'lucide-vue-next';
+import {
+    Plus,
+    FolderKanban,
+    CheckSquare,
+    Layers,
+    PlayCircle,
+    Calendar,
+    Sparkles,
+    GripVertical,
+} from 'lucide-vue-next';
 import { ref } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 
@@ -18,9 +33,24 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // Colors for project cards
 const cardColors = [
-    { bg: 'bg-blue-700/10', icon: 'text-blue-700', accent: 'bg-blue-700', glow: 'shadow-blue-700/20' },
-    { bg: 'bg-yellow-500/10', icon: 'text-yellow-500', accent: 'bg-yellow-500', glow: 'shadow-yellow-500/20' },
-    { bg: 'bg-blue-500/10', icon: 'text-blue-500', accent: 'bg-blue-500', glow: 'shadow-blue-500/20' },
+    {
+        bg: 'bg-blue-700/10',
+        icon: 'text-blue-700',
+        accent: 'bg-blue-700',
+        glow: 'shadow-blue-700/20',
+    },
+    {
+        bg: 'bg-yellow-500/10',
+        icon: 'text-yellow-500',
+        accent: 'bg-yellow-500',
+        glow: 'shadow-yellow-500/20',
+    },
+    {
+        bg: 'bg-blue-500/10',
+        icon: 'text-blue-500',
+        accent: 'bg-blue-500',
+        glow: 'shadow-blue-500/20',
+    },
 ];
 
 const getCardColor = (index: number) => cardColors[index % cardColors.length];
@@ -75,12 +105,16 @@ const saveOrder = () => {
         order: index + 1,
     }));
 
-    router.post('/projects/reorder', { projects }, {
-        preserveScroll: true,
-        onFinish: () => {
-            isSaving.value = false;
+    router.post(
+        '/projects/reorder',
+        { projects },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                isSaving.value = false;
+            },
         },
-    });
+    );
 };
 </script>
 
@@ -91,13 +125,19 @@ const saveOrder = () => {
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="flex items-start gap-2 text-2xl font-bold tracking-tight">
-                        <FolderKanban class="h-6 w-6 shrink-0 mt-1 text-primary" />
+                    <h1
+                        class="flex items-start gap-2 text-2xl font-bold tracking-tight"
+                    >
+                        <FolderKanban
+                            class="mt-1 h-6 w-6 shrink-0 text-primary"
+                        />
                         Projects
                     </h1>
                     <p class="text-muted-foreground">
                         Manage your QA projects and test suites
-                        <span v-if="isSaving" class="ml-2 text-primary">Saving...</span>
+                        <span v-if="isSaving" class="ml-2 text-primary"
+                            >Saving...</span
+                        >
                     </p>
                 </div>
                 <RestrictedAction>
@@ -110,11 +150,16 @@ const saveOrder = () => {
                 </RestrictedAction>
             </div>
 
-            <div v-if="projects.length === 0" class="flex flex-1 items-center justify-center">
+            <div
+                v-if="projects.length === 0"
+                class="flex flex-1 items-center justify-center"
+            >
                 <div class="text-center">
                     <Sparkles class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="mt-4 text-lg font-semibold">No projects yet</h3>
-                    <p class="mt-2 text-sm text-muted-foreground">Get started by creating your first project.</p>
+                    <p class="mt-2 text-sm text-muted-foreground">
+                        Get started by creating your first project.
+                    </p>
                     <RestrictedAction>
                         <Link href="/projects/create" class="mt-4 inline-block">
                             <Button variant="cta" class="gap-2">
@@ -132,8 +177,9 @@ const saveOrder = () => {
                     :key="project.id"
                     class="group relative"
                     :class="{
-                        'ring-2 ring-primary ring-offset-2 rounded-xl': dragOverIndex === index,
-                        'opacity-50': draggedIndex === index
+                        'rounded-xl ring-2 ring-primary ring-offset-2':
+                            dragOverIndex === index,
+                        'opacity-50': draggedIndex === index,
                     }"
                     @dragover="onDragOver(index, $event)"
                     @dragleave="onDragLeave"
@@ -141,47 +187,90 @@ const saveOrder = () => {
                 >
                     <Link :href="`/projects/${project.id}`">
                         <Card
-                            class="transition-all duration-300 cursor-pointer h-full overflow-hidden group-hover:scale-[1.02] shadow-sm hover:shadow-lg !border-l-0 relative"
+                            class="relative h-full cursor-pointer overflow-hidden !border-l-0 shadow-sm transition-all duration-300 group-hover:scale-[1.02] hover:shadow-lg"
                         >
                             <!-- Colored left bar -->
                             <div
-                                class="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
+                                class="absolute top-0 bottom-0 left-0 w-1 rounded-l-xl"
                                 :class="getCardColor(index).accent"
                             ></div>
                             <CardHeader class="p-4 pb-2">
-                                <div class="flex items-center justify-between gap-3 relative">
+                                <div
+                                    class="relative flex items-center justify-between gap-3"
+                                >
                                     <div class="flex items-center gap-3">
                                         <div
-                                            class="h-11 w-11 rounded-xl flex items-center justify-center shrink-0 shadow-lg"
-                                            :class="[getCardColor(index).bg, getCardColor(index).glow]"
+                                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-lg"
+                                            :class="[
+                                                getCardColor(index).bg,
+                                                getCardColor(index).glow,
+                                            ]"
                                         >
-                                            <FolderKanban class="h-6 w-6" :class="getCardColor(index).icon" />
+                                            <FolderKanban
+                                                class="h-6 w-6"
+                                                :class="
+                                                    getCardColor(index).icon
+                                                "
+                                            />
                                         </div>
                                         <div>
-                                            <CardTitle class="text-xl font-semibold line-clamp-1">
+                                            <CardTitle
+                                                class="line-clamp-1 text-xl font-semibold"
+                                            >
                                                 {{ project.name }}
                                             </CardTitle>
-                                            <CardDescription class="text-sm flex items-center gap-1.5 mt-0.5">
+                                            <CardDescription
+                                                class="mt-0.5 flex items-center gap-1.5 text-sm"
+                                            >
                                                 <Calendar class="h-3.5 w-3.5" />
-                                                {{ new Date(project.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
+                                                {{
+                                                    new Date(
+                                                        project.created_at,
+                                                    ).toLocaleDateString(
+                                                        'en-US',
+                                                        {
+                                                            year: 'numeric',
+                                                            month: 'short',
+                                                            day: 'numeric',
+                                                        },
+                                                    )
+                                                }}
                                             </CardDescription>
                                         </div>
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent class="p-4 pt-0 relative">
+                            <CardContent class="relative p-4 pt-0">
                                 <div class="flex gap-3 text-sm">
-                                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50">
-                                        <CheckSquare class="h-4 w-4 text-blue-700" />
-                                        <span class="font-medium">{{ project.checklists_count || 0 }}</span>
+                                    <div
+                                        class="flex items-center gap-1.5 rounded-md bg-muted/50 px-2.5 py-1"
+                                    >
+                                        <CheckSquare
+                                            class="h-4 w-4 text-blue-700"
+                                        />
+                                        <span class="font-medium">{{
+                                            project.checklists_count || 0
+                                        }}</span>
                                     </div>
-                                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50">
-                                        <Layers class="h-4 w-4 text-yellow-500" />
-                                        <span class="font-medium">{{ project.test_suites_count || 0 }}</span>
+                                    <div
+                                        class="flex items-center gap-1.5 rounded-md bg-muted/50 px-2.5 py-1"
+                                    >
+                                        <Layers
+                                            class="h-4 w-4 text-yellow-500"
+                                        />
+                                        <span class="font-medium">{{
+                                            project.test_suites_count || 0
+                                        }}</span>
                                     </div>
-                                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50">
-                                        <PlayCircle class="h-4 w-4 text-blue-500" />
-                                        <span class="font-medium">{{ project.test_runs_count || 0 }}</span>
+                                    <div
+                                        class="flex items-center gap-1.5 rounded-md bg-muted/50 px-2.5 py-1"
+                                    >
+                                        <PlayCircle
+                                            class="h-4 w-4 text-blue-500"
+                                        />
+                                        <span class="font-medium">{{
+                                            project.test_runs_count || 0
+                                        }}</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -193,10 +282,12 @@ const saveOrder = () => {
                             draggable="true"
                             @dragstart="onDragStart(index, $event)"
                             @dragend="onDragEnd"
-                            class="absolute top-2 right-2 p-1.5 rounded-lg bg-muted/80 hover:bg-muted cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            class="absolute top-2 right-2 z-10 cursor-grab rounded-lg bg-muted/80 p-1.5 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted active:cursor-grabbing"
                             @click.prevent.stop
                         >
-                            <GripVertical class="h-4 w-4 text-muted-foreground" />
+                            <GripVertical
+                                class="h-4 w-4 text-muted-foreground"
+                            />
                         </div>
                     </RestrictedAction>
                 </div>

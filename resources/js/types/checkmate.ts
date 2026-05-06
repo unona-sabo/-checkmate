@@ -23,7 +23,13 @@ export interface Bugreport {
     id: number;
     project_id: number;
     title: string;
-    status: 'to_do' | 'in_progress' | 'in_review' | 'needs_changes' | 'cancelled' | 'done';
+    status:
+        | 'to_do'
+        | 'in_progress'
+        | 'in_review'
+        | 'needs_changes'
+        | 'cancelled'
+        | 'done';
     severity: 'blocker' | 'critical' | 'major' | 'minor' | 'trivial';
     priority: 'critical' | 'high' | 'medium' | 'low';
     created_at: string;
@@ -74,9 +80,16 @@ export interface Checklist {
     updated_at: string;
     rows_count?: number;
     rows?: ChecklistRow[];
-    section_headers?: Pick<ChecklistRow, 'id' | 'checklist_id' | 'data' | 'order'>[];
+    section_headers?: Pick<
+        ChecklistRow,
+        'id' | 'checklist_id' | 'data' | 'order'
+    >[];
     note?: ChecklistNote;
-    project_features?: { id: number; name?: string; module?: string[] | null }[];
+    project_features?: {
+        id: number;
+        name?: string;
+        module?: string[] | null;
+    }[];
 }
 
 export interface SelectOption {
@@ -130,7 +143,11 @@ export interface TestSuite {
     parent?: TestSuite;
     children?: TestSuite[];
     test_cases?: TestCase[];
-    project_features?: { id: number; name?: string; module?: string[] | null }[];
+    project_features?: {
+        id: number;
+        name?: string;
+        module?: string[] | null;
+    }[];
 }
 
 export interface TestCase {
@@ -143,7 +160,16 @@ export interface TestCase {
     expected_result: string | null;
     priority: 'low' | 'medium' | 'high' | 'critical';
     severity: 'trivial' | 'minor' | 'major' | 'critical' | 'blocker';
-    type: 'functional' | 'smoke' | 'regression' | 'integration' | 'acceptance' | 'performance' | 'security' | 'usability' | 'other';
+    type:
+        | 'functional'
+        | 'smoke'
+        | 'regression'
+        | 'integration'
+        | 'acceptance'
+        | 'performance'
+        | 'security'
+        | 'usability'
+        | 'other';
     automation_status: 'not_automated' | 'to_be_automated' | 'automated';
     module: string[] | null;
     tags: string[] | null;
@@ -155,7 +181,11 @@ export interface TestCase {
     creator?: { id: number; name: string };
     note?: TestCaseNote;
     attachments?: Attachment[];
-    project_features?: { id: number; name?: string; module?: string[] | null }[];
+    project_features?: {
+        id: number;
+        name?: string;
+        module?: string[] | null;
+    }[];
 }
 
 export interface TestStep {
@@ -307,7 +337,14 @@ export interface Release {
     description: string | null;
     planned_date: string | null;
     actual_date: string | null;
-    status: 'planning' | 'development' | 'testing' | 'staging' | 'ready' | 'released' | 'cancelled';
+    status:
+        | 'planning'
+        | 'development'
+        | 'testing'
+        | 'staging'
+        | 'ready'
+        | 'released'
+        | 'cancelled';
     health: 'green' | 'yellow' | 'red';
     decision: 'pending' | 'go' | 'no_go' | 'conditional';
     decision_notes: string | null;
@@ -381,7 +418,10 @@ export interface ReleaseReadiness {
     color: 'green' | 'yellow' | 'red';
     days_to_deadline: number | null;
     on_track: boolean;
-    breakdown: Record<string, { weight: number; value: number; weighted: number }>;
+    breakdown: Record<
+        string,
+        { weight: number; value: number; weighted: number }
+    >;
 }
 
 export interface ReleaseBlockersAndRisks {
@@ -487,7 +527,13 @@ export interface ProjectFeature {
     is_active: boolean;
     test_cases_count?: number;
     checklists_count?: number;
-    test_cases?: { id: number; title: string; test_suite_id: number; module?: string[] | null; test_suite?: { id: number; name: string } }[];
+    test_cases?: {
+        id: number;
+        title: string;
+        test_suite_id: number;
+        module?: string[] | null;
+        test_suite?: { id: number; name: string };
+    }[];
     checklists?: { id: number; name: string; module?: string[] | null }[];
     created_at: string;
     updated_at: string;
@@ -696,8 +742,22 @@ export interface AIGeneratedTestCaseInput {
     expected_result: string;
     priority: 'critical' | 'high' | 'medium' | 'low';
     severity: 'blocker' | 'critical' | 'major' | 'minor' | 'trivial';
-    type: 'functional' | 'smoke' | 'regression' | 'integration' | 'acceptance' | 'performance' | 'security' | 'usability' | 'exploratory' | 'other';
-    automation_status: 'not_automated' | 'automated' | 'in_progress' | 'cannot_automate';
+    type:
+        | 'functional'
+        | 'smoke'
+        | 'regression'
+        | 'integration'
+        | 'acceptance'
+        | 'performance'
+        | 'security'
+        | 'usability'
+        | 'exploratory'
+        | 'other';
+    automation_status:
+        | 'not_automated'
+        | 'automated'
+        | 'in_progress'
+        | 'cannot_automate';
     approved?: boolean;
     editing?: boolean;
 }

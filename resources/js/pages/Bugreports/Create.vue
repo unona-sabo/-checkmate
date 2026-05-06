@@ -5,16 +5,35 @@ import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { type ProjectFeature } from '@/types/checkmate';
 import FeatureSelector from '@/components/FeatureSelector.vue';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { useFormDraft } from '@/composables/useFormDraft';
-import { Bug, Paperclip, X, FileText, StickyNote, Trash2 } from 'lucide-vue-next';
+import {
+    Bug,
+    Paperclip,
+    X,
+    FileText,
+    StickyNote,
+    Trash2,
+} from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
 interface User {
@@ -33,7 +52,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Bugreports', href: `/projects/${props.project.id}/bugreports` },
-    { title: 'Create', href: `/projects/${props.project.id}/bugreports/create` },
+    {
+        title: 'Create',
+        href: `/projects/${props.project.id}/bugreports/create`,
+    },
 ];
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -41,14 +63,18 @@ const urlParams = new URLSearchParams(window.location.search);
 const validSeverities = ['critical', 'major', 'minor', 'trivial'] as const;
 const validPriorities = ['high', 'medium', 'low'] as const;
 
-const parseSeverity = (): typeof validSeverities[number] => {
+const parseSeverity = (): (typeof validSeverities)[number] => {
     const raw = urlParams.get('severity');
-    return raw && (validSeverities as readonly string[]).includes(raw) ? raw as typeof validSeverities[number] : 'minor';
+    return raw && (validSeverities as readonly string[]).includes(raw)
+        ? (raw as (typeof validSeverities)[number])
+        : 'minor';
 };
 
-const parsePriority = (): typeof validPriorities[number] => {
+const parsePriority = (): (typeof validPriorities)[number] => {
     const raw = urlParams.get('priority');
-    return raw && (validPriorities as readonly string[]).includes(raw) ? raw as typeof validPriorities[number] : 'medium';
+    return raw && (validPriorities as readonly string[]).includes(raw)
+        ? (raw as (typeof validPriorities)[number])
+        : 'medium';
 };
 
 const form = useForm({
@@ -65,17 +91,25 @@ const form = useForm({
     fixed_on: [] as string[],
     feature_ids: [] as number[],
     attachments: [] as File[],
-    checklist_id: urlParams.get('checklist_id') || null as string | null,
-    checklist_row_ids: urlParams.get('checklist_row_ids') || null as string | null,
-    checklist_link_column: urlParams.get('checklist_link_column') || null as string | null,
-    test_case_id: urlParams.get('test_case_id') || null as string | null,
+    checklist_id: urlParams.get('checklist_id') || (null as string | null),
+    checklist_row_ids:
+        urlParams.get('checklist_row_ids') || (null as string | null),
+    checklist_link_column:
+        urlParams.get('checklist_link_column') || (null as string | null),
+    test_case_id: urlParams.get('test_case_id') || (null as string | null),
 });
 useClearErrorsOnInput(form);
 
 const draftKey = `bugreport-draft-${props.project.id}`;
 const hasUrlParams = urlParams.has('title');
 const { loadDraft, deleteDraft, getDraft } = useFormDraft(form, draftKey, {
-    exclude: ['attachments', 'checklist_id', 'checklist_row_ids', 'checklist_link_column', 'test_case_id'],
+    exclude: [
+        'attachments',
+        'checklist_id',
+        'checklist_row_ids',
+        'checklist_link_column',
+        'test_case_id',
+    ],
 });
 
 const draftData = ref<Record<string, unknown> | null>(null);
@@ -126,7 +160,9 @@ const formatFileSize = (bytes: number): string => {
 };
 
 const envOptions = ['develop', 'staging', 'production'] as const;
-const allEnvsSelected = computed(() => envOptions.every(e => form.fixed_on.includes(e)));
+const allEnvsSelected = computed(() =>
+    envOptions.every((e) => form.fixed_on.includes(e)),
+);
 const toggleEnv = (env: string) => {
     const idx = form.fixed_on.indexOf(env);
     if (idx >= 0) {
@@ -160,13 +196,13 @@ const submit = () => {
                 <!-- Draft Card -->
                 <Card
                     v-if="draftData"
-                    class="border-dashed border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 cursor-pointer group relative"
+                    class="group relative cursor-pointer border-dashed border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20"
                     @click="restoreDraft"
                 >
                     <Button
                         variant="ghost"
                         size="sm"
-                        class="absolute top-3 right-3 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive z-10 cursor-pointer"
+                        class="absolute top-3 right-3 z-10 h-7 w-7 cursor-pointer p-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
                         @click.stop="discardDraft"
                         title="Discard draft"
                     >
@@ -175,17 +211,31 @@ const submit = () => {
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2 text-base">
                             <StickyNote class="h-5 w-5 text-amber-500" />
-                            <Badge variant="warning" class="text-xs">Draft</Badge>
+                            <Badge variant="warning" class="text-xs"
+                                >Draft</Badge
+                            >
                             <span class="truncate">{{ draftData.title }}</span>
                         </CardTitle>
-                        <CardDescription v-if="draftData.description" class="line-clamp-2">
+                        <CardDescription
+                            v-if="draftData.description"
+                            class="line-clamp-2"
+                        >
                             {{ draftData.description }}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div class="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span v-if="draftData.severity">{{ capitalize(draftData.severity as string) }}</span>
-                            <span v-if="draftData.priority">{{ capitalize(draftData.priority as string) }} priority</span>
+                        <div
+                            class="flex items-center gap-3 text-xs text-muted-foreground"
+                        >
+                            <span v-if="draftData.severity">{{
+                                capitalize(draftData.severity as string)
+                            }}</span>
+                            <span v-if="draftData.priority"
+                                >{{
+                                    capitalize(draftData.priority as string)
+                                }}
+                                priority</span
+                            >
                             <span class="ml-auto">Click to restore</span>
                         </div>
                     </CardContent>
@@ -210,7 +260,9 @@ const submit = () => {
                                     v-model="form.title"
                                     type="text"
                                     placeholder="Brief description of the bug"
-                                    :class="{ 'border-destructive': form.errors.title }"
+                                    :class="{
+                                        'border-destructive': form.errors.title,
+                                    }"
                                 />
                                 <InputError :message="form.errors.title" />
                             </div>
@@ -224,11 +276,15 @@ const submit = () => {
                                     rows="3"
                                     autoResize
                                 />
-                                <InputError :message="form.errors.description" />
+                                <InputError
+                                    :message="form.errors.description"
+                                />
                             </div>
 
                             <div class="space-y-2">
-                                <Label for="steps_to_reproduce">Steps to Reproduce</Label>
+                                <Label for="steps_to_reproduce"
+                                    >Steps to Reproduce</Label
+                                >
                                 <Textarea
                                     id="steps_to_reproduce"
                                     v-model="form.steps_to_reproduce"
@@ -236,12 +292,16 @@ const submit = () => {
                                     rows="4"
                                     autoResize
                                 />
-                                <InputError :message="form.errors.steps_to_reproduce" />
+                                <InputError
+                                    :message="form.errors.steps_to_reproduce"
+                                />
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="space-y-2">
-                                    <Label for="expected_result">Expected Result</Label>
+                                    <Label for="expected_result"
+                                        >Expected Result</Label
+                                    >
                                     <Textarea
                                         id="expected_result"
                                         v-model="form.expected_result"
@@ -249,11 +309,15 @@ const submit = () => {
                                         rows="2"
                                         autoResize
                                     />
-                                    <InputError :message="form.errors.expected_result" />
+                                    <InputError
+                                        :message="form.errors.expected_result"
+                                    />
                                 </div>
 
                                 <div class="space-y-2">
-                                    <Label for="actual_result">Actual Result</Label>
+                                    <Label for="actual_result"
+                                        >Actual Result</Label
+                                    >
                                     <Textarea
                                         id="actual_result"
                                         v-model="form.actual_result"
@@ -261,7 +325,9 @@ const submit = () => {
                                         rows="2"
                                         autoResize
                                     />
-                                    <InputError :message="form.errors.actual_result" />
+                                    <InputError
+                                        :message="form.errors.actual_result"
+                                    />
                                 </div>
                             </div>
 
@@ -273,10 +339,18 @@ const submit = () => {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="critical">Critical</SelectItem>
-                                            <SelectItem value="major">Major</SelectItem>
-                                            <SelectItem value="minor">Minor</SelectItem>
-                                            <SelectItem value="trivial">Trivial</SelectItem>
+                                            <SelectItem value="critical"
+                                                >Critical</SelectItem
+                                            >
+                                            <SelectItem value="major"
+                                                >Major</SelectItem
+                                            >
+                                            <SelectItem value="minor"
+                                                >Minor</SelectItem
+                                            >
+                                            <SelectItem value="trivial"
+                                                >Trivial</SelectItem
+                                            >
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -288,9 +362,15 @@ const submit = () => {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="high">High</SelectItem>
-                                            <SelectItem value="medium">Medium</SelectItem>
-                                            <SelectItem value="low">Low</SelectItem>
+                                            <SelectItem value="high"
+                                                >High</SelectItem
+                                            >
+                                            <SelectItem value="medium"
+                                                >Medium</SelectItem
+                                            >
+                                            <SelectItem value="low"
+                                                >Low</SelectItem
+                                            >
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -302,12 +382,24 @@ const submit = () => {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="to_do">To Do</SelectItem>
-                                            <SelectItem value="in_progress">In Progress</SelectItem>
-                                            <SelectItem value="in_review">In Review</SelectItem>
-                                            <SelectItem value="needs_changes">Needs Changes</SelectItem>
-                                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                                            <SelectItem value="done">Done</SelectItem>
+                                            <SelectItem value="to_do"
+                                                >To Do</SelectItem
+                                            >
+                                            <SelectItem value="in_progress"
+                                                >In Progress</SelectItem
+                                            >
+                                            <SelectItem value="in_review"
+                                                >In Review</SelectItem
+                                            >
+                                            <SelectItem value="needs_changes"
+                                                >Needs Changes</SelectItem
+                                            >
+                                            <SelectItem value="cancelled"
+                                                >Cancelled</SelectItem
+                                            >
+                                            <SelectItem value="done"
+                                                >Done</SelectItem
+                                            >
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -321,14 +413,39 @@ const submit = () => {
                                     type="text"
                                     placeholder="e.g., Chrome 120, Windows 11, Production"
                                 />
-                                <InputError :message="form.errors.environment" />
+                                <InputError
+                                    :message="form.errors.environment"
+                                />
                             </div>
 
                             <div class="space-y-2">
                                 <Label>Fixed On</Label>
                                 <div class="flex flex-wrap gap-2">
-                                    <Button type="button" size="sm" :variant="allEnvsSelected ? 'default' : 'outline'" @click="toggleAllEnvs" class="cursor-pointer">All</Button>
-                                    <Button v-for="env in envOptions" :key="env" type="button" size="sm" :variant="form.fixed_on.includes(env) ? 'default' : 'outline'" @click="toggleEnv(env)" class="cursor-pointer">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        :variant="
+                                            allEnvsSelected
+                                                ? 'default'
+                                                : 'outline'
+                                        "
+                                        @click="toggleAllEnvs"
+                                        class="cursor-pointer"
+                                        >All</Button
+                                    >
+                                    <Button
+                                        v-for="env in envOptions"
+                                        :key="env"
+                                        type="button"
+                                        size="sm"
+                                        :variant="
+                                            form.fixed_on.includes(env)
+                                                ? 'default'
+                                                : 'outline'
+                                        "
+                                        @click="toggleEnv(env)"
+                                        class="cursor-pointer"
+                                    >
                                         {{ capitalize(env) }}
                                     </Button>
                                 </div>
@@ -342,17 +459,36 @@ const submit = () => {
                             />
 
                             <!-- Test Case Attachments -->
-                            <div v-if="testCaseAttachments?.length" class="space-y-2">
+                            <div
+                                v-if="testCaseAttachments?.length"
+                                class="space-y-2"
+                            >
                                 <Label class="flex items-center gap-1.5">
                                     <FileText class="h-3.5 w-3.5" />
                                     Attachments from Test Case
                                 </Label>
-                                <p class="text-xs text-muted-foreground">These files will be copied to the new bug report.</p>
+                                <p class="text-xs text-muted-foreground">
+                                    These files will be copied to the new bug
+                                    report.
+                                </p>
                                 <div class="space-y-2">
-                                    <div v-for="attachment in testCaseAttachments" :key="attachment.id" class="flex items-center gap-2 rounded-lg border border-dashed p-2">
-                                        <Paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
-                                        <span class="truncate text-sm">{{ attachment.original_filename }}</span>
-                                        <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(attachment.size) }}</span>
+                                    <div
+                                        v-for="attachment in testCaseAttachments"
+                                        :key="attachment.id"
+                                        class="flex items-center gap-2 rounded-lg border border-dashed p-2"
+                                    >
+                                        <Paperclip
+                                            class="h-4 w-4 shrink-0 text-muted-foreground"
+                                        />
+                                        <span class="truncate text-sm">{{
+                                            attachment.original_filename
+                                        }}</span>
+                                        <span
+                                            class="shrink-0 text-xs text-muted-foreground"
+                                            >{{
+                                                formatFileSize(attachment.size)
+                                            }}</span
+                                        >
                                     </div>
                                 </div>
                             </div>
@@ -361,11 +497,20 @@ const submit = () => {
                             <div class="space-y-2">
                                 <Label>Attachments</Label>
                                 <div class="flex items-center gap-2">
-                                    <Button type="button" variant="outline" size="sm" @click="fileInput?.click()" class="gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        @click="fileInput?.click()"
+                                        class="gap-2"
+                                    >
                                         <Paperclip class="h-4 w-4" />
                                         Add Files
                                     </Button>
-                                    <span class="text-xs text-muted-foreground">Max 10MB per file. JPG, PNG, GIF, WebP, PDF, DOC, XLS, TXT, CSV, ZIP</span>
+                                    <span class="text-xs text-muted-foreground"
+                                        >Max 10MB per file. JPG, PNG, GIF, WebP,
+                                        PDF, DOC, XLS, TXT, CSV, ZIP</span
+                                    >
                                 </div>
                                 <input
                                     ref="fileInput"
@@ -375,28 +520,74 @@ const submit = () => {
                                     class="hidden"
                                     @change="onFilesSelected"
                                 />
-                                <div v-if="form.attachments.length" class="space-y-2">
-                                    <div v-for="(file, index) in form.attachments" :key="index" class="flex items-center justify-between rounded-lg border p-2">
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <Paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
-                                            <span class="truncate text-sm">{{ file.name }}</span>
-                                            <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(file.size) }}</span>
+                                <div
+                                    v-if="form.attachments.length"
+                                    class="space-y-2"
+                                >
+                                    <div
+                                        v-for="(
+                                            file, index
+                                        ) in form.attachments"
+                                        :key="index"
+                                        class="flex items-center justify-between rounded-lg border p-2"
+                                    >
+                                        <div
+                                            class="flex min-w-0 items-center gap-2"
+                                        >
+                                            <Paperclip
+                                                class="h-4 w-4 shrink-0 text-muted-foreground"
+                                            />
+                                            <span class="truncate text-sm">{{
+                                                file.name
+                                            }}</span>
+                                            <span
+                                                class="shrink-0 text-xs text-muted-foreground"
+                                                >{{
+                                                    formatFileSize(file.size)
+                                                }}</span
+                                            >
                                         </div>
-                                        <Button type="button" variant="ghost" size="sm" @click="removeFile(index)" class="h-6 w-6 p-0 shrink-0">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="removeFile(index)"
+                                            class="h-6 w-6 shrink-0 p-0"
+                                        >
                                             <X class="h-4 w-4" />
                                         </Button>
                                     </div>
                                 </div>
-                                <div v-if="attachmentErrors.length" class="space-y-1">
-                                    <p v-for="(error, i) in attachmentErrors" :key="i" class="text-sm text-destructive">{{ error }}</p>
+                                <div
+                                    v-if="attachmentErrors.length"
+                                    class="space-y-1"
+                                >
+                                    <p
+                                        v-for="(error, i) in attachmentErrors"
+                                        :key="i"
+                                        class="text-sm text-destructive"
+                                    >
+                                        {{ error }}
+                                    </p>
                                 </div>
                             </div>
 
                             <div class="flex gap-2">
-                                <Button type="submit" :disabled="form.processing">
+                                <Button
+                                    type="submit"
+                                    :disabled="form.processing"
+                                >
                                     Create Bug Report
                                 </Button>
-                                <Button type="button" variant="outline" @click="$inertia.visit(`/projects/${project.id}/bugreports`)">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="
+                                        $inertia.visit(
+                                            `/projects/${project.id}/bugreports`,
+                                        )
+                                    "
+                                >
                                     Cancel
                                 </Button>
                             </div>
