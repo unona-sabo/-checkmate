@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Support\Facades\Storage;
 
 class Attachment extends Model
 {
@@ -24,6 +23,6 @@ class Attachment extends Model
 
     public function getUrlAttribute(): string
     {
-        return Storage::disk('public')->url($this->stored_path);
+        return '/storage/'.$this->stored_path;
     }
 }
