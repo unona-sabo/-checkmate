@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { FileText, Plus, Trash2, Bug } from 'lucide-vue-next';
+import { FileText, Paperclip, Plus, Trash2, Bug } from 'lucide-vue-next';
 import FileDropZone from '@/components/FileDropZone.vue';
 import { computed } from 'vue';
 

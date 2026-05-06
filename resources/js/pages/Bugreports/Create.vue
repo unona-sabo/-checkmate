@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import { useFormDraft } from '@/composables/useFormDraft';
-import { Bug, FileText, StickyNote, Trash2 } from 'lucide-vue-next';
+import { Bug, FileText, Paperclip, StickyNote, Trash2 } from 'lucide-vue-next';
 import FileDropZone from '@/components/FileDropZone.vue';
 import { ref, computed } from 'vue';
 
