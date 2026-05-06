@@ -14,7 +14,6 @@ use App\Services\DocumentParserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -185,7 +184,7 @@ class DocumentationController extends Controller
         $path = $request->file('image')->store('attachments/documentations/images', 'public');
 
         return response()->json([
-            'url' => Storage::disk('public')->url($path),
+            'url' => '/storage/'.$path,
         ]);
     }
 

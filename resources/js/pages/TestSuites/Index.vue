@@ -1,20 +1,41 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestSuite, type TestCase } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, ExternalLink, FolderTree, GripVertical, Boxes, Layers, Check, Minus, MoreHorizontal, Trash2, Play, Copy, FolderPlus, Search, X, StickyNote, Pencil, Filter, Loader2, Upload, Download, FileSpreadsheet, Zap, RotateCcw, Bot } from 'lucide-vue-next';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+    Plus,
+    FileText,
+    ExternalLink,
+    FolderTree,
+    GripVertical,
+    Boxes,
+    Layers,
+    Check,
+    Minus,
+    MoreHorizontal,
+    Trash2,
+    Play,
+    Copy,
+    FolderPlus,
+    Search,
+    X,
+    StickyNote,
+    Pencil,
+    Filter,
+    Loader2,
+    Upload,
+    Download,
+    FileSpreadsheet,
+    Zap,
+    RotateCcw,
+    Bot,
+} from 'lucide-vue-next';
+import { ref, computed, onMounted, watch } from 'vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
+import FeatureSelector from '@/components/FeatureSelector.vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
+import TranslateButtons from '@/components/TranslateButtons.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -24,9 +45,16 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import TranslateButtons from '@/components/TranslateButtons.vue';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -34,18 +62,25 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import RestrictedAction from '@/components/RestrictedAction.vue';
-import FeatureBadges from '@/components/FeatureBadges.vue';
-import FeatureSelector from '@/components/FeatureSelector.vue';
-import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
-import { ref, computed, onMounted, watch } from 'vue';
+import { Textarea } from '@/components/ui/textarea';
 import { useSearch } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type TestSuite,
+    type TestCase,
+} from '@/types';
 
 const getTypeIcon = (type: string) => {
     switch (type) {
-        case 'smoke': return Zap;
-        case 'regression': return RotateCcw;
-        default: return FileText;
+        case 'smoke':
+            return Zap;
+        case 'regression':
+            return RotateCcw;
+        default:
+            return FileText;
     }
 };
 
@@ -77,7 +112,7 @@ interface FlatSuite {
 const flatSuites = computed<FlatSuite[]>(() => {
     const result: FlatSuite[] = [];
 
-    props.testSuites.forEach(suite => {
+    props.testSuites.forEach((suite) => {
         // Add parent suite
         if (suite.test_cases?.length) {
             result.push({
@@ -90,7 +125,7 @@ const flatSuites = computed<FlatSuite[]>(() => {
         }
 
         // Add child suites
-        suite.children?.forEach(child => {
+        suite.children?.forEach((child) => {
             if (child.test_cases?.length) {
                 result.push({
                     id: child.id,
@@ -122,7 +157,11 @@ const scrollToSuite = (suiteId: number) => {
 // Calculate total test cases count including children
 const getSuiteTotalTestCases = (suite: TestSuite): number => {
     const ownCount = suite.test_cases?.length || 0;
-    const childrenCount = suite.children?.reduce((acc, child) => acc + (child.test_cases?.length || 0), 0) || 0;
+    const childrenCount =
+        suite.children?.reduce(
+            (acc, child) => acc + (child.test_cases?.length || 0),
+            0,
+        ) || 0;
     return ownCount + childrenCount;
 };
 
@@ -133,7 +172,9 @@ const getFlatSuiteTotalTestCases = (flatSuite: FlatSuite): number => {
         return flatSuite.testCases.length;
     }
     // If it's a parent suite, find it in localTestSuites and get total
-    const originalSuite = localTestSuites.value.find(s => s.id === flatSuite.id);
+    const originalSuite = localTestSuites.value.find(
+        (s) => s.id === flatSuite.id,
+    );
     if (originalSuite) {
         return getSuiteTotalTestCases(originalSuite);
     }
@@ -154,10 +195,10 @@ const isTestCaseSelected = (id: number): boolean => {
 // Get all test case IDs
 const allTestCaseIds = computed<number[]>(() => {
     const ids: number[] = [];
-    localTestSuites.value.forEach(suite => {
-        suite.test_cases?.forEach(tc => ids.push(tc.id));
-        suite.children?.forEach(child => {
-            child.test_cases?.forEach(tc => ids.push(tc.id));
+    localTestSuites.value.forEach((suite) => {
+        suite.test_cases?.forEach((tc) => ids.push(tc.id));
+        suite.children?.forEach((child) => {
+            child.test_cases?.forEach((tc) => ids.push(tc.id));
         });
     });
     return ids;
@@ -166,8 +207,8 @@ const allTestCaseIds = computed<number[]>(() => {
 // Get filtered (visible) test case IDs — respects search and filters
 const filteredTestCaseIds = computed<number[]>(() => {
     const ids: number[] = [];
-    filteredFlatSuites.value.forEach(suite => {
-        suite.testCases.forEach(tc => ids.push(tc.id));
+    filteredFlatSuites.value.forEach((suite) => {
+        suite.testCases.forEach((tc) => ids.push(tc.id));
     });
     return ids;
 });
@@ -175,7 +216,9 @@ const filteredTestCaseIds = computed<number[]>(() => {
 // Check if all visible test cases are selected
 const isAllSelected = computed(() => {
     if (filteredTestCaseIds.value.length === 0) return false;
-    return filteredTestCaseIds.value.every(id => selectedTestCaseIds.value.includes(id));
+    return filteredTestCaseIds.value.every((id) =>
+        selectedTestCaseIds.value.includes(id),
+    );
 });
 
 // Check if some test cases are selected
@@ -187,39 +230,56 @@ const isSomeSelected = computed(() => {
 const toggleSelectAll = () => {
     if (isAllSelected.value) {
         const filteredIds = new Set(filteredTestCaseIds.value);
-        selectedTestCaseIds.value = selectedTestCaseIds.value.filter(id => !filteredIds.has(id));
+        selectedTestCaseIds.value = selectedTestCaseIds.value.filter(
+            (id) => !filteredIds.has(id),
+        );
     } else {
-        const newIds = filteredTestCaseIds.value.filter(id => !selectedTestCaseIds.value.includes(id));
+        const newIds = filteredTestCaseIds.value.filter(
+            (id) => !selectedTestCaseIds.value.includes(id),
+        );
         selectedTestCaseIds.value = [...selectedTestCaseIds.value, ...newIds];
     }
 };
 
 // Computed: suite selection states (reactive)
 const suiteSelectionStates = computed(() => {
-    const states: Record<number, { isFullySelected: boolean; isPartiallySelected: boolean; totalCount: number; testCaseIds: number[] }> = {};
+    const states: Record<
+        number,
+        {
+            isFullySelected: boolean;
+            isPartiallySelected: boolean;
+            totalCount: number;
+            testCaseIds: number[];
+        }
+    > = {};
 
-    localFlatSuites.value.forEach(suite => {
+    localFlatSuites.value.forEach((suite) => {
         const ids: number[] = [];
 
         // Add own test cases
-        suite.testCases.forEach(tc => ids.push(tc.id));
+        suite.testCases.forEach((tc) => ids.push(tc.id));
 
         // If it's a parent suite (no parentName), also add children's test cases
         if (!suite.parentName) {
-            const originalSuite = localTestSuites.value.find(s => s.id === suite.id);
+            const originalSuite = localTestSuites.value.find(
+                (s) => s.id === suite.id,
+            );
             if (originalSuite?.children) {
-                originalSuite.children.forEach(child => {
-                    child.test_cases?.forEach(tc => ids.push(tc.id));
+                originalSuite.children.forEach((child) => {
+                    child.test_cases?.forEach((tc) => ids.push(tc.id));
                 });
             }
         }
 
-        const selectedCount = ids.filter(id => selectedTestCaseIds.value.includes(id)).length;
+        const selectedCount = ids.filter((id) =>
+            selectedTestCaseIds.value.includes(id),
+        ).length;
         const totalCount = ids.length;
 
         states[suite.id] = {
             isFullySelected: totalCount > 0 && selectedCount === totalCount,
-            isPartiallySelected: selectedCount > 0 && selectedCount < totalCount,
+            isPartiallySelected:
+                selectedCount > 0 && selectedCount < totalCount,
             totalCount,
             testCaseIds: ids,
         };
@@ -230,7 +290,14 @@ const suiteSelectionStates = computed(() => {
 
 // Get suite selection state
 const getSuiteState = (suiteId: number) => {
-    return suiteSelectionStates.value[suiteId] || { isFullySelected: false, isPartiallySelected: false, totalCount: 0, testCaseIds: [] };
+    return (
+        suiteSelectionStates.value[suiteId] || {
+            isFullySelected: false,
+            isPartiallySelected: false,
+            totalCount: 0,
+            testCaseIds: [],
+        }
+    );
 };
 
 // Toggle selection for a flat suite (including children for parent suites)
@@ -240,10 +307,14 @@ const toggleFlatSuiteSelection = (suite: FlatSuite) => {
 
     if (state.isFullySelected) {
         // Deselect all - remove these ids from selection
-        selectedTestCaseIds.value = selectedTestCaseIds.value.filter(id => !ids.includes(id));
+        selectedTestCaseIds.value = selectedTestCaseIds.value.filter(
+            (id) => !ids.includes(id),
+        );
     } else {
         // Select all - add missing ids
-        const newIds = ids.filter(id => !selectedTestCaseIds.value.includes(id));
+        const newIds = ids.filter(
+            (id) => !selectedTestCaseIds.value.includes(id),
+        );
         selectedTestCaseIds.value = [...selectedTestCaseIds.value, ...newIds];
     }
 };
@@ -252,7 +323,9 @@ const toggleFlatSuiteSelection = (suite: FlatSuite) => {
 const toggleTestCaseSelection = (testCaseId: number) => {
     const index = selectedTestCaseIds.value.indexOf(testCaseId);
     if (index > -1) {
-        selectedTestCaseIds.value = selectedTestCaseIds.value.filter(id => id !== testCaseId);
+        selectedTestCaseIds.value = selectedTestCaseIds.value.filter(
+            (id) => id !== testCaseId,
+        );
     } else {
         selectedTestCaseIds.value = [...selectedTestCaseIds.value, testCaseId];
     }
@@ -308,27 +381,47 @@ const saveSuiteOrder = () => {
         parent_id: suite.parent_id || null,
     }));
 
-    router.post(`/projects/${props.project.id}/test-suites/reorder`, { suites }, {
-        preserveScroll: true,
-        onFinish: () => {
-            isSaving.value = false;
+    router.post(
+        `/projects/${props.project.id}/test-suites/reorder`,
+        { suites },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                isSaving.value = false;
+            },
         },
-    });
+    );
 };
 
 // Drag and drop for test cases
-const draggedTestCase = ref<{ suiteId: number; index: number; testCase: TestCase } | null>(null);
+const draggedTestCase = ref<{
+    suiteId: number;
+    index: number;
+    testCase: TestCase;
+} | null>(null);
 const dragOverTestCase = ref<{ suiteId: number; index: number } | null>(null);
 
-const onTestCaseDragStart = (suiteId: number, index: number, testCase: TestCase, event: DragEvent) => {
+const onTestCaseDragStart = (
+    suiteId: number,
+    index: number,
+    testCase: TestCase,
+    event: DragEvent,
+) => {
     draggedTestCase.value = { suiteId, index, testCase };
     if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', `testcase-${suiteId}-${index}`);
+        event.dataTransfer.setData(
+            'text/plain',
+            `testcase-${suiteId}-${index}`,
+        );
     }
 };
 
-const onTestCaseDragOver = (suiteId: number, index: number, event: DragEvent) => {
+const onTestCaseDragOver = (
+    suiteId: number,
+    index: number,
+    event: DragEvent,
+) => {
     event.preventDefault();
     if (event.dataTransfer) {
         event.dataTransfer.dropEffect = 'move';
@@ -340,11 +433,19 @@ const onTestCaseDragLeave = () => {
     dragOverTestCase.value = null;
 };
 
-const onTestCaseDrop = (targetSuiteId: number, targetIndex: number, event: DragEvent) => {
+const onTestCaseDrop = (
+    targetSuiteId: number,
+    targetIndex: number,
+    event: DragEvent,
+) => {
     event.preventDefault();
     if (!draggedTestCase.value) return;
 
-    const { suiteId: sourceSuiteId, index: sourceIndex, testCase } = draggedTestCase.value;
+    const {
+        suiteId: sourceSuiteId,
+        index: sourceIndex,
+        testCase,
+    } = draggedTestCase.value;
 
     // Find source and target suites in localTestSuites
     const sourceSuite = findSuiteById(sourceSuiteId);
@@ -364,7 +465,12 @@ const onTestCaseDrop = (targetSuiteId: number, targetIndex: number, event: DragE
     sourceSuite.test_cases = sourceTestCases;
     targetSuite.test_cases = targetTestCases;
 
-    saveTestCaseOrder(targetSuiteId, targetTestCases, sourceSuiteId !== targetSuiteId ? sourceSuiteId : undefined, sourceSuiteId !== targetSuiteId ? sourceTestCases : undefined);
+    saveTestCaseOrder(
+        targetSuiteId,
+        targetTestCases,
+        sourceSuiteId !== targetSuiteId ? sourceSuiteId : undefined,
+        sourceSuiteId !== targetSuiteId ? sourceTestCases : undefined,
+    );
 
     draggedTestCase.value = null;
     dragOverTestCase.value = null;
@@ -379,14 +485,19 @@ const findSuiteById = (suiteId: number): TestSuite | undefined => {
     for (const suite of localTestSuites.value) {
         if (suite.id === suiteId) return suite;
         if (suite.children) {
-            const child = suite.children.find(c => c.id === suiteId);
+            const child = suite.children.find((c) => c.id === suiteId);
             if (child) return child;
         }
     }
     return undefined;
 };
 
-const saveTestCaseOrder = (suiteId: number, testCases: TestCase[], sourceSuiteId?: number, sourceTestCases?: TestCase[]) => {
+const saveTestCaseOrder = (
+    suiteId: number,
+    testCases: TestCase[],
+    sourceSuiteId?: number,
+    sourceTestCases?: TestCase[],
+) => {
     isSaving.value = true;
 
     const cases: { id: number; order: number; test_suite_id: number }[] = [];
@@ -411,19 +522,23 @@ const saveTestCaseOrder = (suiteId: number, testCases: TestCase[], sourceSuiteId
         });
     }
 
-    router.post(`/projects/${props.project.id}/test-suites/reorder-cases`, { cases }, {
-        preserveScroll: true,
-        onFinish: () => {
-            isSaving.value = false;
+    router.post(
+        `/projects/${props.project.id}/test-suites/reorder-cases`,
+        { cases },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                isSaving.value = false;
+            },
         },
-    });
+    );
 };
 
 // Update flatSuites to use localTestSuites
 const localFlatSuites = computed<FlatSuite[]>(() => {
     const result: FlatSuite[] = [];
 
-    localTestSuites.value.forEach(suite => {
+    localTestSuites.value.forEach((suite) => {
         // Always add parent suite block
         result.push({
             id: suite.id,
@@ -434,7 +549,7 @@ const localFlatSuites = computed<FlatSuite[]>(() => {
         });
 
         // Add all child suites (even without test cases)
-        suite.children?.forEach(child => {
+        suite.children?.forEach((child) => {
             result.push({
                 id: child.id,
                 name: child.name,
@@ -450,7 +565,10 @@ const localFlatSuites = computed<FlatSuite[]>(() => {
 });
 
 const localTotalTestCases = computed(() => {
-    return localFlatSuites.value.reduce((acc, s) => acc + s.testCases.length, 0);
+    return localFlatSuites.value.reduce(
+        (acc, s) => acc + s.testCases.length,
+        0,
+    );
 });
 
 // Search
@@ -471,8 +589,19 @@ const filterUpdatedFrom = ref('');
 const filterUpdatedTo = ref('');
 
 const activeFilterCount = computed(() => {
-    return [filterType, filterPriority, filterSeverity, filterAutomation, filterAuthor, filterFeature, filterModule, filterCreatedFrom, filterCreatedTo, filterUpdatedFrom, filterUpdatedTo]
-        .filter(f => f.value !== '').length;
+    return [
+        filterType,
+        filterPriority,
+        filterSeverity,
+        filterAutomation,
+        filterAuthor,
+        filterFeature,
+        filterModule,
+        filterCreatedFrom,
+        filterCreatedTo,
+        filterUpdatedFrom,
+        filterUpdatedTo,
+    ].filter((f) => f.value !== '').length;
 });
 
 const clearFilters = () => {
@@ -497,26 +626,50 @@ const filteredFlatSuites = computed(() => {
     if (!hasSearch && !hasFilters) return localFlatSuites.value;
 
     return localFlatSuites.value
-        .map(suite => ({
+        .map((suite) => ({
             ...suite,
-            testCases: suite.testCases.filter(tc => {
+            testCases: suite.testCases.filter((tc) => {
                 // Search filter
-                if (hasSearch && !tc.title.toLowerCase().includes(query)) return false;
+                if (hasSearch && !tc.title.toLowerCase().includes(query))
+                    return false;
                 // Type filter
-                if (filterType.value && tc.type !== filterType.value) return false;
+                if (filterType.value && tc.type !== filterType.value)
+                    return false;
                 // Priority filter
-                if (filterPriority.value && tc.priority !== filterPriority.value) return false;
+                if (
+                    filterPriority.value &&
+                    tc.priority !== filterPriority.value
+                )
+                    return false;
                 // Severity filter
-                if (filterSeverity.value && tc.severity !== filterSeverity.value) return false;
+                if (
+                    filterSeverity.value &&
+                    tc.severity !== filterSeverity.value
+                )
+                    return false;
                 // Automation filter
-                if (filterAutomation.value && tc.automation_status !== filterAutomation.value) return false;
+                if (
+                    filterAutomation.value &&
+                    tc.automation_status !== filterAutomation.value
+                )
+                    return false;
                 // Author filter
-                if (filterAuthor.value && String(tc.created_by) !== filterAuthor.value) return false;
+                if (
+                    filterAuthor.value &&
+                    String(tc.created_by) !== filterAuthor.value
+                )
+                    return false;
                 // Feature filter
                 if (filterFeature.value === '__none__') {
-                    if (tc.project_features && tc.project_features.length > 0) return false;
+                    if (tc.project_features && tc.project_features.length > 0)
+                        return false;
                 } else if (filterFeature.value) {
-                    if (!tc.project_features?.some(f => String(f.id) === filterFeature.value)) return false;
+                    if (
+                        !tc.project_features?.some(
+                            (f) => String(f.id) === filterFeature.value,
+                        )
+                    )
+                        return false;
                 }
                 // Module filter
                 if (filterModule.value === '__none__') {
@@ -525,18 +678,41 @@ const filteredFlatSuites = computed(() => {
                     if (!tc.module?.includes(filterModule.value)) return false;
                 }
                 // Date filters
-                if (filterCreatedFrom.value && tc.created_at < filterCreatedFrom.value) return false;
-                if (filterCreatedTo.value && tc.created_at.slice(0, 10) > filterCreatedTo.value) return false;
-                if (filterUpdatedFrom.value && tc.updated_at < filterUpdatedFrom.value) return false;
-                if (filterUpdatedTo.value && tc.updated_at.slice(0, 10) > filterUpdatedTo.value) return false;
+                if (
+                    filterCreatedFrom.value &&
+                    tc.created_at < filterCreatedFrom.value
+                )
+                    return false;
+                if (
+                    filterCreatedTo.value &&
+                    tc.created_at.slice(0, 10) > filterCreatedTo.value
+                )
+                    return false;
+                if (
+                    filterUpdatedFrom.value &&
+                    tc.updated_at < filterUpdatedFrom.value
+                )
+                    return false;
+                if (
+                    filterUpdatedTo.value &&
+                    tc.updated_at.slice(0, 10) > filterUpdatedTo.value
+                )
+                    return false;
                 return true;
             }),
         }))
-        .filter(suite => suite.testCases.length > 0 || (hasSearch && suite.name.toLowerCase().includes(query)));
+        .filter(
+            (suite) =>
+                suite.testCases.length > 0 ||
+                (hasSearch && suite.name.toLowerCase().includes(query)),
+        );
 });
 
 const filteredTestCaseCount = computed(() => {
-    return filteredFlatSuites.value.reduce((acc, s) => acc + s.testCases.length, 0);
+    return filteredFlatSuites.value.reduce(
+        (acc, s) => acc + s.testCases.length,
+        0,
+    );
 });
 
 // === Action Dialogs ===
@@ -556,7 +732,7 @@ const openTestRunDialog = () => {
     const firstSelectedId = selectedTestCaseIds.value[0];
     let suiteName = '';
     for (const suite of localFlatSuites.value) {
-        if (suite.testCases.some(tc => tc.id === firstSelectedId)) {
+        if (suite.testCases.some((tc) => tc.id === firstSelectedId)) {
             suiteName = suite.name;
             break;
         }
@@ -571,27 +747,35 @@ const openTestRunDialog = () => {
 };
 
 const createTestRun = () => {
-    if (!testRunName.value.trim() || selectedTestCaseIds.value.length === 0) return;
+    if (!testRunName.value.trim() || selectedTestCaseIds.value.length === 0)
+        return;
     isCreatingTestRun.value = true;
 
-    const environment = [testRunEnvPreset.value, testRunEnvNotes.value].filter(Boolean).join(' - ') || null;
+    const environment =
+        [testRunEnvPreset.value, testRunEnvNotes.value]
+            .filter(Boolean)
+            .join(' - ') || null;
 
-    router.post(`/projects/${props.project.id}/test-runs`, {
-        name: testRunName.value.trim(),
-        description: testRunDescription.value || null,
-        priority: testRunPriority.value || null,
-        environment,
-        milestone: testRunMilestone.value || null,
-        test_case_ids: selectedTestCaseIds.value,
-    }, {
-        onSuccess: () => {
-            showTestRunDialog.value = false;
-            isCreatingTestRun.value = false;
+    router.post(
+        `/projects/${props.project.id}/test-runs`,
+        {
+            name: testRunName.value.trim(),
+            description: testRunDescription.value || null,
+            priority: testRunPriority.value || null,
+            environment,
+            milestone: testRunMilestone.value || null,
+            test_case_ids: selectedTestCaseIds.value,
         },
-        onError: () => {
-            isCreatingTestRun.value = false;
+        {
+            onSuccess: () => {
+                showTestRunDialog.value = false;
+                isCreatingTestRun.value = false;
+            },
+            onError: () => {
+                isCreatingTestRun.value = false;
+            },
         },
-    });
+    );
 };
 
 // Copy to Test Suite dialog
@@ -603,26 +787,37 @@ const copyAttachments = ref(true);
 const copyFeatures = ref(true);
 const copyNotes = ref(true);
 const availableProjects = ref<{ id: number; name: string }[]>([]);
-const availableSuites = ref<{ id: number; name: string; children?: { id: number; name: string }[] }[]>([]);
+const availableSuites = ref<
+    { id: number; name: string; children?: { id: number; name: string }[] }[]
+>([]);
 const loadingProjects = ref(false);
 const loadingSuites = ref(false);
 
 const isCrossProject = computed(() => {
-    return copyTargetProjectId.value && Number(copyTargetProjectId.value) !== props.project.id;
+    return (
+        copyTargetProjectId.value &&
+        Number(copyTargetProjectId.value) !== props.project.id
+    );
 });
 
 const copyTargetParentSuiteId = ref('');
 
 const copyParentSuiteOptions = computed(() => {
-    const source = isCrossProject.value ? availableSuites.value : props.testSuites;
-    return source.map(s => ({ id: s.id, name: s.name }));
+    const source = isCrossProject.value
+        ? availableSuites.value
+        : props.testSuites;
+    return source.map((s) => ({ id: s.id, name: s.name }));
 });
 
 const copyChildSuiteOptions = computed(() => {
     if (!copyTargetParentSuiteId.value) return [];
-    const source = isCrossProject.value ? availableSuites.value : props.testSuites;
-    const parent = source.find(s => s.id === Number(copyTargetParentSuiteId.value));
-    return parent?.children?.map(c => ({ id: c.id, name: c.name })) ?? [];
+    const source = isCrossProject.value
+        ? availableSuites.value
+        : props.testSuites;
+    const parent = source.find(
+        (s) => s.id === Number(copyTargetParentSuiteId.value),
+    );
+    return parent?.children?.map((c) => ({ id: c.id, name: c.name })) ?? [];
 });
 
 watch(copyTargetParentSuiteId, () => {
@@ -641,11 +836,18 @@ const openCopyDialog = () => {
 
     loadingProjects.value = true;
     fetch(`/projects/${props.project.id}/test-suites/copy-projects`, {
-        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
     })
-        .then(res => res.json())
-        .then(data => { availableProjects.value = data; })
-        .finally(() => { loadingProjects.value = false; });
+        .then((res) => res.json())
+        .then((data) => {
+            availableProjects.value = data;
+        })
+        .finally(() => {
+            loadingProjects.value = false;
+        });
 };
 
 watch(copyTargetProjectId, (newVal) => {
@@ -659,36 +861,53 @@ watch(copyTargetProjectId, (newVal) => {
     }
 
     loadingSuites.value = true;
-    fetch(`/projects/${props.project.id}/test-suites/copy-suites?project_id=${newVal}`, {
-        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-    })
-        .then(res => res.json())
-        .then(data => { availableSuites.value = data; })
-        .finally(() => { loadingSuites.value = false; });
+    fetch(
+        `/projects/${props.project.id}/test-suites/copy-suites?project_id=${newVal}`,
+        {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        },
+    )
+        .then((res) => res.json())
+        .then((data) => {
+            availableSuites.value = data;
+        })
+        .finally(() => {
+            loadingSuites.value = false;
+        });
 });
 
 const copyToSuite = () => {
-    if (!copyTargetSuiteId.value || selectedTestCaseIds.value.length === 0) return;
+    if (!copyTargetSuiteId.value || selectedTestCaseIds.value.length === 0)
+        return;
     isCopying.value = true;
 
-    router.post(`/projects/${props.project.id}/test-suites/bulk-copy-cases`, {
-        test_case_ids: selectedTestCaseIds.value,
-        target_suite_id: Number(copyTargetSuiteId.value),
-        target_project_id: isCrossProject.value ? Number(copyTargetProjectId.value) : null,
-        copy_attachments: copyAttachments.value,
-        copy_features: copyFeatures.value,
-        copy_notes: copyNotes.value,
-    }, {
-        preserveState: false,
-        onSuccess: () => {
-            showCopyDialog.value = false;
-            selectedTestCaseIds.value = [];
-            isCopying.value = false;
+    router.post(
+        `/projects/${props.project.id}/test-suites/bulk-copy-cases`,
+        {
+            test_case_ids: selectedTestCaseIds.value,
+            target_suite_id: Number(copyTargetSuiteId.value),
+            target_project_id: isCrossProject.value
+                ? Number(copyTargetProjectId.value)
+                : null,
+            copy_attachments: copyAttachments.value,
+            copy_features: copyFeatures.value,
+            copy_notes: copyNotes.value,
         },
-        onError: () => {
-            isCopying.value = false;
+        {
+            preserveState: false,
+            onSuccess: () => {
+                showCopyDialog.value = false;
+                selectedTestCaseIds.value = [];
+                isCopying.value = false;
+            },
+            onError: () => {
+                isCopying.value = false;
+            },
         },
-    });
+    );
 };
 
 // Delete Test Cases dialog
@@ -703,19 +922,23 @@ const deleteTestCases = () => {
     if (selectedTestCaseIds.value.length === 0) return;
     isDeleting.value = true;
 
-    router.post(`/projects/${props.project.id}/test-suites/bulk-delete-cases`, {
-        test_case_ids: selectedTestCaseIds.value,
-    }, {
-        preserveState: false,
-        onSuccess: () => {
-            showDeleteDialog.value = false;
-            selectedTestCaseIds.value = [];
-            isDeleting.value = false;
+    router.post(
+        `/projects/${props.project.id}/test-suites/bulk-delete-cases`,
+        {
+            test_case_ids: selectedTestCaseIds.value,
         },
-        onError: () => {
-            isDeleting.value = false;
+        {
+            preserveState: false,
+            onSuccess: () => {
+                showDeleteDialog.value = false;
+                selectedTestCaseIds.value = [];
+                isDeleting.value = false;
+            },
+            onError: () => {
+                isDeleting.value = false;
+            },
         },
-    });
+    );
 };
 
 // Create Subcategory dialog
@@ -738,11 +961,15 @@ const openSubcategoryDialog = () => {
     let detectedParentId = '';
     if (firstId) {
         for (const suite of props.testSuites) {
-            if (suite.test_cases?.some(tc => tc.id === firstId)) {
+            if (suite.test_cases?.some((tc) => tc.id === firstId)) {
                 detectedParentId = String(suite.id);
                 break;
             }
-            if (suite.children?.some(child => child.test_cases?.some(tc => tc.id === firstId))) {
+            if (
+                suite.children?.some((child) =>
+                    child.test_cases?.some((tc) => tc.id === firstId),
+                )
+            ) {
                 detectedParentId = String(suite.id);
                 break;
             }
@@ -756,24 +983,28 @@ const createSubcategory = () => {
     if (!subcategoryParentId.value || !subcategoryName.value.trim()) return;
     isCreatingSubcategory.value = true;
 
-    router.post(`/projects/${props.project.id}/test-suites`, {
-        name: subcategoryName.value.trim(),
-        description: subcategoryDescription.value || null,
-        type: subcategoryType.value,
-        parent_id: Number(subcategoryParentId.value),
-        feature_ids: subcategoryFeatureIds.value,
-        test_case_ids: selectedTestCaseIds.value,
-    }, {
-        preserveState: false,
-        onSuccess: () => {
-            showSubcategoryDialog.value = false;
-            isCreatingSubcategory.value = false;
-            selectedTestCaseIds.value = [];
+    router.post(
+        `/projects/${props.project.id}/test-suites`,
+        {
+            name: subcategoryName.value.trim(),
+            description: subcategoryDescription.value || null,
+            type: subcategoryType.value,
+            parent_id: Number(subcategoryParentId.value),
+            feature_ids: subcategoryFeatureIds.value,
+            test_case_ids: selectedTestCaseIds.value,
         },
-        onError: () => {
-            isCreatingSubcategory.value = false;
+        {
+            preserveState: false,
+            onSuccess: () => {
+                showSubcategoryDialog.value = false;
+                isCreatingSubcategory.value = false;
+                selectedTestCaseIds.value = [];
+            },
+            onError: () => {
+                isCreatingSubcategory.value = false;
+            },
         },
-    });
+    );
 };
 
 // Import/Export
@@ -787,27 +1018,44 @@ const isImportingCases = ref(false);
 
 const importSubcategoryOptions = computed(() => {
     if (!importParentSuiteId.value) return [];
-    const parent = props.testSuites.find(s => s.id === Number(importParentSuiteId.value));
-    return parent?.children?.map(c => ({ id: c.id, name: c.name })) || [];
+    const parent = props.testSuites.find(
+        (s) => s.id === Number(importParentSuiteId.value),
+    );
+    return parent?.children?.map((c) => ({ id: c.id, name: c.name })) || [];
 });
 
-const importTargetSuiteId = computed(() => importSubcategoryId.value || importParentSuiteId.value);
+const importTargetSuiteId = computed(
+    () => importSubcategoryId.value || importParentSuiteId.value,
+);
 
-watch(() => importParentSuiteId.value, () => {
-    importSubcategoryId.value = '';
-});
+watch(
+    () => importParentSuiteId.value,
+    () => {
+        importSubcategoryId.value = '';
+    },
+);
 
 const fieldAliases: Record<string, string[]> = {
-    'Title': ['title', 'name', 'test case name', 'test name', 'case name'],
-    'Description': ['description', 'summary', 'details'],
-    'Preconditions': ['preconditions', 'pre-conditions', 'prerequisites', 'pre conditions'],
-    'Steps': ['steps', 'test steps', 'steps to reproduce', 'step'],
-    'Expected Result': ['expected result', 'expected', 'expected results', 'expected outcome'],
-    'Priority': ['priority'],
-    'Severity': ['severity'],
-    'Type': ['type', 'test type', 'case type'],
+    Title: ['title', 'name', 'test case name', 'test name', 'case name'],
+    Description: ['description', 'summary', 'details'],
+    Preconditions: [
+        'preconditions',
+        'pre-conditions',
+        'prerequisites',
+        'pre conditions',
+    ],
+    Steps: ['steps', 'test steps', 'steps to reproduce', 'step'],
+    'Expected Result': [
+        'expected result',
+        'expected',
+        'expected results',
+        'expected outcome',
+    ],
+    Priority: ['priority'],
+    Severity: ['severity'],
+    Type: ['type', 'test type', 'case type'],
     'Automation Status': ['automation status', 'automation', 'automated'],
-    'Tags': ['tags', 'labels', 'keywords'],
+    Tags: ['tags', 'labels', 'keywords'],
 };
 
 const getMatchedField = (header: string): string | null => {
@@ -819,13 +1067,15 @@ const getMatchedField = (header: string): string | null => {
 };
 
 const importFieldMapping = computed(() => {
-    return importHeaders.value.map(h => ({
+    return importHeaders.value.map((h) => ({
         header: h,
         matchedField: getMatchedField(h),
     }));
 });
 
-const matchedFieldCount = computed(() => importFieldMapping.value.filter(m => m.matchedField).length);
+const matchedFieldCount = computed(
+    () => importFieldMapping.value.filter((m) => m.matchedField).length,
+);
 
 const onImportFileChange = async (event: Event) => {
     const input = event.target as HTMLInputElement;
@@ -850,7 +1100,16 @@ const onImportFileChange = async (event: Event) => {
         }
 
         importHeaders.value = (json[0] || []).map(String);
-        importRows.value = json.slice(1).filter(row => row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''));
+        importRows.value = json
+            .slice(1)
+            .filter((row) =>
+                row.some(
+                    (cell) =>
+                        cell !== null &&
+                        cell !== undefined &&
+                        String(cell).trim() !== '',
+                ),
+            );
     } catch {
         importHeaders.value = [];
         importRows.value = [];
@@ -870,20 +1129,24 @@ const submitImport = () => {
     if (!importTargetSuiteId.value || importRows.value.length === 0) return;
     isImportingCases.value = true;
 
-    router.post(`/projects/${props.project.id}/test-suites/import-cases`, {
-        test_suite_id: Number(importTargetSuiteId.value),
-        headers: importHeaders.value,
-        rows: importRows.value,
-    }, {
-        preserveState: false,
-        onSuccess: () => {
-            showImportDialog.value = false;
-            isImportingCases.value = false;
+    router.post(
+        `/projects/${props.project.id}/test-suites/import-cases`,
+        {
+            test_suite_id: Number(importTargetSuiteId.value),
+            headers: importHeaders.value,
+            rows: importRows.value,
         },
-        onError: () => {
-            isImportingCases.value = false;
+        {
+            preserveState: false,
+            onSuccess: () => {
+                showImportDialog.value = false;
+                isImportingCases.value = false;
+            },
+            onError: () => {
+                isImportingCases.value = false;
+            },
         },
-    });
+    );
 };
 
 const exportAllCsv = () => {
@@ -906,16 +1169,22 @@ const hasDraft = ref(false);
 const DRAFT_STORAGE_KEY = `test-suite-note-draft-${props.project.id}`;
 
 // Target suite ID: subcategory takes priority, then parent suite
-const targetSuiteId = computed(() => selectedSubcategoryId.value || selectedParentSuiteId.value);
+const targetSuiteId = computed(
+    () => selectedSubcategoryId.value || selectedParentSuiteId.value,
+);
 
 // Parent suites (top-level only)
-const parentSuiteOptions = computed(() => props.testSuites.map(s => ({ id: s.id, name: s.name })));
+const parentSuiteOptions = computed(() =>
+    props.testSuites.map((s) => ({ id: s.id, name: s.name })),
+);
 
 // Subcategories filtered by selected parent suite
 const subcategoryOptions = computed(() => {
     if (!selectedParentSuiteId.value) return [];
-    const parent = props.testSuites.find(s => s.id === Number(selectedParentSuiteId.value));
-    return parent?.children?.map(c => ({ id: c.id, name: c.name })) || [];
+    const parent = props.testSuites.find(
+        (s) => s.id === Number(selectedParentSuiteId.value),
+    );
+    return parent?.children?.map((c) => ({ id: c.id, name: c.name })) || [];
 });
 
 interface NoteDraft {
@@ -1013,17 +1282,22 @@ const parsedSteps = computed(() => {
     if (!noteContent.value.trim()) return [];
     return noteContent.value
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .map(line => ({
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => ({
             action: line.replace(/^[\d]+[.\)\-:\s]+/, '').trim(),
             expected: null,
         }))
-        .filter(step => step.action.length > 0);
+        .filter((step) => step.action.length > 0);
 });
 
 const importNoteAsTestCase = () => {
-    if (!parsedSteps.value.length || !noteTitle.value.trim() || !targetSuiteId.value) return;
+    if (
+        !parsedSteps.value.length ||
+        !noteTitle.value.trim() ||
+        !targetSuiteId.value
+    )
+        return;
     isImportingNote.value = true;
     router.post(
         `/projects/${props.project.id}/test-suites/${targetSuiteId.value}/test-cases`,
@@ -1065,27 +1339,39 @@ onMounted(() => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
+                    <h1
+                        class="flex items-center gap-2 text-2xl font-bold tracking-tight"
+                    >
                         <Layers class="h-6 w-6 text-primary" />
                         Test Suites
                     </h1>
-                    <p class="text-muted-foreground text-sm mt-1">
-                        {{ localTestSuites.length }} suites · {{ localTotalTestCases }} test cases
-                        <span v-if="isSaving" class="ml-2 text-primary">Saving...</span>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        {{ localTestSuites.length }} suites ·
+                        {{ localTotalTestCases }} test cases
+                        <span v-if="isSaving" class="ml-2 text-primary"
+                            >Saving...</span
+                        >
                     </p>
                 </div>
             </div>
 
             <!-- Empty State -->
-            <div v-if="testSuites.length === 0" class="flex flex-1 items-center justify-center">
+            <div
+                v-if="testSuites.length === 0"
+                class="flex flex-1 items-center justify-center"
+            >
                 <div class="text-center">
                     <Layers class="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 class="text-lg font-semibold">No test suites yet</h3>
-                    <p class="mt-2 text-sm text-muted-foreground max-w-sm">
-                        Create your first test suite to organize your test cases into logical groups.
+                    <p class="mt-2 max-w-sm text-sm text-muted-foreground">
+                        Create your first test suite to organize your test cases
+                        into logical groups.
                     </p>
                     <RestrictedAction>
-                        <Link :href="`/projects/${project.id}/test-suites/create`" class="mt-4 inline-block">
+                        <Link
+                            :href="`/projects/${project.id}/test-suites/create`"
+                            class="mt-4 inline-block"
+                        >
                             <Button variant="cta" class="gap-2">
                                 <Plus class="h-4 w-4" />
                                 Create Test Suite
@@ -1096,58 +1382,103 @@ onMounted(() => {
             </div>
 
             <!-- Main Content -->
-            <div v-else class="flex flex-col flex-1 min-h-0">
+            <div v-else class="flex min-h-0 flex-1 flex-col">
                 <!-- Action Header -->
-                <div class="flex items-center mb-3 gap-6">
+                <div class="mb-3 flex items-center gap-6">
                     <!-- Spacer for left column -->
                     <div class="w-[430px] shrink-0"></div>
                     <!-- Right side - Selection controls and New Test Suite button -->
-                    <div class="flex items-center justify-between flex-1 max-w-4xl pr-2">
-                        <div v-if="localTotalTestCases > 0 && filteredFlatSuites.length > 0" class="flex items-center gap-3">
+                    <div
+                        class="flex max-w-4xl flex-1 items-center justify-between pr-2"
+                    >
+                        <div
+                            v-if="
+                                localTotalTestCases > 0 &&
+                                filteredFlatSuites.length > 0
+                            "
+                            class="flex items-center gap-3"
+                        >
                             <button
                                 type="button"
-                                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-7 px-2.5 cursor-pointer"
+                                class="inline-flex h-7 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-2.5 text-xs font-medium whitespace-nowrap shadow-xs hover:bg-accent hover:text-accent-foreground"
                                 @click="toggleSelectAll"
                             >
                                 <div
-                                    class="h-3.5 w-3.5 shrink-0 rounded-[4px] border shadow-xs flex items-center justify-center"
-                                    :class="isAllSelected || isSomeSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-input'"
+                                    class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[4px] border shadow-xs"
+                                    :class="
+                                        isAllSelected || isSomeSelected
+                                            ? 'border-primary bg-primary text-primary-foreground'
+                                            : 'border-input'
+                                    "
                                 >
-                                    <Minus v-if="isSomeSelected" class="h-3 w-3" />
-                                    <Check v-else-if="isAllSelected" class="h-3 w-3" />
+                                    <Minus
+                                        v-if="isSomeSelected"
+                                        class="h-3 w-3"
+                                    />
+                                    <Check
+                                        v-else-if="isAllSelected"
+                                        class="h-3 w-3"
+                                    />
                                 </div>
-                                {{ isAllSelected ? 'Deselect All' : 'Select All' }}
+                                {{
+                                    isAllSelected
+                                        ? 'Deselect All'
+                                        : 'Select All'
+                                }}
                             </button>
-                            <span v-if="selectedTestCaseIds.length > 0" class="text-sm text-muted-foreground">
-                                {{ selectedTestCaseIds.length }} of {{ filteredTestCaseCount }} selected
+                            <span
+                                v-if="selectedTestCaseIds.length > 0"
+                                class="text-sm text-muted-foreground"
+                            >
+                                {{ selectedTestCaseIds.length }} of
+                                {{ filteredTestCaseCount }} selected
                             </span>
                             <!-- Actions dropdown when test cases are selected -->
-                            <RestrictedAction v-if="selectedTestCaseIds.length > 0">
+                            <RestrictedAction
+                                v-if="selectedTestCaseIds.length > 0"
+                            >
                                 <DropdownMenu>
                                     <DropdownMenuTrigger as-child>
                                         <Button class="gap-2">
                                             <MoreHorizontal class="h-4 w-4" />
-                                            Actions ({{ selectedTestCaseIds.length }})
+                                            Actions ({{
+                                                selectedTestCaseIds.length
+                                            }})
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start">
-                                        <DropdownMenuLabel>Selected Test Cases</DropdownMenuLabel>
+                                        <DropdownMenuLabel
+                                            >Selected Test
+                                            Cases</DropdownMenuLabel
+                                        >
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem class="cursor-pointer" @click="openTestRunDialog">
-                                            <Play class="h-4 w-4 mr-2" />
+                                        <DropdownMenuItem
+                                            class="cursor-pointer"
+                                            @click="openTestRunDialog"
+                                        >
+                                            <Play class="mr-2 h-4 w-4" />
                                             Create Test Run
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem class="cursor-pointer" @click="openCopyDialog">
-                                            <Copy class="h-4 w-4 mr-2" />
+                                        <DropdownMenuItem
+                                            class="cursor-pointer"
+                                            @click="openCopyDialog"
+                                        >
+                                            <Copy class="mr-2 h-4 w-4" />
                                             Copy to Test Suite
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem class="cursor-pointer" @click="openSubcategoryDialog">
-                                            <FolderPlus class="h-4 w-4 mr-2" />
+                                        <DropdownMenuItem
+                                            class="cursor-pointer"
+                                            @click="openSubcategoryDialog"
+                                        >
+                                            <FolderPlus class="mr-2 h-4 w-4" />
                                             Create Subcategory
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem class="text-destructive focus:text-destructive cursor-pointer" @click="openDeleteDialog">
-                                            <Trash2 class="h-4 w-4 mr-2" />
+                                        <DropdownMenuItem
+                                            class="cursor-pointer text-destructive focus:text-destructive"
+                                            @click="openDeleteDialog"
+                                        >
+                                            <Trash2 class="mr-2 h-4 w-4" />
                                             Delete Test Cases
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -1158,18 +1489,28 @@ onMounted(() => {
                         <div class="flex items-center gap-2">
                             <DropdownMenu>
                                 <DropdownMenuTrigger as-child>
-                                    <Button variant="outline" size="sm" class="gap-1.5 text-xs">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        class="gap-1.5 text-xs"
+                                    >
                                         <FileSpreadsheet class="h-3.5 w-3.5" />
                                         File
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem class="cursor-pointer" @click="openImportDialog">
-                                        <Download class="h-4 w-4 mr-2" />
+                                    <DropdownMenuItem
+                                        class="cursor-pointer"
+                                        @click="openImportDialog"
+                                    >
+                                        <Download class="mr-2 h-4 w-4" />
                                         Import
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem class="cursor-pointer" @click="exportAllCsv">
-                                        <Upload class="h-4 w-4 mr-2" />
+                                    <DropdownMenuItem
+                                        class="cursor-pointer"
+                                        @click="exportAllCsv"
+                                    >
+                                        <Upload class="mr-2 h-4 w-4" />
                                         Export All
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
@@ -1177,159 +1518,327 @@ onMounted(() => {
                                         class="cursor-pointer"
                                         @click="exportSelectedCsv"
                                     >
-                                        <Upload class="h-4 w-4 mr-2" />
-                                        Export Selected ({{ selectedTestCaseIds.length }})
+                                        <Upload class="mr-2 h-4 w-4" />
+                                        Export Selected ({{
+                                            selectedTestCaseIds.length
+                                        }})
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                             <Button
                                 variant="outline"
-                                class="gap-2 relative"
+                                class="relative gap-2"
                                 @click="showFilters = !showFilters"
                             >
                                 <Filter class="h-4 w-4" />
                                 Filter
                                 <Badge
                                     v-if="activeFilterCount > 0"
-                                    class="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full"
+                                    class="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full p-0 text-[10px]"
                                 >
                                     {{ activeFilterCount }}
                                 </Badge>
                             </Button>
                             <RestrictedAction>
-                                <Dialog v-model:open="showNoteDialog" @update:open="onNoteDialogChange">
+                                <Dialog
+                                    v-model:open="showNoteDialog"
+                                    @update:open="onNoteDialogChange"
+                                >
                                     <DialogTrigger as-child>
                                         <Button
-                                            :variant="hasDraft ? 'cta' : 'outline'"
+                                            :variant="
+                                                hasDraft ? 'cta' : 'outline'
+                                            "
                                             class="gap-2"
                                         >
-                                            <Pencil v-if="hasDraft" class="h-4 w-4" />
-                                            <StickyNote v-else class="h-4 w-4" />
-                                            {{ hasDraft ? 'Draft' : 'Create a Note' }}
+                                            <Pencil
+                                                v-if="hasDraft"
+                                                class="h-4 w-4"
+                                            />
+                                            <StickyNote
+                                                v-else
+                                                class="h-4 w-4"
+                                            />
+                                            {{
+                                                hasDraft
+                                                    ? 'Draft'
+                                                    : 'Create a Note'
+                                            }}
                                         </Button>
                                     </DialogTrigger>
-                                <DialogContent class="max-w-2xl max-h-[75vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
-                                    <DialogHeader>
-                                        <DialogTitle class="flex items-center gap-2">
-                                            <StickyNote class="h-5 w-5 text-primary" />
-                                            {{ hasDraft ? 'Edit Draft' : 'Create a Note' }}
-                                        </DialogTitle>
-                                        <DialogDescription>
-                                            Write your notes below. Each line will become a test step in the new test case.
-                                        </DialogDescription>
-                                    </DialogHeader>
-
-                                    <div class="space-y-4 py-4 px-0.5 overflow-y-auto min-h-0 flex-1">
-                                        <div class="space-y-2">
-                                            <Label>Test Case Title</Label>
-                                            <Input
-                                                v-model="noteTitle"
-                                                type="text"
-                                                placeholder="e.g. Verify user login flow"
-                                            />
-                                        </div>
-
-                                        <div class="space-y-2">
-                                            <div class="flex items-center justify-between">
-                                                <Label>Steps (one per line)</Label>
-                                                <TranslateButtons :project-id="project.id" :text="noteContent" @translated="noteContent = $event" />
-                                            </div>
-                                            <Textarea
-                                                v-model="noteContent"
-                                                placeholder="1. Navigate to the login page&#10;2. Enter valid credentials&#10;3. Click the login button&#10;4. Verify dashboard is displayed"
-                                                rows="10"
-                                                class="font-mono text-sm resize-y"
-                                                style="word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap; overflow-y: auto; max-height: 400px;"
-                                            />
-                                            <p v-if="parsedSteps.length > 0" class="text-sm text-muted-foreground">
-                                                {{ parsedSteps.length }} step(s) will be created
-                                            </p>
-                                        </div>
-
-                                        <div v-if="parsedSteps.length > 0" class="space-y-4 rounded-lg border p-4 bg-muted/30">
-                                            <div class="grid gap-3">
-                                                <div class="space-y-2 min-w-0">
-                                                    <Label>Test Suite</Label>
-                                                    <Select v-model="selectedParentSuiteId">
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select suite..." />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem
-                                                                v-for="suite in parentSuiteOptions"
-                                                                :key="suite.id"
-                                                                :value="String(suite.id)"
-                                                            >
-                                                                {{ suite.name }}
-                                                            </SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div class="space-y-2 min-w-0">
-                                                    <Label>Subcategory <span class="text-muted-foreground font-normal">(optional)</span></Label>
-                                                    <Select v-model="selectedSubcategoryId" :disabled="!subcategoryOptions.length">
-                                                        <SelectTrigger>
-                                                            <SelectValue :placeholder="subcategoryOptions.length ? 'Select subcategory...' : 'No subcategories'" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem
-                                                                v-for="sub in subcategoryOptions"
-                                                                :key="sub.id"
-                                                                :value="String(sub.id)"
-                                                            >
-                                                                {{ sub.name }}
-                                                            </SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            </div>
-
-                                            <div class="space-y-2 overflow-hidden">
-                                                <Label>Preview</Label>
-                                                <div class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word;">
-                                                    <ol class="list-decimal list-inside space-y-1">
-                                                        <li v-for="(step, index) in parsedSteps.slice(0, 10)" :key="index" class="break-words whitespace-pre-wrap" style="overflow-wrap: break-word; word-break: break-all;">
-                                                            {{ step.action }}
-                                                        </li>
-                                                        <li v-if="parsedSteps.length > 10" class="text-muted-foreground">
-                                                            ... and {{ parsedSteps.length - 10 }} more
-                                                        </li>
-                                                    </ol>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <DialogFooter class="flex justify-between sm:justify-between">
-                                        <Button
-                                            v-if="noteContent.trim() || noteTitle.trim() || selectedParentSuiteId"
-                                            variant="ghost"
-                                            @click="clearNotes"
-                                            class="gap-2 text-muted-foreground hover:text-destructive"
-                                        >
-                                            <X class="h-4 w-4" />
-                                            Clear
-                                        </Button>
-                                        <div v-else></div>
-                                        <div class="flex gap-2">
-                                            <Button variant="outline" @click="showNoteDialog = false">
-                                                Cancel
-                                            </Button>
-                                            <Button
-                                                @click="importNoteAsTestCase"
-                                                :disabled="!targetSuiteId || parsedSteps.length === 0 || !noteTitle.trim() || isImportingNote"
-                                                class="gap-2"
+                                    <DialogContent
+                                        class="flex max-h-[75vh] max-w-2xl flex-col"
+                                        style="
+                                            overflow: hidden !important;
+                                            max-width: min(
+                                                42rem,
+                                                calc(100vw - 2rem)
+                                            ) !important;
+                                        "
+                                    >
+                                        <DialogHeader>
+                                            <DialogTitle
+                                                class="flex items-center gap-2"
                                             >
-                                                <Plus class="h-4 w-4" />
-                                                Create Test Case
-                                            </Button>
+                                                <StickyNote
+                                                    class="h-5 w-5 text-primary"
+                                                />
+                                                {{
+                                                    hasDraft
+                                                        ? 'Edit Draft'
+                                                        : 'Create a Note'
+                                                }}
+                                            </DialogTitle>
+                                            <DialogDescription>
+                                                Write your notes below. Each
+                                                line will become a test step in
+                                                the new test case.
+                                            </DialogDescription>
+                                        </DialogHeader>
+
+                                        <div
+                                            class="min-h-0 flex-1 space-y-4 overflow-y-auto px-0.5 py-4"
+                                        >
+                                            <div class="space-y-2">
+                                                <Label>Test Case Title</Label>
+                                                <Input
+                                                    v-model="noteTitle"
+                                                    type="text"
+                                                    placeholder="e.g. Verify user login flow"
+                                                />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <div
+                                                    class="flex items-center justify-between"
+                                                >
+                                                    <Label
+                                                        >Steps (one per
+                                                        line)</Label
+                                                    >
+                                                    <TranslateButtons
+                                                        :project-id="project.id"
+                                                        :text="noteContent"
+                                                        @translated="
+                                                            noteContent = $event
+                                                        "
+                                                    />
+                                                </div>
+                                                <Textarea
+                                                    v-model="noteContent"
+                                                    placeholder="1. Navigate to the login page&#10;2. Enter valid credentials&#10;3. Click the login button&#10;4. Verify dashboard is displayed"
+                                                    rows="10"
+                                                    class="resize-y font-mono text-sm"
+                                                    style="
+                                                        word-wrap: break-word;
+                                                        overflow-wrap: break-word;
+                                                        white-space: pre-wrap;
+                                                        overflow-y: auto;
+                                                        max-height: 400px;
+                                                    "
+                                                />
+                                                <p
+                                                    v-if="
+                                                        parsedSteps.length > 0
+                                                    "
+                                                    class="text-sm text-muted-foreground"
+                                                >
+                                                    {{ parsedSteps.length }}
+                                                    step(s) will be created
+                                                </p>
+                                            </div>
+
+                                            <div
+                                                v-if="parsedSteps.length > 0"
+                                                class="space-y-4 rounded-lg border bg-muted/30 p-4"
+                                            >
+                                                <div class="grid gap-3">
+                                                    <div
+                                                        class="min-w-0 space-y-2"
+                                                    >
+                                                        <Label
+                                                            >Test Suite</Label
+                                                        >
+                                                        <Select
+                                                            v-model="
+                                                                selectedParentSuiteId
+                                                            "
+                                                        >
+                                                            <SelectTrigger>
+                                                                <SelectValue
+                                                                    placeholder="Select suite..."
+                                                                />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem
+                                                                    v-for="suite in parentSuiteOptions"
+                                                                    :key="
+                                                                        suite.id
+                                                                    "
+                                                                    :value="
+                                                                        String(
+                                                                            suite.id,
+                                                                        )
+                                                                    "
+                                                                >
+                                                                    {{
+                                                                        suite.name
+                                                                    }}
+                                                                </SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div
+                                                        class="min-w-0 space-y-2"
+                                                    >
+                                                        <Label
+                                                            >Subcategory
+                                                            <span
+                                                                class="font-normal text-muted-foreground"
+                                                                >(optional)</span
+                                                            ></Label
+                                                        >
+                                                        <Select
+                                                            v-model="
+                                                                selectedSubcategoryId
+                                                            "
+                                                            :disabled="
+                                                                !subcategoryOptions.length
+                                                            "
+                                                        >
+                                                            <SelectTrigger>
+                                                                <SelectValue
+                                                                    :placeholder="
+                                                                        subcategoryOptions.length
+                                                                            ? 'Select subcategory...'
+                                                                            : 'No subcategories'
+                                                                    "
+                                                                />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem
+                                                                    v-for="sub in subcategoryOptions"
+                                                                    :key="
+                                                                        sub.id
+                                                                    "
+                                                                    :value="
+                                                                        String(
+                                                                            sub.id,
+                                                                        )
+                                                                    "
+                                                                >
+                                                                    {{
+                                                                        sub.name
+                                                                    }}
+                                                                </SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </div>
+
+                                                <div
+                                                    class="space-y-2 overflow-hidden"
+                                                >
+                                                    <Label>Preview</Label>
+                                                    <div
+                                                        class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm"
+                                                        style="
+                                                            word-wrap: break-word;
+                                                            overflow-wrap: break-word;
+                                                        "
+                                                    >
+                                                        <ol
+                                                            class="list-inside list-decimal space-y-1"
+                                                        >
+                                                            <li
+                                                                v-for="(
+                                                                    step, index
+                                                                ) in parsedSteps.slice(
+                                                                    0,
+                                                                    10,
+                                                                )"
+                                                                :key="index"
+                                                                class="break-words whitespace-pre-wrap"
+                                                                style="
+                                                                    overflow-wrap: break-word;
+                                                                    word-break: break-all;
+                                                                "
+                                                            >
+                                                                {{
+                                                                    step.action
+                                                                }}
+                                                            </li>
+                                                            <li
+                                                                v-if="
+                                                                    parsedSteps.length >
+                                                                    10
+                                                                "
+                                                                class="text-muted-foreground"
+                                                            >
+                                                                ... and
+                                                                {{
+                                                                    parsedSteps.length -
+                                                                    10
+                                                                }}
+                                                                more
+                                                            </li>
+                                                        </ol>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </DialogFooter>
-                                </DialogContent>
+
+                                        <DialogFooter
+                                            class="flex justify-between sm:justify-between"
+                                        >
+                                            <Button
+                                                v-if="
+                                                    noteContent.trim() ||
+                                                    noteTitle.trim() ||
+                                                    selectedParentSuiteId
+                                                "
+                                                variant="ghost"
+                                                @click="clearNotes"
+                                                class="gap-2 text-muted-foreground hover:text-destructive"
+                                            >
+                                                <X class="h-4 w-4" />
+                                                Clear
+                                            </Button>
+                                            <div v-else></div>
+                                            <div class="flex gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    @click="
+                                                        showNoteDialog = false
+                                                    "
+                                                >
+                                                    Cancel
+                                                </Button>
+                                                <Button
+                                                    @click="
+                                                        importNoteAsTestCase
+                                                    "
+                                                    :disabled="
+                                                        !targetSuiteId ||
+                                                        parsedSteps.length ===
+                                                            0 ||
+                                                        !noteTitle.trim() ||
+                                                        isImportingNote
+                                                    "
+                                                    class="gap-2"
+                                                >
+                                                    <Plus class="h-4 w-4" />
+                                                    Create Test Case
+                                                </Button>
+                                            </div>
+                                        </DialogFooter>
+                                    </DialogContent>
                                 </Dialog>
                             </RestrictedAction>
                             <RestrictedAction>
-                                <Link :href="`/projects/${project.id}/test-suites/create`">
+                                <Link
+                                    :href="`/projects/${project.id}/test-suites/create`"
+                                >
                                     <Button variant="cta" class="gap-2">
                                         <Plus class="h-4 w-4" />
                                         Test Suite
@@ -1341,469 +1850,994 @@ onMounted(() => {
                 </div>
 
                 <!-- Two Column Layout -->
-                <div class="flex gap-6 flex-1 min-h-0">
-                <!-- Left: Test Suites Navigation -->
-                <div class="w-[430px] shrink-0 self-start sticky top-6">
-                    <div class="rounded-xl border bg-card shadow-sm">
-                        <div class="p-3 border-b bg-muted/30">
-                            <div class="flex items-center gap-2 text-sm font-medium">
-                                <FolderTree class="h-4 w-4 text-primary" />
-                                <span>Navigation</span>
-                            </div>
-                            <div class="relative mt-2">
-                                <Search class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    v-model="searchQuery"
-                                    type="text"
-                                    placeholder="Search test cases..."
-                                    class="pl-7 pr-7 h-8 text-xs bg-background/60"
-                                />
-                                <button
-                                    v-if="searchQuery"
-                                    @click="searchQuery = ''"
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                                >
-                                    <X class="h-3.5 w-3.5" />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="p-2 space-y-0.5 max-h-[calc(100vh-220px)] overflow-y-auto">
-                            <template v-for="(suite, suiteIndex) in localTestSuites" :key="suite.id">
-                                <!-- Parent Suite -->
+                <div class="flex min-h-0 flex-1 gap-6">
+                    <!-- Left: Test Suites Navigation -->
+                    <div class="sticky top-6 w-[430px] shrink-0 self-start">
+                        <div class="rounded-xl border bg-card shadow-sm">
+                            <div class="border-b bg-muted/30 p-3">
                                 <div
-                                    class="group flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-all duration-150"
-                                    :class="[
-                                        activeSuiteId === suite.id
-                                            ? 'bg-primary text-primary-foreground shadow-sm'
-                                            : 'hover:bg-muted/70',
-                                        {
-                                            'border-t-2 border-t-primary': dragOverSuiteIndex === suiteIndex,
-                                            'opacity-50': draggedSuiteIndex === suiteIndex
-                                        }
-                                    ]"
-                                    @click="scrollToSuite(suite.id)"
-                                    @dragover="onSuiteDragOver(suiteIndex, $event)"
-                                    @dragleave="onSuiteDragLeave"
-                                    @drop="onSuiteDrop(suiteIndex, $event)"
+                                    class="flex items-center gap-2 text-sm font-medium"
                                 >
-                                    <div class="flex items-center gap-2 min-w-0 flex-1">
-                                        <div
-                                            draggable="true"
-                                            @dragstart="onSuiteDragStart(suiteIndex, $event)"
-                                            @dragend="onSuiteDragEnd"
-                                            class="cursor-grab active:cursor-grabbing shrink-0"
-                                            @click.stop
-                                        >
-                                            <GripVertical class="h-4 w-4 text-muted-foreground/50" />
-                                        </div>
-                                        <Layers class="h-4 w-4 shrink-0" :class="activeSuiteId === suite.id ? '' : 'text-primary'" />
-                                        <span class="font-medium text-sm truncate max-w-[280px]">{{ suite.name }}</span>
-                                    </div>
-                                    <div class="flex items-center gap-1.5 shrink-0 ml-3">
-                                        <span
-                                            class="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-                                            :class="activeSuiteId === suite.id ? 'bg-primary-foreground/20' : 'bg-muted text-muted-foreground'"
-                                        >
-                                            {{ getSuiteTotalTestCases(suite) }}
-                                        </span>
-                                        <Link
-                                            :href="`/projects/${project.id}/test-suites/${suite.id}`"
-                                            @click.stop
-                                            class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                            :class="activeSuiteId === suite.id ? 'hover:bg-primary-foreground/20' : 'hover:bg-muted'"
-                                        >
-                                            <ExternalLink class="h-3 w-3" />
-                                        </Link>
-                                    </div>
+                                    <FolderTree class="h-4 w-4 text-primary" />
+                                    <span>Navigation</span>
                                 </div>
-
-                                <!-- Child Suites -->
-                                <template v-if="suite.children?.length">
-                                    <div
-                                        v-for="child in suite.children"
-                                        :key="child.id"
-                                        class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-4 cursor-pointer transition-all duration-150"
-                                        :class="[
-                                            activeSuiteId === child.id
-                                                ? 'bg-primary text-primary-foreground shadow-sm'
-                                                : 'hover:bg-muted/70'
-                                        ]"
-                                        @click="scrollToSuite(child.id)"
+                                <div class="relative mt-2">
+                                    <Search
+                                        class="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                                    />
+                                    <Input
+                                        v-model="searchQuery"
+                                        type="text"
+                                        placeholder="Search test cases..."
+                                        class="h-8 bg-background/60 pr-7 pl-7 text-xs"
+                                    />
+                                    <button
+                                        v-if="searchQuery"
+                                        @click="searchQuery = ''"
+                                        class="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                                     >
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <Boxes class="h-3.5 w-3.5 shrink-0" :class="activeSuiteId === child.id ? '' : 'text-yellow-500'" />
-                                            <span class="text-sm truncate max-w-[240px]">{{ child.name }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-1.5 shrink-0 ml-3">
-                                            <span
-                                                class="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-                                                :class="activeSuiteId === child.id ? 'bg-primary-foreground/20' : 'bg-muted text-muted-foreground'"
+                                        <X class="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div
+                                class="max-h-[calc(100vh-220px)] space-y-0.5 overflow-y-auto p-2"
+                            >
+                                <template
+                                    v-for="(
+                                        suite, suiteIndex
+                                    ) in localTestSuites"
+                                    :key="suite.id"
+                                >
+                                    <!-- Parent Suite -->
+                                    <div
+                                        class="group flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 transition-all duration-150"
+                                        :class="[
+                                            activeSuiteId === suite.id
+                                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                                : 'hover:bg-muted/70',
+                                            {
+                                                'border-t-2 border-t-primary':
+                                                    dragOverSuiteIndex ===
+                                                    suiteIndex,
+                                                'opacity-50':
+                                                    draggedSuiteIndex ===
+                                                    suiteIndex,
+                                            },
+                                        ]"
+                                        @click="scrollToSuite(suite.id)"
+                                        @dragover="
+                                            onSuiteDragOver(suiteIndex, $event)
+                                        "
+                                        @dragleave="onSuiteDragLeave"
+                                        @drop="onSuiteDrop(suiteIndex, $event)"
+                                    >
+                                        <div
+                                            class="flex min-w-0 flex-1 items-center gap-2"
+                                        >
+                                            <div
+                                                draggable="true"
+                                                @dragstart="
+                                                    onSuiteDragStart(
+                                                        suiteIndex,
+                                                        $event,
+                                                    )
+                                                "
+                                                @dragend="onSuiteDragEnd"
+                                                class="shrink-0 cursor-grab active:cursor-grabbing"
+                                                @click.stop
                                             >
-                                                {{ child.test_cases?.length || 0 }}
+                                                <GripVertical
+                                                    class="h-4 w-4 text-muted-foreground/50"
+                                                />
+                                            </div>
+                                            <Layers
+                                                class="h-4 w-4 shrink-0"
+                                                :class="
+                                                    activeSuiteId === suite.id
+                                                        ? ''
+                                                        : 'text-primary'
+                                                "
+                                            />
+                                            <span
+                                                class="max-w-[280px] truncate text-sm font-medium"
+                                                >{{ suite.name }}</span
+                                            >
+                                        </div>
+                                        <div
+                                            class="ml-3 flex shrink-0 items-center gap-1.5"
+                                        >
+                                            <span
+                                                class="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                                                :class="
+                                                    activeSuiteId === suite.id
+                                                        ? 'bg-primary-foreground/20'
+                                                        : 'bg-muted text-muted-foreground'
+                                                "
+                                            >
+                                                {{
+                                                    getSuiteTotalTestCases(
+                                                        suite,
+                                                    )
+                                                }}
                                             </span>
                                             <Link
-                                                :href="`/projects/${project.id}/test-suites/${child.id}`"
+                                                :href="`/projects/${project.id}/test-suites/${suite.id}`"
                                                 @click.stop
-                                                class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                                :class="activeSuiteId === child.id ? 'hover:bg-primary-foreground/20' : 'hover:bg-muted'"
+                                                class="rounded p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                                                :class="
+                                                    activeSuiteId === suite.id
+                                                        ? 'hover:bg-primary-foreground/20'
+                                                        : 'hover:bg-muted'
+                                                "
                                             >
                                                 <ExternalLink class="h-3 w-3" />
                                             </Link>
                                         </div>
                                     </div>
+
+                                    <!-- Child Suites -->
+                                    <template v-if="suite.children?.length">
+                                        <div
+                                            v-for="child in suite.children"
+                                            :key="child.id"
+                                            class="group ml-4 flex cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 transition-all duration-150"
+                                            :class="[
+                                                activeSuiteId === child.id
+                                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                                    : 'hover:bg-muted/70',
+                                            ]"
+                                            @click="scrollToSuite(child.id)"
+                                        >
+                                            <div
+                                                class="flex min-w-0 items-center gap-2"
+                                            >
+                                                <Boxes
+                                                    class="h-3.5 w-3.5 shrink-0"
+                                                    :class="
+                                                        activeSuiteId ===
+                                                        child.id
+                                                            ? ''
+                                                            : 'text-yellow-500'
+                                                    "
+                                                />
+                                                <span
+                                                    class="max-w-[240px] truncate text-sm"
+                                                    >{{ child.name }}</span
+                                                >
+                                            </div>
+                                            <div
+                                                class="ml-3 flex shrink-0 items-center gap-1.5"
+                                            >
+                                                <span
+                                                    class="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                                                    :class="
+                                                        activeSuiteId ===
+                                                        child.id
+                                                            ? 'bg-primary-foreground/20'
+                                                            : 'bg-muted text-muted-foreground'
+                                                    "
+                                                >
+                                                    {{
+                                                        child.test_cases
+                                                            ?.length || 0
+                                                    }}
+                                                </span>
+                                                <Link
+                                                    :href="`/projects/${project.id}/test-suites/${child.id}`"
+                                                    @click.stop
+                                                    class="rounded p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                                                    :class="
+                                                        activeSuiteId ===
+                                                        child.id
+                                                            ? 'hover:bg-primary-foreground/20'
+                                                            : 'hover:bg-muted'
+                                                    "
+                                                >
+                                                    <ExternalLink
+                                                        class="h-3 w-3"
+                                                    />
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    </template>
                                 </template>
-                            </template>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Right: Test Cases List -->
-                <div class="flex-1 overflow-y-auto min-h-0 pr-2 max-w-4xl relative">
-                    <!-- Filter Dropdown -->
-                    <div v-if="showFilters" class="absolute top-0 left-0 right-2 z-20 rounded-xl border bg-card shadow-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div class="flex items-center justify-between mb-3">
-                            <span class="text-sm font-medium flex items-center gap-2">
-                                <Filter class="h-4 w-4 text-primary" />
-                                Filters
-                                <Badge v-if="activeFilterCount > 0" class="h-5 px-1.5 text-[10px] rounded-full">{{ activeFilterCount }}</Badge>
-                            </span>
-                            <div class="flex items-center gap-2">
-                                <Button
-                                    v-if="activeFilterCount > 0"
-                                    variant="ghost"
-                                    size="sm"
-                                    class="h-6 gap-1 text-xs text-muted-foreground hover:text-destructive"
-                                    @click="clearFilters"
+                    <!-- Right: Test Cases List -->
+                    <div
+                        class="relative min-h-0 max-w-4xl flex-1 overflow-y-auto pr-2"
+                    >
+                        <!-- Filter Dropdown -->
+                        <div
+                            v-if="showFilters"
+                            class="absolute top-0 right-2 left-0 z-20 animate-in rounded-xl border bg-card p-4 shadow-lg duration-200 fade-in slide-in-from-top-2"
+                        >
+                            <div class="mb-3 flex items-center justify-between">
+                                <span
+                                    class="flex items-center gap-2 text-sm font-medium"
                                 >
-                                    <X class="h-3 w-3" />
-                                    Clear All
-                                </Button>
-                                <button @click="showFilters = false" class="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer">
-                                    <X class="h-4 w-4" />
-                                </button>
+                                    <Filter class="h-4 w-4 text-primary" />
+                                    Filters
+                                    <Badge
+                                        v-if="activeFilterCount > 0"
+                                        class="h-5 rounded-full px-1.5 text-[10px]"
+                                        >{{ activeFilterCount }}</Badge
+                                    >
+                                </span>
+                                <div class="flex items-center gap-2">
+                                    <Button
+                                        v-if="activeFilterCount > 0"
+                                        variant="ghost"
+                                        size="sm"
+                                        class="h-6 gap-1 text-xs text-muted-foreground hover:text-destructive"
+                                        @click="clearFilters"
+                                    >
+                                        <X class="h-3 w-3" />
+                                        Clear All
+                                    </Button>
+                                    <button
+                                        @click="showFilters = false"
+                                        class="cursor-pointer rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                        <X class="h-4 w-4" />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="grid grid-cols-3 gap-x-3 gap-y-2.5">
-                            <!-- Type -->
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Type</Label>
-                                <Select v-model="filterType">
-                                    <SelectTrigger class="h-8 text-xs" :class="filterType ? 'pr-7' : ''">
-                                        <SelectValue placeholder="All" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="functional">Functional</SelectItem>
-                                        <SelectItem value="smoke">Smoke</SelectItem>
-                                        <SelectItem value="regression">Regression</SelectItem>
-                                        <SelectItem value="integration">Integration</SelectItem>
-                                        <SelectItem value="acceptance">Acceptance</SelectItem>
-                                        <SelectItem value="performance">Performance</SelectItem>
-                                        <SelectItem value="security">Security</SelectItem>
-                                        <SelectItem value="usability">Usability</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <button v-if="filterType" @click="filterType = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
-                            <!-- Priority -->
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Priority</Label>
-                                <Select v-model="filterPriority">
-                                    <SelectTrigger class="h-8 text-xs" :class="filterPriority ? 'pr-7' : ''">
-                                        <SelectValue placeholder="All" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="low">Low</SelectItem>
-                                        <SelectItem value="medium">Medium</SelectItem>
-                                        <SelectItem value="high">High</SelectItem>
-                                        <SelectItem value="critical">Critical</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <button v-if="filterPriority" @click="filterPriority = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
-                            <!-- Automation -->
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Automation</Label>
-                                <Select v-model="filterAutomation">
-                                    <SelectTrigger class="h-8 text-xs" :class="filterAutomation ? 'pr-7' : ''">
-                                        <SelectValue placeholder="All" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="not_automated">Not Automated</SelectItem>
-                                        <SelectItem value="to_be_automated">To Be Automated</SelectItem>
-                                        <SelectItem value="automated">Automated</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <button v-if="filterAutomation" @click="filterAutomation = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
-                            <!-- Severity -->
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Severity</Label>
-                                <Select v-model="filterSeverity">
-                                    <SelectTrigger class="h-8 text-xs" :class="filterSeverity ? 'pr-7' : ''">
-                                        <SelectValue placeholder="All" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="trivial">Trivial</SelectItem>
-                                        <SelectItem value="minor">Minor</SelectItem>
-                                        <SelectItem value="major">Major</SelectItem>
-                                        <SelectItem value="critical">Critical</SelectItem>
-                                        <SelectItem value="blocker">Blocker</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <button v-if="filterSeverity" @click="filterSeverity = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
-                            <!-- Author -->
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Author</Label>
-                                <Select v-model="filterAuthor">
-                                    <SelectTrigger class="h-8 text-xs" :class="filterAuthor ? 'pr-7' : ''">
-                                        <SelectValue placeholder="All" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem
-                                            v-for="user in users"
-                                            :key="user.id"
-                                            :value="String(user.id)"
-                                        >
-                                            {{ user.name }}
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <button v-if="filterAuthor" @click="filterAuthor = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
-                            <!-- Feature -->
-                            <div class="relative">
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Feature</Label>
-                                <Select v-model="filterFeature">
-                                    <SelectTrigger class="h-8 text-xs" :class="filterFeature ? 'pr-7' : ''">
-                                        <SelectValue placeholder="All" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="__none__">No feature</SelectItem>
-                                        <SelectItem
-                                            v-for="feature in availableFeatures"
-                                            :key="feature.id"
-                                            :value="String(feature.id)"
-                                        >
-                                            {{ feature.module?.length ? `${feature.module.join(', ')} / ` : '' }}{{ feature.name }}
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <button v-if="filterFeature" @click="filterFeature = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                    <X class="h-3 w-3" />
-                                </button>
-                            </div>
-                            <!-- Module -->
-                            <div>
-                                <Label class="text-[11px] text-muted-foreground mb-1 block">Module</Label>
+                            <div class="grid grid-cols-3 gap-x-3 gap-y-2.5">
+                                <!-- Type -->
                                 <div class="relative">
-                                    <Select v-model="filterModule">
-                                        <SelectTrigger class="h-8 text-xs" :class="filterModule ? 'pr-7' : ''">
+                                    <Label
+                                        class="mb-1 block text-[11px] text-muted-foreground"
+                                        >Type</Label
+                                    >
+                                    <Select v-model="filterType">
+                                        <SelectTrigger
+                                            class="h-8 text-xs"
+                                            :class="filterType ? 'pr-7' : ''"
+                                        >
                                             <SelectValue placeholder="All" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="__none__">No module</SelectItem>
-                                            <SelectItem value="UI">UI</SelectItem>
-                                            <SelectItem value="API">API</SelectItem>
-                                            <SelectItem value="Backend">Backend</SelectItem>
-                                            <SelectItem value="Database">Database</SelectItem>
-                                            <SelectItem value="Integration">Integration</SelectItem>
+                                            <SelectItem value="functional"
+                                                >Functional</SelectItem
+                                            >
+                                            <SelectItem value="smoke"
+                                                >Smoke</SelectItem
+                                            >
+                                            <SelectItem value="regression"
+                                                >Regression</SelectItem
+                                            >
+                                            <SelectItem value="integration"
+                                                >Integration</SelectItem
+                                            >
+                                            <SelectItem value="acceptance"
+                                                >Acceptance</SelectItem
+                                            >
+                                            <SelectItem value="performance"
+                                                >Performance</SelectItem
+                                            >
+                                            <SelectItem value="security"
+                                                >Security</SelectItem
+                                            >
+                                            <SelectItem value="usability"
+                                                >Usability</SelectItem
+                                            >
+                                            <SelectItem value="other"
+                                                >Other</SelectItem
+                                            >
                                         </SelectContent>
                                     </Select>
-                                    <button v-if="filterModule" @click="filterModule = ''" class="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                        <X class="h-3 w-3" />
-                                    </button>
-                                </div>
-                            </div>
-                            <!-- Dates: 2x2 grid spanning 2 columns -->
-                            <div class="col-span-2 grid grid-cols-2 gap-x-3 gap-y-2.5">
-                                <!-- Created From -->
-                                <div class="relative">
-                                    <Label class="text-[11px] text-muted-foreground mb-1 block">Created From</Label>
-                                    <Input v-model="filterCreatedFrom" type="date" class="h-8 text-xs" :class="filterCreatedFrom ? 'pr-7' : ''" />
-                                    <button v-if="filterCreatedFrom" @click="filterCreatedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                        <X class="h-3 w-3" />
-                                    </button>
-                                </div>
-                                <!-- Created To -->
-                                <div class="relative">
-                                    <Label class="text-[11px] text-muted-foreground mb-1 block">Created To</Label>
-                                    <Input v-model="filterCreatedTo" type="date" class="h-8 text-xs" :class="filterCreatedTo ? 'pr-7' : ''" />
-                                    <button v-if="filterCreatedTo" @click="filterCreatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                        <X class="h-3 w-3" />
-                                    </button>
-                                </div>
-                                <!-- Updated From -->
-                                <div class="relative">
-                                    <Label class="text-[11px] text-muted-foreground mb-1 block">Updated From</Label>
-                                    <Input v-model="filterUpdatedFrom" type="date" class="h-8 text-xs" :class="filterUpdatedFrom ? 'pr-7' : ''" />
-                                    <button v-if="filterUpdatedFrom" @click="filterUpdatedFrom = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                        <X class="h-3 w-3" />
-                                    </button>
-                                </div>
-                                <!-- Updated To -->
-                                <div class="relative">
-                                    <Label class="text-[11px] text-muted-foreground mb-1 block">Updated To</Label>
-                                    <Input v-model="filterUpdatedTo" type="date" class="h-8 text-xs" :class="filterUpdatedTo ? 'pr-7' : ''" />
-                                    <button v-if="filterUpdatedTo" @click="filterUpdatedTo = ''" class="absolute right-1.5 bottom-1.5 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10">
-                                        <X class="h-3 w-3" />
-                                    </button>
-                                </div>
-                            </div>
-                            <!-- Results count -->
-                            <div class="flex items-end justify-center pb-1">
-                                <span class="text-sm text-muted-foreground">
-                                    Found <span class="font-semibold text-foreground">{{ filteredTestCaseCount }}</span> {{ filteredTestCaseCount === 1 ? 'case' : 'cases' }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Backdrop to close filter -->
-                    <div v-if="showFilters" class="fixed inset-0 z-10" @click="showFilters = false" />
-                    <div v-if="filteredFlatSuites.length === 0 && (searchQuery.trim() || activeFilterCount > 0)" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                        <Search class="h-12 w-12 mb-3" />
-                        <p class="font-semibold">No results found</p>
-                        <p v-if="searchQuery.trim()" class="text-sm max-w-full truncate px-4">No test cases match "{{ searchQuery }}"</p>
-                        <p v-else class="text-sm">No test cases match the selected filters</p>
-                        <Button v-if="activeFilterCount > 0" variant="outline" size="sm" class="mt-3 gap-2" @click="clearFilters">
-                            <X class="h-3.5 w-3.5" />
-                            Clear Filters
-                        </Button>
-                    </div>
-                    <div v-else-if="filteredFlatSuites.length === 0" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                        <FileText class="h-12 w-12 mb-3" />
-                        <p class="font-semibold">No test cases yet</p>
-                        <p class="text-sm">Add test cases to your suites to see them here.</p>
-                    </div>
-
-                    <div v-else class="space-y-1">
-                        <div
-                            v-for="suite in filteredFlatSuites"
-                            :key="suite.id"
-                            :id="`suite-${suite.id}`"
-                            class="scroll-mt-4 mt-2.5 first:mt-0"
-                        >
-                            <!-- Suite Header -->
-                            <div
-                                class="group/header flex items-center justify-between mb-2 sticky top-0 bg-card/95 backdrop-blur-sm z-10 rounded-xl border shadow-sm cursor-pointer transition-all duration-150 hover:border-primary/50"
-                                :class="suite.parentName ? 'py-2 px-4' : 'py-3.5 px-4'"
-                                @click="router.visit(`/projects/${project.id}/test-suites/${suite.id}`)"
-                            >
-                                <div class="flex items-center gap-3 min-w-0 flex-1 mr-3">
-                                    <div
-                                        class="h-4 w-4 shrink-0 rounded-[4px] border shadow-xs flex items-center justify-center cursor-pointer transition-colors"
-                                        :class="[
-                                            getSuiteState(suite.id).isFullySelected || getSuiteState(suite.id).isPartiallySelected
-                                                ? 'bg-primary border-primary text-primary-foreground'
-                                                : 'border-input',
-                                            { 'opacity-50 pointer-events-none': getSuiteState(suite.id).totalCount === 0 }
-                                        ]"
-                                        @click.stop="toggleFlatSuiteSelection(suite)"
+                                    <button
+                                        v-if="filterType"
+                                        @click="filterType = ''"
+                                        class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                                     >
-                                        <Minus v-if="getSuiteState(suite.id).isPartiallySelected" class="h-3 w-3" />
-                                        <Check v-else-if="getSuiteState(suite.id).isFullySelected" class="h-3 w-3" />
-                                    </div>
-                                    <div
-                                        class="shrink-0 rounded-lg flex items-center justify-center transition-colors"
-                                        :class="[
-                                            suite.parentName ? 'h-8 w-8 bg-yellow-500/10 group-hover/header:bg-primary/10' : 'h-8 w-8 bg-primary/10'
-                                        ]"
-                                    >
-                                        <Boxes v-if="suite.parentName" class="h-3.5 w-3.5 text-yellow-500 group-hover/header:text-primary transition-colors" />
-                                        <Layers v-else class="h-4 w-4 text-primary" />
-                                    </div>
-                                    <div class="min-w-0">
-                                        <h3 :class="suite.parentName ? 'font-semibold text-sm' : 'font-semibold text-base'" class="group-hover/header:text-primary transition-colors truncate" v-html="highlight(suite.name)" />
-                                        <p v-if="suite.parentName" class="text-[11px] text-muted-foreground truncate">
-                                            in <span v-html="highlight(suite.parentName ?? '')" />
-                                        </p>
-                                    </div>
-                                    <Badge variant="secondary" :class="suite.parentName ? 'text-[11px] ml-1' : 'text-xs ml-2'" class="shrink-0 font-normal bg-gray-500/10 text-gray-600 border-gray-200 dark:text-gray-400 dark:border-gray-800">
-                                        {{ getFlatSuiteTotalTestCases(suite) }} {{ getFlatSuiteTotalTestCases(suite) === 1 ? 'case' : 'cases' }}
-                                    </Badge>
-                                    <Badge :variant="testTypeVariant(suite.type)" :class="[suite.parentName ? 'text-[11px]' : 'text-xs']" class="shrink-0 font-normal">
-                                        {{ suite.type }}
-                                    </Badge>
-                                    <FeatureBadges v-if="suite.projectFeatures?.length" :features="suite.projectFeatures" :max-visible="2" />
+                                        <X class="h-3 w-3" />
+                                    </button>
                                 </div>
-                                <RestrictedAction>
-                                    <Link :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/create`" @click.stop class="shrink-0">
-                                        <Button variant="outline" size="sm" :class="suite.parentName ? 'h-6 text-[11px] gap-1 px-2' : 'text-xs'">
-                                            <Plus class="h-3.5 w-3.5" />
-                                            Add
-                                        </Button>
-                                    </Link>
-                                </RestrictedAction>
-                            </div>
-
-                            <!-- Test Cases -->
-                            <div v-if="suite.testCases.length" class="space-y-[3px]">
-                                <Link
-                                    v-for="(testCase, tcIndex) in suite.testCases"
-                                    :key="testCase.id"
-                                    :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/${testCase.id}`"
-                                    class="group flex items-center justify-between px-4 py-2.5 rounded-xl border bg-card hover:border-primary/50 hover:shadow-sm transition-all duration-150"
-                                    :class="{
-                                        'border-t-2 border-t-primary': dragOverTestCase?.suiteId === suite.id && dragOverTestCase?.index === tcIndex,
-                                        'opacity-50': draggedTestCase?.suiteId === suite.id && draggedTestCase?.index === tcIndex,
-                                        'border-primary/50 bg-primary/5': isTestCaseSelected(testCase.id)
-                                    }"
-                                    @dragover="onTestCaseDragOver(suite.id, tcIndex, $event)"
-                                    @dragleave="onTestCaseDragLeave"
-                                    @drop="onTestCaseDrop(suite.id, tcIndex, $event)"
+                                <!-- Priority -->
+                                <div class="relative">
+                                    <Label
+                                        class="mb-1 block text-[11px] text-muted-foreground"
+                                        >Priority</Label
+                                    >
+                                    <Select v-model="filterPriority">
+                                        <SelectTrigger
+                                            class="h-8 text-xs"
+                                            :class="
+                                                filterPriority ? 'pr-7' : ''
+                                            "
+                                        >
+                                            <SelectValue placeholder="All" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="low"
+                                                >Low</SelectItem
+                                            >
+                                            <SelectItem value="medium"
+                                                >Medium</SelectItem
+                                            >
+                                            <SelectItem value="high"
+                                                >High</SelectItem
+                                            >
+                                            <SelectItem value="critical"
+                                                >Critical</SelectItem
+                                            >
+                                        </SelectContent>
+                                    </Select>
+                                    <button
+                                        v-if="filterPriority"
+                                        @click="filterPriority = ''"
+                                        class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                        <X class="h-3 w-3" />
+                                    </button>
+                                </div>
+                                <!-- Automation -->
+                                <div class="relative">
+                                    <Label
+                                        class="mb-1 block text-[11px] text-muted-foreground"
+                                        >Automation</Label
+                                    >
+                                    <Select v-model="filterAutomation">
+                                        <SelectTrigger
+                                            class="h-8 text-xs"
+                                            :class="
+                                                filterAutomation ? 'pr-7' : ''
+                                            "
+                                        >
+                                            <SelectValue placeholder="All" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="not_automated"
+                                                >Not Automated</SelectItem
+                                            >
+                                            <SelectItem value="to_be_automated"
+                                                >To Be Automated</SelectItem
+                                            >
+                                            <SelectItem value="automated"
+                                                >Automated</SelectItem
+                                            >
+                                        </SelectContent>
+                                    </Select>
+                                    <button
+                                        v-if="filterAutomation"
+                                        @click="filterAutomation = ''"
+                                        class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                        <X class="h-3 w-3" />
+                                    </button>
+                                </div>
+                                <!-- Severity -->
+                                <div class="relative">
+                                    <Label
+                                        class="mb-1 block text-[11px] text-muted-foreground"
+                                        >Severity</Label
+                                    >
+                                    <Select v-model="filterSeverity">
+                                        <SelectTrigger
+                                            class="h-8 text-xs"
+                                            :class="
+                                                filterSeverity ? 'pr-7' : ''
+                                            "
+                                        >
+                                            <SelectValue placeholder="All" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="trivial"
+                                                >Trivial</SelectItem
+                                            >
+                                            <SelectItem value="minor"
+                                                >Minor</SelectItem
+                                            >
+                                            <SelectItem value="major"
+                                                >Major</SelectItem
+                                            >
+                                            <SelectItem value="critical"
+                                                >Critical</SelectItem
+                                            >
+                                            <SelectItem value="blocker"
+                                                >Blocker</SelectItem
+                                            >
+                                        </SelectContent>
+                                    </Select>
+                                    <button
+                                        v-if="filterSeverity"
+                                        @click="filterSeverity = ''"
+                                        class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                        <X class="h-3 w-3" />
+                                    </button>
+                                </div>
+                                <!-- Author -->
+                                <div class="relative">
+                                    <Label
+                                        class="mb-1 block text-[11px] text-muted-foreground"
+                                        >Author</Label
+                                    >
+                                    <Select v-model="filterAuthor">
+                                        <SelectTrigger
+                                            class="h-8 text-xs"
+                                            :class="filterAuthor ? 'pr-7' : ''"
+                                        >
+                                            <SelectValue placeholder="All" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem
+                                                v-for="user in users"
+                                                :key="user.id"
+                                                :value="String(user.id)"
+                                            >
+                                                {{ user.name }}
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <button
+                                        v-if="filterAuthor"
+                                        @click="filterAuthor = ''"
+                                        class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                        <X class="h-3 w-3" />
+                                    </button>
+                                </div>
+                                <!-- Feature -->
+                                <div class="relative">
+                                    <Label
+                                        class="mb-1 block text-[11px] text-muted-foreground"
+                                        >Feature</Label
+                                    >
+                                    <Select v-model="filterFeature">
+                                        <SelectTrigger
+                                            class="h-8 text-xs"
+                                            :class="filterFeature ? 'pr-7' : ''"
+                                        >
+                                            <SelectValue placeholder="All" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__none__"
+                                                >No feature</SelectItem
+                                            >
+                                            <SelectItem
+                                                v-for="feature in availableFeatures"
+                                                :key="feature.id"
+                                                :value="String(feature.id)"
+                                            >
+                                                {{
+                                                    feature.module?.length
+                                                        ? `${feature.module.join(', ')} / `
+                                                        : ''
+                                                }}{{ feature.name }}
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <button
+                                        v-if="filterFeature"
+                                        @click="filterFeature = ''"
+                                        class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                        <X class="h-3 w-3" />
+                                    </button>
+                                </div>
+                                <!-- Module -->
+                                <div>
+                                    <Label
+                                        class="mb-1 block text-[11px] text-muted-foreground"
+                                        >Module</Label
+                                    >
+                                    <div class="relative">
+                                        <Select v-model="filterModule">
+                                            <SelectTrigger
+                                                class="h-8 text-xs"
+                                                :class="
+                                                    filterModule ? 'pr-7' : ''
+                                                "
+                                            >
+                                                <SelectValue
+                                                    placeholder="All"
+                                                />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__none__"
+                                                    >No module</SelectItem
+                                                >
+                                                <SelectItem value="UI"
+                                                    >UI</SelectItem
+                                                >
+                                                <SelectItem value="API"
+                                                    >API</SelectItem
+                                                >
+                                                <SelectItem value="Backend"
+                                                    >Backend</SelectItem
+                                                >
+                                                <SelectItem value="Database"
+                                                    >Database</SelectItem
+                                                >
+                                                <SelectItem value="Integration"
+                                                    >Integration</SelectItem
+                                                >
+                                            </SelectContent>
+                                        </Select>
+                                        <button
+                                            v-if="filterModule"
+                                            @click="filterModule = ''"
+                                            class="absolute top-1/2 right-1.5 z-10 -translate-y-1/2 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        >
+                                            <X class="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Dates: 2x2 grid spanning 2 columns -->
+                                <div
+                                    class="col-span-2 grid grid-cols-2 gap-x-3 gap-y-2.5"
                                 >
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <div
-                                            class="h-4 w-4 shrink-0 rounded-[4px] border shadow-xs flex items-center justify-center cursor-pointer transition-colors"
-                                            :class="isTestCaseSelected(testCase.id)
-                                                ? 'bg-primary border-primary text-primary-foreground'
-                                                : 'border-input'"
-                                            @click.stop.prevent="toggleTestCaseSelection(testCase.id)"
+                                    <!-- Created From -->
+                                    <div class="relative">
+                                        <Label
+                                            class="mb-1 block text-[11px] text-muted-foreground"
+                                            >Created From</Label
                                         >
-                                            <Check v-if="isTestCaseSelected(testCase.id)" class="h-3 w-3" />
-                                        </div>
-                                        <div
-                                            draggable="true"
-                                            @dragstart="onTestCaseDragStart(suite.id, tcIndex, testCase, $event)"
-                                            @dragend="onTestCaseDragEnd"
-                                            @click.stop.prevent
-                                            class="cursor-grab active:cursor-grabbing"
+                                        <Input
+                                            v-model="filterCreatedFrom"
+                                            type="date"
+                                            class="h-8 text-xs"
+                                            :class="
+                                                filterCreatedFrom ? 'pr-7' : ''
+                                            "
+                                        />
+                                        <button
+                                            v-if="filterCreatedFrom"
+                                            @click="filterCreatedFrom = ''"
+                                            class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                                         >
-                                            <GripVertical class="h-4 w-4 text-muted-foreground/50" />
-                                        </div>
-                                        <div class="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
-                                            <Bot v-if="testCase.automation_status === 'automated'" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                                            <component v-else :is="getTypeIcon(testCase.type)" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                                        </div>
-                                        <p class="text-sm font-normal truncate group-hover:text-primary transition-colors" v-html="highlight(testCase.title)" />
+                                            <X class="h-3 w-3" />
+                                        </button>
                                     </div>
-                                    <div class="flex items-center gap-2 shrink-0 ml-4">
-                                        <FeatureBadges v-if="testCase.project_features?.length" :features="testCase.project_features" :max-visible="2" />
-                                        <Badge :variant="priorityVariant(testCase.priority)" class="text-[10px] px-1.5 h-4 font-medium">
-                                            {{ testCase.priority }}
-                                        </Badge>
-                                        <Badge variant="secondary" class="text-[10px] px-1.5 h-4 font-normal">
-                                            {{ testCase.type }}
-                                        </Badge>
+                                    <!-- Created To -->
+                                    <div class="relative">
+                                        <Label
+                                            class="mb-1 block text-[11px] text-muted-foreground"
+                                            >Created To</Label
+                                        >
+                                        <Input
+                                            v-model="filterCreatedTo"
+                                            type="date"
+                                            class="h-8 text-xs"
+                                            :class="
+                                                filterCreatedTo ? 'pr-7' : ''
+                                            "
+                                        />
+                                        <button
+                                            v-if="filterCreatedTo"
+                                            @click="filterCreatedTo = ''"
+                                            class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        >
+                                            <X class="h-3 w-3" />
+                                        </button>
                                     </div>
-                                </Link>
+                                    <!-- Updated From -->
+                                    <div class="relative">
+                                        <Label
+                                            class="mb-1 block text-[11px] text-muted-foreground"
+                                            >Updated From</Label
+                                        >
+                                        <Input
+                                            v-model="filterUpdatedFrom"
+                                            type="date"
+                                            class="h-8 text-xs"
+                                            :class="
+                                                filterUpdatedFrom ? 'pr-7' : ''
+                                            "
+                                        />
+                                        <button
+                                            v-if="filterUpdatedFrom"
+                                            @click="filterUpdatedFrom = ''"
+                                            class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        >
+                                            <X class="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                    <!-- Updated To -->
+                                    <div class="relative">
+                                        <Label
+                                            class="mb-1 block text-[11px] text-muted-foreground"
+                                            >Updated To</Label
+                                        >
+                                        <Input
+                                            v-model="filterUpdatedTo"
+                                            type="date"
+                                            class="h-8 text-xs"
+                                            :class="
+                                                filterUpdatedTo ? 'pr-7' : ''
+                                            "
+                                        />
+                                        <button
+                                            v-if="filterUpdatedTo"
+                                            @click="filterUpdatedTo = ''"
+                                            class="absolute right-1.5 bottom-1.5 z-10 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        >
+                                            <X class="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Results count -->
+                                <div class="flex items-end justify-center pb-1">
+                                    <span class="text-sm text-muted-foreground">
+                                        Found
+                                        <span
+                                            class="font-semibold text-foreground"
+                                            >{{ filteredTestCaseCount }}</span
+                                        >
+                                        {{
+                                            filteredTestCaseCount === 1
+                                                ? 'case'
+                                                : 'cases'
+                                        }}
+                                    </span>
+                                </div>
                             </div>
+                        </div>
+                        <!-- Backdrop to close filter -->
+                        <div
+                            v-if="showFilters"
+                            class="fixed inset-0 z-10"
+                            @click="showFilters = false"
+                        />
+                        <div
+                            v-if="
+                                filteredFlatSuites.length === 0 &&
+                                (searchQuery.trim() || activeFilterCount > 0)
+                            "
+                            class="flex flex-col items-center justify-center py-16 text-muted-foreground"
+                        >
+                            <Search class="mb-3 h-12 w-12" />
+                            <p class="font-semibold">No results found</p>
+                            <p
+                                v-if="searchQuery.trim()"
+                                class="max-w-full truncate px-4 text-sm"
+                            >
+                                No test cases match "{{ searchQuery }}"
+                            </p>
+                            <p v-else class="text-sm">
+                                No test cases match the selected filters
+                            </p>
+                            <Button
+                                v-if="activeFilterCount > 0"
+                                variant="outline"
+                                size="sm"
+                                class="mt-3 gap-2"
+                                @click="clearFilters"
+                            >
+                                <X class="h-3.5 w-3.5" />
+                                Clear Filters
+                            </Button>
+                        </div>
+                        <div
+                            v-else-if="filteredFlatSuites.length === 0"
+                            class="flex flex-col items-center justify-center py-16 text-muted-foreground"
+                        >
+                            <FileText class="mb-3 h-12 w-12" />
+                            <p class="font-semibold">No test cases yet</p>
+                            <p class="text-sm">
+                                Add test cases to your suites to see them here.
+                            </p>
+                        </div>
 
+                        <div v-else class="space-y-1">
+                            <div
+                                v-for="suite in filteredFlatSuites"
+                                :key="suite.id"
+                                :id="`suite-${suite.id}`"
+                                class="mt-2.5 scroll-mt-4 first:mt-0"
+                            >
+                                <!-- Suite Header -->
+                                <div
+                                    class="group/header sticky top-0 z-10 mb-2 flex cursor-pointer items-center justify-between rounded-xl border bg-card/95 shadow-sm backdrop-blur-sm transition-all duration-150 hover:border-primary/50"
+                                    :class="
+                                        suite.parentName
+                                            ? 'px-4 py-2'
+                                            : 'px-4 py-3.5'
+                                    "
+                                    @click="
+                                        router.visit(
+                                            `/projects/${project.id}/test-suites/${suite.id}`,
+                                        )
+                                    "
+                                >
+                                    <div
+                                        class="mr-3 flex min-w-0 flex-1 items-center gap-3"
+                                    >
+                                        <div
+                                            class="flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[4px] border shadow-xs transition-colors"
+                                            :class="[
+                                                getSuiteState(suite.id)
+                                                    .isFullySelected ||
+                                                getSuiteState(suite.id)
+                                                    .isPartiallySelected
+                                                    ? 'border-primary bg-primary text-primary-foreground'
+                                                    : 'border-input',
+                                                {
+                                                    'pointer-events-none opacity-50':
+                                                        getSuiteState(suite.id)
+                                                            .totalCount === 0,
+                                                },
+                                            ]"
+                                            @click.stop="
+                                                toggleFlatSuiteSelection(suite)
+                                            "
+                                        >
+                                            <Minus
+                                                v-if="
+                                                    getSuiteState(suite.id)
+                                                        .isPartiallySelected
+                                                "
+                                                class="h-3 w-3"
+                                            />
+                                            <Check
+                                                v-else-if="
+                                                    getSuiteState(suite.id)
+                                                        .isFullySelected
+                                                "
+                                                class="h-3 w-3"
+                                            />
+                                        </div>
+                                        <div
+                                            class="flex shrink-0 items-center justify-center rounded-lg transition-colors"
+                                            :class="[
+                                                suite.parentName
+                                                    ? 'h-8 w-8 bg-yellow-500/10 group-hover/header:bg-primary/10'
+                                                    : 'h-8 w-8 bg-primary/10',
+                                            ]"
+                                        >
+                                            <Boxes
+                                                v-if="suite.parentName"
+                                                class="h-3.5 w-3.5 text-yellow-500 transition-colors group-hover/header:text-primary"
+                                            />
+                                            <Layers
+                                                v-else
+                                                class="h-4 w-4 text-primary"
+                                            />
+                                        </div>
+                                        <div class="min-w-0">
+                                            <h3
+                                                :class="
+                                                    suite.parentName
+                                                        ? 'text-sm font-semibold'
+                                                        : 'text-base font-semibold'
+                                                "
+                                                class="truncate transition-colors group-hover/header:text-primary"
+                                                v-html="highlight(suite.name)"
+                                            />
+                                            <p
+                                                v-if="suite.parentName"
+                                                class="truncate text-[11px] text-muted-foreground"
+                                            >
+                                                in
+                                                <span
+                                                    v-html="
+                                                        highlight(
+                                                            suite.parentName ??
+                                                                '',
+                                                        )
+                                                    "
+                                                />
+                                            </p>
+                                        </div>
+                                        <Badge
+                                            variant="secondary"
+                                            :class="
+                                                suite.parentName
+                                                    ? 'ml-1 text-[11px]'
+                                                    : 'ml-2 text-xs'
+                                            "
+                                            class="shrink-0 border-gray-200 bg-gray-500/10 font-normal text-gray-600 dark:border-gray-800 dark:text-gray-400"
+                                        >
+                                            {{
+                                                getFlatSuiteTotalTestCases(
+                                                    suite,
+                                                )
+                                            }}
+                                            {{
+                                                getFlatSuiteTotalTestCases(
+                                                    suite,
+                                                ) === 1
+                                                    ? 'case'
+                                                    : 'cases'
+                                            }}
+                                        </Badge>
+                                        <Badge
+                                            :variant="
+                                                testTypeVariant(suite.type)
+                                            "
+                                            :class="[
+                                                suite.parentName
+                                                    ? 'text-[11px]'
+                                                    : 'text-xs',
+                                            ]"
+                                            class="shrink-0 font-normal"
+                                        >
+                                            {{ suite.type }}
+                                        </Badge>
+                                        <FeatureBadges
+                                            v-if="suite.projectFeatures?.length"
+                                            :features="suite.projectFeatures"
+                                            :max-visible="2"
+                                        />
+                                    </div>
+                                    <RestrictedAction>
+                                        <Link
+                                            :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/create`"
+                                            @click.stop
+                                            class="shrink-0"
+                                        >
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                :class="
+                                                    suite.parentName
+                                                        ? 'h-6 gap-1 px-2 text-[11px]'
+                                                        : 'text-xs'
+                                                "
+                                            >
+                                                <Plus class="h-3.5 w-3.5" />
+                                                Add
+                                            </Button>
+                                        </Link>
+                                    </RestrictedAction>
+                                </div>
+
+                                <!-- Test Cases -->
+                                <div
+                                    v-if="suite.testCases.length"
+                                    class="space-y-[3px]"
+                                >
+                                    <Link
+                                        v-for="(
+                                            testCase, tcIndex
+                                        ) in suite.testCases"
+                                        :key="testCase.id"
+                                        :href="`/projects/${project.id}/test-suites/${suite.id}/test-cases/${testCase.id}`"
+                                        class="group flex items-center justify-between rounded-xl border bg-card px-4 py-2.5 transition-all duration-150 hover:border-primary/50 hover:shadow-sm"
+                                        :class="{
+                                            'border-t-2 border-t-primary':
+                                                dragOverTestCase?.suiteId ===
+                                                    suite.id &&
+                                                dragOverTestCase?.index ===
+                                                    tcIndex,
+                                            'opacity-50':
+                                                draggedTestCase?.suiteId ===
+                                                    suite.id &&
+                                                draggedTestCase?.index ===
+                                                    tcIndex,
+                                            'border-primary/50 bg-primary/5':
+                                                isTestCaseSelected(testCase.id),
+                                        }"
+                                        @dragover="
+                                            onTestCaseDragOver(
+                                                suite.id,
+                                                tcIndex,
+                                                $event,
+                                            )
+                                        "
+                                        @dragleave="onTestCaseDragLeave"
+                                        @drop="
+                                            onTestCaseDrop(
+                                                suite.id,
+                                                tcIndex,
+                                                $event,
+                                            )
+                                        "
+                                    >
+                                        <div
+                                            class="flex min-w-0 items-center gap-3"
+                                        >
+                                            <div
+                                                class="flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[4px] border shadow-xs transition-colors"
+                                                :class="
+                                                    isTestCaseSelected(
+                                                        testCase.id,
+                                                    )
+                                                        ? 'border-primary bg-primary text-primary-foreground'
+                                                        : 'border-input'
+                                                "
+                                                @click.stop.prevent="
+                                                    toggleTestCaseSelection(
+                                                        testCase.id,
+                                                    )
+                                                "
+                                            >
+                                                <Check
+                                                    v-if="
+                                                        isTestCaseSelected(
+                                                            testCase.id,
+                                                        )
+                                                    "
+                                                    class="h-3 w-3"
+                                                />
+                                            </div>
+                                            <div
+                                                draggable="true"
+                                                @dragstart="
+                                                    onTestCaseDragStart(
+                                                        suite.id,
+                                                        tcIndex,
+                                                        testCase,
+                                                        $event,
+                                                    )
+                                                "
+                                                @dragend="onTestCaseDragEnd"
+                                                @click.stop.prevent
+                                                class="cursor-grab active:cursor-grabbing"
+                                            >
+                                                <GripVertical
+                                                    class="h-4 w-4 text-muted-foreground/50"
+                                                />
+                                            </div>
+                                            <div
+                                                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/50 transition-colors group-hover:bg-primary/10"
+                                            >
+                                                <Bot
+                                                    v-if="
+                                                        testCase.automation_status ===
+                                                        'automated'
+                                                    "
+                                                    class="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-primary"
+                                                />
+                                                <component
+                                                    v-else
+                                                    :is="
+                                                        getTypeIcon(
+                                                            testCase.type,
+                                                        )
+                                                    "
+                                                    class="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-primary"
+                                                />
+                                            </div>
+                                            <p
+                                                class="truncate text-sm font-normal transition-colors group-hover:text-primary"
+                                                v-html="
+                                                    highlight(testCase.title)
+                                                "
+                                            />
+                                        </div>
+                                        <div
+                                            class="ml-4 flex shrink-0 items-center gap-2"
+                                        >
+                                            <FeatureBadges
+                                                v-if="
+                                                    testCase.project_features
+                                                        ?.length
+                                                "
+                                                :features="
+                                                    testCase.project_features
+                                                "
+                                                :max-visible="2"
+                                            />
+                                            <Badge
+                                                :variant="
+                                                    priorityVariant(
+                                                        testCase.priority,
+                                                    )
+                                                "
+                                                class="h-4 px-1.5 text-[10px] font-medium"
+                                            >
+                                                {{ testCase.priority }}
+                                            </Badge>
+                                            <Badge
+                                                variant="secondary"
+                                                class="h-4 px-1.5 text-[10px] font-normal"
+                                            >
+                                                {{ testCase.type }}
+                                            </Badge>
+                                        </div>
+                                    </Link>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
                 </div>
             </div>
         </div>
@@ -1816,17 +2850,28 @@ onMounted(() => {
                         Create Test Run
                     </DialogTitle>
                     <DialogDescription>
-                        Create a test run from {{ selectedTestCaseIds.length }} selected test case{{ selectedTestCaseIds.length !== 1 ? 's' : '' }}.
+                        Create a test run from
+                        {{ selectedTestCaseIds.length }} selected test case{{
+                            selectedTestCaseIds.length !== 1 ? 's' : ''
+                        }}.
                     </DialogDescription>
                 </DialogHeader>
-                <div class="py-4 space-y-4">
+                <div class="space-y-4 py-4">
                     <div class="space-y-2">
                         <Label for="tr-name">Name</Label>
-                        <Input id="tr-name" v-model="testRunName" placeholder="Test run name..." />
+                        <Input
+                            id="tr-name"
+                            v-model="testRunName"
+                            placeholder="Test run name..."
+                        />
                     </div>
                     <div class="space-y-2">
                         <Label for="tr-description">Description</Label>
-                        <Input id="tr-description" v-model="testRunDescription" placeholder="Optional description..." />
+                        <Input
+                            id="tr-description"
+                            v-model="testRunDescription"
+                            placeholder="Optional description..."
+                        />
                     </div>
                     <div class="space-y-2">
                         <Label>Priority</Label>
@@ -1838,7 +2883,9 @@ onMounted(() => {
                                 <SelectItem value="low">Low</SelectItem>
                                 <SelectItem value="medium">Medium</SelectItem>
                                 <SelectItem value="high">High</SelectItem>
-                                <SelectItem value="critical">Critical</SelectItem>
+                                <SelectItem value="critical"
+                                    >Critical</SelectItem
+                                >
                             </SelectContent>
                         </Select>
                     </div>
@@ -1850,26 +2897,51 @@ onMounted(() => {
                                     <SelectValue placeholder="Select..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="Develop">Develop</SelectItem>
-                                    <SelectItem value="Staging">Staging</SelectItem>
-                                    <SelectItem value="Production">Production</SelectItem>
+                                    <SelectItem value="Develop"
+                                        >Develop</SelectItem
+                                    >
+                                    <SelectItem value="Staging"
+                                        >Staging</SelectItem
+                                    >
+                                    <SelectItem value="Production"
+                                        >Production</SelectItem
+                                    >
                                 </SelectContent>
                             </Select>
-                            <Input v-model="testRunEnvNotes" placeholder="Devices, browser..." class="col-span-2" />
+                            <Input
+                                v-model="testRunEnvNotes"
+                                placeholder="Devices, browser..."
+                                class="col-span-2"
+                            />
                         </div>
                     </div>
                     <div class="space-y-2">
                         <Label for="tr-milestone">Milestone</Label>
-                        <Input id="tr-milestone" v-model="testRunMilestone" placeholder="e.g. v1.0, Sprint 5..." />
+                        <Input
+                            id="tr-milestone"
+                            v-model="testRunMilestone"
+                            placeholder="e.g. v1.0, Sprint 5..."
+                        />
                     </div>
                 </div>
                 <DialogFooter class="flex gap-2 sm:justify-end">
-                    <Button variant="outline" @click="showTestRunDialog = false">
+                    <Button
+                        variant="outline"
+                        @click="showTestRunDialog = false"
+                    >
                         Cancel
                     </Button>
-                    <Button @click="createTestRun" :disabled="!testRunName.trim() || isCreatingTestRun" class="gap-2">
+                    <Button
+                        @click="createTestRun"
+                        :disabled="!testRunName.trim() || isCreatingTestRun"
+                        class="gap-2"
+                    >
                         <Play class="h-4 w-4" />
-                        {{ isCreatingTestRun ? 'Creating...' : 'Create Test Run' }}
+                        {{
+                            isCreatingTestRun
+                                ? 'Creating...'
+                                : 'Create Test Run'
+                        }}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -1884,13 +2956,19 @@ onMounted(() => {
                         Copy to Test Suite
                     </DialogTitle>
                     <DialogDescription>
-                        Copy {{ selectedTestCaseIds.length }} test case{{ selectedTestCaseIds.length !== 1 ? 's' : '' }} to another suite.
+                        Copy {{ selectedTestCaseIds.length }} test case{{
+                            selectedTestCaseIds.length !== 1 ? 's' : ''
+                        }}
+                        to another suite.
                     </DialogDescription>
                 </DialogHeader>
-                <div class="py-4 space-y-4">
+                <div class="space-y-4 py-4">
                     <div class="space-y-2">
                         <Label>Destination Project</Label>
-                        <Select v-model="copyTargetProjectId" :disabled="loadingProjects">
+                        <Select
+                            v-model="copyTargetProjectId"
+                            :disabled="loadingProjects"
+                        >
                             <SelectTrigger>
                                 <SelectValue placeholder="Select project..." />
                             </SelectTrigger>
@@ -1907,11 +2985,18 @@ onMounted(() => {
                     </div>
                     <div class="space-y-2">
                         <Label>Target Suite</Label>
-                        <div v-if="loadingSuites" class="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                        <div
+                            v-if="loadingSuites"
+                            class="flex items-center gap-2 py-2 text-sm text-muted-foreground"
+                        >
                             <Loader2 class="h-4 w-4 animate-spin" />
                             Loading suites...
                         </div>
-                        <Select v-else v-model="copyTargetParentSuiteId" :disabled="!copyTargetProjectId">
+                        <Select
+                            v-else
+                            v-model="copyTargetParentSuiteId"
+                            :disabled="!copyTargetProjectId"
+                        >
                             <SelectTrigger class="truncate">
                                 <SelectValue placeholder="Select suite..." />
                             </SelectTrigger>
@@ -1921,47 +3006,90 @@ onMounted(() => {
                                     :key="suite.id"
                                     :value="String(suite.id)"
                                 >
-                                    <span class="truncate">{{ suite.name }}</span>
+                                    <span class="truncate">{{
+                                        suite.name
+                                    }}</span>
                                 </SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
-                    <div v-if="copyChildSuiteOptions.length > 0" class="space-y-2">
-                        <Label>Subcategory <span class="text-muted-foreground font-normal">(optional)</span></Label>
+                    <div
+                        v-if="copyChildSuiteOptions.length > 0"
+                        class="space-y-2"
+                    >
+                        <Label
+                            >Subcategory
+                            <span class="font-normal text-muted-foreground"
+                                >(optional)</span
+                            ></Label
+                        >
                         <Select v-model="copyTargetSuiteId">
                             <SelectTrigger class="truncate">
-                                <SelectValue placeholder="Parent suite (default)" />
+                                <SelectValue
+                                    placeholder="Parent suite (default)"
+                                />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem :value="copyTargetParentSuiteId">
-                                    <span class="text-muted-foreground">Parent suite (default)</span>
+                                    <span class="text-muted-foreground"
+                                        >Parent suite (default)</span
+                                    >
                                 </SelectItem>
                                 <SelectItem
                                     v-for="child in copyChildSuiteOptions"
                                     :key="child.id"
                                     :value="String(child.id)"
                                 >
-                                    <span class="truncate">{{ child.name }}</span>
+                                    <span class="truncate">{{
+                                        child.name
+                                    }}</span>
                                 </SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
-                    <div class="space-y-3 pt-2 border-t">
+                    <div class="space-y-3 border-t pt-2">
                         <Label class="text-sm font-medium">Copy Options</Label>
                         <div class="flex items-center gap-2">
-                            <Checkbox id="copy-attachments" :checked="copyAttachments" @update:checked="copyAttachments = $event" />
-                            <label for="copy-attachments" class="text-sm cursor-pointer">Copy attachments</label>
+                            <Checkbox
+                                id="copy-attachments"
+                                :checked="copyAttachments"
+                                @update:checked="copyAttachments = $event"
+                            />
+                            <label
+                                for="copy-attachments"
+                                class="cursor-pointer text-sm"
+                                >Copy attachments</label
+                            >
                         </div>
                         <div class="flex items-center gap-2">
-                            <Checkbox id="copy-features" :checked="copyFeatures" @update:checked="copyFeatures = $event" />
-                            <label for="copy-features" class="text-sm cursor-pointer">
+                            <Checkbox
+                                id="copy-features"
+                                :checked="copyFeatures"
+                                @update:checked="copyFeatures = $event"
+                            />
+                            <label
+                                for="copy-features"
+                                class="cursor-pointer text-sm"
+                            >
                                 Copy feature links
-                                <span v-if="isCrossProject" class="text-muted-foreground">(matched by name)</span>
+                                <span
+                                    v-if="isCrossProject"
+                                    class="text-muted-foreground"
+                                    >(matched by name)</span
+                                >
                             </label>
                         </div>
                         <div class="flex items-center gap-2">
-                            <Checkbox id="copy-notes" :checked="copyNotes" @update:checked="copyNotes = $event" />
-                            <label for="copy-notes" class="text-sm cursor-pointer">Copy notes</label>
+                            <Checkbox
+                                id="copy-notes"
+                                :checked="copyNotes"
+                                @update:checked="copyNotes = $event"
+                            />
+                            <label
+                                for="copy-notes"
+                                class="cursor-pointer text-sm"
+                                >Copy notes</label
+                            >
                         </div>
                     </div>
                 </div>
@@ -1969,7 +3097,11 @@ onMounted(() => {
                     <Button variant="outline" @click="showCopyDialog = false">
                         Cancel
                     </Button>
-                    <Button @click="copyToSuite" :disabled="!copyTargetSuiteId || isCopying" class="gap-2">
+                    <Button
+                        @click="copyToSuite"
+                        :disabled="!copyTargetSuiteId || isCopying"
+                        class="gap-2"
+                    >
                         <Copy class="h-4 w-4" />
                         {{ isCopying ? 'Copying...' : 'Copy' }}
                     </Button>
@@ -1983,14 +3115,26 @@ onMounted(() => {
                 <DialogHeader>
                     <DialogTitle>Delete Test Cases?</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete {{ selectedTestCaseIds.length }} test case{{ selectedTestCaseIds.length !== 1 ? 's' : '' }}? This action cannot be undone.
+                        Are you sure you want to delete
+                        {{ selectedTestCaseIds.length }} test case{{
+                            selectedTestCaseIds.length !== 1 ? 's' : ''
+                        }}? This action cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="flex gap-4 sm:justify-end">
-                    <Button variant="secondary" @click="showDeleteDialog = false" class="flex-1 sm:flex-none">
+                    <Button
+                        variant="secondary"
+                        @click="showDeleteDialog = false"
+                        class="flex-1 sm:flex-none"
+                    >
                         No
                     </Button>
-                    <Button variant="destructive" @click="deleteTestCases" :disabled="isDeleting" class="flex-1 sm:flex-none">
+                    <Button
+                        variant="destructive"
+                        @click="deleteTestCases"
+                        :disabled="isDeleting"
+                        class="flex-1 sm:flex-none"
+                    >
                         {{ isDeleting ? 'Deleting...' : 'Yes' }}
                     </Button>
                 </DialogFooter>
@@ -2006,15 +3150,21 @@ onMounted(() => {
                         Group into Subcategory
                     </DialogTitle>
                     <DialogDescription>
-                        Create a new subcategory and move {{ selectedTestCaseIds.length }} selected test case{{ selectedTestCaseIds.length === 1 ? '' : 's' }} into it.
+                        Create a new subcategory and move
+                        {{ selectedTestCaseIds.length }} selected test case{{
+                            selectedTestCaseIds.length === 1 ? '' : 's'
+                        }}
+                        into it.
                     </DialogDescription>
                 </DialogHeader>
-                <div class="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                <div class="max-h-[60vh] space-y-4 overflow-y-auto py-4">
                     <div class="space-y-2">
                         <Label>Parent Suite</Label>
                         <Select v-model="subcategoryParentId">
                             <SelectTrigger>
-                                <SelectValue placeholder="Select parent suite..." />
+                                <SelectValue
+                                    placeholder="Select parent suite..."
+                                />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem
@@ -2029,11 +3179,20 @@ onMounted(() => {
                     </div>
                     <div class="space-y-2">
                         <Label for="sub-name">Name</Label>
-                        <Input id="sub-name" v-model="subcategoryName" placeholder="Subcategory name..." />
+                        <Input
+                            id="sub-name"
+                            v-model="subcategoryName"
+                            placeholder="Subcategory name..."
+                        />
                     </div>
                     <div class="space-y-2">
                         <Label for="sub-description">Description</Label>
-                        <Textarea id="sub-description" v-model="subcategoryDescription" placeholder="Optional description..." rows="2" />
+                        <Textarea
+                            id="sub-description"
+                            v-model="subcategoryDescription"
+                            placeholder="Optional description..."
+                            rows="2"
+                        />
                     </div>
                     <div class="space-y-2">
                         <Label>Type</Label>
@@ -2042,14 +3201,28 @@ onMounted(() => {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="functional">Functional</SelectItem>
+                                <SelectItem value="functional"
+                                    >Functional</SelectItem
+                                >
                                 <SelectItem value="smoke">Smoke</SelectItem>
-                                <SelectItem value="regression">Regression</SelectItem>
-                                <SelectItem value="integration">Integration</SelectItem>
-                                <SelectItem value="acceptance">Acceptance</SelectItem>
-                                <SelectItem value="performance">Performance</SelectItem>
-                                <SelectItem value="security">Security</SelectItem>
-                                <SelectItem value="usability">Usability</SelectItem>
+                                <SelectItem value="regression"
+                                    >Regression</SelectItem
+                                >
+                                <SelectItem value="integration"
+                                    >Integration</SelectItem
+                                >
+                                <SelectItem value="acceptance"
+                                    >Acceptance</SelectItem
+                                >
+                                <SelectItem value="performance"
+                                    >Performance</SelectItem
+                                >
+                                <SelectItem value="security"
+                                    >Security</SelectItem
+                                >
+                                <SelectItem value="usability"
+                                    >Usability</SelectItem
+                                >
                                 <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                         </Select>
@@ -2062,12 +3235,27 @@ onMounted(() => {
                     />
                 </div>
                 <DialogFooter class="flex gap-2 sm:justify-end">
-                    <Button variant="outline" @click="showSubcategoryDialog = false">
+                    <Button
+                        variant="outline"
+                        @click="showSubcategoryDialog = false"
+                    >
                         Cancel
                     </Button>
-                    <Button @click="createSubcategory" :disabled="!subcategoryParentId || !subcategoryName.trim() || isCreatingSubcategory" class="gap-2">
+                    <Button
+                        @click="createSubcategory"
+                        :disabled="
+                            !subcategoryParentId ||
+                            !subcategoryName.trim() ||
+                            isCreatingSubcategory
+                        "
+                        class="gap-2"
+                    >
                         <FolderPlus class="h-4 w-4" />
-                        {{ isCreatingSubcategory ? 'Creating...' : 'Create & Move' }}
+                        {{
+                            isCreatingSubcategory
+                                ? 'Creating...'
+                                : 'Create & Move'
+                        }}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -2075,17 +3263,24 @@ onMounted(() => {
 
         <!-- Import Dialog -->
         <Dialog v-model:open="showImportDialog">
-            <DialogContent class="max-w-2xl max-h-[80vh] flex flex-col" style="overflow: hidden !important; max-width: min(42rem, calc(100vw - 2rem)) !important;">
+            <DialogContent
+                class="flex max-h-[80vh] max-w-2xl flex-col"
+                style="
+                    overflow: hidden !important;
+                    max-width: min(42rem, calc(100vw - 2rem)) !important;
+                "
+            >
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <Download class="h-5 w-5 text-primary" />
                         Import Test Cases
                     </DialogTitle>
                     <DialogDescription>
-                        Upload a CSV or Excel file to import test cases. Columns will be automatically mapped to CheckMate fields.
+                        Upload a CSV or Excel file to import test cases. Columns
+                        will be automatically mapped to CheckMate fields.
                     </DialogDescription>
                 </DialogHeader>
-                <div class="space-y-4 py-4 overflow-y-auto min-h-0 flex-1">
+                <div class="min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
                     <div class="space-y-2">
                         <Label>File</Label>
                         <div class="flex items-center gap-3">
@@ -2096,21 +3291,38 @@ onMounted(() => {
                                 class="hidden"
                                 @change="onImportFileChange"
                             />
-                            <Button variant="outline" size="sm" class="gap-2 cursor-pointer" @click="($refs.importFileInput as HTMLInputElement).click()">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                class="cursor-pointer gap-2"
+                                @click="
+                                    (
+                                        $refs.importFileInput as HTMLInputElement
+                                    ).click()
+                                "
+                            >
                                 <Upload class="h-4 w-4" />
                                 Choose File
                             </Button>
-                            <span class="text-sm text-muted-foreground truncate">{{ importFile?.name || 'No file selected' }}</span>
+                            <span
+                                class="truncate text-sm text-muted-foreground"
+                                >{{
+                                    importFile?.name || 'No file selected'
+                                }}</span
+                            >
                         </div>
                     </div>
 
                     <div v-if="importHeaders.length > 0" class="space-y-4">
                         <!-- Field mapping preview -->
-                        <div class="rounded-lg border p-4 bg-muted/30 space-y-3">
+                        <div
+                            class="space-y-3 rounded-lg border bg-muted/30 p-4"
+                        >
                             <div class="flex items-center justify-between">
                                 <Label>Column Mapping</Label>
                                 <span class="text-xs text-muted-foreground">
-                                    {{ matchedFieldCount }} of {{ importHeaders.length }} columns matched
+                                    {{ matchedFieldCount }} of
+                                    {{ importHeaders.length }} columns matched
                                 </span>
                             </div>
                             <div class="grid gap-1.5">
@@ -2121,30 +3333,49 @@ onMounted(() => {
                                 >
                                     <span
                                         class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset"
-                                        :class="mapping.matchedField
-                                            ? 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20'
-                                            : 'bg-muted text-muted-foreground ring-border'"
+                                        :class="
+                                            mapping.matchedField
+                                                ? 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20'
+                                                : 'bg-muted text-muted-foreground ring-border'
+                                        "
                                     >
                                         {{ mapping.header }}
                                     </span>
-                                    <span v-if="mapping.matchedField" class="text-muted-foreground">&rarr;</span>
-                                    <span v-if="mapping.matchedField" class="text-sm font-medium">{{ mapping.matchedField }}</span>
-                                    <span v-else class="text-xs text-muted-foreground italic">ignored</span>
+                                    <span
+                                        v-if="mapping.matchedField"
+                                        class="text-muted-foreground"
+                                        >&rarr;</span
+                                    >
+                                    <span
+                                        v-if="mapping.matchedField"
+                                        class="text-sm font-medium"
+                                        >{{ mapping.matchedField }}</span
+                                    >
+                                    <span
+                                        v-else
+                                        class="text-xs text-muted-foreground italic"
+                                        >ignored</span
+                                    >
                                 </div>
                             </div>
                         </div>
 
                         <p class="text-sm text-muted-foreground">
-                            Found <strong>{{ importRows.length }}</strong> test case(s) to import
+                            Found <strong>{{ importRows.length }}</strong> test
+                            case(s) to import
                         </p>
 
                         <!-- Suite selector -->
-                        <div class="rounded-lg border p-4 bg-muted/30 space-y-3">
+                        <div
+                            class="space-y-3 rounded-lg border bg-muted/30 p-4"
+                        >
                             <div class="space-y-2">
                                 <Label>Test Suite</Label>
                                 <Select v-model="importParentSuiteId">
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select suite..." />
+                                        <SelectValue
+                                            placeholder="Select suite..."
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem
@@ -2158,10 +3389,25 @@ onMounted(() => {
                                 </Select>
                             </div>
                             <div class="space-y-2">
-                                <Label>Subcategory <span class="text-muted-foreground font-normal">(optional)</span></Label>
-                                <Select v-model="importSubcategoryId" :disabled="!importSubcategoryOptions.length">
+                                <Label
+                                    >Subcategory
+                                    <span
+                                        class="font-normal text-muted-foreground"
+                                        >(optional)</span
+                                    ></Label
+                                >
+                                <Select
+                                    v-model="importSubcategoryId"
+                                    :disabled="!importSubcategoryOptions.length"
+                                >
                                     <SelectTrigger>
-                                        <SelectValue :placeholder="importSubcategoryOptions.length ? 'Select subcategory...' : 'No subcategories'" />
+                                        <SelectValue
+                                            :placeholder="
+                                                importSubcategoryOptions.length
+                                                    ? 'Select subcategory...'
+                                                    : 'No subcategories'
+                                            "
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem
@@ -2183,11 +3429,20 @@ onMounted(() => {
                     </Button>
                     <Button
                         @click="submitImport"
-                        :disabled="!importTargetSuiteId || importRows.length === 0 || isImportingCases || matchedFieldCount === 0"
+                        :disabled="
+                            !importTargetSuiteId ||
+                            importRows.length === 0 ||
+                            isImportingCases ||
+                            matchedFieldCount === 0
+                        "
                         class="gap-2"
                     >
                         <Download class="h-4 w-4" />
-                        {{ isImportingCases ? 'Importing...' : `Import ${importRows.length} test case(s)` }}
+                        {{
+                            isImportingCases
+                                ? 'Importing...'
+                                : `Import ${importRows.length} test case(s)`
+                        }}
                     </Button>
                 </DialogFooter>
             </DialogContent>

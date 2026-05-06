@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { ArrowUp } from 'lucide-vue-next';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { Button } from '@/components/ui/button';
 
 const show = ref(false);
@@ -22,7 +22,14 @@ const startHideTimer = () => {
     }, 3000);
 };
 
-const getScrollInfo = (target: EventTarget | null): { scrollTop: number; scrollHeight: number; clientHeight: number; element: Element | Window } | null => {
+const getScrollInfo = (
+    target: EventTarget | null,
+): {
+    scrollTop: number;
+    scrollHeight: number;
+    clientHeight: number;
+    element: Element | Window;
+} | null => {
     if (!target) return null;
 
     if (target === window || target === document) {
@@ -48,7 +55,11 @@ const getScrollInfo = (target: EventTarget | null): { scrollTop: number; scrollH
     return null;
 };
 
-const canScrollDown = (info: { scrollTop: number; scrollHeight: number; clientHeight: number }): boolean => {
+const canScrollDown = (info: {
+    scrollTop: number;
+    scrollHeight: number;
+    clientHeight: number;
+}): boolean => {
     const remaining = info.scrollHeight - info.scrollTop - info.clientHeight;
     return remaining > 10;
 };
@@ -86,7 +97,10 @@ const scrollToTop = () => {
 
 onMounted(() => {
     // Use capture to intercept scroll on any element, including inner containers
-    document.addEventListener('scroll', onScroll, { passive: true, capture: true });
+    document.addEventListener('scroll', onScroll, {
+        passive: true,
+        capture: true,
+    });
 
     if (window.scrollY > SCROLL_THRESHOLD) {
         activeTarget = window;
@@ -113,7 +127,7 @@ onBeforeUnmount(() => {
             v-if="show"
             variant="outline"
             size="icon"
-            class="fixed bottom-6 right-6 z-50 h-10 w-10 rounded-full shadow-lg cursor-pointer"
+            class="fixed right-6 bottom-6 z-50 h-10 w-10 cursor-pointer rounded-full shadow-lg"
             @click="scrollToTop"
         >
             <ArrowUp class="h-5 w-5" />

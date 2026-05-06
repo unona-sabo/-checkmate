@@ -1,40 +1,5 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
-import type {
-    ProjectFeature,
-    CoverageAnalysis,
-    CoverageModuleStats,
-    CoverageStatistics,
-    CoverageGap,
-    AIGap,
-    AIAnalysisData,
-    TestCaseSummary,
-    Checklist,
-} from '@/types/checkmate';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     BarChart3,
     Plus,
@@ -60,12 +25,53 @@ import {
     FileText,
     ClipboardList,
 } from 'lucide-vue-next';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ref, computed, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { priorityVariant } from '@/lib/badge-variants';
+import { type BreadcrumbItem, type Project } from '@/types';
+import type {
+    ProjectFeature,
+    CoverageAnalysis,
+    CoverageModuleStats,
+    CoverageStatistics,
+    CoverageGap,
+    AIGap,
+    AIAnalysisData,
+    TestCaseSummary,
+    Checklist,
+} from '@/types/checkmate';
 
-const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;
+const MODULE_OPTIONS = [
+    'UI',
+    'API',
+    'Backend',
+    'Database',
+    'Integration',
+] as const;
 
 const props = defineProps<{
     project: Project;
@@ -82,11 +88,19 @@ const props = defineProps<{
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
-    { title: 'Test Coverage', href: `/projects/${props.project.id}/test-coverage` },
+    {
+        title: 'Test Coverage',
+        href: `/projects/${props.project.id}/test-coverage`,
+    },
 ];
 
 // Tabs
-type TabKey = 'overview' | 'ai-analysis' | 'gaps' | 'recommendations' | 'history';
+type TabKey =
+    | 'overview'
+    | 'ai-analysis'
+    | 'gaps'
+    | 'recommendations'
+    | 'history';
 const activeTab = ref<TabKey>('overview');
 const tabs: { key: TabKey; label: string; icon: typeof BarChart3 }[] = [
     { key: 'overview', label: 'Overview', icon: BarChart3 },
@@ -98,7 +112,9 @@ const tabs: { key: TabKey; label: string; icon: typeof BarChart3 }[] = [
 
 // AI Analysis state
 const isAnalyzing = ref(false);
-const analysisResults = ref<AIAnalysisData | null>(props.latestAnalysis?.analysis_data as AIAnalysisData | null);
+const analysisResults = ref<AIAnalysisData | null>(
+    props.latestAnalysis?.analysis_data as AIAnalysisData | null,
+);
 const generatingForGap = ref<string | null>(null);
 const generatedTestCases = ref<Record<string, unknown>[]>([]);
 const showGeneratedModal = ref(false);
@@ -135,7 +151,8 @@ const selectedFeature = computed(() => {
 });
 
 const selectFeature = (featureId: number) => {
-    selectedFeatureId.value = selectedFeatureId.value === featureId ? null : featureId;
+    selectedFeatureId.value =
+        selectedFeatureId.value === featureId ? null : featureId;
 };
 
 const clearFeatureSelection = () => {
@@ -148,7 +165,10 @@ const displayedCoverageByModule = computed(() => {
     const f = selectedFeature.value;
 
     // Build module stats from test case modules
-    const moduleMap = new Map<string, { test_cases_count: number; checklists_count: number }>();
+    const moduleMap = new Map<
+        string,
+        { test_cases_count: number; checklists_count: number }
+    >();
 
     // Seed with feature-level modules
     const featureModules = f.module?.length ? f.module : ['Uncategorized'];
@@ -164,7 +184,10 @@ const displayedCoverageByModule = computed(() => {
             if (existing) {
                 existing.test_cases_count++;
             } else {
-                moduleMap.set(mod, { test_cases_count: 1, checklists_count: 0 });
+                moduleMap.set(mod, {
+                    test_cases_count: 1,
+                    checklists_count: 0,
+                });
             }
         }
     }
@@ -177,13 +200,17 @@ const displayedCoverageByModule = computed(() => {
             if (existing) {
                 existing.checklists_count++;
             } else {
-                moduleMap.set(mod, { test_cases_count: 0, checklists_count: 1 });
+                moduleMap.set(mod, {
+                    test_cases_count: 0,
+                    checklists_count: 1,
+                });
             }
         }
     }
 
     return Array.from(moduleMap.entries()).map(([mod, stats]) => {
-        const modCovered = stats.test_cases_count > 0 || stats.checklists_count > 0;
+        const modCovered =
+            stats.test_cases_count > 0 || stats.checklists_count > 0;
         return {
             module: mod,
             total_features: 1,
@@ -210,14 +237,18 @@ const filteredFeatures = computed(() => {
 });
 
 // Coverage history
-const coverageHistory = ref<{ date: string; coverage: number; features: number; gaps: number }[]>([]);
+const coverageHistory = ref<
+    { date: string; coverage: number; features: number; gaps: number }[]
+>([]);
 const loadingHistory = ref(false);
 
 const loadHistory = async () => {
     if (coverageHistory.value.length > 0) return;
     loadingHistory.value = true;
     try {
-        const response = await fetch(`/projects/${props.project.id}/test-coverage/history`);
+        const response = await fetch(
+            `/projects/${props.project.id}/test-coverage/history`,
+        );
         coverageHistory.value = await response.json();
     } finally {
         loadingHistory.value = false;
@@ -245,25 +276,45 @@ const getCoverageBg = (coverage: number): string => {
 
 const formatDate = (date: string | null): string => {
     if (!date) return 'Never';
-    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
 };
 
 // AI Analysis
 const runAnalysis = async () => {
     isAnalyzing.value = true;
     try {
-        const response = await fetch(`/projects/${props.project.id}/test-coverage/ai-analysis`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                'X-Requested-With': 'XMLHttpRequest',
+        const response = await fetch(
+            `/projects/${props.project.id}/test-coverage/ai-analysis`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN':
+                        (
+                            document.querySelector(
+                                'meta[name="csrf-token"]',
+                            ) as HTMLMetaElement
+                        )?.content || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
             },
-        });
+        );
         const data = await response.json();
         analysisResults.value = data.analysis;
         activeTab.value = 'recommendations';
-        router.reload({ only: ['statistics', 'coverageByModule', 'latestAnalysis', 'features', 'gaps'] });
+        router.reload({
+            only: [
+                'statistics',
+                'coverageByModule',
+                'latestAnalysis',
+                'features',
+                'gaps',
+            ],
+        });
     } catch (error) {
         console.error('Analysis error:', error);
     } finally {
@@ -275,15 +326,23 @@ const generateTestCases = async (gap: AIGap) => {
     generatingForGap.value = gap.id;
     currentGapName.value = gap.feature;
     try {
-        const response = await fetch(`/projects/${props.project.id}/test-coverage/generate-test-cases`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                'X-Requested-With': 'XMLHttpRequest',
+        const response = await fetch(
+            `/projects/${props.project.id}/test-coverage/generate-test-cases`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN':
+                        (
+                            document.querySelector(
+                                'meta[name="csrf-token"]',
+                            ) as HTMLMetaElement
+                        )?.content || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(gap),
             },
-            body: JSON.stringify(gap),
-        });
+        );
         const data = await response.json();
         generatedTestCases.value = data.test_cases;
         showGeneratedModal.value = true;
@@ -296,13 +355,23 @@ const generateTestCases = async (gap: AIGap) => {
 
 // Feature CRUD
 const addFeature = () => {
-    router.post(`/projects/${props.project.id}/test-coverage/features`, featureForm.value, {
-        preserveScroll: true,
-        onSuccess: () => {
-            showAddFeatureDialog.value = false;
-            featureForm.value = { name: '', description: '', module: [], category: '', priority: 'medium' };
+    router.post(
+        `/projects/${props.project.id}/test-coverage/features`,
+        featureForm.value,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showAddFeatureDialog.value = false;
+                featureForm.value = {
+                    name: '',
+                    description: '',
+                    module: [],
+                    category: '',
+                    priority: 'medium',
+                };
+            },
         },
-    });
+    );
 };
 
 const startEdit = (feature: ProjectFeature) => {
@@ -319,25 +388,33 @@ const startEdit = (feature: ProjectFeature) => {
 
 const updateFeature = () => {
     if (!editingFeature.value) return;
-    router.put(`/projects/${props.project.id}/test-coverage/features/${editingFeature.value.id}`, editForm.value, {
-        preserveScroll: true,
-        onSuccess: () => {
-            showEditFeatureDialog.value = false;
-            editingFeature.value = null;
+    router.put(
+        `/projects/${props.project.id}/test-coverage/features/${editingFeature.value.id}`,
+        editForm.value,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showEditFeatureDialog.value = false;
+                editingFeature.value = null;
+            },
         },
-    });
+    );
 };
 
 const deleteFeature = (featureId: number) => {
-    router.delete(`/projects/${props.project.id}/test-coverage/features/${featureId}`, {
-        preserveScroll: true,
-    });
+    router.delete(
+        `/projects/${props.project.id}/test-coverage/features/${featureId}`,
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 // Expanded feature rows
 const expandedFeatureId = ref<number | null>(null);
 const toggleExpanded = (featureId: number) => {
-    expandedFeatureId.value = expandedFeatureId.value === featureId ? null : featureId;
+    expandedFeatureId.value =
+        expandedFeatureId.value === featureId ? null : featureId;
 };
 
 // Link Test Cases dialog
@@ -355,7 +432,9 @@ const availableSuitesForLink = computed(() => {
             suiteMap.set(tc.test_suite.id, tc.test_suite.name);
         }
     }
-    return Array.from(suiteMap, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(suiteMap, ([id, name]) => ({ id, name })).sort((a, b) =>
+        a.name.localeCompare(b.name),
+    );
 });
 
 const filteredAllTestCases = computed(() => {
@@ -369,7 +448,9 @@ const filteredAllTestCases = computed(() => {
     if (linkTestCaseSearch.value) {
         const q = linkTestCaseSearch.value.toLowerCase();
         results = results.filter(
-            (tc) => tc.title.toLowerCase().includes(q) || tc.test_suite?.name.toLowerCase().includes(q),
+            (tc) =>
+                tc.title.toLowerCase().includes(q) ||
+                tc.test_suite?.name.toLowerCase().includes(q),
         );
     }
 
@@ -384,7 +465,9 @@ const openLinkTestCasesDialog = (feature: ProjectFeature) => {
     linkingTestCaseFeature.value = feature;
     linkTestCaseSearch.value = '';
     linkTestCaseSuiteFilter.value = 'all';
-    linkedTestCaseSnapshot.value = new Set(feature.test_cases?.map((tc) => tc.id) ?? []);
+    linkedTestCaseSnapshot.value = new Set(
+        feature.test_cases?.map((tc) => tc.id) ?? [],
+    );
     showLinkTestCasesDialog.value = true;
 };
 
@@ -404,10 +487,13 @@ const toggleLink = (testCaseId: number) => {
     };
 
     if (wasLinked) {
-        router.delete(`/projects/${props.project.id}/test-coverage/features/${feature.id}/test-cases/${testCaseId}`, {
-            preserveScroll: true,
-            onFinish,
-        });
+        router.delete(
+            `/projects/${props.project.id}/test-coverage/features/${feature.id}/test-cases/${testCaseId}`,
+            {
+                preserveScroll: true,
+                onFinish,
+            },
+        );
     } else {
         router.post(
             `/projects/${props.project.id}/test-coverage/features/${feature.id}/link-test-case`,
@@ -418,9 +504,12 @@ const toggleLink = (testCaseId: number) => {
 };
 
 const unlinkTestCase = (featureId: number, testCaseId: number) => {
-    router.delete(`/projects/${props.project.id}/test-coverage/features/${featureId}/test-cases/${testCaseId}`, {
-        preserveScroll: true,
-    });
+    router.delete(
+        `/projects/${props.project.id}/test-coverage/features/${featureId}/test-cases/${testCaseId}`,
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 // Link Checklists dialog
@@ -433,17 +522,24 @@ const linkedChecklistSnapshot = ref(new Set<number>());
 const filteredAllChecklists = computed(() => {
     if (!linkChecklistSearch.value) return props.allChecklists;
     const q = linkChecklistSearch.value.toLowerCase();
-    return props.allChecklists.filter((cl) => cl.name.toLowerCase().includes(q));
+    return props.allChecklists.filter((cl) =>
+        cl.name.toLowerCase().includes(q),
+    );
 });
 
-const isChecklistLinked = (_feature: ProjectFeature, checklistId: number): boolean => {
+const isChecklistLinked = (
+    _feature: ProjectFeature,
+    checklistId: number,
+): boolean => {
     return linkedChecklistSnapshot.value.has(checklistId);
 };
 
 const openLinkChecklistsDialog = (feature: ProjectFeature) => {
     linkingChecklistFeature.value = feature;
     linkChecklistSearch.value = '';
-    linkedChecklistSnapshot.value = new Set(feature.checklists?.map((cl) => cl.id) ?? []);
+    linkedChecklistSnapshot.value = new Set(
+        feature.checklists?.map((cl) => cl.id) ?? [],
+    );
     showLinkChecklistsDialog.value = true;
 };
 
@@ -463,10 +559,13 @@ const toggleChecklistLink = (checklistId: number) => {
     };
 
     if (wasLinked) {
-        router.delete(`/projects/${props.project.id}/test-coverage/features/${feature.id}/checklists/${checklistId}`, {
-            preserveScroll: true,
-            onFinish,
-        });
+        router.delete(
+            `/projects/${props.project.id}/test-coverage/features/${feature.id}/checklists/${checklistId}`,
+            {
+                preserveScroll: true,
+                onFinish,
+            },
+        );
     } else {
         router.post(
             `/projects/${props.project.id}/test-coverage/features/${feature.id}/link-checklist`,
@@ -477,26 +576,47 @@ const toggleChecklistLink = (checklistId: number) => {
 };
 
 const unlinkChecklist = (featureId: number, checklistId: number) => {
-    router.delete(`/projects/${props.project.id}/test-coverage/features/${featureId}/checklists/${checklistId}`, {
-        preserveScroll: true,
-    });
+    router.delete(
+        `/projects/${props.project.id}/test-coverage/features/${featureId}/checklists/${checklistId}`,
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 // Auto-link
 const autoLinkSingle = (featureId: number) => {
-    router.post(`/projects/${props.project.id}/test-coverage/features/${featureId}/auto-link`, {}, {
-        preserveScroll: true,
-    });
+    router.post(
+        `/projects/${props.project.id}/test-coverage/features/${featureId}/auto-link`,
+        {},
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 const autoLinkAll = () => {
-    router.post(`/projects/${props.project.id}/test-coverage/auto-link-all`, {}, {
-        preserveScroll: true,
-    });
+    router.post(
+        `/projects/${props.project.id}/test-coverage/auto-link-all`,
+        {},
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 const refreshData = () => {
-    router.reload({ only: ['statistics', 'coverageByModule', 'latestAnalysis', 'features', 'gaps', 'allTestCases', 'allChecklists'] });
+    router.reload({
+        only: [
+            'statistics',
+            'coverageByModule',
+            'latestAnalysis',
+            'features',
+            'gaps',
+            'allTestCases',
+            'allChecklists',
+        ],
+    });
 };
 </script>
 
@@ -507,26 +627,42 @@ const refreshData = () => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="flex items-center gap-2 text-2xl font-bold text-foreground">
+                    <h1
+                        class="flex items-center gap-2 text-2xl font-bold text-foreground"
+                    >
                         <BarChart3 class="h-6 w-6" />
                         Test Coverage Analytics
                     </h1>
-                    <p class="mt-1 text-sm text-muted-foreground">AI-powered insights into your test coverage</p>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        AI-powered insights into your test coverage
+                    </p>
                 </div>
                 <div class="flex gap-2">
                     <RestrictedAction>
-                        <Button variant="outline" @click="autoLinkAll" class="cursor-pointer">
+                        <Button
+                            variant="outline"
+                            @click="autoLinkAll"
+                            class="cursor-pointer"
+                        >
                             <Wand2 class="mr-1 h-4 w-4" />
                             Auto-Link All
                         </Button>
                     </RestrictedAction>
                     <RestrictedAction>
-                        <Button variant="outline" @click="showAddFeatureDialog = true" class="cursor-pointer">
+                        <Button
+                            variant="outline"
+                            @click="showAddFeatureDialog = true"
+                            class="cursor-pointer"
+                        >
                             <Plus class="mr-1 h-4 w-4" />
                             Add Feature
                         </Button>
                     </RestrictedAction>
-                    <Button variant="outline" @click="refreshData" class="cursor-pointer">
+                    <Button
+                        variant="outline"
+                        @click="refreshData"
+                        class="cursor-pointer"
+                    >
                         <RefreshCw class="mr-1 h-4 w-4" />
                         Refresh
                     </Button>
@@ -541,8 +677,17 @@ const refreshData = () => {
                             <BarChart3 class="h-6 w-6 text-primary" />
                         </div>
                         <div>
-                            <p class="text-sm text-muted-foreground">Overall Coverage</p>
-                            <p class="text-2xl font-bold" :class="getCoverageColor(statistics.overall_coverage)">
+                            <p class="text-sm text-muted-foreground">
+                                Overall Coverage
+                            </p>
+                            <p
+                                class="text-2xl font-bold"
+                                :class="
+                                    getCoverageColor(
+                                        statistics.overall_coverage,
+                                    )
+                                "
+                            >
                                 {{ statistics.overall_coverage }}%
                             </p>
                         </div>
@@ -554,8 +699,12 @@ const refreshData = () => {
                             <FileText class="h-6 w-6 text-blue-500" />
                         </div>
                         <div>
-                            <p class="text-sm text-muted-foreground">Total Test Cases</p>
-                            <p class="text-2xl font-bold text-foreground">{{ statistics.total_test_cases }}</p>
+                            <p class="text-sm text-muted-foreground">
+                                Total Test Cases
+                            </p>
+                            <p class="text-2xl font-bold text-foreground">
+                                {{ statistics.total_test_cases }}
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
@@ -565,8 +714,12 @@ const refreshData = () => {
                             <ClipboardList class="h-6 w-6 text-violet-500" />
                         </div>
                         <div>
-                            <p class="text-sm text-muted-foreground">Total Checklists</p>
-                            <p class="text-2xl font-bold text-foreground">{{ statistics.total_checklists }}</p>
+                            <p class="text-sm text-muted-foreground">
+                                Total Checklists
+                            </p>
+                            <p class="text-2xl font-bold text-foreground">
+                                {{ statistics.total_checklists }}
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
@@ -576,10 +729,15 @@ const refreshData = () => {
                             <CheckCircle class="h-6 w-6 text-emerald-500" />
                         </div>
                         <div>
-                            <p class="text-sm text-muted-foreground">Features Covered</p>
+                            <p class="text-sm text-muted-foreground">
+                                Features Covered
+                            </p>
                             <p class="text-2xl font-bold text-foreground">
                                 {{ statistics.covered_features }}
-                                <span class="text-sm font-normal text-muted-foreground">/ {{ statistics.total_features }}</span>
+                                <span
+                                    class="text-sm font-normal text-muted-foreground"
+                                    >/ {{ statistics.total_features }}</span
+                                >
                             </p>
                         </div>
                     </CardContent>
@@ -590,8 +748,12 @@ const refreshData = () => {
                             <AlertTriangle class="h-6 w-6 text-amber-500" />
                         </div>
                         <div>
-                            <p class="text-sm text-muted-foreground">Coverage Gaps</p>
-                            <p class="text-2xl font-bold text-foreground">{{ statistics.gaps_count }}</p>
+                            <p class="text-sm text-muted-foreground">
+                                Coverage Gaps
+                            </p>
+                            <p class="text-2xl font-bold text-foreground">
+                                {{ statistics.gaps_count }}
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
@@ -600,7 +762,10 @@ const refreshData = () => {
             <!-- Tabs -->
             <Card>
                 <div class="border-b">
-                    <nav class="flex gap-0 overflow-x-auto px-4" aria-label="Tabs">
+                    <nav
+                        class="flex gap-0 overflow-x-auto px-4"
+                        aria-label="Tabs"
+                    >
                         <button
                             v-for="tab in tabs"
                             :key="tab.key"
@@ -628,36 +793,102 @@ const refreshData = () => {
                         <div class="flex items-center gap-3">
                             <Target class="h-5 w-5 text-primary" />
                             <div>
-                                <span class="font-medium text-foreground">{{ selectedFeature.name }}</span>
-                                <span class="ml-2 text-sm text-muted-foreground">
-                                    {{ selectedFeature.test_cases_count ?? 0 }} test cases<span v-if="(selectedFeature.checklists_count ?? 0) > 0"> · {{ selectedFeature.checklists_count }} checklists</span>
+                                <span class="font-medium text-foreground">{{
+                                    selectedFeature.name
+                                }}</span>
+                                <span
+                                    class="ml-2 text-sm text-muted-foreground"
+                                >
+                                    {{
+                                        selectedFeature.test_cases_count ?? 0
+                                    }}
+                                    test cases<span
+                                        v-if="
+                                            (selectedFeature.checklists_count ??
+                                                0) > 0
+                                        "
+                                    >
+                                        ·
+                                        {{
+                                            selectedFeature.checklists_count
+                                        }}
+                                        checklists</span
+                                    >
                                 </span>
                             </div>
                         </div>
-                        <Button variant="outline" size="sm" class="cursor-pointer" @click="clearFeatureSelection">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            class="cursor-pointer"
+                            @click="clearFeatureSelection"
+                        >
                             <X class="mr-1 h-3.5 w-3.5" />
                             Show All
                         </Button>
                     </div>
 
                     <!-- Coverage by Module -->
-                    <div v-if="displayedCoverageByModule.length > 0" class="mb-8">
+                    <div
+                        v-if="displayedCoverageByModule.length > 0"
+                        class="mb-8"
+                    >
                         <h3 class="mb-4 text-lg font-semibold text-foreground">
-                            {{ selectedFeature ? 'Coverage in Feature Modules' : 'Coverage by Module' }}
+                            {{
+                                selectedFeature
+                                    ? 'Coverage in Feature Modules'
+                                    : 'Coverage by Module'
+                            }}
                         </h3>
                         <div class="grid gap-4 md:grid-cols-2">
-                            <Card v-for="mod in displayedCoverageByModule" :key="mod.module">
+                            <Card
+                                v-for="mod in displayedCoverageByModule"
+                                :key="mod.module"
+                            >
                                 <CardContent class="p-5">
-                                    <div class="mb-3 flex items-center justify-between">
-                                        <h4 class="font-medium text-foreground">{{ mod.module }}</h4>
-                                        <span class="text-xl font-bold" :class="getCoverageColor(mod.coverage_percentage)">
+                                    <div
+                                        class="mb-3 flex items-center justify-between"
+                                    >
+                                        <h4 class="font-medium text-foreground">
+                                            {{ mod.module }}
+                                        </h4>
+                                        <span
+                                            class="text-xl font-bold"
+                                            :class="
+                                                getCoverageColor(
+                                                    mod.coverage_percentage,
+                                                )
+                                            "
+                                        >
                                             {{ mod.coverage_percentage }}%
                                         </span>
                                     </div>
-                                    <Progress :model-value="mod.coverage_percentage" class="mb-2" />
-                                    <div class="flex justify-between text-xs text-muted-foreground">
-                                        <span>{{ mod.covered_features }} / {{ mod.total_features }} features</span>
-                                        <span>{{ mod.test_cases_count }} test cases<span v-if="mod.checklists_count"> · {{ mod.checklists_count }} checklists</span></span>
+                                    <Progress
+                                        :model-value="mod.coverage_percentage"
+                                        class="mb-2"
+                                    />
+                                    <div
+                                        class="flex justify-between text-xs text-muted-foreground"
+                                    >
+                                        <span
+                                            >{{ mod.covered_features }} /
+                                            {{
+                                                mod.total_features
+                                            }}
+                                            features</span
+                                        >
+                                        <span
+                                            >{{ mod.test_cases_count }} test
+                                            cases<span
+                                                v-if="mod.checklists_count"
+                                            >
+                                                ·
+                                                {{
+                                                    mod.checklists_count
+                                                }}
+                                                checklists</span
+                                            ></span
+                                        >
                                     </div>
                                 </CardContent>
                             </Card>
@@ -667,9 +898,13 @@ const refreshData = () => {
                     <!-- Features list -->
                     <div>
                         <div class="mb-4 flex items-center justify-between">
-                            <h3 class="text-lg font-semibold text-foreground">Project Features</h3>
+                            <h3 class="text-lg font-semibold text-foreground">
+                                Project Features
+                            </h3>
                             <div class="relative w-64">
-                                <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search
+                                    class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                                />
                                 <Input
                                     v-model="featureSearch"
                                     placeholder="Search features..."
@@ -685,35 +920,74 @@ const refreshData = () => {
                             </div>
                         </div>
 
-                        <div v-if="filteredFeatures.length === 0" class="py-12 text-center text-muted-foreground">
+                        <div
+                            v-if="filteredFeatures.length === 0"
+                            class="py-12 text-center text-muted-foreground"
+                        >
                             <Target class="mx-auto mb-3 h-12 w-12 opacity-30" />
-                            <p class="text-lg font-medium">No features defined yet</p>
-                            <p class="mt-1 text-sm">Add project features to start tracking test coverage</p>
+                            <p class="text-lg font-medium">
+                                No features defined yet
+                            </p>
+                            <p class="mt-1 text-sm">
+                                Add project features to start tracking test
+                                coverage
+                            </p>
                         </div>
 
                         <div v-else class="space-y-2">
-                            <div v-for="feature in filteredFeatures" :key="feature.id">
+                            <div
+                                v-for="feature in filteredFeatures"
+                                :key="feature.id"
+                            >
                                 <div
                                     class="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/30"
                                     :class="{
-                                        'rounded-b-none border-b-0': expandedFeatureId === feature.id,
-                                        'border-primary/50 bg-primary/5': selectedFeatureId === feature.id,
+                                        'rounded-b-none border-b-0':
+                                            expandedFeatureId === feature.id,
+                                        'border-primary/50 bg-primary/5':
+                                            selectedFeatureId === feature.id,
                                     }"
                                 >
-                                    <div class="flex-1 cursor-pointer" @click="selectFeature(feature.id)">
+                                    <div
+                                        class="flex-1 cursor-pointer"
+                                        @click="selectFeature(feature.id)"
+                                    >
                                         <div class="flex items-center gap-2">
-                                            <span class="font-medium text-foreground">{{ feature.name }}</span>
-                                            <Badge :variant="priorityVariant(feature.priority)" class="text-xs uppercase">
+                                            <span
+                                                class="font-medium text-foreground"
+                                                >{{ feature.name }}</span
+                                            >
+                                            <Badge
+                                                :variant="
+                                                    priorityVariant(
+                                                        feature.priority,
+                                                    )
+                                                "
+                                                class="text-xs uppercase"
+                                            >
                                                 {{ feature.priority }}
                                             </Badge>
-                                            <Badge v-for="mod in (feature.module || [])" :key="mod" variant="outline" class="text-xs">
+                                            <Badge
+                                                v-for="mod in feature.module ||
+                                                []"
+                                                :key="mod"
+                                                variant="outline"
+                                                class="text-xs"
+                                            >
                                                 {{ mod }}
                                             </Badge>
-                                            <Badge v-if="feature.category" variant="secondary" class="text-xs">
+                                            <Badge
+                                                v-if="feature.category"
+                                                variant="secondary"
+                                                class="text-xs"
+                                            >
                                                 {{ feature.category }}
                                             </Badge>
                                         </div>
-                                        <p v-if="feature.description" class="mt-1 text-sm text-muted-foreground">
+                                        <p
+                                            v-if="feature.description"
+                                            class="mt-1 text-sm text-muted-foreground"
+                                        >
                                             {{ feature.description }}
                                         </p>
                                     </div>
@@ -721,38 +995,109 @@ const refreshData = () => {
                                         <button
                                             @click="toggleExpanded(feature.id)"
                                             class="cursor-pointer text-sm font-medium"
-                                            :class="(feature.test_cases_count ?? 0) > 0 || (feature.checklists_count ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400 hover:underline' : 'text-muted-foreground'"
+                                            :class="
+                                                (feature.test_cases_count ??
+                                                    0) > 0 ||
+                                                (feature.checklists_count ??
+                                                    0) > 0
+                                                    ? 'text-emerald-600 hover:underline dark:text-emerald-400'
+                                                    : 'text-muted-foreground'
+                                            "
                                         >
-                                            <span class="flex items-center gap-1">
+                                            <span
+                                                class="flex items-center gap-1"
+                                            >
                                                 <component
-                                                    :is="expandedFeatureId === feature.id ? ChevronDown : ChevronRight"
+                                                    :is="
+                                                        expandedFeatureId ===
+                                                        feature.id
+                                                            ? ChevronDown
+                                                            : ChevronRight
+                                                    "
                                                     class="h-4 w-4"
                                                 />
-                                                {{ feature.test_cases_count ?? 0 }} test cases<span v-if="(feature.checklists_count ?? 0) > 0"> · {{ feature.checklists_count }} checklists</span>
+                                                {{
+                                                    feature.test_cases_count ??
+                                                    0
+                                                }}
+                                                test cases<span
+                                                    v-if="
+                                                        (feature.checklists_count ??
+                                                            0) > 0
+                                                    "
+                                                >
+                                                    ·
+                                                    {{
+                                                        feature.checklists_count
+                                                    }}
+                                                    checklists</span
+                                                >
                                             </span>
                                         </button>
                                         <RestrictedAction>
-                                            <Button variant="ghost" size="sm" @click="autoLinkSingle(feature.id)" class="cursor-pointer" title="Auto-link matching test cases">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="
+                                                    autoLinkSingle(feature.id)
+                                                "
+                                                class="cursor-pointer"
+                                                title="Auto-link matching test cases"
+                                            >
                                                 <Wand2 class="h-4 w-4" />
                                             </Button>
                                         </RestrictedAction>
                                         <RestrictedAction>
-                                            <Button variant="ghost" size="sm" @click="openLinkTestCasesDialog(feature)" class="cursor-pointer" title="Link test cases">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="
+                                                    openLinkTestCasesDialog(
+                                                        feature,
+                                                    )
+                                                "
+                                                class="cursor-pointer"
+                                                title="Link test cases"
+                                            >
                                                 <Link2 class="h-4 w-4" />
                                             </Button>
                                         </RestrictedAction>
                                         <RestrictedAction>
-                                            <Button variant="ghost" size="sm" @click="openLinkChecklistsDialog(feature)" class="cursor-pointer" title="Link checklists">
-                                                <ClipboardList class="h-4 w-4" />
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="
+                                                    openLinkChecklistsDialog(
+                                                        feature,
+                                                    )
+                                                "
+                                                class="cursor-pointer"
+                                                title="Link checklists"
+                                            >
+                                                <ClipboardList
+                                                    class="h-4 w-4"
+                                                />
                                             </Button>
                                         </RestrictedAction>
                                         <RestrictedAction>
-                                            <Button variant="ghost" size="sm" @click="startEdit(feature)" class="cursor-pointer">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="startEdit(feature)"
+                                                class="cursor-pointer"
+                                            >
                                                 <Edit class="h-4 w-4" />
                                             </Button>
                                         </RestrictedAction>
                                         <RestrictedAction>
-                                            <Button variant="ghost" size="sm" @click="deleteFeature(feature.id)" class="cursor-pointer text-destructive hover:text-destructive">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="
+                                                    deleteFeature(feature.id)
+                                                "
+                                                class="cursor-pointer text-destructive hover:text-destructive"
+                                            >
                                                 <Trash2 class="h-4 w-4" />
                                             </Button>
                                         </RestrictedAction>
@@ -763,24 +1108,48 @@ const refreshData = () => {
                                     v-if="expandedFeatureId === feature.id"
                                     class="rounded-b-lg border border-t-0 bg-muted/20 px-4 py-3"
                                 >
-                                    <div v-if="feature.test_cases && feature.test_cases.length > 0" class="space-y-2">
+                                    <div
+                                        v-if="
+                                            feature.test_cases &&
+                                            feature.test_cases.length > 0
+                                        "
+                                        class="space-y-2"
+                                    >
                                         <div
                                             v-for="tc in feature.test_cases"
                                             :key="tc.id"
                                             class="flex items-center justify-between rounded border bg-background px-3 py-2"
                                         >
-                                            <div class="flex items-center gap-2">
-                                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/50">
-                                                    <FileText class="h-3.5 w-3.5 text-muted-foreground" />
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <div
+                                                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/50"
+                                                >
+                                                    <FileText
+                                                        class="h-3.5 w-3.5 text-muted-foreground"
+                                                    />
                                                 </div>
-                                                <span class="text-sm text-foreground">{{ tc.title }}</span>
-                                                <Badge v-if="tc.test_suite" variant="outline" class="text-xs">
+                                                <span
+                                                    class="text-sm text-foreground"
+                                                    >{{ tc.title }}</span
+                                                >
+                                                <Badge
+                                                    v-if="tc.test_suite"
+                                                    variant="outline"
+                                                    class="text-xs"
+                                                >
                                                     {{ tc.test_suite.name }}
                                                 </Badge>
                                             </div>
                                             <RestrictedAction>
                                                 <button
-                                                    @click="unlinkTestCase(feature.id, tc.id)"
+                                                    @click="
+                                                        unlinkTestCase(
+                                                            feature.id,
+                                                            tc.id,
+                                                        )
+                                                    "
                                                     class="cursor-pointer text-muted-foreground hover:text-destructive"
                                                     title="Unlink test case"
                                                 >
@@ -789,22 +1158,52 @@ const refreshData = () => {
                                             </RestrictedAction>
                                         </div>
                                     </div>
-                                    <div v-if="feature.checklists && feature.checklists.length > 0" class="space-y-2" :class="{ 'mt-3 border-t pt-3': feature.test_cases && feature.test_cases.length > 0 }">
-                                        <p class="text-xs font-medium text-muted-foreground uppercase">Checklists</p>
+                                    <div
+                                        v-if="
+                                            feature.checklists &&
+                                            feature.checklists.length > 0
+                                        "
+                                        class="space-y-2"
+                                        :class="{
+                                            'mt-3 border-t pt-3':
+                                                feature.test_cases &&
+                                                feature.test_cases.length > 0,
+                                        }"
+                                    >
+                                        <p
+                                            class="text-xs font-medium text-muted-foreground uppercase"
+                                        >
+                                            Checklists
+                                        </p>
                                         <div
                                             v-for="cl in feature.checklists"
                                             :key="cl.id"
                                             class="flex items-center justify-between rounded border bg-background px-3 py-2"
                                         >
-                                            <div class="flex items-center gap-2">
-                                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10">
-                                                    <ClipboardList class="h-3.5 w-3.5 text-violet-500" />
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <div
+                                                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10"
+                                                >
+                                                    <ClipboardList
+                                                        class="h-3.5 w-3.5 text-violet-500"
+                                                    />
                                                 </div>
-                                                <a :href="`/projects/${project.id}/checklists/${cl.id}`" class="text-sm text-foreground hover:underline">{{ cl.name }}</a>
+                                                <a
+                                                    :href="`/projects/${project.id}/checklists/${cl.id}`"
+                                                    class="text-sm text-foreground hover:underline"
+                                                    >{{ cl.name }}</a
+                                                >
                                             </div>
                                             <RestrictedAction>
                                                 <button
-                                                    @click="unlinkChecklist(feature.id, cl.id)"
+                                                    @click="
+                                                        unlinkChecklist(
+                                                            feature.id,
+                                                            cl.id,
+                                                        )
+                                                    "
                                                     class="cursor-pointer text-muted-foreground hover:text-destructive"
                                                     title="Unlink checklist"
                                                 >
@@ -813,7 +1212,19 @@ const refreshData = () => {
                                             </RestrictedAction>
                                         </div>
                                     </div>
-                                    <p v-if="(!feature.test_cases || feature.test_cases.length === 0) && (!feature.checklists || feature.checklists.length === 0)" class="text-sm text-muted-foreground">No test cases or checklists linked. Use auto-link or link manually.</p>
+                                    <p
+                                        v-if="
+                                            (!feature.test_cases ||
+                                                feature.test_cases.length ===
+                                                    0) &&
+                                            (!feature.checklists ||
+                                                feature.checklists.length === 0)
+                                        "
+                                        class="text-sm text-muted-foreground"
+                                    >
+                                        No test cases or checklists linked. Use
+                                        auto-link or link manually.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -823,23 +1234,37 @@ const refreshData = () => {
                 <!-- Tab: AI Analysis -->
                 <div v-if="activeTab === 'ai-analysis'" class="p-6">
                     <!-- AI Analysis Trigger -->
-                    <div class="mb-8 rounded-lg bg-gradient-to-r from-violet-600 to-blue-600 p-8 text-white">
+                    <div
+                        class="mb-8 rounded-lg bg-gradient-to-r from-violet-600 to-blue-600 p-8 text-white"
+                    >
                         <div class="flex items-center justify-between gap-6">
                             <div class="flex-1">
-                                <h2 class="mb-2 flex items-center gap-2 text-2xl font-bold">
+                                <h2
+                                    class="mb-2 flex items-center gap-2 text-2xl font-bold"
+                                >
                                     <Sparkles class="h-6 w-6" />
                                     AI-Powered Coverage Analysis
                                 </h2>
                                 <p class="text-violet-100">
-                                    Leverage Claude AI to analyze your test coverage, identify gaps, and get intelligent recommendations.
+                                    Leverage Claude AI to analyze your test
+                                    coverage, identify gaps, and get intelligent
+                                    recommendations.
                                 </p>
-                                <div v-if="!hasAnthropicKey" class="mt-4 rounded-lg border border-red-300 bg-red-500/20 p-3">
+                                <div
+                                    v-if="!hasAnthropicKey"
+                                    class="mt-4 rounded-lg border border-red-300 bg-red-500/20 p-3"
+                                >
                                     <p class="text-sm">
-                                        Anthropic API key not configured. Add ANTHROPIC_API_KEY to your .env file.
+                                        Anthropic API key not configured. Add
+                                        ANTHROPIC_API_KEY to your .env file.
                                     </p>
                                 </div>
-                                <p v-if="latestAnalysis?.analyzed_at" class="mt-2 text-sm text-violet-200">
-                                    Last analysis: {{ formatDate(latestAnalysis.analyzed_at) }}
+                                <p
+                                    v-if="latestAnalysis?.analyzed_at"
+                                    class="mt-2 text-sm text-violet-200"
+                                >
+                                    Last analysis:
+                                    {{ formatDate(latestAnalysis.analyzed_at) }}
                                 </p>
                             </div>
                             <RestrictedAction>
@@ -848,9 +1273,16 @@ const refreshData = () => {
                                     :disabled="isAnalyzing || !hasAnthropicKey"
                                     class="cursor-pointer bg-white px-8 py-6 font-bold text-violet-600 hover:bg-violet-50"
                                 >
-                                    <Loader2 v-if="isAnalyzing" class="mr-2 h-5 w-5 animate-spin" />
+                                    <Loader2
+                                        v-if="isAnalyzing"
+                                        class="mr-2 h-5 w-5 animate-spin"
+                                    />
                                     <Search v-else class="mr-2 h-5 w-5" />
-                                    {{ isAnalyzing ? 'Analyzing...' : 'Run AI Analysis' }}
+                                    {{
+                                        isAnalyzing
+                                            ? 'Analyzing...'
+                                            : 'Run AI Analysis'
+                                    }}
                                 </Button>
                             </RestrictedAction>
                         </div>
@@ -867,7 +1299,11 @@ const refreshData = () => {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p class="leading-relaxed text-muted-foreground">{{ analysisResults.summary }}</p>
+                                <p
+                                    class="leading-relaxed text-muted-foreground"
+                                >
+                                    {{ analysisResults.summary }}
+                                </p>
                             </CardContent>
                         </Card>
 
@@ -877,21 +1313,44 @@ const refreshData = () => {
                                 <CardTitle>Coverage by Category</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
+                                <div
+                                    class="grid grid-cols-2 gap-4 md:grid-cols-5"
+                                >
                                     <div
-                                        v-for="(percentage, category) in analysisResults.coverage_by_category"
+                                        v-for="(
+                                            percentage, category
+                                        ) in analysisResults.coverage_by_category"
                                         :key="category"
                                         class="text-center"
                                     >
-                                        <div class="mb-1 text-2xl font-bold" :class="getCoverageColor(percentage as number)">
+                                        <div
+                                            class="mb-1 text-2xl font-bold"
+                                            :class="
+                                                getCoverageColor(
+                                                    percentage as number,
+                                                )
+                                            "
+                                        >
                                             {{ percentage }}%
                                         </div>
-                                        <div class="mb-2 text-xs capitalize text-muted-foreground">{{ category }}</div>
-                                        <div class="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                                        <div
+                                            class="mb-2 text-xs text-muted-foreground capitalize"
+                                        >
+                                            {{ category }}
+                                        </div>
+                                        <div
+                                            class="h-2 w-full overflow-hidden rounded-full bg-secondary"
+                                        >
                                             <div
                                                 class="h-full rounded-full transition-all"
-                                                :class="getCoverageBg(percentage as number)"
-                                                :style="{ width: percentage + '%' }"
+                                                :class="
+                                                    getCoverageBg(
+                                                        percentage as number,
+                                                    )
+                                                "
+                                                :style="{
+                                                    width: percentage + '%',
+                                                }"
                                             />
                                         </div>
                                     </div>
@@ -903,8 +1362,12 @@ const refreshData = () => {
                         <Card v-if="analysisResults.well_covered?.length">
                             <CardHeader>
                                 <CardTitle class="flex items-center gap-2">
-                                    <CheckCircle class="h-5 w-5 text-emerald-500" />
-                                    Well-Covered Areas ({{ analysisResults.well_covered.length }})
+                                    <CheckCircle
+                                        class="h-5 w-5 text-emerald-500"
+                                    />
+                                    Well-Covered Areas ({{
+                                        analysisResults.well_covered.length
+                                    }})
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -914,12 +1377,29 @@ const refreshData = () => {
                                         :key="area.feature"
                                         class="rounded-lg border-l-4 border-emerald-500 bg-emerald-50 p-4 dark:bg-emerald-950/20"
                                     >
-                                        <div class="mb-2 flex items-center justify-between">
-                                            <h4 class="font-bold text-emerald-900 dark:text-emerald-100">{{ area.feature }}</h4>
-                                            <span class="text-xl font-bold text-emerald-600">{{ area.coverage }}%</span>
+                                        <div
+                                            class="mb-2 flex items-center justify-between"
+                                        >
+                                            <h4
+                                                class="font-bold text-emerald-900 dark:text-emerald-100"
+                                            >
+                                                {{ area.feature }}
+                                            </h4>
+                                            <span
+                                                class="text-xl font-bold text-emerald-600"
+                                                >{{ area.coverage }}%</span
+                                            >
                                         </div>
-                                        <p class="mb-1 text-sm text-emerald-700 dark:text-emerald-300">{{ area.test_count }} test cases</p>
-                                        <p class="text-sm text-muted-foreground">{{ area.strength }}</p>
+                                        <p
+                                            class="mb-1 text-sm text-emerald-700 dark:text-emerald-300"
+                                        >
+                                            {{ area.test_count }} test cases
+                                        </p>
+                                        <p
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            {{ area.strength }}
+                                        </p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -930,7 +1410,9 @@ const refreshData = () => {
                             <CardHeader>
                                 <CardTitle class="flex items-center gap-2">
                                     <Shield class="h-5 w-5 text-amber-500" />
-                                    Risk Assessment ({{ analysisResults.risks.length }})
+                                    Risk Assessment ({{
+                                        analysisResults.risks.length
+                                    }})
                                 </CardTitle>
                             </CardHeader>
                             <CardContent class="space-y-3">
@@ -940,19 +1422,35 @@ const refreshData = () => {
                                     class="rounded-lg border bg-amber-50/50 p-4 dark:bg-amber-950/10"
                                 >
                                     <div class="mb-2 flex items-center gap-2">
-                                        <h4 class="font-bold text-foreground">{{ risk.area }}</h4>
-                                        <Badge :variant="priorityVariant(risk.level)" class="uppercase">
+                                        <h4 class="font-bold text-foreground">
+                                            {{ risk.area }}
+                                        </h4>
+                                        <Badge
+                                            :variant="
+                                                priorityVariant(risk.level)
+                                            "
+                                            class="uppercase"
+                                        >
                                             {{ risk.level }}
                                         </Badge>
                                     </div>
-                                    <p class="mb-1 text-sm text-muted-foreground">
-                                        <strong>Reason:</strong> {{ risk.reason }}
+                                    <p
+                                        class="mb-1 text-sm text-muted-foreground"
+                                    >
+                                        <strong>Reason:</strong>
+                                        {{ risk.reason }}
                                     </p>
-                                    <p class="mb-1 text-sm text-muted-foreground">
-                                        <strong>Impact:</strong> {{ risk.impact }}
+                                    <p
+                                        class="mb-1 text-sm text-muted-foreground"
+                                    >
+                                        <strong>Impact:</strong>
+                                        {{ risk.impact }}
                                     </p>
-                                    <p class="text-sm text-blue-600 dark:text-blue-400">
-                                        <strong>Recommendation:</strong> {{ risk.recommendation }}
+                                    <p
+                                        class="text-sm text-blue-600 dark:text-blue-400"
+                                    >
+                                        <strong>Recommendation:</strong>
+                                        {{ risk.recommendation }}
                                     </p>
                                 </div>
                             </CardContent>
@@ -960,16 +1458,25 @@ const refreshData = () => {
                     </div>
 
                     <div v-else class="py-16 text-center">
-                        <Brain class="mx-auto mb-4 h-16 w-16 text-muted-foreground/30" />
-                        <p class="text-lg font-medium text-muted-foreground">No AI analysis yet</p>
-                        <p class="mt-1 text-sm text-muted-foreground">Run an AI analysis to get intelligent coverage insights</p>
+                        <Brain
+                            class="mx-auto mb-4 h-16 w-16 text-muted-foreground/30"
+                        />
+                        <p class="text-lg font-medium text-muted-foreground">
+                            No AI analysis yet
+                        </p>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Run an AI analysis to get intelligent coverage
+                            insights
+                        </p>
                     </div>
                 </div>
 
                 <!-- Tab: Coverage Gaps -->
                 <div v-if="activeTab === 'gaps'" class="p-6">
                     <div v-if="analysisResults?.gaps?.length" class="space-y-4">
-                        <h3 class="flex items-center gap-2 text-lg font-semibold text-foreground">
+                        <h3
+                            class="flex items-center gap-2 text-lg font-semibold text-foreground"
+                        >
                             <AlertTriangle class="h-5 w-5 text-amber-500" />
                             Coverage Gaps ({{ analysisResults.gaps.length }})
                         </h3>
@@ -978,26 +1485,56 @@ const refreshData = () => {
                             :key="gap.id"
                             class="rounded-r-lg border-l-4 p-5 transition-shadow hover:shadow-md"
                             :class="{
-                                'border-red-600 bg-red-50 dark:bg-red-950/10': gap.priority === 'critical',
-                                'border-orange-500 bg-orange-50 dark:bg-orange-950/10': gap.priority === 'high',
-                                'border-amber-500 bg-amber-50 dark:bg-amber-950/10': gap.priority === 'medium',
-                                'border-blue-500 bg-blue-50 dark:bg-blue-950/10': gap.priority === 'low',
+                                'border-red-600 bg-red-50 dark:bg-red-950/10':
+                                    gap.priority === 'critical',
+                                'border-orange-500 bg-orange-50 dark:bg-orange-950/10':
+                                    gap.priority === 'high',
+                                'border-amber-500 bg-amber-50 dark:bg-amber-950/10':
+                                    gap.priority === 'medium',
+                                'border-blue-500 bg-blue-50 dark:bg-blue-950/10':
+                                    gap.priority === 'low',
                             }"
                         >
                             <div class="flex items-start justify-between gap-4">
                                 <div class="flex-1">
                                     <div class="mb-2 flex items-center gap-3">
-                                        <h4 class="text-lg font-bold text-foreground">{{ gap.feature }}</h4>
-                                        <Badge :variant="priorityVariant(gap.priority)" class="uppercase">
+                                        <h4
+                                            class="text-lg font-bold text-foreground"
+                                        >
+                                            {{ gap.feature }}
+                                        </h4>
+                                        <Badge
+                                            :variant="
+                                                priorityVariant(gap.priority)
+                                            "
+                                            class="uppercase"
+                                        >
                                             {{ gap.priority }}
                                         </Badge>
-                                        <Badge v-if="gap.category" variant="outline">{{ gap.category }}</Badge>
+                                        <Badge
+                                            v-if="gap.category"
+                                            variant="outline"
+                                            >{{ gap.category }}</Badge
+                                        >
                                     </div>
-                                    <p class="mb-3 text-muted-foreground">{{ gap.description }}</p>
-                                    <div class="space-y-1 text-sm text-muted-foreground">
-                                        <p><strong>Module:</strong> {{ gap.module || 'N/A' }}</p>
-                                        <p><strong>Suggested tests:</strong> {{ gap.suggested_test_count || 3 }}</p>
-                                        <p><strong>Reasoning:</strong> {{ gap.reasoning }}</p>
+                                    <p class="mb-3 text-muted-foreground">
+                                        {{ gap.description }}
+                                    </p>
+                                    <div
+                                        class="space-y-1 text-sm text-muted-foreground"
+                                    >
+                                        <p>
+                                            <strong>Module:</strong>
+                                            {{ gap.module || 'N/A' }}
+                                        </p>
+                                        <p>
+                                            <strong>Suggested tests:</strong>
+                                            {{ gap.suggested_test_count || 3 }}
+                                        </p>
+                                        <p>
+                                            <strong>Reasoning:</strong>
+                                            {{ gap.reasoning }}
+                                        </p>
                                     </div>
                                 </div>
                                 <RestrictedAction>
@@ -1006,9 +1543,16 @@ const refreshData = () => {
                                         :disabled="generatingForGap === gap.id"
                                         class="cursor-pointer whitespace-nowrap"
                                     >
-                                        <Loader2 v-if="generatingForGap === gap.id" class="mr-1 h-4 w-4 animate-spin" />
+                                        <Loader2
+                                            v-if="generatingForGap === gap.id"
+                                            class="mr-1 h-4 w-4 animate-spin"
+                                        />
                                         <Sparkles v-else class="mr-1 h-4 w-4" />
-                                        {{ generatingForGap === gap.id ? 'Generating...' : 'Generate Tests' }}
+                                        {{
+                                            generatingForGap === gap.id
+                                                ? 'Generating...'
+                                                : 'Generate Tests'
+                                        }}
                                     </Button>
                                 </RestrictedAction>
                             </div>
@@ -1017,12 +1561,16 @@ const refreshData = () => {
 
                     <!-- DB-sourced gaps (features without test cases) -->
                     <div v-else-if="gaps.length" class="space-y-4">
-                        <h3 class="flex items-center gap-2 text-lg font-semibold text-foreground">
+                        <h3
+                            class="flex items-center gap-2 text-lg font-semibold text-foreground"
+                        >
                             <AlertTriangle class="h-5 w-5 text-amber-500" />
                             Uncovered Features ({{ gaps.length }})
                         </h3>
                         <p class="text-sm text-muted-foreground">
-                            These project features have no linked test cases or checklists. Run an AI analysis for detailed gap insights.
+                            These project features have no linked test cases or
+                            checklists. Run an AI analysis for detailed gap
+                            insights.
                         </p>
                         <div
                             v-for="gap in gaps"
@@ -1031,31 +1579,62 @@ const refreshData = () => {
                         >
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <span class="font-medium text-foreground">{{ gap.feature }}</span>
-                                    <Badge :variant="priorityVariant(gap.priority)" class="text-xs uppercase">
+                                    <span class="font-medium text-foreground">{{
+                                        gap.feature
+                                    }}</span>
+                                    <Badge
+                                        :variant="priorityVariant(gap.priority)"
+                                        class="text-xs uppercase"
+                                    >
                                         {{ gap.priority }}
                                     </Badge>
-                                    <Badge v-for="mod in (gap.module || [])" :key="mod" variant="outline" class="text-xs">{{ mod }}</Badge>
+                                    <Badge
+                                        v-for="mod in gap.module || []"
+                                        :key="mod"
+                                        variant="outline"
+                                        class="text-xs"
+                                        >{{ mod }}</Badge
+                                    >
                                 </div>
-                                <p v-if="gap.description" class="mt-1 text-sm text-muted-foreground">{{ gap.description }}</p>
+                                <p
+                                    v-if="gap.description"
+                                    class="mt-1 text-sm text-muted-foreground"
+                                >
+                                    {{ gap.description }}
+                                </p>
                             </div>
-                            <ChevronRight class="h-5 w-5 text-muted-foreground" />
+                            <ChevronRight
+                                class="h-5 w-5 text-muted-foreground"
+                            />
                         </div>
                     </div>
 
                     <div v-else class="py-16 text-center">
-                        <CheckCircle class="mx-auto mb-4 h-16 w-16 text-emerald-500/30" />
-                        <p class="text-lg font-medium text-muted-foreground">No coverage gaps</p>
-                        <p class="mt-1 text-sm text-muted-foreground">All features are covered or no features defined yet</p>
+                        <CheckCircle
+                            class="mx-auto mb-4 h-16 w-16 text-emerald-500/30"
+                        />
+                        <p class="text-lg font-medium text-muted-foreground">
+                            No coverage gaps
+                        </p>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            All features are covered or no features defined yet
+                        </p>
                     </div>
                 </div>
 
                 <!-- Tab: Recommendations -->
                 <div v-if="activeTab === 'recommendations'" class="p-6">
-                    <div v-if="analysisResults?.recommendations?.length" class="space-y-4">
-                        <h3 class="mb-4 text-lg font-semibold text-foreground">AI Recommendations</h3>
+                    <div
+                        v-if="analysisResults?.recommendations?.length"
+                        class="space-y-4"
+                    >
+                        <h3 class="mb-4 text-lg font-semibold text-foreground">
+                            AI Recommendations
+                        </h3>
                         <div
-                            v-for="(rec, index) in analysisResults.recommendations"
+                            v-for="(
+                                rec, index
+                            ) in analysisResults.recommendations"
                             :key="index"
                             class="flex items-start gap-4 rounded-lg border p-5"
                         >
@@ -1065,53 +1644,119 @@ const refreshData = () => {
                                 {{ rec.priority }}
                             </div>
                             <div class="flex-1">
-                                <h4 class="font-medium text-foreground">{{ rec.action }}</h4>
-                                <p class="mt-1 text-sm text-muted-foreground">{{ rec.benefit }}</p>
+                                <h4 class="font-medium text-foreground">
+                                    {{ rec.action }}
+                                </h4>
+                                <p class="mt-1 text-sm text-muted-foreground">
+                                    {{ rec.benefit }}
+                                </p>
                             </div>
-                            <Badge variant="outline" class="uppercase">{{ rec.effort }} effort</Badge>
+                            <Badge variant="outline" class="uppercase"
+                                >{{ rec.effort }} effort</Badge
+                            >
                         </div>
                     </div>
                     <div v-else class="py-16 text-center">
-                        <Target class="mx-auto mb-4 h-16 w-16 text-muted-foreground/30" />
-                        <p class="text-lg font-medium text-muted-foreground">No recommendations yet</p>
-                        <p class="mt-1 text-sm text-muted-foreground">Run an AI analysis to get recommendations</p>
+                        <Target
+                            class="mx-auto mb-4 h-16 w-16 text-muted-foreground/30"
+                        />
+                        <p class="text-lg font-medium text-muted-foreground">
+                            No recommendations yet
+                        </p>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Run an AI analysis to get recommendations
+                        </p>
                     </div>
                 </div>
 
                 <!-- Tab: History -->
                 <div v-if="activeTab === 'history'" class="p-6">
-                    <div v-if="loadingHistory" class="flex items-center justify-center py-16">
-                        <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+                    <div
+                        v-if="loadingHistory"
+                        class="flex items-center justify-center py-16"
+                    >
+                        <Loader2
+                            class="h-8 w-8 animate-spin text-muted-foreground"
+                        />
                     </div>
                     <div v-else-if="coverageHistory.length" class="space-y-4">
-                        <h3 class="mb-4 text-lg font-semibold text-foreground">Coverage History</h3>
+                        <h3 class="mb-4 text-lg font-semibold text-foreground">
+                            Coverage History
+                        </h3>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead>
                                     <tr class="border-b">
-                                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-                                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Coverage</th>
-                                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Features</th>
-                                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Gaps</th>
-                                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Visual</th>
+                                        <th
+                                            class="px-4 py-3 text-left font-medium text-muted-foreground"
+                                        >
+                                            Date
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 text-left font-medium text-muted-foreground"
+                                        >
+                                            Coverage
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 text-left font-medium text-muted-foreground"
+                                        >
+                                            Features
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 text-left font-medium text-muted-foreground"
+                                        >
+                                            Gaps
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 text-left font-medium text-muted-foreground"
+                                        >
+                                            Visual
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="entry in coverageHistory" :key="entry.date" class="border-b">
-                                        <td class="px-4 py-3 text-foreground">{{ entry.date }}</td>
+                                    <tr
+                                        v-for="entry in coverageHistory"
+                                        :key="entry.date"
+                                        class="border-b"
+                                    >
+                                        <td class="px-4 py-3 text-foreground">
+                                            {{ entry.date }}
+                                        </td>
                                         <td class="px-4 py-3">
-                                            <span class="font-medium" :class="getCoverageColor(entry.coverage)">
+                                            <span
+                                                class="font-medium"
+                                                :class="
+                                                    getCoverageColor(
+                                                        entry.coverage,
+                                                    )
+                                                "
+                                            >
                                                 {{ entry.coverage }}%
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3 text-foreground">{{ entry.features }}</td>
-                                        <td class="px-4 py-3 text-foreground">{{ entry.gaps }}</td>
+                                        <td class="px-4 py-3 text-foreground">
+                                            {{ entry.features }}
+                                        </td>
+                                        <td class="px-4 py-3 text-foreground">
+                                            {{ entry.gaps }}
+                                        </td>
                                         <td class="px-4 py-3">
-                                            <div class="h-2 w-32 overflow-hidden rounded-full bg-secondary">
+                                            <div
+                                                class="h-2 w-32 overflow-hidden rounded-full bg-secondary"
+                                            >
                                                 <div
                                                     class="h-full rounded-full transition-all"
-                                                    :class="getCoverageBg(entry.coverage)"
-                                                    :style="{ width: entry.coverage + '%' }"
+                                                    :class="
+                                                        getCoverageBg(
+                                                            entry.coverage,
+                                                        )
+                                                    "
+                                                    :style="{
+                                                        width:
+                                                            entry.coverage +
+                                                            '%',
+                                                    }"
                                                 />
                                             </div>
                                         </td>
@@ -1121,9 +1766,15 @@ const refreshData = () => {
                         </div>
                     </div>
                     <div v-else class="py-16 text-center">
-                        <TrendingUp class="mx-auto mb-4 h-16 w-16 text-muted-foreground/30" />
-                        <p class="text-lg font-medium text-muted-foreground">No history yet</p>
-                        <p class="mt-1 text-sm text-muted-foreground">Run AI analyses to build coverage history</p>
+                        <TrendingUp
+                            class="mx-auto mb-4 h-16 w-16 text-muted-foreground/30"
+                        />
+                        <p class="text-lg font-medium text-muted-foreground">
+                            No history yet
+                        </p>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Run AI analyses to build coverage history
+                        </p>
                     </div>
                 </div>
             </Card>
@@ -1134,39 +1785,99 @@ const refreshData = () => {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Add Project Feature</DialogTitle>
-                    <DialogDescription>Define a feature to track its test coverage.</DialogDescription>
+                    <DialogDescription
+                        >Define a feature to track its test
+                        coverage.</DialogDescription
+                    >
                 </DialogHeader>
                 <div class="space-y-4 py-4">
                     <div>
                         <Label>Name *</Label>
-                        <Input v-model="featureForm.name" placeholder="Feature name" class="mt-1" />
+                        <Input
+                            v-model="featureForm.name"
+                            placeholder="Feature name"
+                            class="mt-1"
+                        />
                     </div>
                     <div>
                         <Label>Description</Label>
-                        <Textarea v-model="featureForm.description" placeholder="Feature description" class="mt-1" />
+                        <Textarea
+                            v-model="featureForm.description"
+                            placeholder="Feature description"
+                            class="mt-1"
+                        />
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <div class="flex items-center justify-between">
                                 <Label>Modules</Label>
                                 <div class="flex gap-2 text-xs">
-                                    <button type="button" class="cursor-pointer text-primary hover:underline" @click="featureForm.module = [...MODULE_OPTIONS]">Select All</button>
-                                    <button type="button" class="cursor-pointer text-muted-foreground hover:underline" @click="featureForm.module = []">Clear</button>
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer text-primary hover:underline"
+                                        @click="
+                                            featureForm.module = [
+                                                ...MODULE_OPTIONS,
+                                            ]
+                                        "
+                                    >
+                                        Select All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer text-muted-foreground hover:underline"
+                                        @click="featureForm.module = []"
+                                    >
+                                        Clear
+                                    </button>
                                 </div>
                             </div>
-                            <div class="mt-1 rounded-md border p-2 space-y-1">
-                                <label v-for="opt in MODULE_OPTIONS" :key="opt" class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-muted/50">
+                            <div class="mt-1 space-y-1 rounded-md border p-2">
+                                <label
+                                    v-for="opt in MODULE_OPTIONS"
+                                    :key="opt"
+                                    class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-muted/50"
+                                >
                                     <Checkbox
-                                        :model-value="featureForm.module.includes(opt)"
-                                        @update:model-value="featureForm.module.includes(opt) ? featureForm.module = featureForm.module.filter(m => m !== opt) : featureForm.module = [...featureForm.module, opt]"
+                                        :model-value="
+                                            featureForm.module.includes(opt)
+                                        "
+                                        @update:model-value="
+                                            featureForm.module.includes(opt)
+                                                ? (featureForm.module =
+                                                      featureForm.module.filter(
+                                                          (m) => m !== opt,
+                                                      ))
+                                                : (featureForm.module = [
+                                                      ...featureForm.module,
+                                                      opt,
+                                                  ])
+                                        "
                                     />
                                     <span class="text-sm">{{ opt }}</span>
                                 </label>
                             </div>
-                            <div v-if="featureForm.module.length" class="mt-1.5 flex flex-wrap gap-1">
-                                <Badge v-for="mod in featureForm.module" :key="mod" variant="secondary" class="gap-1 pr-1">
+                            <div
+                                v-if="featureForm.module.length"
+                                class="mt-1.5 flex flex-wrap gap-1"
+                            >
+                                <Badge
+                                    v-for="mod in featureForm.module"
+                                    :key="mod"
+                                    variant="secondary"
+                                    class="gap-1 pr-1"
+                                >
                                     {{ mod }}
-                                    <button type="button" class="ml-0.5 cursor-pointer rounded-full p-0.5 hover:bg-muted" @click="featureForm.module = featureForm.module.filter(m => m !== mod)">
+                                    <button
+                                        type="button"
+                                        class="ml-0.5 cursor-pointer rounded-full p-0.5 hover:bg-muted"
+                                        @click="
+                                            featureForm.module =
+                                                featureForm.module.filter(
+                                                    (m) => m !== mod,
+                                                )
+                                        "
+                                    >
                                         <X class="h-3 w-3" />
                                     </button>
                                 </Badge>
@@ -1174,7 +1885,11 @@ const refreshData = () => {
                         </div>
                         <div>
                             <Label>Category</Label>
-                            <Input v-model="featureForm.category" placeholder="e.g. Authentication" class="mt-1" />
+                            <Input
+                                v-model="featureForm.category"
+                                placeholder="e.g. Authentication"
+                                class="mt-1"
+                            />
                         </div>
                     </div>
                     <div>
@@ -1184,7 +1899,9 @@ const refreshData = () => {
                                 <SelectValue placeholder="Select priority" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="critical">Critical</SelectItem>
+                                <SelectItem value="critical"
+                                    >Critical</SelectItem
+                                >
                                 <SelectItem value="high">High</SelectItem>
                                 <SelectItem value="medium">Medium</SelectItem>
                                 <SelectItem value="low">Low</SelectItem>
@@ -1193,8 +1910,18 @@ const refreshData = () => {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" @click="showAddFeatureDialog = false" class="cursor-pointer">Cancel</Button>
-                    <Button @click="addFeature" :disabled="!featureForm.name" class="cursor-pointer">Add Feature</Button>
+                    <Button
+                        variant="outline"
+                        @click="showAddFeatureDialog = false"
+                        class="cursor-pointer"
+                        >Cancel</Button
+                    >
+                    <Button
+                        @click="addFeature"
+                        :disabled="!featureForm.name"
+                        class="cursor-pointer"
+                        >Add Feature</Button
+                    >
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1204,39 +1931,98 @@ const refreshData = () => {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Edit Feature</DialogTitle>
-                    <DialogDescription>Update feature details.</DialogDescription>
+                    <DialogDescription
+                        >Update feature details.</DialogDescription
+                    >
                 </DialogHeader>
                 <div class="space-y-4 py-4">
                     <div>
                         <Label>Name *</Label>
-                        <Input v-model="editForm.name" placeholder="Feature name" class="mt-1" />
+                        <Input
+                            v-model="editForm.name"
+                            placeholder="Feature name"
+                            class="mt-1"
+                        />
                     </div>
                     <div>
                         <Label>Description</Label>
-                        <Textarea v-model="editForm.description" placeholder="Feature description" class="mt-1" />
+                        <Textarea
+                            v-model="editForm.description"
+                            placeholder="Feature description"
+                            class="mt-1"
+                        />
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <div class="flex items-center justify-between">
                                 <Label>Modules</Label>
                                 <div class="flex gap-2 text-xs">
-                                    <button type="button" class="cursor-pointer text-primary hover:underline" @click="editForm.module = [...MODULE_OPTIONS]">Select All</button>
-                                    <button type="button" class="cursor-pointer text-muted-foreground hover:underline" @click="editForm.module = []">Clear</button>
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer text-primary hover:underline"
+                                        @click="
+                                            editForm.module = [
+                                                ...MODULE_OPTIONS,
+                                            ]
+                                        "
+                                    >
+                                        Select All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer text-muted-foreground hover:underline"
+                                        @click="editForm.module = []"
+                                    >
+                                        Clear
+                                    </button>
                                 </div>
                             </div>
-                            <div class="mt-1 rounded-md border p-2 space-y-1">
-                                <label v-for="opt in MODULE_OPTIONS" :key="opt" class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-muted/50">
+                            <div class="mt-1 space-y-1 rounded-md border p-2">
+                                <label
+                                    v-for="opt in MODULE_OPTIONS"
+                                    :key="opt"
+                                    class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-muted/50"
+                                >
                                     <Checkbox
-                                        :model-value="editForm.module.includes(opt)"
-                                        @update:model-value="editForm.module.includes(opt) ? editForm.module = editForm.module.filter(m => m !== opt) : editForm.module = [...editForm.module, opt]"
+                                        :model-value="
+                                            editForm.module.includes(opt)
+                                        "
+                                        @update:model-value="
+                                            editForm.module.includes(opt)
+                                                ? (editForm.module =
+                                                      editForm.module.filter(
+                                                          (m) => m !== opt,
+                                                      ))
+                                                : (editForm.module = [
+                                                      ...editForm.module,
+                                                      opt,
+                                                  ])
+                                        "
                                     />
                                     <span class="text-sm">{{ opt }}</span>
                                 </label>
                             </div>
-                            <div v-if="editForm.module.length" class="mt-1.5 flex flex-wrap gap-1">
-                                <Badge v-for="mod in editForm.module" :key="mod" variant="secondary" class="gap-1 pr-1">
+                            <div
+                                v-if="editForm.module.length"
+                                class="mt-1.5 flex flex-wrap gap-1"
+                            >
+                                <Badge
+                                    v-for="mod in editForm.module"
+                                    :key="mod"
+                                    variant="secondary"
+                                    class="gap-1 pr-1"
+                                >
                                     {{ mod }}
-                                    <button type="button" class="ml-0.5 cursor-pointer rounded-full p-0.5 hover:bg-muted" @click="editForm.module = editForm.module.filter(m => m !== mod)">
+                                    <button
+                                        type="button"
+                                        class="ml-0.5 cursor-pointer rounded-full p-0.5 hover:bg-muted"
+                                        @click="
+                                            editForm.module =
+                                                editForm.module.filter(
+                                                    (m) => m !== mod,
+                                                )
+                                        "
+                                    >
                                         <X class="h-3 w-3" />
                                     </button>
                                 </Badge>
@@ -1244,7 +2030,11 @@ const refreshData = () => {
                         </div>
                         <div>
                             <Label>Category</Label>
-                            <Input v-model="editForm.category" placeholder="e.g. Authentication" class="mt-1" />
+                            <Input
+                                v-model="editForm.category"
+                                placeholder="e.g. Authentication"
+                                class="mt-1"
+                            />
                         </div>
                     </div>
                     <div>
@@ -1254,7 +2044,9 @@ const refreshData = () => {
                                 <SelectValue placeholder="Select priority" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="critical">Critical</SelectItem>
+                                <SelectItem value="critical"
+                                    >Critical</SelectItem
+                                >
                                 <SelectItem value="high">High</SelectItem>
                                 <SelectItem value="medium">Medium</SelectItem>
                                 <SelectItem value="low">Low</SelectItem>
@@ -1263,8 +2055,18 @@ const refreshData = () => {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" @click="showEditFeatureDialog = false" class="cursor-pointer">Cancel</Button>
-                    <Button @click="updateFeature" :disabled="!editForm.name" class="cursor-pointer">Save Changes</Button>
+                    <Button
+                        variant="outline"
+                        @click="showEditFeatureDialog = false"
+                        class="cursor-pointer"
+                        >Cancel</Button
+                    >
+                    <Button
+                        @click="updateFeature"
+                        :disabled="!editForm.name"
+                        class="cursor-pointer"
+                        >Save Changes</Button
+                    >
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1278,7 +2080,8 @@ const refreshData = () => {
                         Link Test Cases to {{ linkingTestCaseFeature?.name }}
                     </DialogTitle>
                     <DialogDescription>
-                        Filter by test suite, search and toggle test cases to link or unlink from this feature.
+                        Filter by test suite, search and toggle test cases to
+                        link or unlink from this feature.
                     </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4 py-4">
@@ -1287,10 +2090,14 @@ const refreshData = () => {
                         <div class="w-48 shrink-0">
                             <Select v-model="linkTestCaseSuiteFilter">
                                 <SelectTrigger>
-                                    <SelectValue placeholder="All test suites" />
+                                    <SelectValue
+                                        placeholder="All test suites"
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All test suites</SelectItem>
+                                    <SelectItem value="all"
+                                        >All test suites</SelectItem
+                                    >
                                     <SelectItem
                                         v-for="suite in availableSuitesForLink"
                                         :key="suite.id"
@@ -1302,8 +2109,14 @@ const refreshData = () => {
                             </Select>
                         </div>
                         <div class="relative flex-1">
-                            <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input v-model="linkTestCaseSearch" placeholder="Search test cases..." class="pl-9" />
+                            <Search
+                                class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                            />
+                            <Input
+                                v-model="linkTestCaseSearch"
+                                placeholder="Search test cases..."
+                                class="pl-9"
+                            />
                             <button
                                 v-if="linkTestCaseSearch"
                                 @click="linkTestCaseSearch = ''"
@@ -1319,12 +2132,23 @@ const refreshData = () => {
                             :key="tc.id"
                             class="flex items-start gap-3 rounded border px-3 py-2 transition-colors hover:bg-muted/30"
                         >
-                            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/50">
-                                <FileText class="h-3.5 w-3.5 text-muted-foreground" />
+                            <div
+                                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/50"
+                            >
+                                <FileText
+                                    class="h-3.5 w-3.5 text-muted-foreground"
+                                />
                             </div>
                             <div class="min-w-0 flex-1">
-                                <span class="text-sm leading-snug text-foreground">{{ tc.title }}</span>
-                                <Badge v-if="tc.test_suite" variant="outline" class="ml-3 align-middle text-xs">
+                                <span
+                                    class="text-sm leading-snug text-foreground"
+                                    >{{ tc.title }}</span
+                                >
+                                <Badge
+                                    v-if="tc.test_suite"
+                                    variant="outline"
+                                    class="ml-3 align-middle text-xs"
+                                >
                                     {{ tc.test_suite.name }}
                                 </Badge>
                             </div>
@@ -1335,11 +2159,16 @@ const refreshData = () => {
                                 disabled
                                 class="mt-0.5 shrink-0"
                             >
-                                <Loader2 class="mr-1 h-3.5 w-3.5 animate-spin" />
+                                <Loader2
+                                    class="mr-1 h-3.5 w-3.5 animate-spin"
+                                />
                                 ...
                             </Button>
                             <Button
-                                v-else-if="linkingTestCaseFeature && isLinked(linkingTestCaseFeature, tc.id)"
+                                v-else-if="
+                                    linkingTestCaseFeature &&
+                                    isLinked(linkingTestCaseFeature, tc.id)
+                                "
                                 variant="outline"
                                 size="sm"
                                 @click="toggleLink(tc.id)"
@@ -1359,15 +2188,24 @@ const refreshData = () => {
                                 Link
                             </Button>
                         </div>
-                        <p v-if="filteredAllTestCases.length === 0" class="py-8 text-center text-sm text-muted-foreground">
+                        <p
+                            v-if="filteredAllTestCases.length === 0"
+                            class="py-8 text-center text-sm text-muted-foreground"
+                        >
                             No test cases found.
                         </p>
                     </div>
                 </div>
                 <DialogFooter>
                     <div class="flex w-full items-center justify-between">
-                        <span class="text-sm text-muted-foreground">{{ linkedTestCaseSnapshot.size }} linked</span>
-                        <Button @click="showLinkTestCasesDialog = false" class="cursor-pointer">Close</Button>
+                        <span class="text-sm text-muted-foreground"
+                            >{{ linkedTestCaseSnapshot.size }} linked</span
+                        >
+                        <Button
+                            @click="showLinkTestCasesDialog = false"
+                            class="cursor-pointer"
+                            >Close</Button
+                        >
                     </div>
                 </DialogFooter>
             </DialogContent>
@@ -1382,13 +2220,20 @@ const refreshData = () => {
                         Link Checklists to {{ linkingChecklistFeature?.name }}
                     </DialogTitle>
                     <DialogDescription>
-                        Search and toggle checklists to link or unlink from this feature.
+                        Search and toggle checklists to link or unlink from this
+                        feature.
                     </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4 py-4">
                     <div class="relative">
-                        <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="linkChecklistSearch" placeholder="Search checklists..." class="pl-9" />
+                        <Search
+                            class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+                        <Input
+                            v-model="linkChecklistSearch"
+                            placeholder="Search checklists..."
+                            class="pl-9"
+                        />
                         <button
                             v-if="linkChecklistSearch"
                             @click="linkChecklistSearch = ''"
@@ -1404,10 +2249,18 @@ const refreshData = () => {
                             class="flex items-center justify-between gap-3 rounded border px-3 py-2 transition-colors hover:bg-muted/30"
                         >
                             <div class="flex min-w-0 items-center gap-2">
-                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10">
-                                    <ClipboardList class="h-3.5 w-3.5 text-violet-500" />
+                                <div
+                                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10"
+                                >
+                                    <ClipboardList
+                                        class="h-3.5 w-3.5 text-violet-500"
+                                    />
                                 </div>
-                                <span class="truncate text-sm text-foreground" :title="cl.name">{{ cl.name }}</span>
+                                <span
+                                    class="truncate text-sm text-foreground"
+                                    :title="cl.name"
+                                    >{{ cl.name }}</span
+                                >
                             </div>
                             <Button
                                 v-if="pendingChecklistIds.has(cl.id)"
@@ -1416,11 +2269,19 @@ const refreshData = () => {
                                 disabled
                                 class="shrink-0"
                             >
-                                <Loader2 class="mr-1 h-3.5 w-3.5 animate-spin" />
+                                <Loader2
+                                    class="mr-1 h-3.5 w-3.5 animate-spin"
+                                />
                                 Updating...
                             </Button>
                             <Button
-                                v-else-if="linkingChecklistFeature && isChecklistLinked(linkingChecklistFeature, cl.id)"
+                                v-else-if="
+                                    linkingChecklistFeature &&
+                                    isChecklistLinked(
+                                        linkingChecklistFeature,
+                                        cl.id,
+                                    )
+                                "
                                 variant="outline"
                                 size="sm"
                                 @click="toggleChecklistLink(cl.id)"
@@ -1440,13 +2301,20 @@ const refreshData = () => {
                                 Link
                             </Button>
                         </div>
-                        <p v-if="filteredAllChecklists.length === 0" class="py-8 text-center text-sm text-muted-foreground">
+                        <p
+                            v-if="filteredAllChecklists.length === 0"
+                            class="py-8 text-center text-sm text-muted-foreground"
+                        >
                             No checklists found.
                         </p>
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button @click="showLinkChecklistsDialog = false" class="cursor-pointer">Close</Button>
+                    <Button
+                        @click="showLinkChecklistsDialog = false"
+                        class="cursor-pointer"
+                        >Close</Button
+                    >
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1460,7 +2328,8 @@ const refreshData = () => {
                         Generated Test Cases for {{ currentGapName }}
                     </DialogTitle>
                     <DialogDescription>
-                        AI-generated test cases have been saved. Review them below.
+                        AI-generated test cases have been saved. Review them
+                        below.
                     </DialogDescription>
                 </DialogHeader>
                 <div class="max-h-96 space-y-4 overflow-y-auto py-4">
@@ -1470,31 +2339,63 @@ const refreshData = () => {
                         class="rounded-lg border p-4"
                     >
                         <div class="mb-2 flex items-center gap-2">
-                            <h4 class="font-medium text-foreground">{{ (tc as Record<string, unknown>).title }}</h4>
-                            <Badge :variant="priorityVariant(String((tc as Record<string, unknown>).priority || 'medium'))" class="text-xs uppercase">
-                                {{ (tc as Record<string, unknown>).priority }}
+                            <h4 class="font-medium text-foreground">
+                                {{ tc.title }}
+                            </h4>
+                            <Badge
+                                :variant="
+                                    priorityVariant(
+                                        String(tc.priority || 'medium'),
+                                    )
+                                "
+                                class="text-xs uppercase"
+                            >
+                                {{ tc.priority }}
                             </Badge>
                             <Badge variant="outline" class="text-xs uppercase">
-                                {{ (tc as Record<string, unknown>).type }}
+                                {{ tc.type }}
                             </Badge>
                         </div>
-                        <div v-if="(tc as Record<string, unknown>).preconditions" class="mb-2 text-sm text-muted-foreground">
-                            <strong>Preconditions:</strong> {{ (tc as Record<string, unknown>).preconditions }}
+                        <div
+                            v-if="tc.preconditions"
+                            class="mb-2 text-sm text-muted-foreground"
+                        >
+                            <strong>Preconditions:</strong>
+                            {{ tc.preconditions }}
                         </div>
                         <div class="mb-2">
-                            <strong class="text-sm text-foreground">Steps:</strong>
-                            <ol class="mt-1 list-inside list-decimal space-y-1 text-sm text-muted-foreground">
-                                <li v-for="(step, sIdx) in ((tc as Record<string, unknown>).test_steps as string[])" :key="sIdx">{{ step }}</li>
+                            <strong class="text-sm text-foreground"
+                                >Steps:</strong
+                            >
+                            <ol
+                                class="mt-1 list-inside list-decimal space-y-1 text-sm text-muted-foreground"
+                            >
+                                <li
+                                    v-for="(
+                                        step, sIdx
+                                    ) in tc.test_steps as string[]"
+                                    :key="sIdx"
+                                >
+                                    {{ step }}
+                                </li>
                             </ol>
                         </div>
                         <div class="text-sm">
-                            <strong class="text-foreground">Expected Result:</strong>
-                            <span class="text-muted-foreground"> {{ (tc as Record<string, unknown>).expected_result }}</span>
+                            <strong class="text-foreground"
+                                >Expected Result:</strong
+                            >
+                            <span class="text-muted-foreground">
+                                {{ tc.expected_result }}</span
+                            >
                         </div>
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button @click="showGeneratedModal = false" class="cursor-pointer">Close</Button>
+                    <Button
+                        @click="showGeneratedModal = false"
+                        class="cursor-pointer"
+                        >Close</Button
+                    >
                 </DialogFooter>
             </DialogContent>
         </Dialog>

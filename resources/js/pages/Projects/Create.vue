@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FolderPlus } from 'lucide-vue-next';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { FolderPlus } from 'lucide-vue-next';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
@@ -38,7 +44,8 @@ const submit = () => {
                             Create New Project
                         </CardTitle>
                         <CardDescription>
-                            Create a new QA project to organize your test cases and checklists.
+                            Create a new QA project to organize your test cases
+                            and checklists.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -50,16 +57,26 @@ const submit = () => {
                                     v-model="form.name"
                                     type="text"
                                     placeholder="Enter project name"
-                                    :class="{ 'border-destructive': form.errors.name }"
+                                    :class="{
+                                        'border-destructive': form.errors.name,
+                                    }"
                                 />
                                 <InputError :message="form.errors.name" />
                             </div>
 
                             <div class="flex gap-2">
-                                <Button type="submit" variant="cta" :disabled="form.processing">
+                                <Button
+                                    type="submit"
+                                    variant="cta"
+                                    :disabled="form.processing"
+                                >
                                     Create Project
                                 </Button>
-                                <Button type="button" variant="outline" @click="$inertia.visit('/projects')">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="$inertia.visit('/projects')"
+                                >
                                     Cancel
                                 </Button>
                             </div>

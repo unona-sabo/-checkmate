@@ -1,17 +1,29 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { StickyNote } from 'lucide-vue-next';
+import InputError from '@/components/InputError.vue';
+import TranslateButtons from '@/components/TranslateButtons.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import TranslateButtons from '@/components/TranslateButtons.vue';
-import { StickyNote } from 'lucide-vue-next';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project } from '@/types';
 
 interface Documentation {
     id: number;
@@ -49,7 +61,7 @@ const submit = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="max-w-3xl w-full min-w-0">
+            <div class="w-full max-w-3xl min-w-0">
                 <Card>
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
@@ -57,11 +69,15 @@ const submit = () => {
                             Create Note
                         </CardTitle>
                         <CardDescription>
-                            Create a new note or draft. You can optionally link it to a documentation.
+                            Create a new note or draft. You can optionally link
+                            it to a documentation.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form @submit.prevent="submit" class="space-y-6 min-w-0">
+                        <form
+                            @submit.prevent="submit"
+                            class="min-w-0 space-y-6"
+                        >
                             <div class="space-y-2">
                                 <Label for="title">Title</Label>
                                 <Input
@@ -69,7 +85,9 @@ const submit = () => {
                                     v-model="form.title"
                                     type="text"
                                     placeholder="Note title (optional)"
-                                    :class="{ 'border-destructive': form.errors.title }"
+                                    :class="{
+                                        'border-destructive': form.errors.title,
+                                    }"
                                 />
                                 <InputError :message="form.errors.title" />
                             </div>
@@ -78,25 +96,42 @@ const submit = () => {
                                 <Label>Link to Documentation</Label>
                                 <Select v-model="form.documentation_id">
                                     <SelectTrigger>
-                                        <SelectValue placeholder="None (standalone note)" />
+                                        <SelectValue
+                                            placeholder="None (standalone note)"
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem :value="null">None (standalone note)</SelectItem>
-                                        <SelectItem v-for="doc in documentations" :key="doc.id" :value="doc.id">
+                                        <SelectItem :value="null"
+                                            >None (standalone note)</SelectItem
+                                        >
+                                        <SelectItem
+                                            v-for="doc in documentations"
+                                            :key="doc.id"
+                                            :value="doc.id"
+                                        >
                                             {{ doc.title }}
-                                            <span v-if="doc.category" class="text-muted-foreground ml-1">({{ doc.category }})</span>
+                                            <span
+                                                v-if="doc.category"
+                                                class="ml-1 text-muted-foreground"
+                                                >({{ doc.category }})</span
+                                            >
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <p class="text-xs text-muted-foreground">
-                                    Optionally link this note to a documentation for later publishing.
+                                    Optionally link this note to a documentation
+                                    for later publishing.
                                 </p>
                             </div>
 
-                            <div class="space-y-2 min-w-0">
+                            <div class="min-w-0 space-y-2">
                                 <div class="flex items-center justify-between">
                                     <Label for="content">Content</Label>
-                                    <TranslateButtons :project-id="project.id" :text="form.content" @translated="form.content = $event" />
+                                    <TranslateButtons
+                                        :project-id="project.id"
+                                        :text="form.content"
+                                        @translated="form.content = $event"
+                                    />
                                 </div>
                                 <Textarea
                                     id="content"
@@ -109,10 +144,21 @@ const submit = () => {
                             </div>
 
                             <div class="flex gap-2">
-                                <Button type="submit" :disabled="form.processing">
+                                <Button
+                                    type="submit"
+                                    :disabled="form.processing"
+                                >
                                     Create Note
                                 </Button>
-                                <Button type="button" variant="outline" @click="$inertia.visit(`/projects/${project.id}/notes`)">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="
+                                        $inertia.visit(
+                                            `/projects/${project.id}/notes`,
+                                        )
+                                    "
+                                >
                                     Cancel
                                 </Button>
                             </div>

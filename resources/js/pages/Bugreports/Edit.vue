@@ -1,20 +1,32 @@
 <script setup lang="ts">
 import { Head, useForm, router } from '@inertiajs/vue3';
+import { Bug, Paperclip, Download, Trash2 } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import FileDropZone from '@/components/FileDropZone.vue';
+import FeatureSelector from '@/components/FeatureSelector.vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import { type ProjectFeature } from '@/types/checkmate';
-import FeatureSelector from '@/components/FeatureSelector.vue';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
-import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { Bug, Paperclip, Download, Trash2 } from 'lucide-vue-next';
-import FileDropZone from '@/components/FileDropZone.vue';
-import { ref, computed } from 'vue';
 
 interface User {
     id: number;
@@ -49,8 +61,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Bugreports', href: `/projects/${props.project.id}/bugreports` },
-    { title: props.bugreport.title, href: `/projects/${props.project.id}/bugreports/${props.bugreport.id}` },
-    { title: 'Edit', href: `/projects/${props.project.id}/bugreports/${props.bugreport.id}/edit` },
+    {
+        title: props.bugreport.title,
+        href: `/projects/${props.project.id}/bugreports/${props.bugreport.id}`,
+    },
+    {
+        title: 'Edit',
+        href: `/projects/${props.project.id}/bugreports/${props.bugreport.id}/edit`,
+    },
 ];
 
 const form = useForm({
@@ -66,11 +84,10 @@ const form = useForm({
     environment: props.bugreport.environment || '',
     fixed_on: props.bugreport.fixed_on || [],
     assigned_to: props.bugreport.assigned_to,
-    feature_ids: (props.bugreport.project_features ?? []).map(f => f.id),
+    feature_ids: (props.bugreport.project_features ?? []).map((f) => f.id),
     attachments: [] as File[],
 });
 useClearErrorsOnInput(form);
-
 
 const attachmentErrors = computed(() => {
     return Object.entries(form.errors)
@@ -89,13 +106,18 @@ const isImage = (mimeType: string): boolean => {
 };
 
 const deleteAttachment = (attachmentId: number) => {
-    router.delete(`/projects/${props.project.id}/bugreports/${props.bugreport.id}/attachments/${attachmentId}`, {
-        preserveScroll: true,
-    });
+    router.delete(
+        `/projects/${props.project.id}/bugreports/${props.bugreport.id}/attachments/${attachmentId}`,
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 const envOptions = ['develop', 'staging', 'production'] as const;
-const allEnvsSelected = computed(() => envOptions.every(e => form.fixed_on.includes(e)));
+const allEnvsSelected = computed(() =>
+    envOptions.every((e) => form.fixed_on.includes(e)),
+);
 const toggleEnv = (env: string) => {
     const idx = form.fixed_on.indexOf(env);
     if (idx >= 0) {
@@ -114,9 +136,12 @@ const toggleAllEnvs = () => {
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const submit = () => {
-    form.post(`/projects/${props.project.id}/bugreports/${props.bugreport.id}`, {
-        forceFormData: true,
-    });
+    form.post(
+        `/projects/${props.project.id}/bugreports/${props.bugreport.id}`,
+        {
+            forceFormData: true,
+        },
+    );
 };
 </script>
 
@@ -144,7 +169,9 @@ const submit = () => {
                                     id="title"
                                     v-model="form.title"
                                     type="text"
-                                    :class="{ 'border-destructive': form.errors.title }"
+                                    :class="{
+                                        'border-destructive': form.errors.title,
+                                    }"
                                 />
                                 <InputError :message="form.errors.title" />
                             </div>
@@ -157,41 +184,55 @@ const submit = () => {
                                     rows="3"
                                     autoResize
                                 />
-                                <InputError :message="form.errors.description" />
+                                <InputError
+                                    :message="form.errors.description"
+                                />
                             </div>
 
                             <div class="space-y-2">
-                                <Label for="steps_to_reproduce">Steps to Reproduce</Label>
+                                <Label for="steps_to_reproduce"
+                                    >Steps to Reproduce</Label
+                                >
                                 <Textarea
                                     id="steps_to_reproduce"
                                     v-model="form.steps_to_reproduce"
                                     rows="4"
                                     autoResize
                                 />
-                                <InputError :message="form.errors.steps_to_reproduce" />
+                                <InputError
+                                    :message="form.errors.steps_to_reproduce"
+                                />
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="space-y-2">
-                                    <Label for="expected_result">Expected Result</Label>
+                                    <Label for="expected_result"
+                                        >Expected Result</Label
+                                    >
                                     <Textarea
                                         id="expected_result"
                                         v-model="form.expected_result"
                                         rows="2"
                                         autoResize
                                     />
-                                    <InputError :message="form.errors.expected_result" />
+                                    <InputError
+                                        :message="form.errors.expected_result"
+                                    />
                                 </div>
 
                                 <div class="space-y-2">
-                                    <Label for="actual_result">Actual Result</Label>
+                                    <Label for="actual_result"
+                                        >Actual Result</Label
+                                    >
                                     <Textarea
                                         id="actual_result"
                                         v-model="form.actual_result"
                                         rows="2"
                                         autoResize
                                     />
-                                    <InputError :message="form.errors.actual_result" />
+                                    <InputError
+                                        :message="form.errors.actual_result"
+                                    />
                                 </div>
                             </div>
 
@@ -203,10 +244,18 @@ const submit = () => {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="critical">Critical</SelectItem>
-                                            <SelectItem value="major">Major</SelectItem>
-                                            <SelectItem value="minor">Minor</SelectItem>
-                                            <SelectItem value="trivial">Trivial</SelectItem>
+                                            <SelectItem value="critical"
+                                                >Critical</SelectItem
+                                            >
+                                            <SelectItem value="major"
+                                                >Major</SelectItem
+                                            >
+                                            <SelectItem value="minor"
+                                                >Minor</SelectItem
+                                            >
+                                            <SelectItem value="trivial"
+                                                >Trivial</SelectItem
+                                            >
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -218,9 +267,15 @@ const submit = () => {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="high">High</SelectItem>
-                                            <SelectItem value="medium">Medium</SelectItem>
-                                            <SelectItem value="low">Low</SelectItem>
+                                            <SelectItem value="high"
+                                                >High</SelectItem
+                                            >
+                                            <SelectItem value="medium"
+                                                >Medium</SelectItem
+                                            >
+                                            <SelectItem value="low"
+                                                >Low</SelectItem
+                                            >
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -232,12 +287,24 @@ const submit = () => {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="to_do">To Do</SelectItem>
-                                            <SelectItem value="in_progress">In Progress</SelectItem>
-                                            <SelectItem value="in_review">In Review</SelectItem>
-                                            <SelectItem value="needs_changes">Needs Changes</SelectItem>
-                                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                                            <SelectItem value="done">Done</SelectItem>
+                                            <SelectItem value="to_do"
+                                                >To Do</SelectItem
+                                            >
+                                            <SelectItem value="in_progress"
+                                                >In Progress</SelectItem
+                                            >
+                                            <SelectItem value="in_review"
+                                                >In Review</SelectItem
+                                            >
+                                            <SelectItem value="needs_changes"
+                                                >Needs Changes</SelectItem
+                                            >
+                                            <SelectItem value="cancelled"
+                                                >Cancelled</SelectItem
+                                            >
+                                            <SelectItem value="done"
+                                                >Done</SelectItem
+                                            >
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -250,14 +317,39 @@ const submit = () => {
                                     v-model="form.environment"
                                     type="text"
                                 />
-                                <InputError :message="form.errors.environment" />
+                                <InputError
+                                    :message="form.errors.environment"
+                                />
                             </div>
 
                             <div class="space-y-2">
                                 <Label>Fixed On</Label>
                                 <div class="flex flex-wrap gap-2">
-                                    <Button type="button" size="sm" :variant="allEnvsSelected ? 'default' : 'outline'" @click="toggleAllEnvs" class="cursor-pointer">All</Button>
-                                    <Button v-for="env in envOptions" :key="env" type="button" size="sm" :variant="form.fixed_on.includes(env) ? 'default' : 'outline'" @click="toggleEnv(env)" class="cursor-pointer">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        :variant="
+                                            allEnvsSelected
+                                                ? 'default'
+                                                : 'outline'
+                                        "
+                                        @click="toggleAllEnvs"
+                                        class="cursor-pointer"
+                                        >All</Button
+                                    >
+                                    <Button
+                                        v-for="env in envOptions"
+                                        :key="env"
+                                        type="button"
+                                        size="sm"
+                                        :variant="
+                                            form.fixed_on.includes(env)
+                                                ? 'default'
+                                                : 'outline'
+                                        "
+                                        @click="toggleEnv(env)"
+                                        class="cursor-pointer"
+                                    >
                                         {{ capitalize(env) }}
                                     </Button>
                                 </div>
@@ -271,23 +363,76 @@ const submit = () => {
                             />
 
                             <!-- Existing Attachments -->
-                            <div v-if="bugreport.attachments?.length" class="space-y-2">
+                            <div
+                                v-if="bugreport.attachments?.length"
+                                class="space-y-2"
+                            >
                                 <Label>Current Attachments</Label>
                                 <div class="space-y-2">
-                                    <div v-for="attachment in bugreport.attachments" :key="attachment.id" class="flex items-center justify-between rounded-lg border p-2">
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <img v-if="isImage(attachment.mime_type)" :src="attachment.url" :alt="attachment.original_filename" class="h-10 w-10 rounded object-cover shrink-0" />
-                                            <Paperclip v-else class="h-4 w-4 shrink-0 text-muted-foreground" />
-                                            <span class="truncate text-sm">{{ attachment.original_filename }}</span>
-                                            <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(attachment.size) }}</span>
+                                    <div
+                                        v-for="attachment in bugreport.attachments"
+                                        :key="attachment.id"
+                                        class="flex items-center justify-between rounded-lg border p-2"
+                                    >
+                                        <div
+                                            class="flex min-w-0 items-center gap-2"
+                                        >
+                                            <img
+                                                v-if="
+                                                    isImage(
+                                                        attachment.mime_type,
+                                                    )
+                                                "
+                                                :src="attachment.url"
+                                                :alt="
+                                                    attachment.original_filename
+                                                "
+                                                class="h-10 w-10 shrink-0 rounded object-cover"
+                                            />
+                                            <Paperclip
+                                                v-else
+                                                class="h-4 w-4 shrink-0 text-muted-foreground"
+                                            />
+                                            <span class="truncate text-sm">{{
+                                                attachment.original_filename
+                                            }}</span>
+                                            <span
+                                                class="shrink-0 text-xs text-muted-foreground"
+                                                >{{
+                                                    formatFileSize(
+                                                        attachment.size,
+                                                    )
+                                                }}</span
+                                            >
                                         </div>
-                                        <div class="flex items-center gap-1 shrink-0">
-                                            <a :href="attachment.url" target="_blank" download>
-                                                <Button type="button" variant="ghost" size="sm" class="h-6 w-6 p-0">
+                                        <div
+                                            class="flex shrink-0 items-center gap-1"
+                                        >
+                                            <a
+                                                :href="attachment.url"
+                                                target="_blank"
+                                                download
+                                            >
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    class="h-6 w-6 p-0"
+                                                >
                                                     <Download class="h-4 w-4" />
                                                 </Button>
                                             </a>
-                                            <Button type="button" variant="ghost" size="sm" @click="deleteAttachment(attachment.id)" class="h-6 w-6 p-0 text-destructive hover:text-destructive">
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="
+                                                    deleteAttachment(
+                                                        attachment.id,
+                                                    )
+                                                "
+                                                class="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                            >
                                                 <Trash2 class="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -302,10 +447,21 @@ const submit = () => {
                             </div>
 
                             <div class="flex gap-2">
-                                <Button type="submit" :disabled="form.processing">
+                                <Button
+                                    type="submit"
+                                    :disabled="form.processing"
+                                >
                                     Update Bug Report
                                 </Button>
-                                <Button type="button" variant="outline" @click="$inertia.visit(`/projects/${project.id}/bugreports/${bugreport.id}`)">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="
+                                        $inertia.visit(
+                                            `/projects/${project.id}/bugreports/${bugreport.id}`,
+                                        )
+                                    "
+                                >
                                     Cancel
                                 </Button>
                             </div>

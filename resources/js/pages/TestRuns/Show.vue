@@ -1,28 +1,77 @@
 <script setup lang="ts">
 import { Head, Link, router, Deferred } from '@inertiajs/vue3';
-import { writeToClipboard } from '@/composables/useClipboard';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestRun, type TestRunCase, type TestSuite, type Checklist, type ChecklistRow } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
-    Play, Edit, CheckCircle2, XCircle, AlertTriangle,
-    SkipForward, RotateCcw, Circle, User, ExternalLink, Search, X, Link2, Check, Pause, Timer, ChevronDown, ChevronUp,
-    Plus, Layers, FileText, Boxes, ListChecks, Trash2, Bug, Clock
+    Play,
+    Edit,
+    CheckCircle2,
+    XCircle,
+    AlertTriangle,
+    SkipForward,
+    RotateCcw,
+    Circle,
+    User,
+    ExternalLink,
+    Search,
+    X,
+    Link2,
+    Check,
+    Pause,
+    Timer,
+    ChevronDown,
+    ChevronUp,
+    Plus,
+    Layers,
+    FileText,
+    Boxes,
+    ListChecks,
+    Trash2,
+    Bug,
+    Clock,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { writeToClipboard } from '@/composables/useClipboard';
 import { useSearch, stripHtml } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { testResultVariant } from '@/lib/badge-variants';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type TestRun,
+    type TestRunCase,
+    type TestSuite,
+    type Checklist,
+    type ChecklistRow,
+} from '@/types';
 
 const props = defineProps<{
     project: Project;
@@ -35,7 +84,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Test Runs', href: `/projects/${props.project.id}/test-runs` },
-    { title: props.testRun.name, href: `/projects/${props.project.id}/test-runs/${props.testRun.id}` },
+    {
+        title: props.testRun.name,
+        href: `/projects/${props.project.id}/test-runs/${props.testRun.id}`,
+    },
 ];
 
 const copied = ref(false);
@@ -54,7 +106,9 @@ const copyLink = () => {
     const url = window.location.origin + route;
     writeToClipboard(url).then(() => {
         copied.value = true;
-        setTimeout(() => { copied.value = false; }, 2000);
+        setTimeout(() => {
+            copied.value = false;
+        }, 2000);
     });
 };
 
@@ -70,30 +124,43 @@ const resultForm = ref({
 
 const getStatusIcon = (status: string) => {
     switch (status) {
-        case 'passed': return CheckCircle2;
-        case 'failed': return XCircle;
-        case 'blocked': return AlertTriangle;
-        case 'skipped': return SkipForward;
-        case 'retest': return RotateCcw;
-        default: return Circle;
+        case 'passed':
+            return CheckCircle2;
+        case 'failed':
+            return XCircle;
+        case 'blocked':
+            return AlertTriangle;
+        case 'skipped':
+            return SkipForward;
+        case 'retest':
+            return RotateCcw;
+        default:
+            return Circle;
     }
 };
 
 const getStatusColor = (status: string) => {
     switch (status) {
-        case 'passed': return 'text-green-500';
-        case 'failed': return 'text-red-500';
-        case 'blocked': return 'text-orange-500';
-        case 'skipped': return 'text-purple-500';
-        case 'retest': return 'text-blue-500';
-        default: return 'text-gray-400';
+        case 'passed':
+            return 'text-green-500';
+        case 'failed':
+            return 'text-red-500';
+        case 'blocked':
+            return 'text-orange-500';
+        case 'skipped':
+            return 'text-purple-500';
+        case 'retest':
+            return 'text-blue-500';
+        default:
+            return 'text-gray-400';
     }
 };
 
 const openResultDialog = (testRunCase: TestRunCase) => {
     selectedCase.value = testRunCase;
     resultForm.value = {
-        status: testRunCase.status === 'untested' ? 'passed' : testRunCase.status,
+        status:
+            testRunCase.status === 'untested' ? 'passed' : testRunCase.status,
         actual_result: testRunCase.actual_result || '',
         time_spent: testRunCase.time_spent,
         clickup_link: testRunCase.clickup_link || '',
@@ -114,15 +181,18 @@ const saveResult = () => {
                 showResultDialog.value = false;
                 selectedCase.value = null;
             },
-        }
+        },
     );
 };
 
-const quickStatus = (testRunCase: TestRunCase, status: TestRunCase['status']) => {
+const quickStatus = (
+    testRunCase: TestRunCase,
+    status: TestRunCase['status'],
+) => {
     router.put(
         `/projects/${props.project.id}/test-runs/${props.testRun.id}/cases/${testRunCase.id}`,
         { status },
-        { preserveScroll: true }
+        { preserveScroll: true },
     );
 };
 
@@ -132,20 +202,35 @@ const removeCase = () => {
     if (!caseToRemove.value) return;
     router.delete(
         `/projects/${props.project.id}/test-runs/${props.testRun.id}/cases/${caseToRemove.value.id}`,
-        { preserveScroll: true, onSuccess: () => { caseToRemove.value = null; } }
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                caseToRemove.value = null;
+            },
+        },
     );
 };
 
 const completeRun = () => {
-    router.post(`/projects/${props.project.id}/test-runs/${props.testRun.id}/complete`);
+    router.post(
+        `/projects/${props.project.id}/test-runs/${props.testRun.id}/complete`,
+    );
 };
 
 const pauseRun = () => {
-    router.post(`/projects/${props.project.id}/test-runs/${props.testRun.id}/pause`, {}, { preserveScroll: true });
+    router.post(
+        `/projects/${props.project.id}/test-runs/${props.testRun.id}/pause`,
+        {},
+        { preserveScroll: true },
+    );
 };
 
 const resumeRun = () => {
-    router.post(`/projects/${props.project.id}/test-runs/${props.testRun.id}/resume`, {}, { preserveScroll: true });
+    router.post(
+        `/projects/${props.project.id}/test-runs/${props.testRun.id}/resume`,
+        {},
+        { preserveScroll: true },
+    );
 };
 
 // --- Time Adjustment ---
@@ -177,7 +262,7 @@ const submitTimeAdjustment = () => {
             onFinish: () => {
                 timeAdjustProcessing.value = false;
             },
-        }
+        },
     );
 };
 
@@ -198,7 +283,9 @@ const tick = ref(0);
 let timerInterval: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
-    timerInterval = setInterval(() => { tick.value++; }, 1000);
+    timerInterval = setInterval(() => {
+        tick.value++;
+    }, 1000);
 });
 
 onUnmounted(() => {
@@ -207,7 +294,7 @@ onUnmounted(() => {
 
 const totalCaseTimeSpent = computed((): number => {
     const cases = props.testRun.test_run_cases ?? [];
-    return cases.reduce((sum, trc) => sum + ((trc.time_spent ?? 0) * 60), 0);
+    return cases.reduce((sum, trc) => sum + (trc.time_spent ?? 0) * 60, 0);
 });
 
 const liveElapsed = computed((): number | null => {
@@ -220,10 +307,12 @@ const liveElapsed = computed((): number | null => {
     if (!start) return null;
     const startMs = new Date(start).getTime();
     const nowMs = Date.now();
-    let total = Math.floor((nowMs - startMs) / 1000);
+    const total = Math.floor((nowMs - startMs) / 1000);
     let paused = run.total_paused_seconds ?? 0;
     if (run.is_paused && run.paused_at) {
-        paused += Math.floor((nowMs - new Date(run.paused_at).getTime()) / 1000);
+        paused += Math.floor(
+            (nowMs - new Date(run.paused_at).getTime()) / 1000,
+        );
     }
     const adjustment = run.time_adjustment_seconds ?? 0;
     const timerElapsed = Math.max(0, total - paused);
@@ -233,7 +322,7 @@ const liveElapsed = computed((): number | null => {
 const sourceSuites = computed(() => {
     if (props.testRun.source !== 'test-cases') return [];
     const map = new Map<number, { id: number; name: string }>();
-    props.testRun.test_run_cases?.forEach(trc => {
+    props.testRun.test_run_cases?.forEach((trc) => {
         const suite = trc.test_case?.test_suite;
         if (suite && !map.has(suite.id)) {
             map.set(suite.id, suite);
@@ -244,8 +333,11 @@ const sourceSuites = computed(() => {
 
 const groupedCases = computed(() => {
     const groups: Record<string, TestRunCase[]> = {};
-    props.testRun.test_run_cases?.forEach(trc => {
-        const suiteName = trc.test_case?.test_suite?.name || props.testRun.checklist?.name || 'Checks';
+    props.testRun.test_run_cases?.forEach((trc) => {
+        const suiteName =
+            trc.test_case?.test_suite?.name ||
+            props.testRun.checklist?.name ||
+            'Checks';
         if (!groups[suiteName]) {
             groups[suiteName] = [];
         }
@@ -268,28 +360,38 @@ const hasDetails = (trc: TestRunCase): boolean => {
     if (trc.expected_result) return true;
     const tc = trc.test_case;
     if (!tc) return false;
-    return !!(tc.description || tc.preconditions || tc.steps?.length || tc.expected_result);
+    return !!(
+        tc.description ||
+        tc.preconditions ||
+        tc.steps?.length ||
+        tc.expected_result
+    );
 };
 
 const createBugReportUrl = (trc: TestRunCase): string => {
     const params = new URLSearchParams();
     if (trc.test_case) {
         params.set('title', trc.test_case.title);
-        if (trc.test_case.description) params.set('description', trc.test_case.description);
+        if (trc.test_case.description)
+            params.set('description', trc.test_case.description);
         if (trc.test_case.steps?.length) {
-            const formatted = trc.test_case.steps.map((step, i) => {
-                let line = `${i + 1}. ${step.action}`;
-                if (step.expected) line += `\nExpected: ${step.expected}`;
-                return line;
-            }).join('\n');
+            const formatted = trc.test_case.steps
+                .map((step, i) => {
+                    let line = `${i + 1}. ${step.action}`;
+                    if (step.expected) line += `\nExpected: ${step.expected}`;
+                    return line;
+                })
+                .join('\n');
             params.set('steps_to_reproduce', formatted);
         }
-        if (trc.test_case.expected_result) params.set('expected_result', trc.test_case.expected_result);
+        if (trc.test_case.expected_result)
+            params.set('expected_result', trc.test_case.expected_result);
         if (trc.actual_result) params.set('actual_result', trc.actual_result);
         params.set('test_case_id', String(trc.test_case.id));
     } else {
         if (trc.title) params.set('title', stripHtml(trc.title));
-        if (trc.expected_result) params.set('expected_result', trc.expected_result);
+        if (trc.expected_result)
+            params.set('expected_result', trc.expected_result);
         if (trc.actual_result) params.set('actual_result', trc.actual_result);
     }
     return `/projects/${props.project.id}/bugreports/create?${params.toString()}`;
@@ -302,11 +404,16 @@ const filteredGroupedCases = computed(() => {
     const query = searchQuery.value.toLowerCase();
     const filtered: Record<string, TestRunCase[]> = {};
     for (const [suiteName, cases] of Object.entries(groupedCases.value)) {
-        const matched = cases.filter(trc =>
-            stripHtml(trc.test_case?.title ?? '').toLowerCase().includes(query) ||
-            stripHtml(trc.title ?? '').toLowerCase().includes(query) ||
-            trc.status.toLowerCase().includes(query) ||
-            trc.assigned_user?.name?.toLowerCase().includes(query)
+        const matched = cases.filter(
+            (trc) =>
+                stripHtml(trc.test_case?.title ?? '')
+                    .toLowerCase()
+                    .includes(query) ||
+                stripHtml(trc.title ?? '')
+                    .toLowerCase()
+                    .includes(query) ||
+                trc.status.toLowerCase().includes(query) ||
+                trc.assigned_user?.name?.toLowerCase().includes(query),
         );
         if (matched.length > 0) {
             filtered[suiteName] = matched;
@@ -325,18 +432,18 @@ const addCaseIds = ref<number[]>([]);
 const existingTestCaseIds = computed(() => {
     return new Set(
         props.testRun.test_run_cases
-            ?.filter(trc => trc.test_case_id)
-            .map(trc => trc.test_case_id!) ?? []
+            ?.filter((trc) => trc.test_case_id)
+            .map((trc) => trc.test_case_id!) ?? [],
     );
 });
 
 const getAllTestCases = (suite: TestSuite): number[] => {
     const ids: number[] = [];
     if (suite.test_cases) {
-        ids.push(...suite.test_cases.map(tc => tc.id));
+        ids.push(...suite.test_cases.map((tc) => tc.id));
     }
     if (suite.children) {
-        suite.children.forEach(child => {
+        suite.children.forEach((child) => {
             ids.push(...getAllTestCases(child));
         });
     }
@@ -344,22 +451,34 @@ const getAllTestCases = (suite: TestSuite): number[] => {
 };
 
 const isSuiteSelected = (suite: TestSuite) => {
-    const allIds = getAllTestCases(suite).filter(id => !existingTestCaseIds.value.has(id));
-    return allIds.length > 0 && allIds.every(id => addCaseIds.value.includes(id));
+    const allIds = getAllTestCases(suite).filter(
+        (id) => !existingTestCaseIds.value.has(id),
+    );
+    return (
+        allIds.length > 0 && allIds.every((id) => addCaseIds.value.includes(id))
+    );
 };
 
 const isSuitePartiallySelected = (suite: TestSuite) => {
-    const allIds = getAllTestCases(suite).filter(id => !existingTestCaseIds.value.has(id));
-    const selectedCount = allIds.filter(id => addCaseIds.value.includes(id)).length;
+    const allIds = getAllTestCases(suite).filter(
+        (id) => !existingTestCaseIds.value.has(id),
+    );
+    const selectedCount = allIds.filter((id) =>
+        addCaseIds.value.includes(id),
+    ).length;
     return selectedCount > 0 && selectedCount < allIds.length;
 };
 
 const toggleSuiteSelection = (suite: TestSuite) => {
-    const allIds = getAllTestCases(suite).filter(id => !existingTestCaseIds.value.has(id));
+    const allIds = getAllTestCases(suite).filter(
+        (id) => !existingTestCaseIds.value.has(id),
+    );
     if (isSuiteSelected(suite)) {
-        addCaseIds.value = addCaseIds.value.filter(id => !allIds.includes(id));
+        addCaseIds.value = addCaseIds.value.filter(
+            (id) => !allIds.includes(id),
+        );
     } else {
-        const newIds = allIds.filter(id => !addCaseIds.value.includes(id));
+        const newIds = allIds.filter((id) => !addCaseIds.value.includes(id));
         addCaseIds.value = [...addCaseIds.value, ...newIds];
     }
 };
@@ -368,7 +487,7 @@ const toggleAddTestCase = (testCaseId: number) => {
     if (existingTestCaseIds.value.has(testCaseId)) return;
     const index = addCaseIds.value.indexOf(testCaseId);
     if (index > -1) {
-        addCaseIds.value = addCaseIds.value.filter(id => id !== testCaseId);
+        addCaseIds.value = addCaseIds.value.filter((id) => id !== testCaseId);
     } else {
         addCaseIds.value = [...addCaseIds.value, testCaseId];
     }
@@ -381,18 +500,32 @@ const filteredAddTestSuites = computed(() => {
     if (!query || !props.testSuites) return props.testSuites ?? [];
 
     return props.testSuites
-        .map(suite => {
-            const filteredCases = suite.test_cases?.filter(tc => tc.title.toLowerCase().includes(query)) ?? [];
+        .map((suite) => {
+            const filteredCases =
+                suite.test_cases?.filter((tc) =>
+                    tc.title.toLowerCase().includes(query),
+                ) ?? [];
             const filteredChildren = (suite.children ?? [])
-                .map(child => ({
+                .map((child) => ({
                     ...child,
-                    test_cases: child.test_cases?.filter(tc => tc.title.toLowerCase().includes(query)) ?? [],
+                    test_cases:
+                        child.test_cases?.filter((tc) =>
+                            tc.title.toLowerCase().includes(query),
+                        ) ?? [],
                 }))
-                .filter(child => child.test_cases.length > 0);
+                .filter((child) => child.test_cases.length > 0);
 
-            return { ...suite, test_cases: filteredCases, children: filteredChildren };
+            return {
+                ...suite,
+                test_cases: filteredCases,
+                children: filteredChildren,
+            };
         })
-        .filter(suite => (suite.test_cases?.length ?? 0) > 0 || (suite.children?.length ?? 0) > 0);
+        .filter(
+            (suite) =>
+                (suite.test_cases?.length ?? 0) > 0 ||
+                (suite.children?.length ?? 0) > 0,
+        );
 });
 
 // For checklist source
@@ -402,38 +535,50 @@ const selectedAddChecklistId = ref('');
 const existingTitles = computed(() => {
     return new Set(
         props.testRun.test_run_cases
-            ?.filter(trc => trc.title)
-            .map(trc => trc.title!) ?? []
+            ?.filter((trc) => trc.title)
+            .map((trc) => trc.title!) ?? [],
     );
 });
 
 const selectedAddChecklist = computed(() => {
     if (!selectedAddChecklistId.value) return null;
-    return props.checklists?.find(c => c.id === Number(selectedAddChecklistId.value)) ?? null;
+    return (
+        props.checklists?.find(
+            (c) => c.id === Number(selectedAddChecklistId.value),
+        ) ?? null
+    );
 });
 
 const textColumnKey = computed((): string | null => {
     if (!selectedAddChecklist.value?.columns_config) return null;
-    const col = selectedAddChecklist.value.columns_config.find(col => col.type === 'text');
+    const col = selectedAddChecklist.value.columns_config.find(
+        (col) => col.type === 'text',
+    );
     return col?.key ?? null;
 });
 
 const expectedResultColumnKey = computed((): string | null => {
-    if (!selectedAddChecklist.value?.columns_config || !textColumnKey.value) return null;
-    const cols = selectedAddChecklist.value.columns_config.filter(col => col.type === 'text' && col.key !== textColumnKey.value);
-    const expectedCol = cols.find(col => /expected|result/i.test(col.label));
+    if (!selectedAddChecklist.value?.columns_config || !textColumnKey.value)
+        return null;
+    const cols = selectedAddChecklist.value.columns_config.filter(
+        (col) => col.type === 'text' && col.key !== textColumnKey.value,
+    );
+    const expectedCol = cols.find((col) => /expected|result/i.test(col.label));
     return expectedCol?.key ?? cols[0]?.key ?? null;
 });
 
 const checklistRows = computed((): { title: string; row: ChecklistRow }[] => {
     if (!selectedAddChecklist.value?.rows || !textColumnKey.value) return [];
     return selectedAddChecklist.value.rows
-        .filter(r => r.row_type !== 'section_header')
-        .map(r => ({
-            title: String((r.data as Record<string, unknown>)?.[textColumnKey.value!] ?? ''),
+        .filter((r) => r.row_type !== 'section_header')
+        .map((r) => ({
+            title: String(
+                (r.data as Record<string, unknown>)?.[textColumnKey.value!] ??
+                    '',
+            ),
             row: r,
         }))
-        .filter(r => r.title.trim() !== '');
+        .filter((r) => r.title.trim() !== '');
 });
 
 const toggleAddRowTitle = (title: string) => {
@@ -453,7 +598,7 @@ watch(selectedAddChecklistId, () => {
 
 const selectAllAddRows = () => {
     const set = new Set(addRowTitles.value);
-    checklistRows.value.forEach(item => {
+    checklistRows.value.forEach((item) => {
         if (!existingTitles.value.has(item.title)) {
             set.add(item.title);
         }
@@ -469,7 +614,9 @@ const openAddCasesDialog = () => {
     addCaseIds.value = [];
     addCaseSearch.value = '';
     addRowTitles.value = new Set();
-    selectedAddChecklistId.value = props.testRun.checklist_id ? String(props.testRun.checklist_id) : '';
+    selectedAddChecklistId.value = props.testRun.checklist_id
+        ? String(props.testRun.checklist_id)
+        : '';
     showAddCasesDialog.value = true;
 };
 
@@ -483,9 +630,13 @@ const submitAddCases = () => {
         data.titles = Array.from(addRowTitles.value);
         if (expectedResultColumnKey.value) {
             const map: Record<string, string> = {};
-            checklistRows.value.forEach(item => {
+            checklistRows.value.forEach((item) => {
                 if (addRowTitles.value.has(item.title)) {
-                    const val = String((item.row.data as Record<string, unknown>)?.[expectedResultColumnKey.value!] ?? '').trim();
+                    const val = String(
+                        (item.row.data as Record<string, unknown>)?.[
+                            expectedResultColumnKey.value!
+                        ] ?? '',
+                    ).trim();
                     if (val) {
                         map[item.title] = val;
                     }
@@ -508,7 +659,7 @@ const submitAddCases = () => {
             onFinish: () => {
                 addCasesProcessing.value = false;
             },
-        }
+        },
     );
 };
 
@@ -518,7 +669,6 @@ const addCasesCount = computed(() => {
     }
     return addRowTitles.value.size;
 });
-
 </script>
 
 <template>
@@ -530,13 +680,26 @@ const addCasesCount = computed(() => {
             <div class="flex items-start justify-between">
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight">
-                        <Play class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
-                            @click="copyLink"
-                            class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
-                            :title="copied ? 'Copied!' : 'Copy link'"
-                        ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
+                        <Play
+                            class="mr-2 inline-block h-6 w-6 align-text-top text-primary"
+                        />{{ titleStart
+                        }}<span class="whitespace-nowrap"
+                            >{{ titleEnd
+                            }}<button
+                                @click="copyLink"
+                                class="ml-1.5 inline-flex cursor-pointer rounded-md p-1 align-middle text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+                                :title="copied ? 'Copied!' : 'Copy link'"
+                            >
+                                <Check
+                                    v-if="copied"
+                                    class="h-4 w-4 text-green-500"
+                                /><Link2 v-else class="h-4 w-4" /></button
+                        ></span>
                     </h1>
-                    <p v-if="testRun.description" class="mt-1 text-muted-foreground">
+                    <p
+                        v-if="testRun.description"
+                        class="mt-1 text-muted-foreground"
+                    >
                         {{ testRun.description }}
                     </p>
                     <div class="mt-2 flex items-center gap-3">
@@ -546,9 +709,16 @@ const addCasesCount = computed(() => {
                         <Badge v-if="testRun.environment" variant="blue">
                             {{ testRun.environment }}
                         </Badge>
-                        <DropdownMenu v-if="testRun.source === 'checklist' && testRun.checklist">
+                        <DropdownMenu
+                            v-if="
+                                testRun.source === 'checklist' &&
+                                testRun.checklist
+                            "
+                        >
                             <DropdownMenuTrigger as-child>
-                                <button class="inline-flex items-center gap-1 rounded-md bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer">
+                                <button
+                                    class="inline-flex cursor-pointer items-center gap-1 rounded-md bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                >
                                     <ListChecks class="h-3 w-3" />
                                     Source: Checklist
                                     <ChevronDown class="h-3 w-3" />
@@ -558,7 +728,7 @@ const addCasesCount = computed(() => {
                                 <DropdownMenuItem as-child>
                                     <Link
                                         :href="`/projects/${project.id}/checklists/${testRun.checklist.id}`"
-                                        class="flex items-center gap-2 cursor-pointer"
+                                        class="flex cursor-pointer items-center gap-2"
                                     >
                                         <ListChecks class="h-3.5 w-3.5" />
                                         {{ testRun.checklist.name }}
@@ -566,19 +736,35 @@ const addCasesCount = computed(() => {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <DropdownMenu v-else-if="testRun.source === 'test-cases' && sourceSuites.length > 0">
+                        <DropdownMenu
+                            v-else-if="
+                                testRun.source === 'test-cases' &&
+                                sourceSuites.length > 0
+                            "
+                        >
                             <DropdownMenuTrigger as-child>
-                                <button class="inline-flex items-center gap-1 rounded-md bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer">
+                                <button
+                                    class="inline-flex cursor-pointer items-center gap-1 rounded-md bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                >
                                     <Layers class="h-3 w-3" />
-                                    Source: {{ sourceSuites.length }} {{ sourceSuites.length === 1 ? 'suite' : 'suites' }}
+                                    Source: {{ sourceSuites.length }}
+                                    {{
+                                        sourceSuites.length === 1
+                                            ? 'suite'
+                                            : 'suites'
+                                    }}
                                     <ChevronDown class="h-3 w-3" />
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" class="min-w-40">
-                                <DropdownMenuItem v-for="suite in sourceSuites" :key="suite.id" as-child>
+                                <DropdownMenuItem
+                                    v-for="suite in sourceSuites"
+                                    :key="suite.id"
+                                    as-child
+                                >
                                     <Link
                                         :href="`/projects/${project.id}/test-suites/${suite.id}`"
-                                        class="flex items-center gap-2 cursor-pointer"
+                                        class="flex cursor-pointer items-center gap-2"
                                     >
                                         <Layers class="h-3.5 w-3.5" />
                                         {{ suite.name }}
@@ -586,24 +772,29 @@ const addCasesCount = computed(() => {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <span v-if="testRun.milestone" class="text-sm text-muted-foreground">
+                        <span
+                            v-if="testRun.milestone"
+                            class="text-sm text-muted-foreground"
+                        >
                             {{ testRun.milestone }}
                         </span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="relative">
-                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search
+                            class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
                         <Input
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search test cases..."
-                            class="pl-9 pr-8 w-56 bg-background/60"
+                            class="w-56 bg-background/60 pr-8 pl-9"
                         />
                         <button
                             v-if="searchQuery"
                             @click="searchQuery = ''"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                            class="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                         >
                             <X class="h-4 w-4" />
                         </button>
@@ -621,7 +812,10 @@ const addCasesCount = computed(() => {
                     </RestrictedAction>
                     <RestrictedAction>
                         <Button
-                            v-if="testRun.status === 'active' && !testRun.is_paused"
+                            v-if="
+                                testRun.status === 'active' &&
+                                !testRun.is_paused
+                            "
                             @click="pauseRun"
                             variant="outline"
                             class="gap-2"
@@ -632,7 +826,9 @@ const addCasesCount = computed(() => {
                     </RestrictedAction>
                     <RestrictedAction>
                         <Button
-                            v-if="testRun.status === 'active' && testRun.is_paused"
+                            v-if="
+                                testRun.status === 'active' && testRun.is_paused
+                            "
                             @click="resumeRun"
                             variant="outline"
                             class="gap-2"
@@ -653,7 +849,9 @@ const addCasesCount = computed(() => {
                         </Button>
                     </RestrictedAction>
                     <RestrictedAction>
-                        <Link :href="`/projects/${project.id}/test-runs/${testRun.id}/edit`">
+                        <Link
+                            :href="`/projects/${project.id}/test-runs/${testRun.id}/edit`"
+                        >
                             <Button variant="outline" class="gap-2">
                                 <Edit class="h-4 w-4" />
                                 Edit
@@ -668,46 +866,102 @@ const addCasesCount = computed(() => {
                 <CardContent class="p-6">
                     <div class="flex items-center gap-8">
                         <div class="flex-1">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm font-medium">Progress</span>
-                                <span class="text-2xl font-bold text-primary">{{ testRun.progress }}%</span>
+                            <div class="mb-2 flex items-center justify-between">
+                                <span class="text-sm font-medium"
+                                    >Progress</span
+                                >
+                                <span class="text-2xl font-bold text-primary"
+                                    >{{ testRun.progress }}%</span
+                                >
                             </div>
-                            <Progress :model-value="testRun.progress" class="h-3" />
+                            <Progress
+                                :model-value="testRun.progress"
+                                class="h-3"
+                            />
                         </div>
                         <div class="flex gap-6">
-                            <div v-if="formatElapsed(liveElapsed)" class="text-center">
+                            <div
+                                v-if="formatElapsed(liveElapsed)"
+                                class="text-center"
+                            >
                                 <button
                                     type="button"
                                     @click="openTimeDialog"
-                                    class="text-2xl font-bold flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
-                                    :class="testRun.is_paused ? 'text-yellow-500' : 'text-primary'"
+                                    class="flex cursor-pointer items-center gap-1 text-2xl font-bold transition-opacity hover:opacity-80"
+                                    :class="
+                                        testRun.is_paused
+                                            ? 'text-yellow-500'
+                                            : 'text-primary'
+                                    "
                                     title="Click to adjust time"
                                 >
-                                    <Pause v-if="testRun.is_paused" class="h-5 w-5" />
+                                    <Pause
+                                        v-if="testRun.is_paused"
+                                        class="h-5 w-5"
+                                    />
                                     <Timer v-else class="h-5 w-5" />
                                     {{ formatElapsed(liveElapsed) }}
                                 </button>
-                                <div class="text-xs text-muted-foreground">{{ testRun.is_paused ? 'Paused' : 'Elapsed' }}</div>
+                                <div class="text-xs text-muted-foreground">
+                                    {{
+                                        testRun.is_paused ? 'Paused' : 'Elapsed'
+                                    }}
+                                </div>
                             </div>
-                            <div v-if="testRun.stats?.passed" class="text-center">
-                                <div class="text-2xl font-bold text-green-500">{{ testRun.stats.passed }}</div>
-                                <div class="text-xs text-muted-foreground">Passed</div>
+                            <div
+                                v-if="testRun.stats?.passed"
+                                class="text-center"
+                            >
+                                <div class="text-2xl font-bold text-green-500">
+                                    {{ testRun.stats.passed }}
+                                </div>
+                                <div class="text-xs text-muted-foreground">
+                                    Passed
+                                </div>
                             </div>
-                            <div v-if="testRun.stats?.failed" class="text-center">
-                                <div class="text-2xl font-bold text-red-500">{{ testRun.stats.failed }}</div>
-                                <div class="text-xs text-muted-foreground">Failed</div>
+                            <div
+                                v-if="testRun.stats?.failed"
+                                class="text-center"
+                            >
+                                <div class="text-2xl font-bold text-red-500">
+                                    {{ testRun.stats.failed }}
+                                </div>
+                                <div class="text-xs text-muted-foreground">
+                                    Failed
+                                </div>
                             </div>
-                            <div v-if="testRun.stats?.blocked" class="text-center">
-                                <div class="text-2xl font-bold text-orange-500">{{ testRun.stats.blocked }}</div>
-                                <div class="text-xs text-muted-foreground">Blocked</div>
+                            <div
+                                v-if="testRun.stats?.blocked"
+                                class="text-center"
+                            >
+                                <div class="text-2xl font-bold text-orange-500">
+                                    {{ testRun.stats.blocked }}
+                                </div>
+                                <div class="text-xs text-muted-foreground">
+                                    Blocked
+                                </div>
                             </div>
-                            <div v-if="testRun.stats?.skipped" class="text-center">
-                                <div class="text-2xl font-bold text-purple-500">{{ testRun.stats.skipped }}</div>
-                                <div class="text-xs text-muted-foreground">Skipped</div>
+                            <div
+                                v-if="testRun.stats?.skipped"
+                                class="text-center"
+                            >
+                                <div class="text-2xl font-bold text-purple-500">
+                                    {{ testRun.stats.skipped }}
+                                </div>
+                                <div class="text-xs text-muted-foreground">
+                                    Skipped
+                                </div>
                             </div>
-                            <div v-if="testRun.stats?.untested" class="text-center">
-                                <div class="text-2xl font-bold text-gray-400">{{ testRun.stats.untested }}</div>
-                                <div class="text-xs text-muted-foreground">Untested</div>
+                            <div
+                                v-if="testRun.stats?.untested"
+                                class="text-center"
+                            >
+                                <div class="text-2xl font-bold text-gray-400">
+                                    {{ testRun.stats.untested }}
+                                </div>
+                                <div class="text-xs text-muted-foreground">
+                                    Untested
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -715,13 +969,24 @@ const addCasesCount = computed(() => {
             </Card>
 
             <!-- Test Cases by Suite -->
-            <div v-if="searchQuery.trim() && Object.keys(filteredGroupedCases).length === 0" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Search class="h-12 w-12 mb-3" />
+            <div
+                v-if="
+                    searchQuery.trim() &&
+                    Object.keys(filteredGroupedCases).length === 0
+                "
+                class="flex flex-col items-center justify-center py-16 text-muted-foreground"
+            >
+                <Search class="mb-3 h-12 w-12" />
                 <p class="font-semibold">No results found</p>
-                <p class="text-sm max-w-full truncate px-4">No test cases match "{{ searchQuery }}"</p>
+                <p class="max-w-full truncate px-4 text-sm">
+                    No test cases match "{{ searchQuery }}"
+                </p>
             </div>
             <div v-else class="space-y-4">
-                <div v-for="(cases, suiteName) in filteredGroupedCases" :key="suiteName">
+                <div
+                    v-for="(cases, suiteName) in filteredGroupedCases"
+                    :key="suiteName"
+                >
                     <h3 class="mb-2 font-semibold">{{ suiteName }}</h3>
                     <div class="space-y-1">
                         <Card
@@ -732,62 +997,133 @@ const addCasesCount = computed(() => {
                             <CardContent class="px-4 py-2">
                                 <div class="flex items-center justify-between">
                                     <div
-                                        class="flex items-center gap-3 flex-1 min-w-0"
-                                        :class="{ 'cursor-pointer': hasDetails(trc) }"
-                                        @click="hasDetails(trc) && toggleExpanded(trc.id)"
+                                        class="flex min-w-0 flex-1 items-center gap-3"
+                                        :class="{
+                                            'cursor-pointer': hasDetails(trc),
+                                        }"
+                                        @click="
+                                            hasDetails(trc) &&
+                                            toggleExpanded(trc.id)
+                                        "
                                     >
                                         <component
                                             :is="getStatusIcon(trc.status)"
-                                            :class="['h-4 w-4 shrink-0', getStatusColor(trc.status)]"
+                                            :class="[
+                                                'h-4 w-4 shrink-0',
+                                                getStatusColor(trc.status),
+                                            ]"
                                         />
                                         <div class="min-w-0 flex-1">
-                                            <div class="flex items-center gap-2">
-                                                <p class="text-sm font-medium truncate" v-html="highlightRich(trc.test_case?.title ?? trc.title ?? '')" />
-                                                <Badge :variant="testResultVariant(trc.status)" class="text-[10px] px-1.5 h-4 shrink-0">
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <p
+                                                    class="truncate text-sm font-medium"
+                                                    v-html="
+                                                        highlightRich(
+                                                            trc.test_case
+                                                                ?.title ??
+                                                                trc.title ??
+                                                                '',
+                                                        )
+                                                    "
+                                                />
+                                                <Badge
+                                                    :variant="
+                                                        testResultVariant(
+                                                            trc.status,
+                                                        )
+                                                    "
+                                                    class="h-4 shrink-0 px-1.5 text-[10px]"
+                                                >
                                                     {{ trc.status }}
                                                 </Badge>
-                                                <span v-if="trc.assigned_user" class="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                                                <span
+                                                    v-if="trc.assigned_user"
+                                                    class="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
+                                                >
                                                     <User class="h-3 w-3" />
                                                     {{ trc.assigned_user.name }}
                                                 </span>
-                                                <span v-if="trc.time_spent" class="text-xs text-muted-foreground shrink-0">{{ trc.time_spent }}min</span>
+                                                <span
+                                                    v-if="trc.time_spent"
+                                                    class="shrink-0 text-xs text-muted-foreground"
+                                                    >{{
+                                                        trc.time_spent
+                                                    }}min</span
+                                                >
                                             </div>
                                         </div>
                                         <component
                                             v-if="hasDetails(trc)"
-                                            :is="expandedCases.has(trc.id) ? ChevronUp : ChevronDown"
+                                            :is="
+                                                expandedCases.has(trc.id)
+                                                    ? ChevronUp
+                                                    : ChevronDown
+                                            "
                                             class="h-4 w-4 shrink-0 text-muted-foreground"
                                         />
                                     </div>
-                                    <div class="flex items-center gap-2 shrink-0 ml-2">
+                                    <div
+                                        class="ml-2 flex shrink-0 items-center gap-2"
+                                    >
                                         <!-- Quick status buttons -->
                                         <RestrictedAction>
-                                            <div v-if="testRun.status === 'active'" class="flex gap-1">
+                                            <div
+                                                v-if="
+                                                    testRun.status === 'active'
+                                                "
+                                                class="flex gap-1"
+                                            >
                                                 <Button
                                                     size="icon-sm"
                                                     variant="ghost"
                                                     class="p-0"
-                                                    :class="{ 'bg-green-500/10': trc.status === 'passed' }"
-                                                    @click="quickStatus(trc, 'passed')"
+                                                    :class="{
+                                                        'bg-green-500/10':
+                                                            trc.status ===
+                                                            'passed',
+                                                    }"
+                                                    @click="
+                                                        quickStatus(
+                                                            trc,
+                                                            'passed',
+                                                        )
+                                                    "
                                                     title="Pass"
                                                 >
-                                                    <CheckCircle2 class="h-4 w-4 text-green-500" />
+                                                    <CheckCircle2
+                                                        class="h-4 w-4 text-green-500"
+                                                    />
                                                 </Button>
                                                 <Button
                                                     size="icon-sm"
                                                     variant="ghost"
                                                     class="p-0"
-                                                    :class="{ 'bg-red-500/10': trc.status === 'failed' }"
-                                                    @click="quickStatus(trc, 'failed')"
+                                                    :class="{
+                                                        'bg-red-500/10':
+                                                            trc.status ===
+                                                            'failed',
+                                                    }"
+                                                    @click="
+                                                        quickStatus(
+                                                            trc,
+                                                            'failed',
+                                                        )
+                                                    "
                                                     title="Fail"
                                                 >
-                                                    <XCircle class="h-4 w-4 text-red-500" />
+                                                    <XCircle
+                                                        class="h-4 w-4 text-red-500"
+                                                    />
                                                 </Button>
                                                 <Button
                                                     size="icon-sm"
                                                     variant="ghost"
                                                     class="p-0"
-                                                    @click="openResultDialog(trc)"
+                                                    @click="
+                                                        openResultDialog(trc)
+                                                    "
                                                     title="Add Details"
                                                 >
                                                     <Edit class="h-4 w-4" />
@@ -799,23 +1135,25 @@ const addCasesCount = computed(() => {
                                             v-if="trc.clickup_link"
                                             :href="trc.clickup_link"
                                             target="_blank"
-                                            class="text-muted-foreground hover:text-primary cursor-pointer"
+                                            class="cursor-pointer text-muted-foreground hover:text-primary"
                                         >
                                             <ExternalLink class="h-4 w-4" />
                                         </a>
                                         <Link
                                             :href="createBugReportUrl(trc)"
-                                            class="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-destructive hover:bg-muted cursor-pointer"
+                                            class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive"
                                             title="Create Bug Report"
                                         >
                                             <Bug class="h-4 w-4" />
                                         </Link>
                                         <RestrictedAction>
                                             <Button
-                                                v-if="testRun.status === 'active'"
+                                                v-if="
+                                                    testRun.status === 'active'
+                                                "
                                                 size="icon-sm"
                                                 variant="ghost"
-                                                class="p-0 text-muted-foreground hover:text-destructive cursor-pointer"
+                                                class="cursor-pointer p-0 text-muted-foreground hover:text-destructive"
                                                 @click.stop="caseToRemove = trc"
                                                 title="Remove"
                                             >
@@ -825,36 +1163,95 @@ const addCasesCount = computed(() => {
                                     </div>
                                 </div>
                                 <!-- Expanded Details -->
-                                <div v-if="expandedCases.has(trc.id) && trc.test_case" class="mt-2 ml-7 space-y-2 border-t pt-2">
+                                <div
+                                    v-if="
+                                        expandedCases.has(trc.id) &&
+                                        trc.test_case
+                                    "
+                                    class="mt-2 ml-7 space-y-2 border-t pt-2"
+                                >
                                     <div v-if="trc.test_case.description">
-                                        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Description</p>
-                                        <p class="text-sm whitespace-pre-wrap">{{ trc.test_case.description }}</p>
+                                        <p
+                                            class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                                        >
+                                            Description
+                                        </p>
+                                        <p class="text-sm whitespace-pre-wrap">
+                                            {{ trc.test_case.description }}
+                                        </p>
                                     </div>
                                     <div v-if="trc.test_case.preconditions">
-                                        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Preconditions</p>
-                                        <p class="text-sm whitespace-pre-wrap">{{ trc.test_case.preconditions }}</p>
+                                        <p
+                                            class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                                        >
+                                            Preconditions
+                                        </p>
+                                        <p class="text-sm whitespace-pre-wrap">
+                                            {{ trc.test_case.preconditions }}
+                                        </p>
                                     </div>
-                                    <div v-if="trc.test_case.steps?.length" class="space-y-1">
-                                        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Steps</p>
-                                        <div v-for="(step, idx) in trc.test_case.steps" :key="idx" class="flex gap-2 text-sm">
-                                            <span class="shrink-0 text-xs font-medium text-muted-foreground w-5 text-right pt-0.5">{{ idx + 1 }}.</span>
+                                    <div
+                                        v-if="trc.test_case.steps?.length"
+                                        class="space-y-1"
+                                    >
+                                        <p
+                                            class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                                        >
+                                            Steps
+                                        </p>
+                                        <div
+                                            v-for="(step, idx) in trc.test_case
+                                                .steps"
+                                            :key="idx"
+                                            class="flex gap-2 text-sm"
+                                        >
+                                            <span
+                                                class="w-5 shrink-0 pt-0.5 text-right text-xs font-medium text-muted-foreground"
+                                                >{{ idx + 1 }}.</span
+                                            >
                                             <div class="min-w-0">
                                                 <p>{{ step.action }}</p>
-                                                <p v-if="step.expected" class="text-xs text-muted-foreground">
-                                                    <span class="text-green-500 font-medium">Expected:</span> {{ step.expected }}
+                                                <p
+                                                    v-if="step.expected"
+                                                    class="text-xs text-muted-foreground"
+                                                >
+                                                    <span
+                                                        class="font-medium text-green-500"
+                                                        >Expected:</span
+                                                    >
+                                                    {{ step.expected }}
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
                                     <div v-if="trc.test_case.expected_result">
-                                        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Expected Result</p>
-                                        <p class="text-sm whitespace-pre-wrap">{{ trc.test_case.expected_result }}</p>
+                                        <p
+                                            class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                                        >
+                                            Expected Result
+                                        </p>
+                                        <p class="text-sm whitespace-pre-wrap">
+                                            {{ trc.test_case.expected_result }}
+                                        </p>
                                     </div>
                                 </div>
-                                <div v-if="expandedCases.has(trc.id) && !trc.test_case && trc.expected_result" class="mt-2 ml-7 space-y-2 border-t pt-2">
+                                <div
+                                    v-if="
+                                        expandedCases.has(trc.id) &&
+                                        !trc.test_case &&
+                                        trc.expected_result
+                                    "
+                                    class="mt-2 ml-7 space-y-2 border-t pt-2"
+                                >
                                     <div>
-                                        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Expected Result</p>
-                                        <p class="text-sm whitespace-pre-wrap">{{ trc.expected_result }}</p>
+                                        <p
+                                            class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                                        >
+                                            Expected Result
+                                        </p>
+                                        <p class="text-sm whitespace-pre-wrap">
+                                            {{ trc.expected_result }}
+                                        </p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -870,7 +1267,10 @@ const addCasesCount = computed(() => {
                 <DialogHeader>
                     <DialogTitle>Update Test Result</DialogTitle>
                     <DialogDescription>
-                        {{ selectedCase?.test_case?.title ?? selectedCase?.title }}
+                        {{
+                            selectedCase?.test_case?.title ??
+                            selectedCase?.title
+                        }}
                     </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4">
@@ -891,23 +1291,41 @@ const addCasesCount = computed(() => {
                     </div>
                     <div class="space-y-2">
                         <Label>Actual Result / Comments</Label>
-                        <Textarea v-model="resultForm.actual_result" rows="3" placeholder="Describe what happened..." />
+                        <Textarea
+                            v-model="resultForm.actual_result"
+                            rows="3"
+                            placeholder="Describe what happened..."
+                        />
                     </div>
                     <div class="space-y-2">
                         <Label>Time Spent (minutes)</Label>
-                        <Input v-model.number="resultForm.time_spent" type="number" min="0" />
+                        <Input
+                            v-model.number="resultForm.time_spent"
+                            type="number"
+                            min="0"
+                        />
                     </div>
                     <div class="space-y-2">
                         <Label>ClickUp Link</Label>
-                        <Input v-model="resultForm.clickup_link" type="url" placeholder="https://app.clickup.com/..." />
+                        <Input
+                            v-model="resultForm.clickup_link"
+                            type="url"
+                            placeholder="https://app.clickup.com/..."
+                        />
                     </div>
                     <div class="space-y-2">
                         <Label>Qase Link</Label>
-                        <Input v-model="resultForm.qase_link" type="url" placeholder="https://app.qase.io/..." />
+                        <Input
+                            v-model="resultForm.qase_link"
+                            type="url"
+                            placeholder="https://app.qase.io/..."
+                        />
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" @click="showResultDialog = false">Cancel</Button>
+                    <Button variant="outline" @click="showResultDialog = false"
+                        >Cancel</Button
+                    >
                     <RestrictedAction>
                         <Button @click="saveResult">Save Result</Button>
                     </RestrictedAction>
@@ -917,99 +1335,210 @@ const addCasesCount = computed(() => {
 
         <!-- Add Cases Dialog -->
         <Dialog v-model:open="showAddCasesDialog">
-            <DialogContent class="sm:max-w-2xl max-h-[80vh] flex flex-col">
+            <DialogContent class="flex max-h-[80vh] flex-col sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Add Cases to Test Run</DialogTitle>
                     <DialogDescription>
-                        {{ testRun.source === 'test-cases' ? 'Select additional test cases to add.' : 'Select additional checklist rows to add.' }}
+                        {{
+                            testRun.source === 'test-cases'
+                                ? 'Select additional test cases to add.'
+                                : 'Select additional checklist rows to add.'
+                        }}
                     </DialogDescription>
                 </DialogHeader>
 
                 <!-- Test Cases source -->
-                <Deferred v-if="testRun.source === 'test-cases'" data="testSuites">
+                <Deferred
+                    v-if="testRun.source === 'test-cases'"
+                    data="testSuites"
+                >
                     <template #fallback>
                         <div class="space-y-3 py-4">
-                            <div v-for="i in 3" :key="i" class="h-8 animate-pulse rounded-md bg-muted" />
+                            <div
+                                v-for="i in 3"
+                                :key="i"
+                                class="h-8 animate-pulse rounded-md bg-muted"
+                            />
                         </div>
                     </template>
                     <div class="relative">
-                        <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search
+                            class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
                         <Input
                             v-model="addCaseSearch"
                             type="text"
                             placeholder="Search test cases..."
-                            class="pl-9 pr-9"
+                            class="pr-9 pl-9"
                         />
                         <button
                             v-if="addCaseSearch"
                             type="button"
                             @click="addCaseSearch = ''"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                            class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                         >
                             <X class="h-4 w-4" />
                         </button>
                     </div>
-                    <div class="flex-1 overflow-y-auto space-y-2 pr-1">
-                        <div v-if="!testSuites?.length" class="rounded-lg border border-dashed p-6 text-center">
-                            <Layers class="mx-auto h-8 w-8 text-muted-foreground" />
-                            <p class="mt-2 text-sm text-muted-foreground">No test suites found.</p>
+                    <div class="flex-1 space-y-2 overflow-y-auto pr-1">
+                        <div
+                            v-if="!testSuites?.length"
+                            class="rounded-lg border border-dashed p-6 text-center"
+                        >
+                            <Layers
+                                class="mx-auto h-8 w-8 text-muted-foreground"
+                            />
+                            <p class="mt-2 text-sm text-muted-foreground">
+                                No test suites found.
+                            </p>
                         </div>
-                        <div v-else-if="filteredAddTestSuites.length === 0 && addCaseSearch" class="rounded-lg border border-dashed p-6 text-center">
-                            <Search class="mx-auto h-8 w-8 text-muted-foreground" />
-                            <p class="mt-2 text-sm text-muted-foreground">No test cases matching "{{ addCaseSearch }}"</p>
+                        <div
+                            v-else-if="
+                                filteredAddTestSuites.length === 0 &&
+                                addCaseSearch
+                            "
+                            class="rounded-lg border border-dashed p-6 text-center"
+                        >
+                            <Search
+                                class="mx-auto h-8 w-8 text-muted-foreground"
+                            />
+                            <p class="mt-2 text-sm text-muted-foreground">
+                                No test cases matching "{{ addCaseSearch }}"
+                            </p>
                         </div>
-                        <template v-else v-for="suite in filteredAddTestSuites" :key="suite.id">
+                        <template
+                            v-else
+                            v-for="suite in filteredAddTestSuites"
+                            :key="suite.id"
+                        >
                             <div class="space-y-1">
                                 <div class="flex items-center gap-2 py-1">
                                     <Checkbox
-                                        :model-value="isSuitePartiallySelected(suite) ? 'indeterminate' : isSuiteSelected(suite)"
-                                        @update:model-value="toggleSuiteSelection(suite)"
+                                        :model-value="
+                                            isSuitePartiallySelected(suite)
+                                                ? 'indeterminate'
+                                                : isSuiteSelected(suite)
+                                        "
+                                        @update:model-value="
+                                            toggleSuiteSelection(suite)
+                                        "
                                     />
                                     <Layers class="h-4 w-4 text-primary" />
-                                    <span class="font-medium">{{ suite.name }}</span>
+                                    <span class="font-medium">{{
+                                        suite.name
+                                    }}</span>
                                 </div>
                                 <div class="ml-6 space-y-0.5">
                                     <div
                                         v-for="tc in suite.test_cases"
                                         :key="tc.id"
                                         class="flex items-center gap-2 py-0.5 text-sm"
-                                        :class="{ 'opacity-40': existingTestCaseIds.has(tc.id) }"
+                                        :class="{
+                                            'opacity-40':
+                                                existingTestCaseIds.has(tc.id),
+                                        }"
                                     >
                                         <Checkbox
-                                            :model-value="existingTestCaseIds.has(tc.id) || addCaseIds.includes(tc.id)"
-                                            :disabled="existingTestCaseIds.has(tc.id)"
-                                            @update:model-value="toggleAddTestCase(tc.id)"
+                                            :model-value="
+                                                existingTestCaseIds.has(
+                                                    tc.id,
+                                                ) || addCaseIds.includes(tc.id)
+                                            "
+                                            :disabled="
+                                                existingTestCaseIds.has(tc.id)
+                                            "
+                                            @update:model-value="
+                                                toggleAddTestCase(tc.id)
+                                            "
                                         />
-                                        <FileText class="h-3 w-3 text-muted-foreground" />
+                                        <FileText
+                                            class="h-3 w-3 text-muted-foreground"
+                                        />
                                         <span>{{ tc.title }}</span>
-                                        <Badge v-if="existingTestCaseIds.has(tc.id)" variant="secondary" class="text-[10px] px-1.5 h-4">
+                                        <Badge
+                                            v-if="
+                                                existingTestCaseIds.has(tc.id)
+                                            "
+                                            variant="secondary"
+                                            class="h-4 px-1.5 text-[10px]"
+                                        >
                                             already added
                                         </Badge>
                                     </div>
-                                    <template v-for="child in suite.children" :key="child.id">
+                                    <template
+                                        v-for="child in suite.children"
+                                        :key="child.id"
+                                    >
                                         <div class="ml-4 space-y-0.5">
-                                            <div class="flex items-center gap-2 py-0.5">
+                                            <div
+                                                class="flex items-center gap-2 py-0.5"
+                                            >
                                                 <Checkbox
-                                                    :model-value="isSuitePartiallySelected(child) ? 'indeterminate' : isSuiteSelected(child)"
-                                                    @update:model-value="toggleSuiteSelection(child)"
+                                                    :model-value="
+                                                        isSuitePartiallySelected(
+                                                            child,
+                                                        )
+                                                            ? 'indeterminate'
+                                                            : isSuiteSelected(
+                                                                  child,
+                                                              )
+                                                    "
+                                                    @update:model-value="
+                                                        toggleSuiteSelection(
+                                                            child,
+                                                        )
+                                                    "
                                                 />
-                                                <Boxes class="h-3 w-3 text-yellow-500" />
-                                                <span class="font-medium text-sm">{{ child.name }}</span>
+                                                <Boxes
+                                                    class="h-3 w-3 text-yellow-500"
+                                                />
+                                                <span
+                                                    class="text-sm font-medium"
+                                                    >{{ child.name }}</span
+                                                >
                                             </div>
                                             <div
                                                 v-for="tc in child.test_cases"
                                                 :key="tc.id"
                                                 class="ml-6 flex items-center gap-2 py-0.5 text-sm"
-                                                :class="{ 'opacity-40': existingTestCaseIds.has(tc.id) }"
+                                                :class="{
+                                                    'opacity-40':
+                                                        existingTestCaseIds.has(
+                                                            tc.id,
+                                                        ),
+                                                }"
                                             >
                                                 <Checkbox
-                                                    :model-value="existingTestCaseIds.has(tc.id) || addCaseIds.includes(tc.id)"
-                                                    :disabled="existingTestCaseIds.has(tc.id)"
-                                                    @update:model-value="toggleAddTestCase(tc.id)"
+                                                    :model-value="
+                                                        existingTestCaseIds.has(
+                                                            tc.id,
+                                                        ) ||
+                                                        addCaseIds.includes(
+                                                            tc.id,
+                                                        )
+                                                    "
+                                                    :disabled="
+                                                        existingTestCaseIds.has(
+                                                            tc.id,
+                                                        )
+                                                    "
+                                                    @update:model-value="
+                                                        toggleAddTestCase(tc.id)
+                                                    "
                                                 />
-                                                <FileText class="h-3 w-3 text-muted-foreground" />
+                                                <FileText
+                                                    class="h-3 w-3 text-muted-foreground"
+                                                />
                                                 <span>{{ tc.title }}</span>
-                                                <Badge v-if="existingTestCaseIds.has(tc.id)" variant="secondary" class="text-[10px] px-1.5 h-4">
+                                                <Badge
+                                                    v-if="
+                                                        existingTestCaseIds.has(
+                                                            tc.id,
+                                                        )
+                                                    "
+                                                    variant="secondary"
+                                                    class="h-4 px-1.5 text-[10px]"
+                                                >
                                                     already added
                                                 </Badge>
                                             </div>
@@ -1022,18 +1551,27 @@ const addCasesCount = computed(() => {
                 </Deferred>
 
                 <!-- Checklist source -->
-                <Deferred v-else-if="testRun.source === 'checklist'" data="checklists">
+                <Deferred
+                    v-else-if="testRun.source === 'checklist'"
+                    data="checklists"
+                >
                     <template #fallback>
                         <div class="space-y-3 py-4">
-                            <div v-for="i in 3" :key="i" class="h-8 animate-pulse rounded-md bg-muted" />
+                            <div
+                                v-for="i in 3"
+                                :key="i"
+                                class="h-8 animate-pulse rounded-md bg-muted"
+                            />
                         </div>
                     </template>
-                    <div class="flex-1 overflow-y-auto space-y-3 px-0.5">
+                    <div class="flex-1 space-y-3 overflow-y-auto px-0.5">
                         <div class="space-y-2">
                             <Label>Select Checklist</Label>
                             <Select v-model="selectedAddChecklistId">
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Choose a checklist..." />
+                                    <SelectValue
+                                        placeholder="Choose a checklist..."
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem
@@ -1048,14 +1586,27 @@ const addCasesCount = computed(() => {
                         </div>
 
                         <template v-if="selectedAddChecklist">
-                            <div v-if="checklistRows.length > 0" class="space-y-2">
+                            <div
+                                v-if="checklistRows.length > 0"
+                                class="space-y-2"
+                            >
                                 <div class="flex items-center justify-between">
                                     <Label>Select Rows</Label>
                                     <div class="flex gap-2">
-                                        <Button type="button" variant="outline" size="sm" @click="selectAllAddRows">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            @click="selectAllAddRows"
+                                        >
                                             Select All
                                         </Button>
-                                        <Button type="button" variant="outline" size="sm" @click="deselectAllAddRows">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            @click="deselectAllAddRows"
+                                        >
                                             Deselect All
                                         </Button>
                                     </div>
@@ -1065,36 +1616,73 @@ const addCasesCount = computed(() => {
                                         v-for="item in checklistRows"
                                         :key="item.row.id"
                                         class="flex items-center gap-2 py-1 text-sm"
-                                        :class="{ 'opacity-40': existingTitles.has(item.title) }"
+                                        :class="{
+                                            'opacity-40': existingTitles.has(
+                                                item.title,
+                                            ),
+                                        }"
                                     >
                                         <Checkbox
-                                            :model-value="existingTitles.has(item.title) || addRowTitles.has(item.title)"
-                                            :disabled="existingTitles.has(item.title)"
-                                            @update:model-value="toggleAddRowTitle(item.title)"
+                                            :model-value="
+                                                existingTitles.has(
+                                                    item.title,
+                                                ) ||
+                                                addRowTitles.has(item.title)
+                                            "
+                                            :disabled="
+                                                existingTitles.has(item.title)
+                                            "
+                                            @update:model-value="
+                                                toggleAddRowTitle(item.title)
+                                            "
                                         />
-                                        <ListChecks class="h-3 w-3 text-muted-foreground" />
+                                        <ListChecks
+                                            class="h-3 w-3 text-muted-foreground"
+                                        />
                                         <span v-html="item.title" />
-                                        <Badge v-if="existingTitles.has(item.title)" variant="secondary" class="text-[10px] px-1.5 h-4">
+                                        <Badge
+                                            v-if="
+                                                existingTitles.has(item.title)
+                                            "
+                                            variant="secondary"
+                                            class="h-4 px-1.5 text-[10px]"
+                                        >
                                             already added
                                         </Badge>
                                     </div>
                                 </div>
                             </div>
-                            <div v-else class="rounded-lg border border-dashed p-6 text-center">
-                                <ListChecks class="mx-auto h-8 w-8 text-muted-foreground" />
-                                <p class="mt-2 text-sm text-muted-foreground">No text rows found in this checklist.</p>
+                            <div
+                                v-else
+                                class="rounded-lg border border-dashed p-6 text-center"
+                            >
+                                <ListChecks
+                                    class="mx-auto h-8 w-8 text-muted-foreground"
+                                />
+                                <p class="mt-2 text-sm text-muted-foreground">
+                                    No text rows found in this checklist.
+                                </p>
                             </div>
                         </template>
                     </div>
                 </Deferred>
 
                 <DialogFooter class="pt-2">
-                    <p class="text-sm text-muted-foreground mr-auto">
+                    <p class="mr-auto text-sm text-muted-foreground">
                         {{ addCasesCount }} new case(s) selected
                     </p>
-                    <Button variant="outline" @click="showAddCasesDialog = false">Cancel</Button>
+                    <Button
+                        variant="outline"
+                        @click="showAddCasesDialog = false"
+                        >Cancel</Button
+                    >
                     <RestrictedAction>
-                        <Button @click="submitAddCases" :disabled="addCasesProcessing || addCasesCount === 0">
+                        <Button
+                            @click="submitAddCases"
+                            :disabled="
+                                addCasesProcessing || addCasesCount === 0
+                            "
+                        >
                             Add Cases
                         </Button>
                     </RestrictedAction>
@@ -1107,14 +1695,23 @@ const addCasesCount = computed(() => {
                 <DialogHeader>
                     <DialogTitle>Remove Item?</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to remove this item from the test run? This action cannot be undone.
+                        Are you sure you want to remove this item from the test
+                        run? This action cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="flex gap-4 sm:justify-end">
-                    <Button variant="secondary" @click="caseToRemove = null" class="flex-1 sm:flex-none">
+                    <Button
+                        variant="secondary"
+                        @click="caseToRemove = null"
+                        class="flex-1 sm:flex-none"
+                    >
                         No
                     </Button>
-                    <Button variant="destructive" @click="removeCase" class="flex-1 sm:flex-none">
+                    <Button
+                        variant="destructive"
+                        @click="removeCase"
+                        class="flex-1 sm:flex-none"
+                    >
                         Yes
                     </Button>
                 </DialogFooter>
@@ -1130,7 +1727,8 @@ const addCasesCount = computed(() => {
                         Add Time
                     </DialogTitle>
                     <DialogDescription>
-                        Enter additional time to add to the elapsed duration of this test run.
+                        Enter additional time to add to the elapsed duration of
+                        this test run.
                     </DialogDescription>
                 </DialogHeader>
                 <div class="grid grid-cols-2 gap-4">
@@ -1157,11 +1755,17 @@ const addCasesCount = computed(() => {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" @click="showTimeDialog = false">Cancel</Button>
+                    <Button variant="outline" @click="showTimeDialog = false"
+                        >Cancel</Button
+                    >
                     <RestrictedAction>
                         <Button
                             @click="submitTimeAdjustment"
-                            :disabled="timeAdjustProcessing || (timeAdjustHours === 0 && timeAdjustMinutes === 0)"
+                            :disabled="
+                                timeAdjustProcessing ||
+                                (timeAdjustHours === 0 &&
+                                    timeAdjustMinutes === 0)
+                            "
                         >
                             Add Time
                         </Button>

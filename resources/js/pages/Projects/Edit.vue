@@ -1,16 +1,30 @@
 <script setup lang="ts">
 import { Head, useForm, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import InputError from '@/components/InputError.vue';
-import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Edit, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project } from '@/types';
 
 const props = defineProps<{
     project: Project;
@@ -63,16 +77,29 @@ const deleteProject = () => {
                                     v-model="form.name"
                                     type="text"
                                     placeholder="Enter project name"
-                                    :class="{ 'border-destructive': form.errors.name }"
+                                    :class="{
+                                        'border-destructive': form.errors.name,
+                                    }"
                                 />
                                 <InputError :message="form.errors.name" />
                             </div>
 
                             <div class="flex gap-2">
-                                <Button type="submit" :disabled="form.processing">
+                                <Button
+                                    type="submit"
+                                    :disabled="form.processing"
+                                >
                                     Save Changes
                                 </Button>
-                                <Button type="button" variant="outline" @click="$inertia.visit(`/projects/${project.id}`)">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="
+                                        $inertia.visit(
+                                            `/projects/${project.id}`,
+                                        )
+                                    "
+                                >
                                     Cancel
                                 </Button>
                             </div>
@@ -82,7 +109,9 @@ const deleteProject = () => {
 
                 <Card class="border-destructive/50">
                     <CardHeader>
-                        <CardTitle class="flex items-center gap-2 text-destructive">
+                        <CardTitle
+                            class="flex items-center gap-2 text-destructive"
+                        >
                             <Trash2 class="h-5 w-5" />
                             Danger Zone
                         </CardTitle>
@@ -93,19 +122,34 @@ const deleteProject = () => {
                     <CardContent>
                         <Dialog v-model:open="showDeleteDialog">
                             <DialogTrigger as-child>
-                                <Button variant="destructive">Delete Project</Button>
+                                <Button variant="destructive"
+                                    >Delete Project</Button
+                                >
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Are you absolutely sure?</DialogTitle>
+                                    <DialogTitle
+                                        >Are you absolutely sure?</DialogTitle
+                                    >
                                     <DialogDescription>
-                                        This action cannot be undone. This will permanently delete the project
-                                        "{{ project.name }}" and all of its checklists, test suites, test cases, and test runs.
+                                        This action cannot be undone. This will
+                                        permanently delete the project "{{
+                                            project.name
+                                        }}" and all of its checklists, test
+                                        suites, test cases, and test runs.
                                     </DialogDescription>
                                 </DialogHeader>
                                 <DialogFooter>
-                                    <Button variant="outline" @click="showDeleteDialog = false">Cancel</Button>
-                                    <Button variant="destructive" @click="deleteProject">Delete Project</Button>
+                                    <Button
+                                        variant="outline"
+                                        @click="showDeleteDialog = false"
+                                        >Cancel</Button
+                                    >
+                                    <Button
+                                        variant="destructive"
+                                        @click="deleteProject"
+                                        >Delete Project</Button
+                                    >
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>

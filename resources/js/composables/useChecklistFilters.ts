@@ -1,4 +1,12 @@
-import { ref, computed, watch, nextTick, onMounted, onUnmounted, type Ref } from 'vue';
+import {
+    ref,
+    computed,
+    watch,
+    nextTick,
+    onMounted,
+    onUnmounted,
+    type Ref,
+} from 'vue';
 import type { ChecklistRow } from '@/types';
 
 interface ExtendedChecklistRow extends ChecklistRow {
@@ -25,8 +33,15 @@ export function useChecklistFilters(
     const filterModule = ref('');
 
     const activeFilterCount = computed(() => {
-        const selectCount = Object.values(filterValues.value).filter(v => v !== '').length;
-        return selectCount + (filterUpdatedFrom.value ? 1 : 0) + (filterUpdatedTo.value ? 1 : 0) + (filterModule.value ? 1 : 0);
+        const selectCount = Object.values(filterValues.value).filter(
+            (v) => v !== '',
+        ).length;
+        return (
+            selectCount +
+            (filterUpdatedFrom.value ? 1 : 0) +
+            (filterUpdatedTo.value ? 1 : 0) +
+            (filterModule.value ? 1 : 0)
+        );
     });
 
     const clearFilters = () => {
@@ -37,7 +52,7 @@ export function useChecklistFilters(
     };
 
     const isRowMatch = (row: ExtendedChecklistRow, query: string): boolean => {
-        return Object.values(row.data).some(value => {
+        return Object.values(row.data).some((value) => {
             if (typeof value === 'string') {
                 const text = value.replace(/<[^>]*>/g, '');
                 return text.toLowerCase().includes(query);
@@ -55,34 +70,46 @@ export function useChecklistFilters(
 
         if (!query && !hasFilters) return allRows;
 
-        let dataRows = allRows.filter(row => row.row_type !== 'section_header');
+        let dataRows = allRows.filter(
+            (row) => row.row_type !== 'section_header',
+        );
 
         // When rows are checked, narrow scope to checked rows only
         if (hasChecked) {
-            dataRows = dataRows.filter(row => checked.has(row.id));
+            dataRows = dataRows.filter((row) => checked.has(row.id));
         }
 
         if (query) {
-            dataRows = dataRows.filter(row => isRowMatch(row, query));
+            dataRows = dataRows.filter((row) => isRowMatch(row, query));
         }
 
         if (hasFilters) {
-            dataRows = dataRows.filter(row => {
-                const matchesSelects = Object.entries(filterValues.value).every(([key, value]) => {
-                    if (!value) return true;
-                    return row.data[key] === value;
-                });
+            dataRows = dataRows.filter((row) => {
+                const matchesSelects = Object.entries(filterValues.value).every(
+                    ([key, value]) => {
+                        if (!value) return true;
+                        return row.data[key] === value;
+                    },
+                );
                 if (!matchesSelects) return false;
 
-                const rowDate = row.updated_at ? row.updated_at.slice(0, 10) : '';
-                if (filterUpdatedFrom.value && rowDate < filterUpdatedFrom.value) return false;
-                if (filterUpdatedTo.value && rowDate > filterUpdatedTo.value) return false;
+                const rowDate = row.updated_at
+                    ? row.updated_at.slice(0, 10)
+                    : '';
+                if (
+                    filterUpdatedFrom.value &&
+                    rowDate < filterUpdatedFrom.value
+                )
+                    return false;
+                if (filterUpdatedTo.value && rowDate > filterUpdatedTo.value)
+                    return false;
 
                 if (filterModule.value) {
                     if (filterModule.value === '__none__') {
                         if (row.module && row.module.length > 0) return false;
                     } else {
-                        if (!row.module?.includes(filterModule.value)) return false;
+                        if (!row.module?.includes(filterModule.value))
+                            return false;
                     }
                 }
 
@@ -90,13 +117,16 @@ export function useChecklistFilters(
             });
         }
 
-        const matchedIds = new Set(dataRows.map(r => r.id));
+        const matchedIds = new Set(dataRows.map((r) => r.id));
 
         // Find headers that match the search query directly
         const matchedHeaderIds = new Set<number>();
         if (query) {
             for (const row of allRows) {
-                if (row.row_type === 'section_header' && isRowMatch(row, query)) {
+                if (
+                    row.row_type === 'section_header' &&
+                    isRowMatch(row, query)
+                ) {
                     matchedHeaderIds.add(row.id);
                 }
             }
@@ -130,7 +160,11 @@ export function useChecklistFilters(
                 // Include all rows under a matched header
                 result.push(row);
             } else if (matchedIds.has(row.id)) {
-                if (currentHeader && !headerAdded && headersWithMatches.has(currentHeader.id)) {
+                if (
+                    currentHeader &&
+                    !headerAdded &&
+                    headersWithMatches.has(currentHeader.id)
+                ) {
                     result.push(currentHeader);
                     headerAdded = true;
                 }
@@ -142,11 +176,12 @@ export function useChecklistFilters(
     });
 
     const filteredDataRowCount = computed(() => {
-        return filteredRows.value.filter(r => r.row_type !== 'section_header').length;
+        return filteredRows.value.filter((r) => r.row_type !== 'section_header')
+            .length;
     });
 
     const totalDataRowCount = computed(() => {
-        return rows.value.filter(r => r.row_type !== 'section_header').length;
+        return rows.value.filter((r) => r.row_type !== 'section_header').length;
     });
 
     const displayRows = computed(() => {
@@ -180,12 +215,16 @@ export function useChecklistFilters(
     // Navigate to row
     let highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const navigateToRow = (row: ExtendedChecklistRow, resizeCallback: () => void) => {
+    const navigateToRow = (
+        row: ExtendedChecklistRow,
+        resizeCallback: () => void,
+    ) => {
         if (!searchQuery.value.trim()) return;
 
         const rowId = row.id;
-        const rowIndex = rows.value.findIndex(r => r.id === rowId);
-        const requiredCount = rowIndex >= 0 ? rowIndex + LOAD_MORE_COUNT : visibleRowCount.value;
+        const rowIndex = rows.value.findIndex((r) => r.id === rowId);
+        const requiredCount =
+            rowIndex >= 0 ? rowIndex + LOAD_MORE_COUNT : visibleRowCount.value;
 
         isNavigating = true;
         searchQuery.value = '';
@@ -205,16 +244,26 @@ export function useChecklistFilters(
                 nextTick(() => {
                     const container = scrollContainerRef.value;
                     if (!container) return;
-                    const targetRow = container.querySelector(`tr[data-row-id="${rowId}"]`) as HTMLElement;
+                    const targetRow = container.querySelector(
+                        `tr[data-row-id="${rowId}"]`,
+                    ) as HTMLElement;
                     if (targetRow) {
-                        targetRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                        targetRow.scrollIntoView({
+                            block: 'center',
+                            behavior: 'smooth',
+                        });
                     }
                 });
             });
         });
     };
 
-    const canDragRows = computed(() => !searchQuery.value.trim() && !hasMoreRows.value && activeFilterCount.value === 0);
+    const canDragRows = computed(
+        () =>
+            !searchQuery.value.trim() &&
+            !hasMoreRows.value &&
+            activeFilterCount.value === 0,
+    );
 
     // Infinite scroll: auto-load more rows when sentinel becomes visible
     const sentinelRef = ref<HTMLElement | null>(null);
@@ -231,12 +280,16 @@ export function useChecklistFilters(
         );
 
         // Watch for sentinel element appearing in DOM
-        watch(sentinelRef, (el) => {
-            if (observer) {
-                observer.disconnect();
-                if (el) observer.observe(el);
-            }
-        }, { immediate: true });
+        watch(
+            sentinelRef,
+            (el) => {
+                if (observer) {
+                    observer.disconnect();
+                    if (el) observer.observe(el);
+                }
+            },
+            { immediate: true },
+        );
     });
 
     onUnmounted(() => {

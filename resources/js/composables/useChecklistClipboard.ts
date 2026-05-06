@@ -21,7 +21,10 @@ export function useChecklistClipboard() {
     const clipboardData = ref<ClipboardData | null>(null);
     const copiedRows = ref(false);
 
-    const hasClipboardRows = computed(() => clipboardData.value !== null && clipboardData.value.rows.length > 0);
+    const hasClipboardRows = computed(
+        () =>
+            clipboardData.value !== null && clipboardData.value.rows.length > 0,
+    );
 
     const loadClipboard = () => {
         try {
@@ -44,7 +47,9 @@ export function useChecklistClipboard() {
             localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(data));
             clipboardData.value = data;
             copiedRows.value = true;
-            setTimeout(() => { copiedRows.value = false; }, 2000);
+            setTimeout(() => {
+                copiedRows.value = false;
+            }, 2000);
         } catch (e) {
             console.error('Failed to save to clipboard:', e);
         }

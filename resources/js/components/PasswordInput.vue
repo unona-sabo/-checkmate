@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Eye, EyeOff } from 'lucide-vue-next';
+import { ref } from 'vue';
 import { Input } from '@/components/ui/input';
 
 const props = defineProps<{
@@ -31,7 +31,7 @@ const visible = ref(false);
         <button
             type="button"
             :tabindex="-1"
-            class="absolute right-0 top-0 flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+            class="absolute top-0 right-0 flex h-9 w-9 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground"
             @click="visible = !visible"
         >
             <EyeOff v-if="visible" class="h-4 w-4" />

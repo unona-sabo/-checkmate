@@ -1,12 +1,27 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { writeToClipboard } from '@/composables/useClipboard';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    FileText,
+    Edit,
+    Trash2,
+    ChevronRight,
+    Download,
+    Upload,
+    Paperclip,
+    FolderTree,
+    ExternalLink,
+    Plus,
+    Search,
+    X,
+    Link2,
+    Check,
+    FileSpreadsheet,
+    GripVertical,
+} from 'lucide-vue-next';
+import { ref, computed, watch } from 'vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -21,10 +36,12 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { FileText, Edit, Trash2, ChevronRight, Download, Upload, Paperclip, FolderTree, ExternalLink, Plus, Search, X, Link2, Check, FileSpreadsheet, GripVertical } from 'lucide-vue-next';
-import { ref, computed, watch } from 'vue';
-import RestrictedAction from '@/components/RestrictedAction.vue';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { writeToClipboard } from '@/composables/useClipboard';
 import { useSearch, escapeRegExp } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 
 interface Documentation {
     id: number;
@@ -49,8 +66,14 @@ const props = defineProps<{
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
-    { title: 'Documentations', href: `/projects/${props.project.id}/documentations` },
-    { title: props.documentation.title, href: `/projects/${props.project.id}/documentations/${props.documentation.id}` },
+    {
+        title: 'Documentations',
+        href: `/projects/${props.project.id}/documentations`,
+    },
+    {
+        title: props.documentation.title,
+        href: `/projects/${props.project.id}/documentations/${props.documentation.id}`,
+    },
 ];
 
 const copied = ref(false);
@@ -69,7 +92,9 @@ const copyLink = () => {
     const url = window.location.origin + route;
     writeToClipboard(url).then(() => {
         copied.value = true;
-        setTimeout(() => { copied.value = false; }, 2000);
+        setTimeout(() => {
+            copied.value = false;
+        }, 2000);
     });
 };
 
@@ -78,9 +103,10 @@ const { searchQuery } = useSearch();
 const filterChildren = (children: Documentation[]): Documentation[] => {
     if (!searchQuery.value.trim()) return children;
     const query = searchQuery.value.toLowerCase();
-    return children.filter(child => {
+    return children.filter((child) => {
         if (child.title.toLowerCase().includes(query)) return true;
-        if (child.children?.length) return filterChildren(child.children).length > 0;
+        if (child.children?.length)
+            return filterChildren(child.children).length > 0;
         return false;
     });
 };
@@ -101,23 +127,26 @@ const highlightedContent = computed(() => {
     const regex = new RegExp(`(?<=>)([^<]*?)(?=${query})`, 'i');
 
     // Highlight text nodes only (not inside tags)
-    return props.documentation.content.replace(
-        new RegExp(`(>)([^<]*?)(<)`, 'g'),
-        (match, open, text, close) => {
-            const highlighted = text.replace(
-                new RegExp(`(${query})`, 'gi'),
-                '<mark class="search-highlight">$1</mark>',
-            );
-            return open + highlighted + close;
-        },
-    ).replace(
-        // Also handle text at the very start (before first tag)
-        new RegExp(`^([^<]+)`),
-        (text) => text.replace(
-            new RegExp(`(${query})`, 'gi'),
-            '<mark class="search-highlight">$1</mark>',
-        ),
-    );
+    return props.documentation.content
+        .replace(
+            new RegExp(`(>)([^<]*?)(<)`, 'g'),
+            (match, open, text, close) => {
+                const highlighted = text.replace(
+                    new RegExp(`(${query})`, 'gi'),
+                    '<mark class="search-highlight">$1</mark>',
+                );
+                return open + highlighted + close;
+            },
+        )
+        .replace(
+            // Also handle text at the very start (before first tag)
+            new RegExp(`^([^<]+)`),
+            (text) =>
+                text.replace(
+                    new RegExp(`(${query})`, 'gi'),
+                    '<mark class="search-highlight">$1</mark>',
+                ),
+        );
 });
 
 const isImage = (mimeType: string): boolean => mimeType.startsWith('image/');
@@ -129,16 +158,18 @@ const formatFileSize = (bytes: number): string => {
 };
 
 const nonImageAttachments = (attachments?: Attachment[]) =>
-    attachments?.filter(a => !isImage(a.mime_type)) ?? [];
+    attachments?.filter((a) => !isImage(a.mime_type)) ?? [];
 
 const imageAttachments = (attachments?: Attachment[]) =>
-    attachments?.filter(a => isImage(a.mime_type)) ?? [];
+    attachments?.filter((a) => isImage(a.mime_type)) ?? [];
 
 // Delete confirmation
 const showDeleteConfirm = ref(false);
 
 const confirmDelete = () => {
-    router.delete(`/projects/${props.project.id}/documentations/${props.documentation.id}`);
+    router.delete(
+        `/projects/${props.project.id}/documentations/${props.documentation.id}`,
+    );
 };
 
 // Import/Export
@@ -162,10 +193,20 @@ const handleFileSelect = (event: Event) => {
         return;
     }
 
-    const allowed = ['.json', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt'];
+    const allowed = [
+        '.json',
+        '.pdf',
+        '.doc',
+        '.docx',
+        '.xls',
+        '.xlsx',
+        '.csv',
+        '.txt',
+    ];
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!allowed.includes(ext)) {
-        importError.value = 'Unsupported format. Allowed: JSON, PDF, DOC, DOCX, XLS, XLSX, CSV, TXT.';
+        importError.value =
+            'Unsupported format. Allowed: JSON, PDF, DOC, DOCX, XLS, XLSX, CSV, TXT.';
         importFile.value = null;
         return;
     }
@@ -216,11 +257,16 @@ const closeImportDialog = () => {
 };
 
 // Drag-and-drop for subcategories
-const localChildren = ref<Documentation[]>([...(props.documentation.children ?? [])]);
+const localChildren = ref<Documentation[]>([
+    ...(props.documentation.children ?? []),
+]);
 
-watch(() => props.documentation.children, (val) => {
-    localChildren.value = [...(val ?? [])];
-});
+watch(
+    () => props.documentation.children,
+    (val) => {
+        localChildren.value = [...(val ?? [])];
+    },
+);
 
 const canDrag = computed(() => !searchQuery.value.trim());
 const draggedDoc = ref<Documentation | null>(null);
@@ -257,7 +303,11 @@ const onDragLeaveDoc = (e: DragEvent, targetDoc: Documentation) => {
     }
 };
 
-const onDropOnChild = (e: DragEvent, targetDoc: Documentation, parentId: number) => {
+const onDropOnChild = (
+    e: DragEvent,
+    targetDoc: Documentation,
+    parentId: number,
+) => {
     e.preventDefault();
     if (!draggedDoc.value || draggedDoc.value.id === targetDoc.id) {
         onDragEnd();
@@ -268,7 +318,7 @@ const onDropOnChild = (e: DragEvent, targetDoc: Documentation, parentId: number)
 
     // Find and remove dragged from its current location
     const removeFromList = (list: Documentation[]): boolean => {
-        const idx = list.findIndex(d => d.id === dragged.id);
+        const idx = list.findIndex((d) => d.id === dragged.id);
         if (idx !== -1) {
             list.splice(idx, 1);
             return true;
@@ -284,19 +334,25 @@ const onDropOnChild = (e: DragEvent, targetDoc: Documentation, parentId: number)
     // Find the parent and insert before target
     const insertBefore = (list: Documentation[], pId: number): boolean => {
         if (pId === props.documentation.id) {
-            const targetIdx = list.findIndex(d => d.id === targetDoc.id);
+            const targetIdx = list.findIndex((d) => d.id === targetDoc.id);
             if (targetIdx !== -1) {
                 list.splice(targetIdx, 0, dragged);
-                list.forEach((d, i) => { d.order = i; });
+                list.forEach((d, i) => {
+                    d.order = i;
+                });
                 return true;
             }
         }
         for (const item of list) {
             if (item.id === pId && item.children) {
-                const targetIdx = item.children.findIndex(d => d.id === targetDoc.id);
+                const targetIdx = item.children.findIndex(
+                    (d) => d.id === targetDoc.id,
+                );
                 if (targetIdx !== -1) {
                     item.children.splice(targetIdx, 0, dragged);
-                    item.children.forEach((d, i) => { d.order = i; });
+                    item.children.forEach((d, i) => {
+                        d.order = i;
+                    });
                     return true;
                 }
             }
@@ -323,7 +379,7 @@ const onDropOnParentDoc = (e: DragEvent, parentDoc: Documentation) => {
 
     // Remove from current location
     const removeFromList = (list: Documentation[]): boolean => {
-        const idx = list.findIndex(d => d.id === dragged.id);
+        const idx = list.findIndex((d) => d.id === dragged.id);
         if (idx !== -1) {
             list.splice(idx, 1);
             return true;
@@ -377,17 +433,30 @@ const saveChildReorder = () => {
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight">
-                        <FileText class="inline-block h-6 w-6 align-text-top text-primary mr-2" />{{ titleStart }}<span class="whitespace-nowrap">{{ titleEnd }}<button
-                            @click="copyLink"
-                            class="inline-flex align-middle ml-1.5 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
-                            :title="copied ? 'Copied!' : 'Copy link'"
-                        ><Check v-if="copied" class="h-4 w-4 text-green-500" /><Link2 v-else class="h-4 w-4" /></button></span>
+                        <FileText
+                            class="mr-2 inline-block h-6 w-6 align-text-top text-primary"
+                        />{{ titleStart
+                        }}<span class="whitespace-nowrap"
+                            >{{ titleEnd
+                            }}<button
+                                @click="copyLink"
+                                class="ml-1.5 inline-flex cursor-pointer rounded-md p-1 align-middle text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+                                :title="copied ? 'Copied!' : 'Copy link'"
+                            >
+                                <Check
+                                    v-if="copied"
+                                    class="h-4 w-4 text-green-500"
+                                /><Link2 v-else class="h-4 w-4" /></button
+                        ></span>
                     </h1>
-                    <div v-if="documentation.parent" class="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                    <div
+                        v-if="documentation.parent"
+                        class="mt-1 flex items-center gap-2 text-sm text-muted-foreground"
+                    >
                         <span>in</span>
                         <Link
                             :href="`/projects/${project.id}/documentations/${documentation.parent.id}`"
-                            class="inline-flex items-center gap-1.5 text-primary hover:underline cursor-pointer"
+                            class="inline-flex cursor-pointer items-center gap-1.5 text-primary hover:underline"
                         >
                             <FileText class="h-3.5 w-3.5" />
                             {{ documentation.parent.title }}
@@ -404,19 +473,27 @@ const saveChildReorder = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <RestrictedAction>
-                                <DropdownMenuItem class="cursor-pointer" @click="showImportDialog = true">
-                                    <Download class="h-4 w-4 mr-2" />
+                                <DropdownMenuItem
+                                    class="cursor-pointer"
+                                    @click="showImportDialog = true"
+                                >
+                                    <Download class="mr-2 h-4 w-4" />
                                     Import
                                 </DropdownMenuItem>
                             </RestrictedAction>
-                            <DropdownMenuItem class="cursor-pointer" @click="exportDoc">
-                                <Upload class="h-4 w-4 mr-2" />
+                            <DropdownMenuItem
+                                class="cursor-pointer"
+                                @click="exportDoc"
+                            >
+                                <Upload class="mr-2 h-4 w-4" />
                                 Export
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                     <RestrictedAction>
-                        <Link :href="`/projects/${project.id}/documentations/${documentation.id}/edit`">
+                        <Link
+                            :href="`/projects/${project.id}/documentations/${documentation.id}/edit`"
+                        >
                             <Button variant="outline" class="gap-2">
                                 <Edit class="h-4 w-4" />
                                 Edit
@@ -424,7 +501,11 @@ const saveChildReorder = () => {
                         </Link>
                     </RestrictedAction>
                     <RestrictedAction>
-                        <Button variant="destructive" class="gap-2" @click="showDeleteConfirm = true">
+                        <Button
+                            variant="destructive"
+                            class="gap-2"
+                            @click="showDeleteConfirm = true"
+                        >
                             <Trash2 class="h-4 w-4" />
                             Delete
                         </Button>
@@ -434,158 +515,281 @@ const saveChildReorder = () => {
 
             <div class="grid gap-6 lg:grid-cols-4">
                 <!-- Sidebar with navigation -->
-                <div class="lg:col-span-1 self-start sticky top-6">
+                <div class="sticky top-6 self-start lg:col-span-1">
                     <div class="rounded-xl border bg-card shadow-sm">
-                        <div class="p-3 border-b bg-muted/30">
+                        <div class="border-b bg-muted/30 p-3">
                             <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2 text-sm font-medium">
+                                <div
+                                    class="flex items-center gap-2 text-sm font-medium"
+                                >
                                     <FolderTree class="h-4 w-4 text-primary" />
                                     <span>Subcategories</span>
                                 </div>
                                 <RestrictedAction>
-                                    <Link :href="`/projects/${project.id}/documentations/create?parent_id=${documentation.id}`">
-                                        <Button size="icon-sm" variant="ghost" class="p-0 cursor-pointer h-6 w-6">
+                                    <Link
+                                        :href="`/projects/${project.id}/documentations/create?parent_id=${documentation.id}`"
+                                    >
+                                        <Button
+                                            size="icon-sm"
+                                            variant="ghost"
+                                            class="h-6 w-6 cursor-pointer p-0"
+                                        >
                                             <Plus class="h-4 w-4" />
                                         </Button>
                                     </Link>
                                 </RestrictedAction>
                             </div>
                             <div class="relative mt-2">
-                                <Search class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                <Search
+                                    class="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                                />
                                 <Input
                                     v-model="searchQuery"
                                     type="text"
                                     placeholder="Search..."
-                                    class="pl-7 pr-7 h-8 text-xs bg-background/60"
+                                    class="h-8 bg-background/60 pr-7 pl-7 text-xs"
                                 />
                                 <button
                                     v-if="searchQuery"
                                     @click="searchQuery = ''"
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                                    class="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                                 >
                                     <X class="h-3.5 w-3.5" />
                                 </button>
                             </div>
                         </div>
-                        <div class="p-2 space-y-0.5 max-h-[calc(100vh-270px)] overflow-y-auto">
+                        <div
+                            class="max-h-[calc(100vh-270px)] space-y-0.5 overflow-y-auto p-2"
+                        >
                             <template v-if="filteredChildren.length">
-                                <template v-for="child in filteredChildren" :key="child.id">
+                                <template
+                                    v-for="child in filteredChildren"
+                                    :key="child.id"
+                                >
                                     <div
-                                        class="group flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-all duration-150 hover:bg-muted/70"
+                                        class="group flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 transition-all duration-150 hover:bg-muted/70"
                                         :class="{
-                                            'opacity-50': isDragging && draggedDoc?.id === child.id,
-                                            'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === child.id && draggedDoc?.id !== child.id,
+                                            'opacity-50':
+                                                isDragging &&
+                                                draggedDoc?.id === child.id,
+                                            'bg-primary/5 ring-2 ring-primary':
+                                                isDragging &&
+                                                dragOverDocId === child.id &&
+                                                draggedDoc?.id !== child.id,
                                         }"
                                         @dragover="onDragOverDoc($event, child)"
-                                        @dragleave="onDragLeaveDoc($event, child)"
-                                        @drop="onDropOnChild($event, child, documentation.id)"
+                                        @dragleave="
+                                            onDragLeaveDoc($event, child)
+                                        "
+                                        @drop="
+                                            onDropOnChild(
+                                                $event,
+                                                child,
+                                                documentation.id,
+                                            )
+                                        "
                                     >
                                         <div
                                             v-if="canDrag"
                                             draggable="true"
-                                            class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
-                                            @dragstart="onDragStart($event, child)"
+                                            class="mr-1 shrink-0 cursor-grab opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+                                            @dragstart="
+                                                onDragStart($event, child)
+                                            "
                                             @dragend="onDragEnd"
                                         >
-                                            <GripVertical class="h-3.5 w-3.5 text-muted-foreground" />
+                                            <GripVertical
+                                                class="h-3.5 w-3.5 text-muted-foreground"
+                                            />
                                         </div>
                                         <Link
                                             :href="`/projects/${project.id}/documentations/${child.id}`"
-                                            class="flex items-center gap-2 min-w-0 flex-1"
+                                            class="flex min-w-0 flex-1 items-center gap-2"
                                         >
-                                            <FileText class="h-4 w-4 shrink-0 text-primary" />
-                                            <span class="font-medium text-sm truncate">{{ child.title }}</span>
+                                            <FileText
+                                                class="h-4 w-4 shrink-0 text-primary"
+                                            />
+                                            <span
+                                                class="truncate text-sm font-medium"
+                                                >{{ child.title }}</span
+                                            >
                                         </Link>
                                         <Link
                                             :href="`/projects/${project.id}/documentations/${child.id}`"
                                             @click.stop
-                                            class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2 hover:bg-muted"
+                                            class="ml-2 shrink-0 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted"
                                         >
                                             <ExternalLink class="h-3 w-3" />
                                         </Link>
                                     </div>
                                     <!-- Nested children (level 2) -->
                                     <template v-if="child.children?.length">
-                                        <template v-for="grandchild in filteredGrandchildren(child.children)" :key="grandchild.id">
+                                        <template
+                                            v-for="grandchild in filteredGrandchildren(
+                                                child.children,
+                                            )"
+                                            :key="grandchild.id"
+                                        >
                                             <div
-                                                class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-4 cursor-pointer transition-all duration-150 hover:bg-muted/70"
+                                                class="group ml-4 flex cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 transition-all duration-150 hover:bg-muted/70"
                                                 :class="{
-                                                    'opacity-50': isDragging && draggedDoc?.id === grandchild.id,
-                                                    'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === grandchild.id && draggedDoc?.id !== grandchild.id,
+                                                    'opacity-50':
+                                                        isDragging &&
+                                                        draggedDoc?.id ===
+                                                            grandchild.id,
+                                                    'bg-primary/5 ring-2 ring-primary':
+                                                        isDragging &&
+                                                        dragOverDocId ===
+                                                            grandchild.id &&
+                                                        draggedDoc?.id !==
+                                                            grandchild.id,
                                                 }"
-                                                @dragover="onDragOverDoc($event, grandchild)"
-                                                @dragleave="onDragLeaveDoc($event, grandchild)"
-                                                @drop="onDropOnChild($event, grandchild, child.id)"
+                                                @dragover="
+                                                    onDragOverDoc(
+                                                        $event,
+                                                        grandchild,
+                                                    )
+                                                "
+                                                @dragleave="
+                                                    onDragLeaveDoc(
+                                                        $event,
+                                                        grandchild,
+                                                    )
+                                                "
+                                                @drop="
+                                                    onDropOnChild(
+                                                        $event,
+                                                        grandchild,
+                                                        child.id,
+                                                    )
+                                                "
                                             >
                                                 <div
                                                     v-if="canDrag"
                                                     draggable="true"
-                                                    class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
-                                                    @dragstart="onDragStart($event, grandchild)"
+                                                    class="mr-1 shrink-0 cursor-grab opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+                                                    @dragstart="
+                                                        onDragStart(
+                                                            $event,
+                                                            grandchild,
+                                                        )
+                                                    "
                                                     @dragend="onDragEnd"
                                                 >
-                                                    <GripVertical class="h-3 w-3 text-muted-foreground" />
+                                                    <GripVertical
+                                                        class="h-3 w-3 text-muted-foreground"
+                                                    />
                                                 </div>
                                                 <Link
                                                     :href="`/projects/${project.id}/documentations/${grandchild.id}`"
-                                                    class="flex items-center gap-2 min-w-0 flex-1"
+                                                    class="flex min-w-0 flex-1 items-center gap-2"
                                                 >
-                                                    <ChevronRight class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                                    <span class="text-sm truncate">{{ grandchild.title }}</span>
+                                                    <ChevronRight
+                                                        class="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                                                    />
+                                                    <span
+                                                        class="truncate text-sm"
+                                                        >{{
+                                                            grandchild.title
+                                                        }}</span
+                                                    >
                                                 </Link>
                                                 <Link
                                                     :href="`/projects/${project.id}/documentations/${grandchild.id}`"
                                                     @click.stop
-                                                    class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2 hover:bg-muted"
+                                                    class="ml-2 shrink-0 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted"
                                                 >
-                                                    <ExternalLink class="h-3 w-3" />
+                                                    <ExternalLink
+                                                        class="h-3 w-3"
+                                                    />
                                                 </Link>
                                             </div>
                                             <!-- Nested children (level 3) -->
                                             <div
                                                 v-for="deep in grandchild.children"
                                                 :key="deep.id"
-                                                class="group flex items-center justify-between rounded-lg px-3 py-1.5 ml-8 cursor-pointer transition-all duration-150 hover:bg-muted/70"
+                                                class="group ml-8 flex cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 transition-all duration-150 hover:bg-muted/70"
                                                 :class="{
-                                                    'opacity-50': isDragging && draggedDoc?.id === deep.id,
-                                                    'ring-2 ring-primary bg-primary/5': isDragging && dragOverDocId === deep.id && draggedDoc?.id !== deep.id,
+                                                    'opacity-50':
+                                                        isDragging &&
+                                                        draggedDoc?.id ===
+                                                            deep.id,
+                                                    'bg-primary/5 ring-2 ring-primary':
+                                                        isDragging &&
+                                                        dragOverDocId ===
+                                                            deep.id &&
+                                                        draggedDoc?.id !==
+                                                            deep.id,
                                                 }"
-                                                @dragover="onDragOverDoc($event, deep)"
-                                                @dragleave="onDragLeaveDoc($event, deep)"
-                                                @drop="onDropOnChild($event, deep, grandchild.id)"
+                                                @dragover="
+                                                    onDragOverDoc($event, deep)
+                                                "
+                                                @dragleave="
+                                                    onDragLeaveDoc($event, deep)
+                                                "
+                                                @drop="
+                                                    onDropOnChild(
+                                                        $event,
+                                                        deep,
+                                                        grandchild.id,
+                                                    )
+                                                "
                                             >
                                                 <div
                                                     v-if="canDrag"
                                                     draggable="true"
-                                                    class="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 mr-1"
-                                                    @dragstart="onDragStart($event, deep)"
+                                                    class="mr-1 shrink-0 cursor-grab opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+                                                    @dragstart="
+                                                        onDragStart(
+                                                            $event,
+                                                            deep,
+                                                        )
+                                                    "
                                                     @dragend="onDragEnd"
                                                 >
-                                                    <GripVertical class="h-2.5 w-2.5 text-muted-foreground" />
+                                                    <GripVertical
+                                                        class="h-2.5 w-2.5 text-muted-foreground"
+                                                    />
                                                 </div>
                                                 <Link
                                                     :href="`/projects/${project.id}/documentations/${deep.id}`"
-                                                    class="flex items-center gap-2 min-w-0 flex-1"
+                                                    class="flex min-w-0 flex-1 items-center gap-2"
                                                 >
-                                                    <ChevronRight class="h-3 w-3 shrink-0 text-muted-foreground" />
-                                                    <span class="text-xs truncate">{{ deep.title }}</span>
+                                                    <ChevronRight
+                                                        class="h-3 w-3 shrink-0 text-muted-foreground"
+                                                    />
+                                                    <span
+                                                        class="truncate text-xs"
+                                                        >{{ deep.title }}</span
+                                                    >
                                                 </Link>
                                                 <Link
                                                     :href="`/projects/${project.id}/documentations/${deep.id}`"
                                                     @click.stop
-                                                    class="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2 hover:bg-muted"
+                                                    class="ml-2 shrink-0 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted"
                                                 >
-                                                    <ExternalLink class="h-3 w-3" />
+                                                    <ExternalLink
+                                                        class="h-3 w-3"
+                                                    />
                                                 </Link>
                                             </div>
                                         </template>
                                     </template>
                                 </template>
                             </template>
-                            <div v-else-if="searchQuery.trim() && documentation.children?.length" class="px-3 py-2 text-sm text-muted-foreground">
+                            <div
+                                v-else-if="
+                                    searchQuery.trim() &&
+                                    documentation.children?.length
+                                "
+                                class="px-3 py-2 text-sm text-muted-foreground"
+                            >
                                 No matches found
                             </div>
-                            <div v-else class="px-3 py-2 text-sm text-muted-foreground">
+                            <div
+                                v-else
+                                class="px-3 py-2 text-sm text-muted-foreground"
+                            >
                                 No subcategories
                             </div>
                         </div>
@@ -598,48 +802,82 @@ const saveChildReorder = () => {
                         <CardHeader>
                             <div class="flex items-center justify-between">
                                 <CardTitle>{{ documentation.title }}</CardTitle>
-                                <span v-if="documentation.category" class="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                <span
+                                    v-if="documentation.category"
+                                    class="rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800"
+                                >
                                     {{ documentation.category }}
                                 </span>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div v-if="documentation.content" class="prose prose-sm max-w-none" v-html="highlightedContent" />
-                            <p v-else class="text-muted-foreground italic">No content yet.</p>
+                            <div
+                                v-if="documentation.content"
+                                class="prose prose-sm max-w-none"
+                                v-html="highlightedContent"
+                            />
+                            <p v-else class="text-muted-foreground italic">
+                                No content yet.
+                            </p>
                         </CardContent>
                     </Card>
 
                     <!-- Attachments -->
-                    <Card v-if="documentation.attachments && documentation.attachments.length > 0" class="mt-6">
+                    <Card
+                        v-if="
+                            documentation.attachments &&
+                            documentation.attachments.length > 0
+                        "
+                        class="mt-6"
+                    >
                         <CardHeader>
-                            <CardTitle class="text-base flex items-start gap-2">
-                                <Paperclip class="h-4 w-4 shrink-0 mt-0.5" />
+                            <CardTitle class="flex items-start gap-2 text-base">
+                                <Paperclip class="mt-0.5 h-4 w-4 shrink-0" />
                                 Attachments
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <!-- Image attachments gallery -->
-                            <div v-if="imageAttachments(documentation.attachments).length > 0" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-4">
+                            <div
+                                v-if="
+                                    imageAttachments(documentation.attachments)
+                                        .length > 0
+                                "
+                                class="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                            >
                                 <div
-                                    v-for="attachment in imageAttachments(documentation.attachments)"
+                                    v-for="attachment in imageAttachments(
+                                        documentation.attachments,
+                                    )"
                                     :key="attachment.id"
-                                    class="group relative overflow-hidden rounded-lg border border-input hover:border-primary transition-colors"
+                                    class="group relative overflow-hidden rounded-lg border border-input transition-colors hover:border-primary"
                                 >
-                                    <a :href="attachment.url" target="_blank" class="block">
+                                    <a
+                                        :href="attachment.url"
+                                        target="_blank"
+                                        class="block"
+                                    >
                                         <img
                                             :src="attachment.url"
                                             :alt="attachment.original_filename"
                                             class="aspect-video w-full object-cover"
                                         />
                                     </a>
-                                    <div class="flex items-center justify-between p-2">
-                                        <span class="text-xs text-muted-foreground truncate">{{ attachment.original_filename }}</span>
+                                    <div
+                                        class="flex items-center justify-between p-2"
+                                    >
+                                        <span
+                                            class="truncate text-xs text-muted-foreground"
+                                            >{{
+                                                attachment.original_filename
+                                            }}</span
+                                        >
                                         <RestrictedAction>
                                             <Link
                                                 :href="`/projects/${project.id}/documentations/${documentation.id}/attachments/${attachment.id}`"
                                                 method="delete"
                                                 as="button"
-                                                class="p-1 text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                                                class="shrink-0 cursor-pointer p-1 text-muted-foreground hover:text-destructive"
                                             >
                                                 <Trash2 class="h-3.5 w-3.5" />
                                             </Link>
@@ -649,19 +887,44 @@ const saveChildReorder = () => {
                             </div>
 
                             <!-- Non-image attachments -->
-                            <div v-if="nonImageAttachments(documentation.attachments).length > 0" class="space-y-2">
+                            <div
+                                v-if="
+                                    nonImageAttachments(
+                                        documentation.attachments,
+                                    ).length > 0
+                                "
+                                class="space-y-2"
+                            >
                                 <div
-                                    v-for="attachment in nonImageAttachments(documentation.attachments)"
+                                    v-for="attachment in nonImageAttachments(
+                                        documentation.attachments,
+                                    )"
                                     :key="attachment.id"
                                     class="flex items-center gap-3 rounded-md border border-input p-3"
                                 >
-                                    <Download class="h-4 w-4 text-muted-foreground shrink-0" />
+                                    <Download
+                                        class="h-4 w-4 shrink-0 text-muted-foreground"
+                                    />
                                     <div class="min-w-0 flex-1">
-                                        <p class="text-sm font-medium truncate">{{ attachment.original_filename }}</p>
-                                        <p class="text-xs text-muted-foreground">{{ formatFileSize(attachment.size) }}</p>
+                                        <p class="truncate text-sm font-medium">
+                                            {{ attachment.original_filename }}
+                                        </p>
+                                        <p
+                                            class="text-xs text-muted-foreground"
+                                        >
+                                            {{
+                                                formatFileSize(attachment.size)
+                                            }}
+                                        </p>
                                     </div>
-                                    <div class="flex items-center gap-1 shrink-0">
-                                        <a :href="attachment.url" target="_blank" class="p-1 text-muted-foreground hover:text-foreground">
+                                    <div
+                                        class="flex shrink-0 items-center gap-1"
+                                    >
+                                        <a
+                                            :href="attachment.url"
+                                            target="_blank"
+                                            class="p-1 text-muted-foreground hover:text-foreground"
+                                        >
                                             <Download class="h-4 w-4" />
                                         </a>
                                         <RestrictedAction>
@@ -669,7 +932,7 @@ const saveChildReorder = () => {
                                                 :href="`/projects/${project.id}/documentations/${documentation.id}/attachments/${attachment.id}`"
                                                 method="delete"
                                                 as="button"
-                                                class="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
+                                                class="cursor-pointer p-1 text-muted-foreground hover:text-destructive"
                                             >
                                                 <Trash2 class="h-4 w-4" />
                                             </Link>
@@ -681,14 +944,33 @@ const saveChildReorder = () => {
                     </Card>
 
                     <!-- Child documents -->
-                    <div v-if="documentation.children && documentation.children.length > 0" class="mt-6">
-                        <h3 class="text-lg font-semibold mb-4">Related Documents</h3>
+                    <div
+                        v-if="
+                            documentation.children &&
+                            documentation.children.length > 0
+                        "
+                        class="mt-6"
+                    >
+                        <h3 class="mb-4 text-lg font-semibold">
+                            Related Documents
+                        </h3>
                         <div class="grid gap-4 md:grid-cols-2">
-                            <Card v-for="child in documentation.children" :key="child.id" class="hover:border-primary transition-colors cursor-pointer">
+                            <Card
+                                v-for="child in documentation.children"
+                                :key="child.id"
+                                class="cursor-pointer transition-colors hover:border-primary"
+                            >
                                 <CardHeader class="pb-2">
-                                    <Link :href="`/projects/${project.id}/documentations/${child.id}`" class="cursor-pointer">
-                                        <CardTitle class="text-base flex items-start gap-2">
-                                            <FileText class="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+                                    <Link
+                                        :href="`/projects/${project.id}/documentations/${child.id}`"
+                                        class="cursor-pointer"
+                                    >
+                                        <CardTitle
+                                            class="flex items-start gap-2 text-base"
+                                        >
+                                            <FileText
+                                                class="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                                            />
                                             {{ child.title }}
                                         </CardTitle>
                                     </Link>
@@ -701,7 +983,14 @@ const saveChildReorder = () => {
         </div>
 
         <!-- Import Dialog -->
-        <Dialog :open="showImportDialog" @update:open="(v: boolean) => { if (!v) closeImportDialog() }">
+        <Dialog
+            :open="showImportDialog"
+            @update:open="
+                (v: boolean) => {
+                    if (!v) closeImportDialog();
+                }
+            "
+        >
             <DialogContent class="max-w-md">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
@@ -709,7 +998,11 @@ const saveChildReorder = () => {
                         Import Documentation
                     </DialogTitle>
                     <DialogDescription>
-                        Upload a document file. JSON files are imported as a documentation tree. PDF, DOC, Excel, CSV and TXT are parsed and added as a subcategory of "{{ documentation.title }}".
+                        Upload a document file. JSON files are imported as a
+                        documentation tree. PDF, DOC, Excel, CSV and TXT are
+                        parsed and added as a subcategory of "{{
+                            documentation.title
+                        }}".
                     </DialogDescription>
                 </DialogHeader>
 
@@ -725,29 +1018,53 @@ const saveChildReorder = () => {
                         />
                         <Button
                             variant="outline"
-                            class="w-full justify-start gap-2 font-normal cursor-pointer"
+                            class="w-full cursor-pointer justify-start gap-2 font-normal"
                             @click="fileInputRef?.click()"
                         >
                             <Upload class="h-4 w-4 text-muted-foreground" />
-                            <span :class="importFile ? 'text-foreground' : 'text-muted-foreground'">
-                                {{ importFile ? importFile.name : 'Choose file...' }}
+                            <span
+                                :class="
+                                    importFile
+                                        ? 'text-foreground'
+                                        : 'text-muted-foreground'
+                                "
+                            >
+                                {{
+                                    importFile
+                                        ? importFile.name
+                                        : 'Choose file...'
+                                }}
                             </span>
                         </Button>
-                        <p class="text-xs text-muted-foreground">JSON, PDF, DOC, DOCX, XLS, XLSX, CSV, TXT — max 5MB</p>
+                        <p class="text-xs text-muted-foreground">
+                            JSON, PDF, DOC, DOCX, XLS, XLSX, CSV, TXT — max 5MB
+                        </p>
                     </div>
 
-                    <div v-if="importFile" class="rounded-lg border p-3 bg-muted/30">
+                    <div
+                        v-if="importFile"
+                        class="rounded-lg border bg-muted/30 p-3"
+                    >
                         <p class="text-sm font-medium">{{ importFile.name }}</p>
-                        <p class="text-xs text-muted-foreground">{{ (importFile.size / 1024).toFixed(1) }} KB</p>
+                        <p class="text-xs text-muted-foreground">
+                            {{ (importFile.size / 1024).toFixed(1) }} KB
+                        </p>
                     </div>
 
-                    <div v-if="importError" class="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
-                        <p class="text-sm text-destructive">{{ importError }}</p>
+                    <div
+                        v-if="importError"
+                        class="rounded-lg border border-destructive/50 bg-destructive/10 p-3"
+                    >
+                        <p class="text-sm text-destructive">
+                            {{ importError }}
+                        </p>
                     </div>
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" @click="closeImportDialog">Cancel</Button>
+                    <Button variant="outline" @click="closeImportDialog"
+                        >Cancel</Button
+                    >
                     <RestrictedAction>
                         <Button
                             @click="submitImport"
@@ -767,15 +1084,25 @@ const saveChildReorder = () => {
                 <DialogHeader>
                     <DialogTitle>Delete Documentation?</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete "{{ documentation.title }}"? This action cannot be undone.
+                        Are you sure you want to delete "{{
+                            documentation.title
+                        }}"? This action cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="flex gap-4 sm:justify-end">
-                    <Button variant="secondary" @click="showDeleteConfirm = false" class="flex-1 sm:flex-none">
+                    <Button
+                        variant="secondary"
+                        @click="showDeleteConfirm = false"
+                        class="flex-1 sm:flex-none"
+                    >
                         Cancel
                     </Button>
                     <RestrictedAction>
-                        <Button variant="destructive" @click="confirmDelete" class="flex-1 sm:flex-none">
+                        <Button
+                            variant="destructive"
+                            @click="confirmDelete"
+                            class="flex-1 sm:flex-none"
+                        >
                             Delete
                         </Button>
                     </RestrictedAction>

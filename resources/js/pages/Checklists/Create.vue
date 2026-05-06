@@ -1,21 +1,52 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type ColumnConfig, type Checklist, type SelectOption } from '@/types';
-import { type ProjectFeature } from '@/types/checkmate';
+import {
+    ClipboardList,
+    Plus,
+    Trash2,
+    Copy,
+    ChevronDown,
+    ChevronUp,
+} from 'lucide-vue-next';
+import { ref, watch } from 'vue';
 import FeatureSelector from '@/components/FeatureSelector.vue';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type ColumnConfig,
+    type Checklist,
+    type SelectOption,
+} from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ClipboardList, Plus, Trash2, Copy, ChevronDown, ChevronUp } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
 
-const MODULE_OPTIONS = ['UI', 'API', 'Backend', 'Database', 'Integration'] as const;
+const MODULE_OPTIONS = [
+    'UI',
+    'API',
+    'Backend',
+    'Database',
+    'Integration',
+] as const;
 
 const props = defineProps<{
     project: Project;
@@ -28,7 +59,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Checklists', href: `/projects/${props.project.id}/checklists` },
-    { title: 'Create', href: `/projects/${props.project.id}/checklists/create` },
+    {
+        title: 'Create',
+        href: `/projects/${props.project.id}/checklists/create`,
+    },
 ];
 
 const selectedTemplateId = ref<number | null>(null);
@@ -51,7 +85,8 @@ const defaultColumns: ColumnConfig[] = [
 ];
 
 const urlParams = new URLSearchParams(window.location.search);
-const defaultCategory = urlParams.get('category') || props.categories[0] || 'Category';
+const defaultCategory =
+    urlParams.get('category') || props.categories[0] || 'Category';
 
 const form = useForm({
     name: '',
@@ -65,10 +100,12 @@ useClearErrorsOnInput(form);
 // Apply template when selected
 watch(selectedTemplateId, (templateId) => {
     if (templateId) {
-        const template = props.templates.find(t => t.id === templateId);
+        const template = props.templates.find((t) => t.id === templateId);
         if (template?.columns_config) {
             // Deep copy columns_config to avoid reference issues
-            form.columns_config = JSON.parse(JSON.stringify(template.columns_config));
+            form.columns_config = JSON.parse(
+                JSON.stringify(template.columns_config),
+            );
             // Expand columns that have options
             expandedColumns.value = {};
             form.columns_config.forEach((col, index) => {
@@ -124,14 +161,18 @@ const setOptionColor = (option: SelectOption, color: string) => {
 };
 
 // Initialize options array when type changes to select
-watch(() => form.columns_config, (columns) => {
-    columns.forEach((col, index) => {
-        if (col.type === 'select' && !col.options) {
-            col.options = [];
-            expandedColumns.value[index] = true;
-        }
-    });
-}, { deep: true });
+watch(
+    () => form.columns_config,
+    (columns) => {
+        columns.forEach((col, index) => {
+            if (col.type === 'select' && !col.options) {
+                col.options = [];
+                expandedColumns.value[index] = true;
+            }
+        });
+    },
+    { deep: true },
+);
 
 const submit = () => {
     form.post(`/projects/${props.project.id}/checklists`);
@@ -161,12 +202,23 @@ const submit = () => {
                                 <Label>Use Template</Label>
                                 <Select v-model="selectedTemplateId">
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select a template (optional)..." />
+                                        <SelectValue
+                                            placeholder="Select a template (optional)..."
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem :value="null">No template (start fresh)</SelectItem>
-                                        <SelectItem v-for="template in templates" :key="template.id" :value="template.id">
-                                            <div class="flex items-center gap-2">
+                                        <SelectItem :value="null"
+                                            >No template (start
+                                            fresh)</SelectItem
+                                        >
+                                        <SelectItem
+                                            v-for="template in templates"
+                                            :key="template.id"
+                                            :value="template.id"
+                                        >
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
                                                 <Copy class="h-3 w-3" />
                                                 {{ template.name }}
                                             </div>
@@ -174,7 +226,8 @@ const submit = () => {
                                     </SelectContent>
                                 </Select>
                                 <p class="text-xs text-muted-foreground">
-                                    Select an existing checklist to copy its column structure
+                                    Select an existing checklist to copy its
+                                    column structure
                                 </p>
                             </div>
 
@@ -185,7 +238,9 @@ const submit = () => {
                                     v-model="form.name"
                                     type="text"
                                     placeholder="e.g., Deployment Checklist, Code Review Items"
-                                    :class="{ 'border-destructive': form.errors.name }"
+                                    :class="{
+                                        'border-destructive': form.errors.name,
+                                    }"
                                 />
                                 <InputError :message="form.errors.name" />
                             </div>
@@ -200,7 +255,11 @@ const submit = () => {
                                         placeholder="No category"
                                     />
                                     <datalist id="category-suggestions">
-                                        <option v-for="cat in categories" :key="cat" :value="cat" />
+                                        <option
+                                            v-for="cat in categories"
+                                            :key="cat"
+                                            :value="cat"
+                                        />
                                     </datalist>
                                     <Button
                                         v-if="form.category"
@@ -220,17 +279,46 @@ const submit = () => {
                             <div class="space-y-2">
                                 <Label>Module</Label>
                                 <div class="flex items-center gap-4">
-                                    <button type="button" class="text-xs text-primary hover:underline cursor-pointer" @click="form.module = [...MODULE_OPTIONS]">Select All</button>
-                                    <button type="button" class="text-xs text-muted-foreground hover:underline cursor-pointer" @click="form.module = []">Clear</button>
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer text-xs text-primary hover:underline"
+                                        @click="
+                                            form.module = [...MODULE_OPTIONS]
+                                        "
+                                    >
+                                        Select All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="cursor-pointer text-xs text-muted-foreground hover:underline"
+                                        @click="form.module = []"
+                                    >
+                                        Clear
+                                    </button>
                                 </div>
                                 <div class="flex flex-wrap gap-3">
-                                    <label v-for="opt in MODULE_OPTIONS" :key="opt" class="flex items-center gap-2 cursor-pointer">
+                                    <label
+                                        v-for="opt in MODULE_OPTIONS"
+                                        :key="opt"
+                                        class="flex cursor-pointer items-center gap-2"
+                                    >
                                         <Checkbox
-                                            :model-value="form.module.includes(opt)"
-                                            @update:model-value="(checked: boolean) => {
-                                                if (checked) { form.module.push(opt); }
-                                                else { form.module = form.module.filter(m => m !== opt); }
-                                            }"
+                                            :model-value="
+                                                form.module.includes(opt)
+                                            "
+                                            @update:model-value="
+                                                (checked: boolean) => {
+                                                    if (checked) {
+                                                        form.module.push(opt);
+                                                    } else {
+                                                        form.module =
+                                                            form.module.filter(
+                                                                (m) =>
+                                                                    m !== opt,
+                                                            );
+                                                    }
+                                                }
+                                            "
                                         />
                                         <span class="text-sm">{{ opt }}</span>
                                     </label>
@@ -247,7 +335,13 @@ const submit = () => {
                             <div class="space-y-3">
                                 <div class="flex items-center justify-between">
                                     <Label>Columns</Label>
-                                    <Button type="button" variant="outline" size="sm" @click="addColumn" class="gap-1">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        @click="addColumn"
+                                        class="gap-1"
+                                    >
                                         <Plus class="h-3 w-3" />
                                         Add Column
                                     </Button>
@@ -255,23 +349,38 @@ const submit = () => {
 
                                 <div class="space-y-2">
                                     <div
-                                        v-for="(column, index) in form.columns_config"
+                                        v-for="(
+                                            column, index
+                                        ) in form.columns_config"
                                         :key="index"
                                         class="rounded-lg border"
                                     >
-                                        <div class="flex items-center gap-2 p-3">
+                                        <div
+                                            class="flex items-center gap-2 p-3"
+                                        >
                                             <div class="flex-1">
-                                                <Input v-model="column.label" placeholder="Column name" />
+                                                <Input
+                                                    v-model="column.label"
+                                                    placeholder="Column name"
+                                                />
                                             </div>
                                             <Select v-model="column.type">
                                                 <SelectTrigger class="w-32">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="text">Text</SelectItem>
-                                                    <SelectItem value="checkbox">Checkbox</SelectItem>
-                                                    <SelectItem value="select">Select</SelectItem>
-                                                    <SelectItem value="date">Date</SelectItem>
+                                                    <SelectItem value="text"
+                                                        >Text</SelectItem
+                                                    >
+                                                    <SelectItem value="checkbox"
+                                                        >Checkbox</SelectItem
+                                                    >
+                                                    <SelectItem value="select"
+                                                        >Select</SelectItem
+                                                    >
+                                                    <SelectItem value="date"
+                                                        >Date</SelectItem
+                                                    >
                                                 </SelectContent>
                                             </Select>
                                             <Button
@@ -279,14 +388,27 @@ const submit = () => {
                                                 type="button"
                                                 variant="ghost"
                                                 size="icon-sm"
-                                                @click="toggleColumnExpand(index)"
+                                                @click="
+                                                    toggleColumnExpand(index)
+                                                "
                                                 class="p-0"
                                             >
-                                                <ChevronDown v-if="!expandedColumns[index]" class="h-4 w-4" />
-                                                <ChevronUp v-else class="h-4 w-4" />
+                                                <ChevronDown
+                                                    v-if="
+                                                        !expandedColumns[index]
+                                                    "
+                                                    class="h-4 w-4"
+                                                />
+                                                <ChevronUp
+                                                    v-else
+                                                    class="h-4 w-4"
+                                                />
                                             </Button>
                                             <Button
-                                                v-if="form.columns_config.length > 1"
+                                                v-if="
+                                                    form.columns_config.length >
+                                                    1
+                                                "
                                                 type="button"
                                                 variant="ghost"
                                                 size="icon-sm"
@@ -299,57 +421,110 @@ const submit = () => {
 
                                         <!-- Select Options -->
                                         <div
-                                            v-if="column.type === 'select' && expandedColumns[index]"
+                                            v-if="
+                                                column.type === 'select' &&
+                                                expandedColumns[index]
+                                            "
                                             class="border-t bg-muted/30 p-3"
                                         >
                                             <div class="space-y-2">
-                                                <div class="flex items-center justify-between">
-                                                    <Label class="text-xs text-muted-foreground">Select Options</Label>
+                                                <div
+                                                    class="flex items-center justify-between"
+                                                >
+                                                    <Label
+                                                        class="text-xs text-muted-foreground"
+                                                        >Select Options</Label
+                                                    >
                                                     <Button
                                                         type="button"
                                                         variant="outline"
                                                         size="sm"
-                                                        @click="addOption(column)"
-                                                        class="h-6 text-xs gap-1"
+                                                        @click="
+                                                            addOption(column)
+                                                        "
+                                                        class="h-6 gap-1 text-xs"
                                                     >
                                                         <Plus class="h-3 w-3" />
                                                         Add Option
                                                     </Button>
                                                 </div>
 
-                                                <div v-if="!column.options?.length" class="text-xs text-muted-foreground text-center py-2">
-                                                    No options yet. Add options for your select dropdown.
+                                                <div
+                                                    v-if="
+                                                        !column.options?.length
+                                                    "
+                                                    class="py-2 text-center text-xs text-muted-foreground"
+                                                >
+                                                    No options yet. Add options
+                                                    for your select dropdown.
                                                 </div>
 
                                                 <div v-else class="space-y-1">
                                                     <div
-                                                        v-for="(option, optIndex) in column.options"
+                                                        v-for="(
+                                                            option, optIndex
+                                                        ) in column.options"
                                                         :key="optIndex"
                                                         class="flex items-center gap-2"
                                                     >
                                                         <Input
-                                                            v-model="option.label"
+                                                            v-model="
+                                                                option.label
+                                                            "
                                                             placeholder="Option label"
-                                                            class="h-8 text-sm flex-1"
+                                                            class="h-8 flex-1 text-sm"
                                                         />
 
                                                         <!-- Color picker -->
-                                                        <div class="flex items-center gap-1">
+                                                        <div
+                                                            class="flex items-center gap-1"
+                                                        >
                                                             <div
                                                                 v-for="color in predefinedColors"
-                                                                :key="color.value"
-                                                                @click="setOptionColor(option, color.value)"
-                                                                class="w-5 h-5 rounded cursor-pointer border hover:scale-110 transition-transform"
-                                                                :class="option.color === color.value ? 'ring-2 ring-primary ring-offset-1' : ''"
-                                                                :style="{ backgroundColor: color.value }"
-                                                                :title="color.name"
+                                                                :key="
+                                                                    color.value
+                                                                "
+                                                                @click="
+                                                                    setOptionColor(
+                                                                        option,
+                                                                        color.value,
+                                                                    )
+                                                                "
+                                                                class="h-5 w-5 cursor-pointer rounded border transition-transform hover:scale-110"
+                                                                :class="
+                                                                    option.color ===
+                                                                    color.value
+                                                                        ? 'ring-2 ring-primary ring-offset-1'
+                                                                        : ''
+                                                                "
+                                                                :style="{
+                                                                    backgroundColor:
+                                                                        color.value,
+                                                                }"
+                                                                :title="
+                                                                    color.name
+                                                                "
                                                             />
-                                                            <label class="flex items-center cursor-pointer ml-1">
+                                                            <label
+                                                                class="ml-1 flex cursor-pointer items-center"
+                                                            >
                                                                 <input
                                                                     type="color"
-                                                                    :value="option.color || '#dbeafe'"
-                                                                    @input="(e) => setOptionColor(option, (e.target as HTMLInputElement).value)"
-                                                                    class="w-5 h-5 rounded cursor-pointer"
+                                                                    :value="
+                                                                        option.color ||
+                                                                        '#dbeafe'
+                                                                    "
+                                                                    @input="
+                                                                        (e) =>
+                                                                            setOptionColor(
+                                                                                option,
+                                                                                (
+                                                                                    e.target as HTMLInputElement
+                                                                                )
+                                                                                    .value,
+                                                                            )
+                                                                    "
+                                                                    class="h-5 w-5 cursor-pointer rounded"
                                                                 />
                                                             </label>
                                                         </div>
@@ -358,28 +533,58 @@ const submit = () => {
                                                             type="button"
                                                             variant="ghost"
                                                             size="sm"
-                                                            @click="removeOption(column, optIndex)"
+                                                            @click="
+                                                                removeOption(
+                                                                    column,
+                                                                    optIndex,
+                                                                )
+                                                            "
                                                             class="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                                                         >
-                                                            <Trash2 class="h-3 w-3" />
+                                                            <Trash2
+                                                                class="h-3 w-3"
+                                                            />
                                                         </Button>
                                                     </div>
                                                 </div>
 
                                                 <!-- Preview -->
-                                                <div v-if="column.options?.length" class="pt-2 border-t mt-2">
-                                                    <Label class="text-xs text-muted-foreground mb-1 block">Preview</Label>
-                                                    <div class="flex flex-wrap gap-1">
+                                                <div
+                                                    v-if="
+                                                        column.options?.length
+                                                    "
+                                                    class="mt-2 border-t pt-2"
+                                                >
+                                                    <Label
+                                                        class="mb-1 block text-xs text-muted-foreground"
+                                                        >Preview</Label
+                                                    >
+                                                    <div
+                                                        class="flex flex-wrap gap-1"
+                                                    >
                                                         <span
-                                                            v-for="(option, optIndex) in column.options"
+                                                            v-for="(
+                                                                option, optIndex
+                                                            ) in column.options"
                                                             :key="optIndex"
-                                                            class="px-2 py-0.5 rounded text-xs font-medium"
+                                                            class="rounded px-2 py-0.5 text-xs font-medium"
                                                             :style="{
-                                                                backgroundColor: option.color || '#dbeafe',
-                                                                color: predefinedColors.find(c => c.value === option.color)?.text || '#2563eb'
+                                                                backgroundColor:
+                                                                    option.color ||
+                                                                    '#dbeafe',
+                                                                color:
+                                                                    predefinedColors.find(
+                                                                        (c) =>
+                                                                            c.value ===
+                                                                            option.color,
+                                                                    )?.text ||
+                                                                    '#2563eb',
                                                             }"
                                                         >
-                                                            {{ option.label || 'Untitled' }}
+                                                            {{
+                                                                option.label ||
+                                                                'Untitled'
+                                                            }}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -390,10 +595,21 @@ const submit = () => {
                             </div>
 
                             <div class="flex gap-2">
-                                <Button type="submit" :disabled="form.processing">
+                                <Button
+                                    type="submit"
+                                    :disabled="form.processing"
+                                >
                                     Create Checklist
                                 </Button>
-                                <Button type="button" variant="outline" @click="$inertia.visit(`/projects/${project.id}/checklists`)">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="
+                                        $inertia.visit(
+                                            `/projects/${project.id}/checklists`,
+                                        )
+                                    "
+                                >
                                     Cancel
                                 </Button>
                             </div>

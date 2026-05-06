@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
+import { ArrowLeft } from 'lucide-vue-next';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem } from '@/types';
-import { ArrowLeft } from 'lucide-vue-next';
-import { router } from '@inertiajs/vue3';
 
 const props = withDefaults(
     defineProps<{
@@ -17,7 +17,8 @@ const props = withDefaults(
 const goBack = () => {
     // If there are breadcrumbs, go to the previous breadcrumb
     if (props.breadcrumbs && props.breadcrumbs.length > 1) {
-        const previousBreadcrumb = props.breadcrumbs[props.breadcrumbs.length - 2];
+        const previousBreadcrumb =
+            props.breadcrumbs[props.breadcrumbs.length - 2];
         if (previousBreadcrumb.href) {
             router.visit(previousBreadcrumb.href);
             return;
@@ -40,10 +41,13 @@ const goBack = () => {
                 </template>
             </div>
         </div>
-        <div v-if="breadcrumbs && breadcrumbs.length > 1" class="px-6 pb-3 md:px-4">
+        <div
+            v-if="breadcrumbs && breadcrumbs.length > 1"
+            class="px-6 pb-3 md:px-4"
+        >
             <button
                 @click="goBack"
-                class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                class="flex cursor-pointer items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
                 <ArrowLeft class="h-4 w-4" />
                 Back

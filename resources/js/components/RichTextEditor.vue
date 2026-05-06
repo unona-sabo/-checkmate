@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { useEditor, EditorContent } from '@tiptap/vue-3';
-import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import { watch } from 'vue';
+import StarterKit from '@tiptap/starter-kit';
+import { useEditor, EditorContent } from '@tiptap/vue-3';
 import axios from 'axios';
 import {
     Bold,
@@ -24,6 +23,7 @@ import {
     Unlink,
     ImagePlus,
 } from 'lucide-vue-next';
+import { watch } from 'vue';
 
 const props = defineProps<{
     modelValue: string;
@@ -142,26 +142,40 @@ const setLink = () => {
         return;
     }
 
-    editor.value.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    editor.value
+        .chain()
+        .focus()
+        .extendMarkRange('link')
+        .setLink({ href: url })
+        .run();
 };
 
-watch(() => props.modelValue, (value) => {
-    if (!editor.value) return;
-    const isSame = editor.value.getHTML() === value;
-    if (!isSame) {
-        editor.value.commands.setContent(value || '', false);
-    }
-});
+watch(
+    () => props.modelValue,
+    (value) => {
+        if (!editor.value) return;
+        const isSame = editor.value.getHTML() === value;
+        if (!isSame) {
+            editor.value.commands.setContent(value || '', false);
+        }
+    },
+);
 </script>
 
 <template>
-    <div class="rounded-md border border-input bg-background overflow-hidden">
+    <div class="overflow-hidden rounded-md border border-input bg-background">
         <!-- Toolbar -->
-        <div v-if="editor" class="flex flex-wrap items-center gap-0.5 border-b border-input bg-muted/30 px-2 py-1.5">
+        <div
+            v-if="editor"
+            class="flex flex-wrap items-center gap-0.5 border-b border-input bg-muted/30 px-2 py-1.5"
+        >
             <button
                 type="button"
                 @click="editor.chain().focus().toggleBold().run()"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('bold') }]"
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    { 'bg-muted text-primary': editor.isActive('bold') },
+                ]"
                 title="Bold"
             >
                 <Bold class="h-4 w-4" />
@@ -169,7 +183,10 @@ watch(() => props.modelValue, (value) => {
             <button
                 type="button"
                 @click="editor.chain().focus().toggleItalic().run()"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('italic') }]"
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    { 'bg-muted text-primary': editor.isActive('italic') },
+                ]"
                 title="Italic"
             >
                 <Italic class="h-4 w-4" />
@@ -177,7 +194,10 @@ watch(() => props.modelValue, (value) => {
             <button
                 type="button"
                 @click="editor.chain().focus().toggleStrike().run()"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('strike') }]"
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    { 'bg-muted text-primary': editor.isActive('strike') },
+                ]"
                 title="Strikethrough"
             >
                 <Strikethrough class="h-4 w-4" />
@@ -185,45 +205,78 @@ watch(() => props.modelValue, (value) => {
             <button
                 type="button"
                 @click="editor.chain().focus().toggleCode().run()"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('code') }]"
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    { 'bg-muted text-primary': editor.isActive('code') },
+                ]"
                 title="Code"
             >
                 <Code class="h-4 w-4" />
             </button>
 
-            <div class="w-px h-5 bg-border mx-1" />
+            <div class="mx-1 h-5 w-px bg-border" />
 
             <button
                 type="button"
-                @click="editor.chain().focus().toggleHeading({ level: 1 }).run()"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('heading', { level: 1 }) }]"
+                @click="
+                    editor.chain().focus().toggleHeading({ level: 1 }).run()
+                "
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    {
+                        'bg-muted text-primary': editor.isActive('heading', {
+                            level: 1,
+                        }),
+                    },
+                ]"
                 title="Heading 1"
             >
                 <Heading1 class="h-4 w-4" />
             </button>
             <button
                 type="button"
-                @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('heading', { level: 2 }) }]"
+                @click="
+                    editor.chain().focus().toggleHeading({ level: 2 }).run()
+                "
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    {
+                        'bg-muted text-primary': editor.isActive('heading', {
+                            level: 2,
+                        }),
+                    },
+                ]"
                 title="Heading 2"
             >
                 <Heading2 class="h-4 w-4" />
             </button>
             <button
                 type="button"
-                @click="editor.chain().focus().toggleHeading({ level: 3 }).run()"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('heading', { level: 3 }) }]"
+                @click="
+                    editor.chain().focus().toggleHeading({ level: 3 }).run()
+                "
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    {
+                        'bg-muted text-primary': editor.isActive('heading', {
+                            level: 3,
+                        }),
+                    },
+                ]"
                 title="Heading 3"
             >
                 <Heading3 class="h-4 w-4" />
             </button>
 
-            <div class="w-px h-5 bg-border mx-1" />
+            <div class="mx-1 h-5 w-px bg-border" />
 
             <button
                 type="button"
                 @click="editor.chain().focus().toggleBulletList().run()"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('bulletList') }]"
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    { 'bg-muted text-primary': editor.isActive('bulletList') },
+                ]"
                 title="Bullet list"
             >
                 <List class="h-4 w-4" />
@@ -231,7 +284,10 @@ watch(() => props.modelValue, (value) => {
             <button
                 type="button"
                 @click="editor.chain().focus().toggleOrderedList().run()"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('orderedList') }]"
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    { 'bg-muted text-primary': editor.isActive('orderedList') },
+                ]"
                 title="Ordered list"
             >
                 <ListOrdered class="h-4 w-4" />
@@ -239,7 +295,10 @@ watch(() => props.modelValue, (value) => {
             <button
                 type="button"
                 @click="editor.chain().focus().toggleBlockquote().run()"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('blockquote') }]"
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    { 'bg-muted text-primary': editor.isActive('blockquote') },
+                ]"
                 title="Blockquote"
             >
                 <Quote class="h-4 w-4" />
@@ -247,18 +306,21 @@ watch(() => props.modelValue, (value) => {
             <button
                 type="button"
                 @click="editor.chain().focus().setHorizontalRule().run()"
-                class="p-1.5 rounded hover:bg-muted transition-colors"
+                class="rounded p-1.5 transition-colors hover:bg-muted"
                 title="Horizontal rule"
             >
                 <Minus class="h-4 w-4" />
             </button>
 
-            <div class="w-px h-5 bg-border mx-1" />
+            <div class="mx-1 h-5 w-px bg-border" />
 
             <button
                 type="button"
                 @click="setLink"
-                :class="['p-1.5 rounded hover:bg-muted transition-colors', { 'bg-muted text-primary': editor.isActive('link') }]"
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    { 'bg-muted text-primary': editor.isActive('link') },
+                ]"
                 title="Add link"
             >
                 <LinkIcon class="h-4 w-4" />
@@ -267,7 +329,7 @@ watch(() => props.modelValue, (value) => {
                 v-if="editor.isActive('link')"
                 type="button"
                 @click="editor.chain().focus().unsetLink().run()"
-                class="p-1.5 rounded hover:bg-muted transition-colors"
+                class="rounded p-1.5 transition-colors hover:bg-muted"
                 title="Remove link"
             >
                 <Unlink class="h-4 w-4" />
@@ -276,19 +338,19 @@ watch(() => props.modelValue, (value) => {
                 v-if="uploadUrl"
                 type="button"
                 @click="addImage"
-                class="p-1.5 rounded hover:bg-muted transition-colors"
+                class="rounded p-1.5 transition-colors hover:bg-muted"
                 title="Insert image"
             >
                 <ImagePlus class="h-4 w-4" />
             </button>
 
-            <div class="w-px h-5 bg-border mx-1" />
+            <div class="mx-1 h-5 w-px bg-border" />
 
             <button
                 type="button"
                 @click="editor.chain().focus().undo().run()"
                 :disabled="!editor.can().undo()"
-                class="p-1.5 rounded hover:bg-muted transition-colors disabled:opacity-30"
+                class="rounded p-1.5 transition-colors hover:bg-muted disabled:opacity-30"
                 title="Undo"
             >
                 <Undo class="h-4 w-4" />
@@ -297,7 +359,7 @@ watch(() => props.modelValue, (value) => {
                 type="button"
                 @click="editor.chain().focus().redo().run()"
                 :disabled="!editor.can().redo()"
-                class="p-1.5 rounded hover:bg-muted transition-colors disabled:opacity-30"
+                class="rounded p-1.5 transition-colors hover:bg-muted disabled:opacity-30"
                 title="Redo"
             >
                 <Redo class="h-4 w-4" />

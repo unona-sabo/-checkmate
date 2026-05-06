@@ -1,19 +1,48 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type TestSuite, type TestCase, type Checklist, type ChecklistRow, type ColumnConfig } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Play,
+    Layers,
+    FileText,
+    Boxes,
+    ListChecks,
+    Search,
+    X,
+    SlidersHorizontal,
+} from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
+import InputError from '@/components/InputError.vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import InputError from '@/components/InputError.vue';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Play, Layers, FileText, Boxes, ListChecks, Search, X, SlidersHorizontal } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
-import RestrictedAction from '@/components/RestrictedAction.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type TestSuite,
+    type TestCase,
+    type Checklist,
+    type ChecklistRow,
+    type ColumnConfig,
+} from '@/types';
 
 const props = defineProps<{
     project: Project;
@@ -80,10 +109,10 @@ const toggleSuite = (suiteId: number) => {
 const getAllTestCases = (suite: TestSuite): number[] => {
     const ids: number[] = [];
     if (suite.test_cases) {
-        ids.push(...suite.test_cases.map(tc => tc.id));
+        ids.push(...suite.test_cases.map((tc) => tc.id));
     }
     if (suite.children) {
-        suite.children.forEach(child => {
+        suite.children.forEach((child) => {
             ids.push(...getAllTestCases(child));
         });
     }
@@ -92,21 +121,28 @@ const getAllTestCases = (suite: TestSuite): number[] => {
 
 const isSuiteSelected = (suite: TestSuite) => {
     const allIds = getAllTestCases(suite);
-    return allIds.length > 0 && allIds.every(id => form.test_case_ids.includes(id));
+    return (
+        allIds.length > 0 &&
+        allIds.every((id) => form.test_case_ids.includes(id))
+    );
 };
 
 const isSuitePartiallySelected = (suite: TestSuite) => {
     const allIds = getAllTestCases(suite);
-    const selectedCount = allIds.filter(id => form.test_case_ids.includes(id)).length;
+    const selectedCount = allIds.filter((id) =>
+        form.test_case_ids.includes(id),
+    ).length;
     return selectedCount > 0 && selectedCount < allIds.length;
 };
 
 const toggleSuiteSelection = (suite: TestSuite) => {
     const allIds = getAllTestCases(suite);
     if (isSuiteSelected(suite)) {
-        form.test_case_ids = form.test_case_ids.filter(id => !allIds.includes(id));
+        form.test_case_ids = form.test_case_ids.filter(
+            (id) => !allIds.includes(id),
+        );
     } else {
-        const newIds = allIds.filter(id => !form.test_case_ids.includes(id));
+        const newIds = allIds.filter((id) => !form.test_case_ids.includes(id));
         form.test_case_ids = [...form.test_case_ids, ...newIds];
     }
 };
@@ -114,7 +150,9 @@ const toggleSuiteSelection = (suite: TestSuite) => {
 const toggleTestCase = (testCaseId: number) => {
     const index = form.test_case_ids.indexOf(testCaseId);
     if (index > -1) {
-        form.test_case_ids = form.test_case_ids.filter(id => id !== testCaseId);
+        form.test_case_ids = form.test_case_ids.filter(
+            (id) => id !== testCaseId,
+        );
     } else {
         form.test_case_ids = [...form.test_case_ids, testCaseId];
     }
@@ -122,7 +160,7 @@ const toggleTestCase = (testCaseId: number) => {
 
 const allTestCaseIds = computed(() => {
     const ids: number[] = [];
-    props.testSuites.forEach(suite => {
+    props.testSuites.forEach((suite) => {
         ids.push(...getAllTestCases(suite));
     });
     return ids;
@@ -135,33 +173,50 @@ const filteredTestSuites = computed(() => {
     if (!query && !hasQuickFilter) return props.testSuites;
 
     return props.testSuites
-        .map(suite => {
+        .map((suite) => {
             const matchesCase = (tc: TestCase) => {
-                const textMatch = !query || tc.title.toLowerCase().includes(query);
-                const typeMatch = !quickFilterType.value || tc.type === quickFilterType.value;
-                const priorityMatch = !quickFilterPriority.value || tc.priority === quickFilterPriority.value;
+                const textMatch =
+                    !query || tc.title.toLowerCase().includes(query);
+                const typeMatch =
+                    !quickFilterType.value || tc.type === quickFilterType.value;
+                const priorityMatch =
+                    !quickFilterPriority.value ||
+                    tc.priority === quickFilterPriority.value;
                 return textMatch && typeMatch && priorityMatch;
             };
 
             const filteredCases = suite.test_cases?.filter(matchesCase) ?? [];
             const filteredChildren = (suite.children ?? [])
-                .map(child => ({
+                .map((child) => ({
                     ...child,
                     test_cases: child.test_cases?.filter(matchesCase) ?? [],
                 }))
-                .filter(child => child.test_cases.length > 0);
+                .filter((child) => child.test_cases.length > 0);
 
-            return { ...suite, test_cases: filteredCases, children: filteredChildren };
+            return {
+                ...suite,
+                test_cases: filteredCases,
+                children: filteredChildren,
+            };
         })
-        .filter(suite => (suite.test_cases?.length ?? 0) > 0 || (suite.children?.length ?? 0) > 0);
+        .filter(
+            (suite) =>
+                (suite.test_cases?.length ?? 0) > 0 ||
+                (suite.children?.length ?? 0) > 0,
+        );
 });
 
 const allTestCasesSelected = computed(() => {
-    return allTestCaseIds.value.length > 0 && allTestCaseIds.value.every(id => form.test_case_ids.includes(id));
+    return (
+        allTestCaseIds.value.length > 0 &&
+        allTestCaseIds.value.every((id) => form.test_case_ids.includes(id))
+    );
 });
 
 const toggleAllTestCases = () => {
-    form.test_case_ids = allTestCasesSelected.value ? [] : [...allTestCaseIds.value];
+    form.test_case_ids = allTestCasesSelected.value
+        ? []
+        : [...allTestCaseIds.value];
 };
 
 // Auto-select test cases when quick filter changes
@@ -175,9 +230,9 @@ watch([quickFilterType, quickFilterPriority], ([type, priority]) => {
             const priorityOk = !priority || tc.priority === priority;
             if (typeOk && priorityOk) matchingIds.push(tc.id);
         });
-        suite.children?.forEach(child => collect(child));
+        suite.children?.forEach((child) => collect(child));
     };
-    props.testSuites.forEach(suite => collect(suite));
+    props.testSuites.forEach((suite) => collect(suite));
     form.test_case_ids = matchingIds;
 });
 
@@ -197,36 +252,54 @@ const selectedChecklistId = ref('');
 
 const selectedChecklist = computed(() => {
     if (!selectedChecklistId.value) return null;
-    return props.checklists?.find(c => c.id === Number(selectedChecklistId.value)) ?? null;
+    return (
+        props.checklists?.find(
+            (c) => c.id === Number(selectedChecklistId.value),
+        ) ?? null
+    );
 });
 
 const textColumnKey = computed((): string | null => {
     if (!selectedChecklist.value?.columns_config) return null;
-    const textCols = selectedChecklist.value.columns_config.filter(col => col.type === 'text');
+    const textCols = selectedChecklist.value.columns_config.filter(
+        (col) => col.type === 'text',
+    );
     if (!textCols.length) return null;
     // Prefer a column explicitly labelled "Check" or with key "item"
-    const checkCol = textCols.find(col => /^check$/i.test(col.label) || col.key === 'item');
+    const checkCol = textCols.find(
+        (col) => /^check$/i.test(col.label) || col.key === 'item',
+    );
     if (checkCol) return checkCol.key;
     // Fallback: widest text column (typically the main content column)
-    return textCols.reduce((a, b) => ((a.width ?? 0) >= (b.width ?? 0) ? a : b)).key;
+    return textCols.reduce((a, b) => ((a.width ?? 0) >= (b.width ?? 0) ? a : b))
+        .key;
 });
 
 const expectedResultColumnKey = computed((): string | null => {
-    if (!selectedChecklist.value?.columns_config || !textColumnKey.value) return null;
-    const cols = selectedChecklist.value.columns_config.filter(col => col.type === 'text' && col.key !== textColumnKey.value);
-    const expectedCol = cols.find(col => /expected|result/i.test(col.label));
+    if (!selectedChecklist.value?.columns_config || !textColumnKey.value)
+        return null;
+    const cols = selectedChecklist.value.columns_config.filter(
+        (col) => col.type === 'text' && col.key !== textColumnKey.value,
+    );
+    const expectedCol = cols.find((col) => /expected|result/i.test(col.label));
     return expectedCol?.key ?? cols[0]?.key ?? null;
 });
 
 const checklistRows = computed((): { title: string; row: ChecklistRow }[] => {
     if (!selectedChecklist.value?.rows || !textColumnKey.value) return [];
     return selectedChecklist.value.rows
-        .filter(r => r.row_type !== 'section_header')
-        .map(r => ({
-            title: stripHtml(String((r.data as Record<string, unknown>)?.[textColumnKey.value!] ?? '')),
+        .filter((r) => r.row_type !== 'section_header')
+        .map((r) => ({
+            title: stripHtml(
+                String(
+                    (r.data as Record<string, unknown>)?.[
+                        textColumnKey.value!
+                    ] ?? '',
+                ),
+            ),
             row: r,
         }))
-        .filter(r => r.title !== '');
+        .filter((r) => r.title !== '');
 });
 
 // Checklist column filters
@@ -235,20 +308,23 @@ const columnFilters = ref<Record<string, string>>({});
 const selectColumns = computed((): ColumnConfig[] => {
     if (!selectedChecklist.value?.columns_config) return [];
     return selectedChecklist.value.columns_config.filter(
-        (col): col is ColumnConfig & { type: 'select' } => col.type === 'select',
+        (col): col is ColumnConfig & { type: 'select' } =>
+            col.type === 'select',
     );
 });
 
 const hasActiveColumnFilters = computed(() =>
-    Object.values(columnFilters.value).some(v => v !== ''),
+    Object.values(columnFilters.value).some((v) => v !== ''),
 );
 
 const filteredChecklistRows = computed(() => {
     if (!hasActiveColumnFilters.value) return checklistRows.value;
-    return checklistRows.value.filter(item =>
+    return checklistRows.value.filter((item) =>
         Object.entries(columnFilters.value).every(([key, value]) => {
             if (!value) return true;
-            const cellValue = String((item.row.data as Record<string, unknown>)?.[key] ?? '');
+            const cellValue = String(
+                (item.row.data as Record<string, unknown>)?.[key] ?? '',
+            );
             return cellValue === value;
         }),
     );
@@ -259,26 +335,31 @@ const selectedRowTitles = ref<Set<string>>(new Set());
 watch(selectedChecklistId, () => {
     selectedRowTitles.value = new Set();
     columnFilters.value = {};
-    checklistForm.checklist_id = selectedChecklistId.value ? Number(selectedChecklistId.value) : null;
+    checklistForm.checklist_id = selectedChecklistId.value
+        ? Number(selectedChecklistId.value)
+        : null;
 });
 
 // Auto-select matching rows when column filter changes
 watch(
     columnFilters,
-    newFilters => {
-        const hasFilters = Object.values(newFilters).some(v => v !== '');
+    (newFilters) => {
+        const hasFilters = Object.values(newFilters).some((v) => v !== '');
         if (!hasFilters) return;
 
         const filteredTitles = new Set(
             checklistRows.value
-                .filter(item =>
+                .filter((item) =>
                     Object.entries(newFilters).every(([key, value]) => {
                         if (!value) return true;
-                        const cellValue = String((item.row.data as Record<string, unknown>)?.[key] ?? '');
+                        const cellValue = String(
+                            (item.row.data as Record<string, unknown>)?.[key] ??
+                                '',
+                        );
                         return cellValue === value;
                     }),
                 )
-                .map(r => r.title),
+                .map((r) => r.title),
         );
         selectedRowTitles.value = filteredTitles;
     },
@@ -286,7 +367,9 @@ watch(
 );
 
 const rowsToDisplay = computed(() =>
-    hasActiveColumnFilters.value ? filteredChecklistRows.value : checklistRows.value,
+    hasActiveColumnFilters.value
+        ? filteredChecklistRows.value
+        : checklistRows.value,
 );
 
 const toggleRowTitle = (title: string) => {
@@ -300,18 +383,21 @@ const toggleRowTitle = (title: string) => {
 };
 
 const allRowsSelected = computed(() => {
-    return rowsToDisplay.value.length > 0 && rowsToDisplay.value.every(r => selectedRowTitles.value.has(r.title));
+    return (
+        rowsToDisplay.value.length > 0 &&
+        rowsToDisplay.value.every((r) => selectedRowTitles.value.has(r.title))
+    );
 });
 
 const toggleAllRows = () => {
     const rows = rowsToDisplay.value;
     if (allRowsSelected.value) {
         const newSet = new Set(selectedRowTitles.value);
-        rows.forEach(r => newSet.delete(r.title));
+        rows.forEach((r) => newSet.delete(r.title));
         selectedRowTitles.value = newSet;
     } else {
         const newSet = new Set(selectedRowTitles.value);
-        rows.forEach(r => newSet.add(r.title));
+        rows.forEach((r) => newSet.add(r.title));
         selectedRowTitles.value = newSet;
     }
 };
@@ -329,9 +415,13 @@ const submitChecklist = () => {
     checklistForm.titles = Array.from(selectedRowTitles.value);
     if (expectedResultColumnKey.value) {
         const map: Record<string, string> = {};
-        checklistRows.value.forEach(item => {
+        checklistRows.value.forEach((item) => {
             if (selectedRowTitles.value.has(item.title)) {
-                const val = String((item.row.data as Record<string, unknown>)?.[expectedResultColumnKey.value!] ?? '').trim();
+                const val = String(
+                    (item.row.data as Record<string, unknown>)?.[
+                        expectedResultColumnKey.value!
+                    ] ?? '',
+                ).trim();
                 if (val) {
                     map[item.title] = val;
                 }
@@ -339,13 +429,22 @@ const submitChecklist = () => {
         });
         checklistForm.expected_results = map;
     }
-    checklistForm.post(`/projects/${props.project.id}/test-runs/from-checklist`);
+    checklistForm.post(
+        `/projects/${props.project.id}/test-runs/from-checklist`,
+    );
 };
 
-const activeForm = computed(() => isChecklistMode.value ? checklistForm : form);
+const activeForm = computed(() =>
+    isChecklistMode.value ? checklistForm : form,
+);
 const isSubmitDisabled = computed(() => {
     if (isChecklistMode.value) {
-        return checklistForm.processing || !checklistForm.name || !checklistForm.checklist_id || selectedRowTitles.value.size === 0;
+        return (
+            checklistForm.processing ||
+            !checklistForm.name ||
+            !checklistForm.checklist_id ||
+            selectedRowTitles.value.size === 0
+        );
     }
     return form.processing || !form.name || form.test_case_ids.length === 0;
 });
@@ -364,11 +463,20 @@ const isSubmitDisabled = computed(() => {
                             Create Test Run
                         </CardTitle>
                         <CardDescription>
-                            {{ isChecklistMode ? 'Select checklist rows to include in this test run.' : 'Select test cases to include in this test run.' }}
+                            {{
+                                isChecklistMode
+                                    ? 'Select checklist rows to include in this test run.'
+                                    : 'Select test cases to include in this test run.'
+                            }}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form @submit.prevent="isChecklistMode ? submitChecklist() : submit()" class="space-y-6">
+                        <form
+                            @submit.prevent="
+                                isChecklistMode ? submitChecklist() : submit()
+                            "
+                            class="space-y-6"
+                        >
                             <div class="space-y-2">
                                 <Label for="name">Run Name</Label>
                                 <Input
@@ -376,7 +484,10 @@ const isSubmitDisabled = computed(() => {
                                     v-model="activeForm.name"
                                     type="text"
                                     placeholder="e.g., Sprint 1 Regression, Release 2.0 Smoke Test"
-                                    :class="{ 'border-destructive': activeForm.errors.name }"
+                                    :class="{
+                                        'border-destructive':
+                                            activeForm.errors.name,
+                                    }"
                                 />
                                 <InputError :message="activeForm.errors.name" />
                             </div>
@@ -395,16 +506,26 @@ const isSubmitDisabled = computed(() => {
                                 <Label>Priority</Label>
                                 <Select v-model="activeForm.priority">
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select priority..." />
+                                        <SelectValue
+                                            placeholder="Select priority..."
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="low">Low</SelectItem>
-                                        <SelectItem value="medium">Medium</SelectItem>
-                                        <SelectItem value="high">High</SelectItem>
-                                        <SelectItem value="critical">Critical</SelectItem>
+                                        <SelectItem value="medium"
+                                            >Medium</SelectItem
+                                        >
+                                        <SelectItem value="high"
+                                            >High</SelectItem
+                                        >
+                                        <SelectItem value="critical"
+                                            >Critical</SelectItem
+                                        >
                                     </SelectContent>
                                 </Select>
-                                <InputError :message="activeForm.errors.priority" />
+                                <InputError
+                                    :message="activeForm.errors.priority"
+                                />
                             </div>
 
                             <div class="space-y-2">
@@ -412,12 +533,20 @@ const isSubmitDisabled = computed(() => {
                                 <div class="grid gap-3 md:grid-cols-3">
                                     <Select v-model="envPreset">
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select..." />
+                                            <SelectValue
+                                                placeholder="Select..."
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Develop">Develop</SelectItem>
-                                            <SelectItem value="Staging">Staging</SelectItem>
-                                            <SelectItem value="Production">Production</SelectItem>
+                                            <SelectItem value="Develop"
+                                                >Develop</SelectItem
+                                            >
+                                            <SelectItem value="Staging"
+                                                >Staging</SelectItem
+                                            >
+                                            <SelectItem value="Production"
+                                                >Production</SelectItem
+                                            >
                                         </SelectContent>
                                     </Select>
                                     <Input
@@ -442,68 +571,131 @@ const isSubmitDisabled = computed(() => {
                             <!-- Test Case Selection (default mode) -->
                             <div v-if="!isChecklistMode" class="space-y-3">
                                 <!-- Quick filter by type / priority -->
-                                <div class="rounded-lg border bg-muted/30 px-3 py-2.5 space-y-2">
-                                    <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                                        <SlidersHorizontal class="h-3.5 w-3.5" />
+                                <div
+                                    class="space-y-2 rounded-lg border bg-muted/30 px-3 py-2.5"
+                                >
+                                    <div
+                                        class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
+                                    >
+                                        <SlidersHorizontal
+                                            class="h-3.5 w-3.5"
+                                        />
                                         Quick select by
                                     </div>
                                     <div class="flex flex-wrap gap-2">
                                         <div class="relative min-w-36 flex-1">
                                             <Select v-model="quickFilterType">
-                                                <SelectTrigger class="h-8 text-xs cursor-pointer" :class="quickFilterType ? 'pr-7' : ''">
-                                                    <SelectValue placeholder="Type: All" />
+                                                <SelectTrigger
+                                                    class="h-8 cursor-pointer text-xs"
+                                                    :class="
+                                                        quickFilterType
+                                                            ? 'pr-7'
+                                                            : ''
+                                                    "
+                                                >
+                                                    <SelectValue
+                                                        placeholder="Type: All"
+                                                    />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="functional">Functional</SelectItem>
-                                                    <SelectItem value="smoke">Smoke</SelectItem>
-                                                    <SelectItem value="regression">Regression</SelectItem>
-                                                    <SelectItem value="integration">Integration</SelectItem>
-                                                    <SelectItem value="acceptance">Acceptance</SelectItem>
-                                                    <SelectItem value="performance">Performance</SelectItem>
-                                                    <SelectItem value="security">Security</SelectItem>
-                                                    <SelectItem value="usability">Usability</SelectItem>
-                                                    <SelectItem value="other">Other</SelectItem>
+                                                    <SelectItem
+                                                        value="functional"
+                                                        >Functional</SelectItem
+                                                    >
+                                                    <SelectItem value="smoke"
+                                                        >Smoke</SelectItem
+                                                    >
+                                                    <SelectItem
+                                                        value="regression"
+                                                        >Regression</SelectItem
+                                                    >
+                                                    <SelectItem
+                                                        value="integration"
+                                                        >Integration</SelectItem
+                                                    >
+                                                    <SelectItem
+                                                        value="acceptance"
+                                                        >Acceptance</SelectItem
+                                                    >
+                                                    <SelectItem
+                                                        value="performance"
+                                                        >Performance</SelectItem
+                                                    >
+                                                    <SelectItem value="security"
+                                                        >Security</SelectItem
+                                                    >
+                                                    <SelectItem
+                                                        value="usability"
+                                                        >Usability</SelectItem
+                                                    >
+                                                    <SelectItem value="other"
+                                                        >Other</SelectItem
+                                                    >
                                                 </SelectContent>
                                             </Select>
                                             <button
                                                 v-if="quickFilterType"
                                                 type="button"
                                                 @click="quickFilterType = ''"
-                                                class="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10"
+                                                class="absolute top-1/2 right-1.5 z-10 -translate-y-1/2 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                                             >
                                                 <X class="h-3 w-3" />
                                             </button>
                                         </div>
                                         <div class="relative min-w-36 flex-1">
-                                            <Select v-model="quickFilterPriority">
-                                                <SelectTrigger class="h-8 text-xs cursor-pointer" :class="quickFilterPriority ? 'pr-7' : ''">
-                                                    <SelectValue placeholder="Priority: All" />
+                                            <Select
+                                                v-model="quickFilterPriority"
+                                            >
+                                                <SelectTrigger
+                                                    class="h-8 cursor-pointer text-xs"
+                                                    :class="
+                                                        quickFilterPriority
+                                                            ? 'pr-7'
+                                                            : ''
+                                                    "
+                                                >
+                                                    <SelectValue
+                                                        placeholder="Priority: All"
+                                                    />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="critical">Critical</SelectItem>
-                                                    <SelectItem value="high">High</SelectItem>
-                                                    <SelectItem value="medium">Medium</SelectItem>
-                                                    <SelectItem value="low">Low</SelectItem>
+                                                    <SelectItem value="critical"
+                                                        >Critical</SelectItem
+                                                    >
+                                                    <SelectItem value="high"
+                                                        >High</SelectItem
+                                                    >
+                                                    <SelectItem value="medium"
+                                                        >Medium</SelectItem
+                                                    >
+                                                    <SelectItem value="low"
+                                                        >Low</SelectItem
+                                                    >
                                                 </SelectContent>
                                             </Select>
                                             <button
                                                 v-if="quickFilterPriority"
                                                 type="button"
-                                                @click="quickFilterPriority = ''"
-                                                class="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10"
+                                                @click="
+                                                    quickFilterPriority = ''
+                                                "
+                                                class="absolute top-1/2 right-1.5 z-10 -translate-y-1/2 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                                             >
                                                 <X class="h-3 w-3" />
                                             </button>
                                         </div>
                                         <Button
-                                            v-if="quickFilterType || quickFilterPriority"
+                                            v-if="
+                                                quickFilterType ||
+                                                quickFilterPriority
+                                            "
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            class="h-8 text-xs text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                                            class="h-8 shrink-0 cursor-pointer text-xs text-muted-foreground hover:text-destructive"
                                             @click="clearQuickFilter"
                                         >
-                                            <X class="h-3 w-3 mr-1" />
+                                            <X class="mr-1 h-3 w-3" />
                                             Clear filter
                                         </Button>
                                     </div>
@@ -511,88 +703,202 @@ const isSubmitDisabled = computed(() => {
 
                                 <div class="flex items-center justify-between">
                                     <Label>Select Test Cases</Label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox :model-value="allTestCasesSelected" @update:model-value="toggleAllTestCases" />
-                                        <span class="text-sm text-muted-foreground">{{ allTestCasesSelected ? 'Deselect All' : 'Select All' }}</span>
+                                    <label
+                                        class="flex cursor-pointer items-center gap-2"
+                                    >
+                                        <Checkbox
+                                            :model-value="allTestCasesSelected"
+                                            @update:model-value="
+                                                toggleAllTestCases
+                                            "
+                                        />
+                                        <span
+                                            class="text-sm text-muted-foreground"
+                                            >{{
+                                                allTestCasesSelected
+                                                    ? 'Deselect All'
+                                                    : 'Select All'
+                                            }}</span
+                                        >
                                     </label>
                                 </div>
 
                                 <div class="relative">
-                                    <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Search
+                                        class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                                    />
                                     <Input
                                         v-model="testCaseSearch"
                                         type="text"
                                         placeholder="Search test cases..."
-                                        class="pl-9 pr-9"
+                                        class="pr-9 pl-9"
                                     />
                                     <button
                                         v-if="testCaseSearch"
                                         type="button"
                                         @click="testCaseSearch = ''"
-                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                                        class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                                     >
                                         <X class="h-4 w-4" />
                                     </button>
                                 </div>
 
-                                <div v-if="!testSuites.length" class="rounded-lg border border-dashed p-6 text-center">
-                                    <Layers class="mx-auto h-8 w-8 text-muted-foreground" />
-                                    <p class="mt-2 text-sm text-muted-foreground">No test suites found. Create test cases first.</p>
-                                </div>
-
-                                <div v-else-if="filteredTestSuites.length === 0" class="rounded-lg border border-dashed p-6 text-center">
-                                    <Search class="mx-auto h-8 w-8 text-muted-foreground" />
-                                    <p class="mt-2 text-sm text-muted-foreground">
-                                        <template v-if="testCaseSearch">No test cases matching "{{ testCaseSearch }}"</template>
-                                        <template v-else>No test cases match the selected filters.</template>
+                                <div
+                                    v-if="!testSuites.length"
+                                    class="rounded-lg border border-dashed p-6 text-center"
+                                >
+                                    <Layers
+                                        class="mx-auto h-8 w-8 text-muted-foreground"
+                                    />
+                                    <p
+                                        class="mt-2 text-sm text-muted-foreground"
+                                    >
+                                        No test suites found. Create test cases
+                                        first.
                                     </p>
                                 </div>
 
-                                <div v-else class="space-y-2 rounded-lg border p-4 max-h-96 overflow-y-auto">
-                                    <template v-for="suite in filteredTestSuites" :key="suite.id">
+                                <div
+                                    v-else-if="filteredTestSuites.length === 0"
+                                    class="rounded-lg border border-dashed p-6 text-center"
+                                >
+                                    <Search
+                                        class="mx-auto h-8 w-8 text-muted-foreground"
+                                    />
+                                    <p
+                                        class="mt-2 text-sm text-muted-foreground"
+                                    >
+                                        <template v-if="testCaseSearch"
+                                            >No test cases matching "{{
+                                                testCaseSearch
+                                            }}"</template
+                                        >
+                                        <template v-else
+                                            >No test cases match the selected
+                                            filters.</template
+                                        >
+                                    </p>
+                                </div>
+
+                                <div
+                                    v-else
+                                    class="max-h-96 space-y-2 overflow-y-auto rounded-lg border p-4"
+                                >
+                                    <template
+                                        v-for="suite in filteredTestSuites"
+                                        :key="suite.id"
+                                    >
                                         <!-- Parent Suite -->
                                         <div class="space-y-2">
-                                            <div class="flex items-center gap-2 py-1">
+                                            <div
+                                                class="flex items-center gap-2 py-1"
+                                            >
                                                 <Checkbox
-                                                    :model-value="isSuitePartiallySelected(suite) ? 'indeterminate' : isSuiteSelected(suite)"
-                                                    @update:model-value="toggleSuiteSelection(suite)"
+                                                    :model-value="
+                                                        isSuitePartiallySelected(
+                                                            suite,
+                                                        )
+                                                            ? 'indeterminate'
+                                                            : isSuiteSelected(
+                                                                  suite,
+                                                              )
+                                                    "
+                                                    @update:model-value="
+                                                        toggleSuiteSelection(
+                                                            suite,
+                                                        )
+                                                    "
                                                 />
                                                 <button
                                                     type="button"
-                                                    @click="toggleSuite(suite.id)"
-                                                    class="flex items-center gap-2 font-medium hover:text-primary cursor-pointer"
+                                                    @click="
+                                                        toggleSuite(suite.id)
+                                                    "
+                                                    class="flex cursor-pointer items-center gap-2 font-medium hover:text-primary"
                                                 >
-                                                    <Layers class="h-4 w-4 text-primary" />
+                                                    <Layers
+                                                        class="h-4 w-4 text-primary"
+                                                    />
                                                     {{ suite.name }}
-                                                    <span class="text-xs text-muted-foreground">({{ getAllTestCases(suite).length }} cases)</span>
+                                                    <span
+                                                        class="text-xs text-muted-foreground"
+                                                        >({{
+                                                            getAllTestCases(
+                                                                suite,
+                                                            ).length
+                                                        }}
+                                                        cases)</span
+                                                    >
                                                 </button>
                                             </div>
 
                                             <!-- Test Cases -->
-                                            <div v-if="expandedSuites[suite.id] || true" class="ml-6 space-y-1">
+                                            <div
+                                                v-if="
+                                                    expandedSuites[suite.id] ||
+                                                    true
+                                                "
+                                                class="ml-6 space-y-1"
+                                            >
                                                 <div
                                                     v-for="testCase in suite.test_cases"
                                                     :key="testCase.id"
                                                     class="flex items-center gap-2 py-1 text-sm"
                                                 >
                                                     <Checkbox
-                                                        :model-value="form.test_case_ids.includes(testCase.id)"
-                                                        @update:model-value="toggleTestCase(testCase.id)"
+                                                        :model-value="
+                                                            form.test_case_ids.includes(
+                                                                testCase.id,
+                                                            )
+                                                        "
+                                                        @update:model-value="
+                                                            toggleTestCase(
+                                                                testCase.id,
+                                                            )
+                                                        "
                                                     />
-                                                    <FileText class="h-3 w-3 text-muted-foreground" />
-                                                    <span>{{ testCase.title }}</span>
+                                                    <FileText
+                                                        class="h-3 w-3 text-muted-foreground"
+                                                    />
+                                                    <span>{{
+                                                        testCase.title
+                                                    }}</span>
                                                 </div>
 
                                                 <!-- Child Suites -->
-                                                <template v-for="child in suite.children" :key="child.id">
+                                                <template
+                                                    v-for="child in suite.children"
+                                                    :key="child.id"
+                                                >
                                                     <div class="ml-4 space-y-1">
-                                                        <div class="flex items-center gap-2 py-1">
+                                                        <div
+                                                            class="flex items-center gap-2 py-1"
+                                                        >
                                                             <Checkbox
-                                                                :model-value="isSuitePartiallySelected(child) ? 'indeterminate' : isSuiteSelected(child)"
-                                                                @update:model-value="toggleSuiteSelection(child)"
+                                                                :model-value="
+                                                                    isSuitePartiallySelected(
+                                                                        child,
+                                                                    )
+                                                                        ? 'indeterminate'
+                                                                        : isSuiteSelected(
+                                                                              child,
+                                                                          )
+                                                                "
+                                                                @update:model-value="
+                                                                    toggleSuiteSelection(
+                                                                        child,
+                                                                    )
+                                                                "
                                                             />
-                                                            <Boxes class="h-3 w-3 text-yellow-500" />
-                                                            <span class="font-medium text-sm">{{ child.name }}</span>
+                                                            <Boxes
+                                                                class="h-3 w-3 text-yellow-500"
+                                                            />
+                                                            <span
+                                                                class="text-sm font-medium"
+                                                                >{{
+                                                                    child.name
+                                                                }}</span
+                                                            >
                                                         </div>
                                                         <div
                                                             v-for="tc in child.test_cases"
@@ -600,11 +906,23 @@ const isSubmitDisabled = computed(() => {
                                                             class="ml-6 flex items-center gap-2 py-1 text-sm"
                                                         >
                                                             <Checkbox
-                                                                :model-value="form.test_case_ids.includes(tc.id)"
-                                                                @update:model-value="toggleTestCase(tc.id)"
+                                                                :model-value="
+                                                                    form.test_case_ids.includes(
+                                                                        tc.id,
+                                                                    )
+                                                                "
+                                                                @update:model-value="
+                                                                    toggleTestCase(
+                                                                        tc.id,
+                                                                    )
+                                                                "
                                                             />
-                                                            <FileText class="h-3 w-3 text-muted-foreground" />
-                                                            <span>{{ tc.title }}</span>
+                                                            <FileText
+                                                                class="h-3 w-3 text-muted-foreground"
+                                                            />
+                                                            <span>{{
+                                                                tc.title
+                                                            }}</span>
                                                         </div>
                                                     </div>
                                                 </template>
@@ -614,9 +932,12 @@ const isSubmitDisabled = computed(() => {
                                 </div>
 
                                 <p class="text-sm text-muted-foreground">
-                                    {{ form.test_case_ids.length }} test cases selected
+                                    {{ form.test_case_ids.length }} test cases
+                                    selected
                                 </p>
-                                <InputError :message="form.errors.test_case_ids" />
+                                <InputError
+                                    :message="form.errors.test_case_ids"
+                                />
                             </div>
 
                             <!-- Checklist Selection (checklist mode) -->
@@ -625,7 +946,9 @@ const isSubmitDisabled = computed(() => {
                                     <Label>Select Checklist</Label>
                                     <Select v-model="selectedChecklistId">
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Choose a checklist..." />
+                                            <SelectValue
+                                                placeholder="Choose a checklist..."
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem
@@ -637,13 +960,27 @@ const isSubmitDisabled = computed(() => {
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <InputError :message="checklistForm.errors.checklist_id" />
+                                    <InputError
+                                        :message="
+                                            checklistForm.errors.checklist_id
+                                        "
+                                    />
                                 </div>
 
                                 <!-- Column filters (shown when checklist has select-type columns) -->
-                                <div v-if="selectedChecklist && selectColumns.length > 0" class="rounded-lg border bg-muted/30 px-3 py-2.5 space-y-2">
-                                    <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                                        <SlidersHorizontal class="h-3.5 w-3.5" />
+                                <div
+                                    v-if="
+                                        selectedChecklist &&
+                                        selectColumns.length > 0
+                                    "
+                                    class="space-y-2 rounded-lg border bg-muted/30 px-3 py-2.5"
+                                >
+                                    <div
+                                        class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
+                                    >
+                                        <SlidersHorizontal
+                                            class="h-3.5 w-3.5"
+                                        />
                                         Filter rows by
                                     </div>
                                     <div class="flex flex-wrap gap-2">
@@ -652,9 +989,20 @@ const isSubmitDisabled = computed(() => {
                                             :key="col.key"
                                             class="relative min-w-36 flex-1"
                                         >
-                                            <Select v-model="columnFilters[col.key]">
-                                                <SelectTrigger class="h-8 text-xs cursor-pointer" :class="columnFilters[col.key] ? 'pr-7' : ''">
-                                                    <SelectValue :placeholder="`${col.label}: All`" />
+                                            <Select
+                                                v-model="columnFilters[col.key]"
+                                            >
+                                                <SelectTrigger
+                                                    class="h-8 cursor-pointer text-xs"
+                                                    :class="
+                                                        columnFilters[col.key]
+                                                            ? 'pr-7'
+                                                            : ''
+                                                    "
+                                                >
+                                                    <SelectValue
+                                                        :placeholder="`${col.label}: All`"
+                                                    />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem
@@ -669,8 +1017,10 @@ const isSubmitDisabled = computed(() => {
                                             <button
                                                 v-if="columnFilters[col.key]"
                                                 type="button"
-                                                @click="columnFilters[col.key] = ''"
-                                                class="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer z-10"
+                                                @click="
+                                                    columnFilters[col.key] = ''
+                                                "
+                                                class="absolute top-1/2 right-1.5 z-10 -translate-y-1/2 cursor-pointer rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                                             >
                                                 <X class="h-3 w-3" />
                                             </button>
@@ -680,75 +1030,164 @@ const isSubmitDisabled = computed(() => {
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            class="h-8 text-xs text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                                            class="h-8 shrink-0 cursor-pointer text-xs text-muted-foreground hover:text-destructive"
                                             @click="clearColumnFilters"
                                         >
-                                            <X class="h-3 w-3 mr-1" />
+                                            <X class="mr-1 h-3 w-3" />
                                             Clear filter
                                         </Button>
                                     </div>
                                 </div>
 
-                                <div v-if="selectedChecklist && checklistRows.length > 0" class="space-y-2">
-                                    <div class="flex items-center justify-between">
+                                <div
+                                    v-if="
+                                        selectedChecklist &&
+                                        checklistRows.length > 0
+                                    "
+                                    class="space-y-2"
+                                >
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
                                         <Label>
                                             Select Rows
-                                            <span v-if="hasActiveColumnFilters" class="ml-1.5 text-xs font-normal text-muted-foreground">
-                                                ({{ filteredChecklistRows.length }} of {{ checklistRows.length }} shown)
+                                            <span
+                                                v-if="hasActiveColumnFilters"
+                                                class="ml-1.5 text-xs font-normal text-muted-foreground"
+                                            >
+                                                ({{
+                                                    filteredChecklistRows.length
+                                                }}
+                                                of
+                                                {{ checklistRows.length }}
+                                                shown)
                                             </span>
                                         </Label>
-                                        <label class="flex items-center gap-2 cursor-pointer">
-                                            <Checkbox :model-value="allRowsSelected" @update:model-value="toggleAllRows" />
-                                            <span class="text-sm text-muted-foreground">
-                                                {{ allRowsSelected ? 'Deselect All' : (hasActiveColumnFilters ? 'Select Filtered' : 'Select All') }}
+                                        <label
+                                            class="flex cursor-pointer items-center gap-2"
+                                        >
+                                            <Checkbox
+                                                :model-value="allRowsSelected"
+                                                @update:model-value="
+                                                    toggleAllRows
+                                                "
+                                            />
+                                            <span
+                                                class="text-sm text-muted-foreground"
+                                            >
+                                                {{
+                                                    allRowsSelected
+                                                        ? 'Deselect All'
+                                                        : hasActiveColumnFilters
+                                                          ? 'Select Filtered'
+                                                          : 'Select All'
+                                                }}
                                             </span>
                                         </label>
                                     </div>
 
-                                    <div v-if="rowsToDisplay.length === 0" class="rounded-lg border border-dashed p-6 text-center">
-                                        <Search class="mx-auto h-8 w-8 text-muted-foreground" />
-                                        <p class="mt-2 text-sm text-muted-foreground">No rows match the selected filters.</p>
+                                    <div
+                                        v-if="rowsToDisplay.length === 0"
+                                        class="rounded-lg border border-dashed p-6 text-center"
+                                    >
+                                        <Search
+                                            class="mx-auto h-8 w-8 text-muted-foreground"
+                                        />
+                                        <p
+                                            class="mt-2 text-sm text-muted-foreground"
+                                        >
+                                            No rows match the selected filters.
+                                        </p>
                                     </div>
 
-                                    <div v-else class="space-y-1 rounded-lg border p-4 max-h-96 overflow-y-auto">
+                                    <div
+                                        v-else
+                                        class="max-h-96 space-y-1 overflow-y-auto rounded-lg border p-4"
+                                    >
                                         <div
                                             v-for="item in rowsToDisplay"
                                             :key="item.row.id"
                                             class="flex items-center gap-2 py-1 text-sm"
                                         >
                                             <Checkbox
-                                                :model-value="selectedRowTitles.has(item.title)"
-                                                @update:model-value="toggleRowTitle(item.title)"
+                                                :model-value="
+                                                    selectedRowTitles.has(
+                                                        item.title,
+                                                    )
+                                                "
+                                                @update:model-value="
+                                                    toggleRowTitle(item.title)
+                                                "
                                             />
-                                            <ListChecks class="h-3 w-3 text-muted-foreground" />
+                                            <ListChecks
+                                                class="h-3 w-3 text-muted-foreground"
+                                            />
                                             <span>{{ item.title }}</span>
                                         </div>
                                     </div>
 
                                     <p class="text-sm text-muted-foreground">
-                                        {{ selectedRowTitles.size }} rows selected
+                                        {{ selectedRowTitles.size }} rows
+                                        selected
                                     </p>
-                                    <InputError :message="checklistForm.errors.titles" />
+                                    <InputError
+                                        :message="checklistForm.errors.titles"
+                                    />
                                 </div>
 
-                                <div v-else-if="selectedChecklist && checklistRows.length === 0" class="rounded-lg border border-dashed p-6 text-center">
-                                    <ListChecks class="mx-auto h-8 w-8 text-muted-foreground" />
-                                    <p class="mt-2 text-sm text-muted-foreground">No rows with text found in this checklist.</p>
+                                <div
+                                    v-else-if="
+                                        selectedChecklist &&
+                                        checklistRows.length === 0
+                                    "
+                                    class="rounded-lg border border-dashed p-6 text-center"
+                                >
+                                    <ListChecks
+                                        class="mx-auto h-8 w-8 text-muted-foreground"
+                                    />
+                                    <p
+                                        class="mt-2 text-sm text-muted-foreground"
+                                    >
+                                        No rows with text found in this
+                                        checklist.
+                                    </p>
                                 </div>
 
-                                <div v-else-if="!checklists?.length" class="rounded-lg border border-dashed p-6 text-center">
-                                    <ListChecks class="mx-auto h-8 w-8 text-muted-foreground" />
-                                    <p class="mt-2 text-sm text-muted-foreground">No checklists found. Create a checklist first.</p>
+                                <div
+                                    v-else-if="!checklists?.length"
+                                    class="rounded-lg border border-dashed p-6 text-center"
+                                >
+                                    <ListChecks
+                                        class="mx-auto h-8 w-8 text-muted-foreground"
+                                    />
+                                    <p
+                                        class="mt-2 text-sm text-muted-foreground"
+                                    >
+                                        No checklists found. Create a checklist
+                                        first.
+                                    </p>
                                 </div>
                             </div>
 
                             <div class="flex gap-2">
                                 <RestrictedAction>
-                                    <Button type="submit" variant="cta" :disabled="isSubmitDisabled">
+                                    <Button
+                                        type="submit"
+                                        variant="cta"
+                                        :disabled="isSubmitDisabled"
+                                    >
                                         Create Test Run
                                     </Button>
                                 </RestrictedAction>
-                                <Button type="button" variant="outline" @click="$inertia.visit(`/projects/${project.id}/test-runs`)">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="
+                                        $inertia.visit(
+                                            `/projects/${project.id}/test-runs`,
+                                        )
+                                    "
+                                >
                                     Cancel
                                 </Button>
                             </div>

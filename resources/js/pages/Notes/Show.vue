@@ -1,20 +1,32 @@
 <script setup lang="ts">
 import { Head, useForm, Link } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { StickyNote, Save, Trash2, Upload, FileText } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
+import InputError from '@/components/InputError.vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
+import TranslateButtons from '@/components/TranslateButtons.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import InputError from '@/components/InputError.vue';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
-import TranslateButtons from '@/components/TranslateButtons.vue';
-import { StickyNote, Save, Trash2, Upload, FileText } from 'lucide-vue-next';
-import RestrictedAction from '@/components/RestrictedAction.vue';
-import { computed, ref, watch } from 'vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem, type Project } from '@/types';
 
 interface Documentation {
     id: number;
@@ -43,7 +55,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
     { title: 'Notes', href: `/projects/${props.project.id}/notes` },
-    { title: props.note.title || 'Untitled Note', href: `/projects/${props.project.id}/notes/${props.note.id}` },
+    {
+        title: props.note.title || 'Untitled Note',
+        href: `/projects/${props.project.id}/notes/${props.note.id}`,
+    },
 ];
 
 const form = useForm({
@@ -62,9 +77,11 @@ const initialState = {
 };
 
 const hasChanges = computed(() => {
-    return form.title !== initialState.title ||
-           form.content !== initialState.content ||
-           form.documentation_id !== initialState.documentation_id;
+    return (
+        form.title !== initialState.title ||
+        form.content !== initialState.content ||
+        form.documentation_id !== initialState.documentation_id
+    );
 });
 
 const submit = () => {
@@ -97,10 +114,15 @@ const formatDate = (date: string) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
-                <h1 class="flex items-start gap-2 text-2xl font-bold tracking-tight">
-                    <StickyNote class="h-6 w-6 shrink-0 mt-1 text-yellow-500" />
+                <h1
+                    class="flex items-start gap-2 text-2xl font-bold tracking-tight"
+                >
+                    <StickyNote class="mt-1 h-6 w-6 shrink-0 text-yellow-500" />
                     {{ note.title || 'Untitled Note' }}
-                    <Badge :variant="note.is_draft ? 'secondary' : 'default'" class="ml-2">
+                    <Badge
+                        :variant="note.is_draft ? 'secondary' : 'default'"
+                        class="ml-2"
+                    >
                         {{ note.is_draft ? 'Draft' : 'Published' }}
                     </Badge>
                 </h1>
@@ -120,9 +142,9 @@ const formatDate = (date: string) => {
                 </div>
             </div>
 
-            <div class="grid gap-6 lg:grid-cols-3 min-w-0">
+            <div class="grid min-w-0 gap-6 lg:grid-cols-3">
                 <!-- Main editor -->
-                <div class="lg:col-span-2 min-w-0">
+                <div class="min-w-0 lg:col-span-2">
                     <Card>
                         <CardHeader>
                             <CardTitle>Edit Note</CardTitle>
@@ -131,7 +153,10 @@ const formatDate = (date: string) => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form @submit.prevent="submit" class="space-y-6 min-w-0">
+                            <form
+                                @submit.prevent="submit"
+                                class="min-w-0 space-y-6"
+                            >
                                 <div class="space-y-2">
                                     <Label for="title">Title</Label>
                                     <Input
@@ -139,15 +164,24 @@ const formatDate = (date: string) => {
                                         v-model="form.title"
                                         type="text"
                                         placeholder="Note title (optional)"
-                                        :class="{ 'border-destructive': form.errors.title }"
+                                        :class="{
+                                            'border-destructive':
+                                                form.errors.title,
+                                        }"
                                     />
                                     <InputError :message="form.errors.title" />
                                 </div>
 
-                                <div class="space-y-2 min-w-0">
-                                    <div class="flex items-center justify-between">
+                                <div class="min-w-0 space-y-2">
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
                                         <Label for="content">Content</Label>
-                                        <TranslateButtons :project-id="project.id" :text="form.content" @translated="form.content = $event" />
+                                        <TranslateButtons
+                                            :project-id="project.id"
+                                            :text="form.content"
+                                            @translated="form.content = $event"
+                                        />
                                     </div>
                                     <Textarea
                                         id="content"
@@ -156,12 +190,20 @@ const formatDate = (date: string) => {
                                         rows="20"
                                         class="font-mono text-sm"
                                     />
-                                    <InputError :message="form.errors.content" />
+                                    <InputError
+                                        :message="form.errors.content"
+                                    />
                                 </div>
 
                                 <div class="flex gap-2">
                                     <RestrictedAction>
-                                        <Button type="submit" :disabled="form.processing || !hasChanges" class="gap-2">
+                                        <Button
+                                            type="submit"
+                                            :disabled="
+                                                form.processing || !hasChanges
+                                            "
+                                            class="gap-2"
+                                        >
                                             <Save class="h-4 w-4" />
                                             Save Changes
                                         </Button>
@@ -173,19 +215,29 @@ const formatDate = (date: string) => {
                 </div>
 
                 <!-- Sidebar with publish options -->
-                <div class="lg:col-span-1 space-y-4">
+                <div class="space-y-4 lg:col-span-1">
                     <Card>
                         <CardHeader>
-                            <CardTitle class="text-base">Link to Documentation</CardTitle>
+                            <CardTitle class="text-base"
+                                >Link to Documentation</CardTitle
+                            >
                         </CardHeader>
                         <CardContent class="space-y-4">
                             <Select v-model="form.documentation_id">
                                 <SelectTrigger>
-                                    <SelectValue placeholder="None (standalone note)" />
+                                    <SelectValue
+                                        placeholder="None (standalone note)"
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem :value="null">None (standalone note)</SelectItem>
-                                    <SelectItem v-for="doc in documentations" :key="doc.id" :value="doc.id">
+                                    <SelectItem :value="null"
+                                        >None (standalone note)</SelectItem
+                                    >
+                                    <SelectItem
+                                        v-for="doc in documentations"
+                                        :key="doc.id"
+                                        :value="doc.id"
+                                    >
                                         {{ doc.title }}
                                     </SelectItem>
                                 </SelectContent>
@@ -195,16 +247,27 @@ const formatDate = (date: string) => {
                                 <RestrictedAction>
                                     <Button
                                         @click="publish"
-                                        :disabled="form.processing || !note.is_draft"
+                                        :disabled="
+                                            form.processing || !note.is_draft
+                                        "
                                         class="w-full gap-2"
-                                        :variant="note.is_draft ? 'default' : 'secondary'"
+                                        :variant="
+                                            note.is_draft
+                                                ? 'default'
+                                                : 'secondary'
+                                        "
                                     >
                                         <Upload class="h-4 w-4" />
-                                        {{ note.is_draft ? 'Publish to Documentation' : 'Already Published' }}
+                                        {{
+                                            note.is_draft
+                                                ? 'Publish to Documentation'
+                                                : 'Already Published'
+                                        }}
                                     </Button>
                                 </RestrictedAction>
-                                <p class="text-xs text-muted-foreground mt-2">
-                                    Publishing will append this note's content to the selected documentation.
+                                <p class="mt-2 text-xs text-muted-foreground">
+                                    Publishing will append this note's content
+                                    to the selected documentation.
                                 </p>
                             </div>
                         </CardContent>
@@ -212,7 +275,9 @@ const formatDate = (date: string) => {
 
                     <Card v-if="note.documentation">
                         <CardHeader>
-                            <CardTitle class="text-base flex items-center gap-2">
+                            <CardTitle
+                                class="flex items-center gap-2 text-base"
+                            >
                                 <FileText class="h-4 w-4 text-primary" />
                                 Linked Documentation
                             </CardTitle>
@@ -220,7 +285,7 @@ const formatDate = (date: string) => {
                         <CardContent>
                             <Link
                                 :href="`/projects/${project.id}/documentations/${note.documentation.id}`"
-                                class="text-sm text-primary hover:underline cursor-pointer"
+                                class="cursor-pointer text-sm text-primary hover:underline"
                             >
                                 {{ note.documentation.title }}
                             </Link>
