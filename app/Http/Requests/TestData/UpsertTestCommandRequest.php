@@ -12,6 +12,7 @@ class UpsertTestCommandRequest extends FormRequest
             'category' => 'nullable|string|max:255',
             'description' => 'required|string|max:255',
             'command' => 'required|string|max:5000',
+            'link' => 'nullable|url|max:2048',
             'comment' => 'nullable|string|max:2000',
         ];
     }

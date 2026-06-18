@@ -348,6 +348,7 @@ class TestDataController extends Controller
             'rows.*.category' => 'nullable|string|max:255',
             'rows.*.description' => 'required|string|max:255',
             'rows.*.command' => 'required|string|max:5000',
+            'rows.*.link' => 'nullable|url|max:2048',
             'rows.*.comment' => 'nullable|string|max:5000',
         ]);
 

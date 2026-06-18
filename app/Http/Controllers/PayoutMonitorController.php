@@ -73,4 +73,11 @@ class PayoutMonitorController extends Controller
 
         return response()->json($parser->parse($request->validated('raw_log')));
     }
+
+    public function balanceCalculator(Project $project): Response
+    {
+        return Inertia::render('PayoutMonitor/BalanceCalculator', [
+            'project' => $project,
+        ]);
+    }
 }

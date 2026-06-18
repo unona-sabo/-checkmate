@@ -8,6 +8,7 @@ use App\Http\Requests\TestRun\StoreTestRunRequest;
 use App\Http\Requests\TestRun\UpdateTestRunRequest;
 use App\Models\Project;
 use App\Models\TestRun;
+use App\Models\TestRunCase;
 use App\Models\User;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -318,6 +319,58 @@ class TestRunController extends Controller
         ]);
 
         return back()->with('success', 'Time adjusted successfully.');
+    }
+
+    public function setTime(Project $project, TestRun $testRun)
+    {
+        $this->authorize('update', $project);
+
+        $validated = request()->validate([
+            'hours' => ['nullable', 'numeric', 'min:0'],
+            'minutes' => ['nullable', 'numeric', 'min:0', 'max:59'],
+        ]);
+
+        $hours = (int) ($validated['hours'] ?? 0);
+        $minutes = (int) ($validated['minutes'] ?? 0);
+        $desiredSeconds = ($hours * 3600) + ($minutes * 60);
+
+        $baseElapsed = ($testRun->getElapsedSeconds() ?? 0) - ($testRun->time_adjustment_seconds ?? 0);
+        $newAdjustment = $desiredSeconds - $baseElapsed;
+
+        $testRun->update(['time_adjustment_seconds' => $newAdjustment]);
+
+        return back()->with('success', 'Time updated successfully.');
+    }
+
+    public function clone(Project $project, TestRun $testRun)
+    {
+        $this->authorize('update', $project);
+
+        $newRun = $project->testRuns()->create([
+            'name' => 'Copy of '.$testRun->name,
+            'description' => $testRun->description,
+            'environment' => $testRun->environment,
+            'milestone' => $testRun->milestone,
+            'priority' => $testRun->priority,
+            'source' => $testRun->source,
+            'checklist_id' => $testRun->checklist_id,
+            'status' => 'active',
+            'created_by' => auth()->id(),
+        ]);
+
+        $testRun->testRunCases()->each(function (TestRunCase $case) use ($newRun): void {
+            $newRun->testRunCases()->create([
+                'test_case_id' => $case->test_case_id,
+                'title' => $case->title,
+                'expected_result' => $case->expected_result,
+                'status' => 'untested',
+            ]);
+        });
+
+        $newRun->updateStats();
+
+        return redirect()->route('test-runs.show', [$project, $newRun])
+            ->with('success', 'Test run cloned successfully.');
     }
 
     public function resume(Project $project, TestRun $testRun)

@@ -10,6 +10,7 @@ class UpdateTestRunCaseRequest extends FormRequest
     {
         return [
             'status' => 'required|in:untested,passed,failed,blocked,skipped,retest',
+            'title' => 'nullable|string|max:255',
             'actual_result' => 'nullable|string',
             'time_spent' => 'nullable|integer|min:0',
             'clickup_link' => 'nullable|url|max:255',

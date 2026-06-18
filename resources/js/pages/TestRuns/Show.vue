@@ -391,7 +391,7 @@ const createBugReportUrl = (trc: TestRunCase): string => {
     } else {
         if (trc.title) params.set('title', stripHtml(trc.title));
         if (trc.expected_result)
-            params.set('expected_result', trc.expected_result);
+            params.set('expected_result', stripHtml(trc.expected_result));
         if (trc.actual_result) params.set('actual_result', trc.actual_result);
     }
     return `/projects/${props.project.id}/bugreports/create?${params.toString()}`;
@@ -1250,7 +1250,7 @@ const addCasesCount = computed(() => {
                                             Expected Result
                                         </p>
                                         <p class="text-sm whitespace-pre-wrap">
-                                            {{ trc.expected_result }}
+                                            {{ stripHtml(trc.expected_result) }}
                                         </p>
                                     </div>
                                 </div>
@@ -1639,7 +1639,7 @@ const addCasesCount = computed(() => {
                                         <ListChecks
                                             class="h-3 w-3 text-muted-foreground"
                                         />
-                                        <span v-html="item.title" />
+                                        <span>{{ stripHtml(item.title) }}</span>
                                         <Badge
                                             v-if="
                                                 existingTitles.has(item.title)

@@ -2073,7 +2073,7 @@ const refreshData = () => {
 
         <!-- Link Test Cases Dialog -->
         <Dialog v-model:open="showLinkTestCasesDialog">
-            <DialogContent class="max-w-2xl">
+            <DialogContent class="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <Link2 class="h-5 w-5" />
@@ -2213,7 +2213,7 @@ const refreshData = () => {
 
         <!-- Link Checklists Dialog -->
         <Dialog v-model:open="showLinkChecklistsDialog">
-            <DialogContent class="max-w-2xl">
+            <DialogContent class="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <ClipboardList class="h-5 w-5" />
@@ -2321,7 +2321,7 @@ const refreshData = () => {
 
         <!-- Generated Test Cases Modal -->
         <Dialog v-model:open="showGeneratedModal">
-            <DialogContent class="max-w-2xl">
+            <DialogContent class="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <Sparkles class="h-5 w-5" />

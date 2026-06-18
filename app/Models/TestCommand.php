@@ -15,6 +15,7 @@ class TestCommand extends Model
         'category',
         'description',
         'command',
+        'link',
         'comment',
         'order',
         'created_by',

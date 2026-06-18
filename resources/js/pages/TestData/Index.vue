@@ -157,6 +157,7 @@ const defaultCommandColumns: ColumnDef[] = [
     { key: 'category', label: 'Category', width: 120 },
     { key: 'description', label: 'Description', width: 200 },
     { key: 'command', label: 'Command', width: 300 },
+    { key: 'link', label: 'Link', width: 80 },
     { key: 'comment', label: 'Comment', width: 200 },
     { key: 'actions', label: 'Actions', width: 96, fixed: true },
 ];
@@ -1151,6 +1152,7 @@ const commandForm = useForm({
     category: '' as string | null,
     description: '',
     command: '',
+    link: '' as string | null,
     comment: '' as string | null,
 });
 useClearErrorsOnInput(commandForm);
@@ -1167,6 +1169,7 @@ const openEditCommandDialog = (cmd: TestCommand) => {
     commandForm.category = cmd.category || '';
     commandForm.description = cmd.description;
     commandForm.command = cmd.command;
+    commandForm.link = cmd.link || '';
     commandForm.comment = cmd.comment || '';
     commandForm.clearErrors();
     showCommandDialog.value = true;
@@ -1176,6 +1179,7 @@ const submitCommandForm = () => {
     const data = {
         ...commandForm.data(),
         category: commandForm.category || null,
+        link: commandForm.link || null,
         comment: commandForm.comment || null,
     };
 
@@ -1464,13 +1468,14 @@ const exportCsv = () => {
                       selectedCommandIds.value.has(c.id),
                   )
                 : filteredCommands.value;
-        csv = 'Category,Description,Command,Comment\n';
+        csv = 'Category,Description,Command,Link,Comment\n';
         rows.forEach((c) => {
             csv +=
                 [
                     `"${(c.category || '').replace(/"/g, '""')}"`,
                     `"${(c.description || '').replace(/"/g, '""')}"`,
                     `"${(c.command || '').replace(/"/g, '""')}"`,
+                    `"${(c.link || '').replace(/"/g, '""')}"`,
                     `"${(c.comment || '').replace(/"/g, '""')}"`,
                 ].join(',') + '\n';
         });
@@ -1535,6 +1540,7 @@ const fieldAliasesPerTab: Record<string, Record<string, string[]>> = {
         Category: ['category', 'group', 'type'],
         Description: ['description', 'name', 'title'],
         Command: ['command', 'cmd', 'script'],
+        Link: ['link', 'url', 'href'],
         Comment: ['comment', 'note', 'notes'],
     },
     links: {
@@ -3675,6 +3681,28 @@ const formatCredentialsValues = (
                                                 </template>
                                                 <template
                                                     v-else-if="
+                                                        col.key === 'link'
+                                                    "
+                                                >
+                                                    <a
+                                                        v-if="cmd.link"
+                                                        :href="cmd.link"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        class="inline-flex items-center text-primary hover:text-primary/80"
+                                                        title="Open link"
+                                                        @click.stop
+                                                    >
+                                                        <ExternalLink class="h-4 w-4" />
+                                                    </a>
+                                                    <span
+                                                        v-else
+                                                        class="text-muted-foreground"
+                                                        >&mdash;</span
+                                                    >
+                                                </template>
+                                                <template
+                                                    v-else-if="
                                                         col.key === 'comment'
                                                     "
                                                 >
@@ -4765,6 +4793,18 @@ const formatCredentialsValues = (
                                 />
                                 <InputError
                                     :message="commandForm.errors.command"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label for="cmd-link">Link</Label>
+                                <Input
+                                    id="cmd-link"
+                                    v-model="commandForm.link"
+                                    type="url"
+                                    placeholder="https://..."
+                                />
+                                <InputError
+                                    :message="commandForm.errors.link"
                                 />
                             </div>
                             <div class="space-y-2">

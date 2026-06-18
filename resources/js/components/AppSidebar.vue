@@ -17,6 +17,7 @@ import {
     StickyNote,
     Sparkles,
     Activity,
+    Calculator,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
@@ -117,6 +118,11 @@ const projectSubItems = computed(() => {
             title: 'Payout Monitor',
             href: `/projects/${projectId}/payout-monitor`,
             icon: Activity,
+        },
+        {
+            title: 'Balance Calculator',
+            href: `/projects/${projectId}/balance-calculator`,
+            icon: Calculator,
         },
         {
             title: 'Documentations',

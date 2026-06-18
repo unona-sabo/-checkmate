@@ -126,6 +126,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('test-runs/{testRun}/pause', [TestRunController::class, 'pause'])->name('pause');
         Route::post('test-runs/{testRun}/resume', [TestRunController::class, 'resume'])->name('resume');
         Route::post('test-runs/{testRun}/adjust-time', [TestRunController::class, 'adjustTime'])->name('adjust-time');
+        Route::post('test-runs/{testRun}/set-time', [TestRunController::class, 'setTime'])->name('set-time');
+        Route::post('test-runs/{testRun}/clone', [TestRunController::class, 'clone'])->name('clone');
     });
 
     // Test Run Cases
@@ -250,6 +252,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('payout-monitor', [PayoutMonitorController::class, 'index'])->name('index');
         Route::post('payout-monitor/fetch-latest', [PayoutMonitorController::class, 'fetchLatest'])->name('fetch-latest');
         Route::post('payout-monitor/parse-log', [PayoutMonitorController::class, 'parseLog'])->name('parse-log');
+    });
+
+    // Balance Calculator (nested under projects)
+    Route::prefix('projects/{project}')->name('balance-calculator.')->group(function () {
+        Route::get('balance-calculator', [PayoutMonitorController::class, 'balanceCalculator'])->name('index');
     });
 
     // Documentations (nested under projects)

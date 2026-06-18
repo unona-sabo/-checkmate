@@ -307,6 +307,7 @@ export interface TestCommand {
     category: string | null;
     description: string;
     command: string;
+    link: string | null;
     comment: string | null;
     order: number;
     created_by: number | null;

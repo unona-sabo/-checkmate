@@ -23,6 +23,7 @@ import {
     BarChart3,
     Sparkles,
     Activity,
+    Calculator,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Input } from '@/components/ui/input';
@@ -59,6 +60,7 @@ const sectionIcons: Record<string, typeof ClipboardList> = {
     documentations: FileText,
     notes: StickyNote,
     'payout-monitor': Activity,
+    'balance-calculator': Calculator,
 };
 
 const filteredSections = computed(() => {
