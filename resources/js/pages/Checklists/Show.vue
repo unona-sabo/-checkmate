@@ -36,11 +36,24 @@ import {
     Filter,
     LocateFixed,
 } from 'lucide-vue-next';
-import { Card, CardContent } from '@/components/ui/card';
+import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
+import CellEditor from '@/components/CellEditor.vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
+import RestrictedAction from '@/components/RestrictedAction.vue';
+import TranslateButtons from '@/components/TranslateButtons.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -52,15 +65,7 @@ import {
     DropdownMenuSubTrigger,
     DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -69,16 +74,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
-import RestrictedAction from '@/components/RestrictedAction.vue';
-import FeatureBadges from '@/components/FeatureBadges.vue';
-import CellEditor from '@/components/CellEditor.vue';
-import TranslateButtons from '@/components/TranslateButtons.vue';
-import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { useCanEdit } from '@/composables/useCanEdit';
 import {
     useChecklistClipboard,
-    type ClipboardData,
 } from '@/composables/useChecklistClipboard';
 import { useChecklistDragDrop } from '@/composables/useChecklistDragDrop';
 import { useChecklistFilters } from '@/composables/useChecklistFilters';
@@ -295,7 +294,8 @@ const addRowsType = ref<'normal' | 'section_header'>('normal');
 
 // Track content changes (excluding checkbox changes)
 const hasContentChanges = ref(false);
-const checkboxKeys = computed(() =>
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _checkboxKeys = computed(() =>
     columns.value.filter((c) => c.type === 'checkbox').map((c) => c.key),
 );
 
@@ -355,11 +355,8 @@ const {
     displayRows,
     hasMoreRows,
     totalRowCount,
-    loadMoreRows,
     navigateToRow: _navigateToRow,
     canDragRows,
-    INITIAL_ROWS,
-    LOAD_MORE_COUNT,
 } = useChecklistFilters(
     rows,
     searchQuery,
@@ -557,7 +554,6 @@ const {
     onColDragLeave,
     onColDrop,
     onColDragEnd,
-    resizingCol,
     startResize,
 } = useChecklistDragDrop(rows, columns, visibleColumns, hasContentChanges);
 
@@ -606,7 +602,8 @@ const fontWeights = [
     { label: 'Bold', value: 'bold' },
 ];
 
-const addRow = (type: 'normal' | 'section_header' = 'normal') => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _addRow = (type: 'normal' | 'section_header' = 'normal') => {
     const newData: Record<string, unknown> = {};
     columns.value.forEach((col) => {
         newData[col.key] = col.type === 'checkbox' ? false : '';
@@ -1500,7 +1497,8 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 const page = usePage();
 
 // Get errors from page props
-const pageErrors = computed(() => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _pageErrors = computed(() => {
     const errors = page.props.errors as Record<string, string> | undefined;
     return errors || {};
 });

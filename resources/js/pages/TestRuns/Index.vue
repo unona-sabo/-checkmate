@@ -31,10 +31,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { useSearch } from '@/composables/useSearch';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { priorityVariant, testRunStatusVariant } from '@/lib/badge-variants';
-import { type BreadcrumbItem, type Project, type TestRun } from '@/types';
 import {
     Select,
     SelectContent,
@@ -42,6 +38,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useSearch } from '@/composables/useSearch';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { priorityVariant, testRunStatusVariant } from '@/lib/badge-variants';
+import { type BreadcrumbItem, type Project, type TestRun } from '@/types';
 
 const props = defineProps<{
     project: Project;
@@ -246,7 +246,7 @@ onUnmounted(() => {
 
 const getLiveElapsed = (run: TestRun): number | null => {
     // Force reactivity on tick
-    tick.value;
+    void tick.value;
     if (run.status === 'completed' || run.status === 'archived') {
         return run.elapsed_seconds ?? null;
     }

@@ -22,10 +22,10 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type TestSuite } from '@/types';
 import { type ProjectFeature } from '@/types/checkmate';
-import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 
 const MODULE_OPTIONS = [
     'UI',

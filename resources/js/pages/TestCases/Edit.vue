@@ -2,8 +2,8 @@
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { Edit, Plus, Trash2, Paperclip, Download } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
-import FileDropZone from '@/components/FileDropZone.vue';
 import FeatureSelector from '@/components/FeatureSelector.vue';
+import FileDropZone from '@/components/FileDropZone.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,17 +25,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import AppLayout from '@/layouts/AppLayout.vue';
-import {
-    type BreadcrumbItem,
-    type Project,
-    type TestSuite,
-    type TestCase,
-    type TestStep,
-    type Attachment,
-} from '@/types';
-import { type ProjectFeature } from '@/types/checkmate';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -43,7 +32,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
+import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type TestSuite,
+    type TestCase,
+    type TestStep,
+} from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
 
 const MODULE_OPTIONS = [
     'UI',

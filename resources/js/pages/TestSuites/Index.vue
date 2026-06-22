@@ -142,7 +142,8 @@ const flatSuites = computed<FlatSuite[]>(() => {
     return result;
 });
 
-const totalTestCases = computed(() => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _totalTestCases = computed(() => {
     return flatSuites.value.reduce((acc, s) => acc + s.testCases.length, 0);
 });
 
@@ -193,7 +194,8 @@ const isTestCaseSelected = (id: number): boolean => {
 };
 
 // Get all test case IDs
-const allTestCaseIds = computed<number[]>(() => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _allTestCaseIds = computed<number[]>(() => {
     const ids: number[] = [];
     localTestSuites.value.forEach((suite) => {
         suite.test_cases?.forEach((tc) => ids.push(tc.id));

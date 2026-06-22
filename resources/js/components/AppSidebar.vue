@@ -35,12 +35,12 @@ import {
 } from '@/components/ui/sidebar';
 import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { home } from '@/routes';
 import { type NavItem, type Project } from '@/types';
 import AppLogo from './AppLogo.vue';
-import { home } from '@/routes';
 
 const page = usePage();
-const { isCurrentUrl, isCurrentUrlPrefix } = useCurrentUrl();
+const { isCurrentUrlPrefix } = useCurrentUrl();
 
 const currentProject = computed(() => {
     const props = page.props as Record<string, unknown>;

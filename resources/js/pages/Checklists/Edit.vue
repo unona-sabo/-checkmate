@@ -6,7 +6,6 @@ import {
     Trash2,
     ChevronDown,
     ChevronUp,
-    Palette,
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 import FeatureSelector from '@/components/FeatureSelector.vue';
@@ -31,6 +30,14 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     type BreadcrumbItem,
@@ -40,14 +47,6 @@ import {
     type SelectOption,
 } from '@/types';
 import { type ProjectFeature } from '@/types/checkmate';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 
 const MODULE_OPTIONS = [
     'UI',

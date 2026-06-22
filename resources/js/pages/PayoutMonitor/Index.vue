@@ -315,7 +315,7 @@ const fetchLatest = async () => {
                 .slice(0, 3)
                 .map((p: PayoutGroup) => String(p.payout_id)),
         );
-    } catch (e) {
+    } catch {
         error.value = 'Network error. Please try again.';
     } finally {
         loading.value = false;
@@ -352,7 +352,7 @@ const parseLog = async () => {
                 .slice(0, 3)
                 .map((p: PayoutGroup) => String(p.payout_id)),
         );
-    } catch (e) {
+    } catch {
         error.value = 'Network error. Please try again.';
     } finally {
         loading.value = false;

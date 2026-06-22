@@ -124,7 +124,8 @@ const highlightedContent = computed(() => {
     if (!searchQuery.value.trim()) return props.documentation.content;
 
     const query = escapeRegExp(searchQuery.value.trim());
-    const regex = new RegExp(`(?<=>)([^<]*?)(?=${query})`, 'i');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _regex = new RegExp(`(?<=>)([^<]*?)(?=${query})`, 'i');
 
     // Highlight text nodes only (not inside tags)
     return props.documentation.content
@@ -368,7 +369,8 @@ const onDropOnChild = (
     onDragEnd();
 };
 
-const onDropOnParentDoc = (e: DragEvent, parentDoc: Documentation) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _onDropOnParentDoc = (e: DragEvent, parentDoc: Documentation) => {
     e.preventDefault();
     if (!draggedDoc.value || draggedDoc.value.id === parentDoc.id) {
         onDragEnd();

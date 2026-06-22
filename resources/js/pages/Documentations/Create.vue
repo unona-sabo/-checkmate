@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import { FileText, Upload, X } from 'lucide-vue-next';
-import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import RichTextEditor from '@/components/RichTextEditor.vue';
 import { Button } from '@/components/ui/button';

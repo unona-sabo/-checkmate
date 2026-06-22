@@ -2,8 +2,8 @@
 import { Head, useForm } from '@inertiajs/vue3';
 import { Bug, FileText, Paperclip, StickyNote, Trash2 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
-import FileDropZone from '@/components/FileDropZone.vue';
 import FeatureSelector from '@/components/FeatureSelector.vue';
+import FileDropZone from '@/components/FileDropZone.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

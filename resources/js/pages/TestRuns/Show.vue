@@ -32,7 +32,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
@@ -49,6 +49,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import {
     Select,
@@ -58,7 +59,6 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { writeToClipboard } from '@/composables/useClipboard';
 import { useSearch, stripHtml } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -298,7 +298,7 @@ const totalCaseTimeSpent = computed((): number => {
 });
 
 const liveElapsed = computed((): number | null => {
-    tick.value;
+    void tick.value;
     const run = props.testRun;
     if (run.status === 'completed' || run.status === 'archived') {
         return (run.elapsed_seconds ?? 0) + totalCaseTimeSpent.value;
@@ -397,7 +397,8 @@ const createBugReportUrl = (trc: TestRunCase): string => {
     return `/projects/${props.project.id}/bugreports/create?${params.toString()}`;
 };
 
-const { searchQuery, highlight, highlightRich } = useSearch();
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { searchQuery, highlight: _highlight, highlightRich } = useSearch();
 
 const filteredGroupedCases = computed(() => {
     if (!searchQuery.value.trim()) return groupedCases.value;

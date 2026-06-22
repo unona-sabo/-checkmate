@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import { FileText, Paperclip, Plus, Trash2, Bug } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
-import FileDropZone from '@/components/FileDropZone.vue';
+import { computed } from 'vue';
 import FeatureSelector from '@/components/FeatureSelector.vue';
+import FileDropZone from '@/components/FileDropZone.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,7 +16,15 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     type BreadcrumbItem,
@@ -26,14 +34,6 @@ import {
     type Attachment,
 } from '@/types';
 import { type ProjectFeature } from '@/types/checkmate';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 
 const MODULE_OPTIONS = [
     'UI',

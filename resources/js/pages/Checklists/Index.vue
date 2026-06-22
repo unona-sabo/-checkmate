@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
     Plus,
     ClipboardList,
     FileText,
@@ -20,12 +13,10 @@ import {
     GripVertical,
     ChevronDown,
     ChevronRight,
-    Tag,
     FolderOpen,
 } from 'lucide-vue-next';
-import FeatureBadges from '@/components/FeatureBadges.vue';
-import { Input } from '@/components/ui/input';
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import TranslateButtons from '@/components/TranslateButtons.vue';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +37,14 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -61,7 +60,6 @@ import {
     type BreadcrumbItem,
     type Project,
     type Checklist,
-    type ColumnConfig,
 } from '@/types';
 
 interface NoteDraft {
@@ -421,7 +419,8 @@ const renamingCategory = ref<string | null>(null);
 const renameCategoryValue = ref('');
 const renameCategoryInput = ref<HTMLInputElement | null>(null);
 
-const openCategoryEditor = (checklist: Checklist) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _openCategoryEditor = (checklist: Checklist) => {
     editingChecklistId.value = checklist.id;
     newCategoryName.value = '';
 };
@@ -1147,7 +1146,7 @@ const onDialogClose = (open: boolean) => {
 
                 <!-- Category Groups -->
                 <div
-                    v-for="(group, groupIdx) in categoryGroups"
+                    v-for="group in categoryGroups"
                     :key="group.name ?? '__uncategorized__'"
                     class="space-y-3"
                     @dragover.prevent="onDragOver($event, group.name)"

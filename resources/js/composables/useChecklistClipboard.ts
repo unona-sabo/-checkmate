@@ -32,7 +32,7 @@ export function useChecklistClipboard() {
             if (saved) {
                 clipboardData.value = JSON.parse(saved);
             }
-        } catch (e) {
+        } catch {
             clipboardData.value = null;
         }
     };

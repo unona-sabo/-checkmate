@@ -23,7 +23,6 @@ import {
     FileSpreadsheet,
     Upload,
     Download,
-    Loader2,
     StickyNote,
     Pencil,
     Bot,
@@ -35,24 +34,7 @@ import RestrictedAction from '@/components/RestrictedAction.vue';
 import TranslateButtons from '@/components/TranslateButtons.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    type BreadcrumbItem,
-    type Project,
-    type TestSuite,
-    type TestCase,
-} from '@/types';
-import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Dialog,
     DialogContent,
@@ -62,16 +44,33 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { writeToClipboard } from '@/composables/useClipboard';
-import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
 import { useSearch } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
+import {
+    type BreadcrumbItem,
+    type Project,
+    type TestSuite,
+    type TestCase,
+} from '@/types';
 
 const props = defineProps<{
     project: Project;
@@ -306,7 +305,8 @@ const isTestCaseSelected = (id: number): boolean => {
     return selectedTestCaseIds.value.includes(id);
 };
 
-const allTestCaseIds = computed<number[]>(() => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _allTestCaseIds = computed<number[]>(() => {
     const ids: number[] = [];
     suiteSections.value.forEach((s) =>
         s.testCases.forEach((tc) => ids.push(tc.id)),

@@ -35,7 +35,6 @@ import {
     type BreadcrumbItem,
     type Project,
     type ProjectSearchResponse,
-    type ProjectSearchResultGroup,
 } from '@/types';
 
 const props = defineProps<{

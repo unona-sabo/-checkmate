@@ -29,6 +29,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     type BreadcrumbItem,
@@ -38,7 +39,6 @@ import {
     type SelectOption,
 } from '@/types';
 import { type ProjectFeature } from '@/types/checkmate';
-import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 
 const MODULE_OPTIONS = [
     'UI',

@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { Paperclip, X, ImagePlus } from 'lucide-vue-next';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { Button } from '@/components/ui/button';
-import { Paperclip, X, ImagePlus } from 'lucide-vue-next';
 
 const props = defineProps<{
     modelValue: File[];

@@ -36,12 +36,12 @@ import {
 } from '@/components/ui/select';
 import { writeToClipboard } from '@/composables/useClipboard';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 import {
     severityVariant,
     bugStatusVariant,
     priorityVariant,
 } from '@/lib/badge-variants';
+import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 
 interface TestSuiteChild {
     id: number;

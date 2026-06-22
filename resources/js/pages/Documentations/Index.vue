@@ -199,7 +199,8 @@ const onDropOnDoc = (
     onDragEnd();
 };
 
-const onDropOnParent = (e: DragEvent, parentDoc: Documentation) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _onDropOnParent = (e: DragEvent, parentDoc: Documentation) => {
     e.preventDefault();
     if (!draggedDoc.value || draggedDoc.value.id === parentDoc.id) {
         onDragEnd();
@@ -555,6 +556,7 @@ const highlightDescription = (content: string): string => {
                                             {{ doc.category }}
                                         </span>
                                     </div>
+                                    <!-- eslint-disable vue/no-v-text-v-html-on-component -->
                                     <CardDescription
                                         v-if="doc.content"
                                         class="line-clamp-2"
@@ -562,6 +564,7 @@ const highlightDescription = (content: string): string => {
                                             highlightDescription(doc.content)
                                         "
                                     />
+                                    <!-- eslint-enable vue/no-v-text-v-html-on-component -->
                                 </CardHeader>
                                 <CardContent
                                     v-if="

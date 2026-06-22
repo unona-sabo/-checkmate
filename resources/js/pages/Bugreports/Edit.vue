@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { Bug, Paperclip, Download, Trash2 } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
-import FileDropZone from '@/components/FileDropZone.vue';
+import { computed } from 'vue';
 import FeatureSelector from '@/components/FeatureSelector.vue';
+import FileDropZone from '@/components/FileDropZone.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {

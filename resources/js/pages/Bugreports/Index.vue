@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, Deferred } from '@inertiajs/vue3';
-import { Bug, Plus, Search, X, Filter, Tag } from 'lucide-vue-next';
+import { Bug, Plus, Search, X, Filter } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';

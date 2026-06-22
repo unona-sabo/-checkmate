@@ -17,7 +17,6 @@ import {
     Trash2,
     Search,
     X,
-    ArrowUpDown,
     ArrowUp,
     ArrowDown,
     Palette,
@@ -39,9 +38,9 @@ import {
 } from '@/components/ui/dialog';
 import { useSearch } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { home } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { type HomeSection, type SectionFeature } from '@/types/checkmate';
-import { home } from '@/routes';
 
 const props = defineProps<{
     section: HomeSection;

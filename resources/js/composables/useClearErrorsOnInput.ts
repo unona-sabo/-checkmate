@@ -1,3 +1,4 @@
+import type { useForm } from '@inertiajs/vue3';
 import { watch } from 'vue';
 
 /**
@@ -5,7 +6,7 @@ import { watch } from 'vue';
  * Also clears nested errors (e.g. "attachments.0") when the parent field changes.
  */
 export function useClearErrorsOnInput(
-    form: ReturnType<typeof import('@inertiajs/vue3').useForm>,
+    form: ReturnType<typeof useForm>,
 ): void {
     const keys = Object.keys(form.data());
 

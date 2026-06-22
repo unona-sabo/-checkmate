@@ -29,9 +29,9 @@ import { computed } from 'vue';
 import { Input } from '@/components/ui/input';
 import { useSearch } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { home } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { type HomeSection } from '@/types/checkmate';
-import { home } from '@/routes';
 
 const props = defineProps<{
     sections: HomeSection[];

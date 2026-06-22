@@ -42,6 +42,15 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     releaseStatusVariant,
@@ -52,20 +61,9 @@ import type {
     Release,
     ReleaseFeature,
     ReleaseChecklistItem,
-    ReleaseMetricsSnapshot,
-    ProjectFeature,
     TestRun,
     ReleaseLiveMetrics,
 } from '@/types/checkmate';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 
 interface WorkspaceMember {
     id: number;
