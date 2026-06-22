@@ -20,7 +20,7 @@ test('home page returns sections data for authenticated users', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Dashboard')
-        ->has('sections', 13)
+        ->has('sections', 14)
         ->has('sections.0', fn ($section) => $section
             ->where('key', 'checklists')
             ->where('title', 'Checklists')
@@ -42,7 +42,7 @@ test('home page sections include all six modules', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Dashboard')
-        ->has('sections', 13)
+        ->has('sections', 14)
         ->where('sections.0.key', 'checklists')
         ->where('sections.1.key', 'test-suites')
         ->where('sections.2.key', 'test-runs')
@@ -54,8 +54,9 @@ test('home page sections include all six modules', function () {
         ->where('sections.8.key', 'ai-generator')
         ->where('sections.9.key', 'test-data')
         ->where('sections.10.key', 'payout-monitor')
-        ->where('sections.11.key', 'documentations')
-        ->where('sections.12.key', 'notes')
+        ->where('sections.11.key', 'balance-calculator')
+        ->where('sections.12.key', 'documentations')
+        ->where('sections.13.key', 'notes')
     );
 });
 
@@ -273,7 +274,7 @@ test('home page auto-syncs features for all sections on first load', function ()
 
     // Verify features exist for all sections
     $sectionKeys = FeatureDescription::query()->distinct()->pluck('section_key')->sort()->values()->all();
-    expect($sectionKeys)->toBe(['ai-generator', 'automation', 'bugreports', 'checklists', 'design', 'documentations', 'notes', 'payout-monitor', 'releases', 'test-coverage', 'test-data', 'test-runs', 'test-suites']);
+    expect($sectionKeys)->toBe(['ai-generator', 'automation', 'balance-calculator', 'bugreports', 'checklists', 'design', 'documentations', 'notes', 'payout-monitor', 'releases', 'test-coverage', 'test-data', 'test-runs', 'test-suites']);
 });
 
 test('show page returns 404 for invalid section', function () {
