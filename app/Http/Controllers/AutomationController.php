@@ -53,13 +53,13 @@ class AutomationController extends Controller
             'project' => $project,
             'recentResults' => $recentResults,
             'latestRunStats' => $latestRunStats,
-            'environments' => $project->testEnvironments()
+            'environments' => Inertia::defer(fn () => $project->testEnvironments()
                 ->orderBy('name')
-                ->get(),
-            'templates' => $project->testRunTemplates()
+                ->get(), 'sidebar'),
+            'templates' => Inertia::defer(fn () => $project->testRunTemplates()
                 ->with('environment:id,name')
                 ->orderBy('name')
-                ->get(),
+                ->get(), 'sidebar'),
         ]);
     }
 
