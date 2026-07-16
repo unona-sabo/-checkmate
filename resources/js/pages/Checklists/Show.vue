@@ -81,7 +81,10 @@ import {
 } from '@/composables/useChecklistClipboard';
 import { useChecklistDragDrop } from '@/composables/useChecklistDragDrop';
 import { useChecklistFilters } from '@/composables/useChecklistFilters';
-import { writeToClipboard } from '@/composables/useClipboard';
+import {
+    writeToClipboard,
+    writeToClipboardSync,
+} from '@/composables/useClipboard';
 import { useLocalStorageDraft } from '@/composables/useLocalStorageDraft';
 import { useSearch } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -148,12 +151,17 @@ const titleEnd = computed(() => {
 const copyLink = () => {
     const route = `/projects/${props.project.id}/checklists/${props.checklist.id}`;
     const url = window.location.origin + route;
-    writeToClipboard(url).then(() => {
-        copied.value = true;
-        setTimeout(() => {
-            copied.value = false;
-        }, 2000);
-    });
+    suppressGlobalCopyEvent = true;
+    writeToClipboard(url)
+        .then(() => {
+            copied.value = true;
+            setTimeout(() => {
+                copied.value = false;
+            }, 2000);
+        })
+        .finally(() => {
+            suppressGlobalCopyEvent = false;
+        });
 };
 
 const MODULE_OPTIONS = [
@@ -248,6 +256,69 @@ const visibleColumns = computed(() =>
 );
 const hasHiddenColumns = computed(() => hiddenColumns.value.length > 0);
 
+const COLUMN_TYPE_OPTIONS: { value: ExtendedColumnConfig['type']; label: string }[] = [
+    { value: 'text', label: 'Text' },
+    { value: 'checkbox', label: 'Checkbox' },
+    { value: 'select', label: 'Select' },
+    { value: 'date', label: 'Date' },
+];
+
+// Reordering columns in the "Cols" list — easier than dragging the header
+// cell itself when there are many columns and the table scrolls.
+const draggedColsIndex = ref<number | null>(null);
+const dragOverColsIndex = ref<number | null>(null);
+
+const onColsDragStart = (index: number, event: DragEvent) => {
+    draggedColsIndex.value = index;
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(index));
+    }
+};
+
+const onColsDragOver = (index: number, event: DragEvent) => {
+    event.preventDefault();
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+    }
+    dragOverColsIndex.value = index;
+};
+
+const onColsDragLeave = () => {
+    dragOverColsIndex.value = null;
+};
+
+const onColsDrop = (index: number, event: DragEvent) => {
+    event.preventDefault();
+    if (draggedColsIndex.value !== null && draggedColsIndex.value !== index) {
+        const draggedCol = columns.value[draggedColsIndex.value];
+        columns.value.splice(draggedColsIndex.value, 1);
+        columns.value.splice(index, 0, draggedCol);
+        hasContentChanges.value = true;
+        nextTick(() => saveRows());
+    }
+    draggedColsIndex.value = null;
+    dragOverColsIndex.value = null;
+};
+
+const onColsDragEnd = () => {
+    draggedColsIndex.value = null;
+    dragOverColsIndex.value = null;
+};
+
+const setColumnType = (
+    column: ExtendedColumnConfig,
+    type: ExtendedColumnConfig['type'],
+) => {
+    if (column.type === type) return;
+    column.type = type;
+    if (type === 'select' && !column.options) {
+        column.options = [];
+    }
+    hasContentChanges.value = true;
+    nextTick(() => saveRows());
+};
+
 const showDeleteConfirm = ref(false);
 const rowToDeleteIndex = ref<number | null>(null);
 
@@ -298,6 +369,14 @@ const hasContentChanges = ref(false);
 const _checkboxKeys = computed(() =>
     columns.value.filter((c) => c.type === 'checkbox').map((c) => c.key),
 );
+
+// Bumped on every row/column mutation so in-flight saves can tell whether
+// something changed after they captured their snapshot (avoids clobbering
+// newer edits when an older save's response arrives late).
+let changeVersion = 0;
+watch([rows, columns], () => {
+    changeVersion++;
+});
 
 // Undo last save — tracks the state after each successful save
 type Snapshot = {
@@ -385,14 +464,18 @@ watch(visibleRowCount, () => {
 });
 
 // Note dialog state
+const NEW_CHECKLIST_OPTION = '__new__';
 const showNoteDialog = ref(false);
 const noteContent = ref('');
 const isImporting = ref(false);
-const selectedChecklistId = ref<number>(props.checklist.id);
+const selectedChecklistId = ref<number | string>(props.checklist.id);
+const newChecklistName = ref('');
 interface NoteDraft {
     content: string;
-    selectedChecklistId: number;
+    selectedChecklistId: number | string;
     selectedColumnKey: string;
+    newChecklistName: string;
+    [key: string]: unknown;
 }
 
 const {
@@ -409,6 +492,7 @@ const saveDraft = () => {
         content: noteContent.value,
         selectedChecklistId: selectedChecklistId.value,
         selectedColumnKey: selectedColumnKey.value,
+        newChecklistName: newChecklistName.value,
     });
 };
 
@@ -423,6 +507,7 @@ const openDraft = () => {
         noteContent.value = draft.content;
         selectedChecklistId.value = draft.selectedChecklistId;
         selectedColumnKey.value = draft.selectedColumnKey;
+        newChecklistName.value = draft.newChecklistName ?? '';
     }
 };
 
@@ -442,6 +527,9 @@ const onNoteDialogChange = (open: boolean) => {
 
 // Get selected checklist
 const selectedChecklist = computed(() => {
+    if (selectedChecklistId.value === NEW_CHECKLIST_OPTION) {
+        return null;
+    }
     return (
         props.checklists.find((c) => c.id === selectedChecklistId.value) || null
     );
@@ -449,7 +537,10 @@ const selectedChecklist = computed(() => {
 
 // Get available text columns for the selected checklist
 const availableColumns = computed(() => {
-    if (!selectedChecklist.value?.columns_config) {
+    if (
+        selectedChecklistId.value === NEW_CHECKLIST_OPTION ||
+        !selectedChecklist.value?.columns_config
+    ) {
         return [{ key: 'item', label: 'Item', type: 'text' as const }];
     }
     return selectedChecklist.value.columns_config.filter(
@@ -505,37 +596,44 @@ const parsedNotes = computed(() => {
         .filter((line) => line.length > 0);
 });
 
+const isCreatingNewChecklist = computed(
+    () => selectedChecklistId.value === NEW_CHECKLIST_OPTION,
+);
+
 // Import notes to checklist
 const importNotes = () => {
-    if (
-        parsedNotes.value.length === 0 ||
-        !selectedChecklistId.value ||
-        !selectedColumnKey.value
-    )
+    if (parsedNotes.value.length === 0 || !selectedChecklistId.value) return;
+
+    if (isCreatingNewChecklist.value) {
+        if (!newChecklistName.value.trim()) return;
+    } else if (!selectedColumnKey.value) {
         return;
+    }
 
     isImporting.value = true;
 
-    router.post(
-        `/projects/${props.project.id}/checklists/${selectedChecklistId.value}/import-notes`,
-        {
-            notes: parsedNotes.value,
-            column_key: selectedColumnKey.value,
+    const url = isCreatingNewChecklist.value
+        ? `/projects/${props.project.id}/checklists/import-notes`
+        : `/projects/${props.project.id}/checklists/${selectedChecklistId.value}/import-notes`;
+
+    const data = isCreatingNewChecklist.value
+        ? { name: newChecklistName.value.trim(), notes: parsedNotes.value }
+        : { notes: parsedNotes.value, column_key: selectedColumnKey.value };
+
+    router.post(url, data, {
+        preserveState: false,
+        preserveScroll: true,
+        onSuccess: () => {
+            showNoteDialog.value = false;
+            noteContent.value = '';
+            newChecklistName.value = '';
+            isImporting.value = false;
+            deleteDraft();
         },
-        {
-            preserveState: false,
-            preserveScroll: true,
-            onSuccess: () => {
-                showNoteDialog.value = false;
-                noteContent.value = '';
-                isImporting.value = false;
-                deleteDraft();
-            },
-            onError: () => {
-                isImporting.value = false;
-            },
+        onError: () => {
+            isImporting.value = false;
         },
-    );
+    });
 };
 
 // Drag and drop + column resize
@@ -583,6 +681,31 @@ const getSelectedOption = (
         (opt) => opt.value === value || opt.label === value,
     );
 };
+
+// Select option values are auto-generated as `option_<timestamp>` (see
+// Create.vue/Edit.vue). If a cell still holds one of these but the option
+// was since renamed/removed from the column, it's stale data — not text a
+// user typed — so it shouldn't be displayed as a "custom text" value.
+const ORPHANED_OPTION_VALUE_RE = /^option_\d+$/;
+const getSelectCellText = (
+    column: ExtendedColumnConfig,
+    value: unknown,
+): string => {
+    const matched = getSelectedOption(column, value);
+    if (matched) return matched.label;
+    if (value && !ORPHANED_OPTION_VALUE_RE.test(String(value))) {
+        // Column may have just been switched from "text" to "select" — in
+        // that case the raw value is still tiptap HTML, not plain text.
+        const raw = String(value);
+        return /<[a-z][\s\S]*>/i.test(raw) ? stripHtmlToPlainText(raw) : raw;
+    }
+    return '';
+};
+
+const getSelectCellDisplayText = (
+    column: ExtendedColumnConfig,
+    value: unknown,
+): string => getSelectCellText(column, value) || 'Select...';
 
 const fontColors = [
     { name: 'Black', value: '#000000' },
@@ -723,6 +846,11 @@ const saveRows = () => {
     saveError.value = false;
     isSaving.value = true;
 
+    // Snapshot the version + sent row ids now: if more edits land before the
+    // response comes back, we must not clear flags/ids for those newer edits.
+    const versionAtSave = changeVersion;
+    const sentDirtyIds = new Set(dirtyRowIds);
+
     const rowsData = rows.value.map((row, index) => ({
         id: row._isNew ? null : row.id,
         data: row.data,
@@ -743,10 +871,12 @@ const saveRows = () => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                hasContentChanges.value = false;
                 saveError.value = false;
                 isSaving.value = false;
-                dirtyRowIds.clear();
+                sentDirtyIds.forEach((id) => dirtyRowIds.delete(id));
+                if (versionAtSave === changeVersion) {
+                    hasContentChanges.value = false;
+                }
                 // Shift: previous saved = what was last saved, last saved = current
                 previousSavedState.value = lastSavedState;
                 lastSavedState = {
@@ -768,8 +898,11 @@ const saveDirtyRows = async () => {
     saveError.value = false;
     isSaving.value = true;
 
+    const versionAtSave = changeVersion;
+    const sentDirtyIds = new Set(dirtyRowIds);
+
     const dirtyRows = rows.value
-        .filter((row) => dirtyRowIds.has(row.id))
+        .filter((row) => sentDirtyIds.has(row.id))
         .map((row) => ({
             id: row.id,
             data: row.data,
@@ -791,9 +924,11 @@ const saveDirtyRows = async () => {
             `/projects/${props.project.id}/checklists/${props.checklist.id}/rows`,
             { rows: dirtyRows },
         );
-        hasContentChanges.value = false;
         saveError.value = false;
-        dirtyRowIds.clear();
+        sentDirtyIds.forEach((id) => dirtyRowIds.delete(id));
+        if (versionAtSave === changeVersion) {
+            hasContentChanges.value = false;
+        }
         previousSavedState.value = lastSavedState;
         lastSavedState = {
             rows: JSON.parse(JSON.stringify(rows.value)),
@@ -1766,6 +1901,316 @@ const navigateCell = (direction: 'up' | 'down' | 'left' | 'right') => {
     return false;
 };
 
+// --- Spreadsheet-style copy/paste (system clipboard) ---
+// Uses the native copy/paste events (not the async Clipboard API) so this
+// works over plain HTTP too, not just secure/HTTPS contexts.
+
+const stripHtmlToPlainText = (html: string): string => {
+    if (!html) return '';
+    return html
+        .replace(/<\/(p|div|li)>/gi, '\n')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s*\n+\s*/g, ' ')
+        .trim();
+};
+
+const getCellPlainText = (
+    row: ExtendedChecklistRow,
+    column: ExtendedColumnConfig,
+): string => {
+    const raw = row.data[column.key];
+    if (column.type === 'checkbox') return raw ? 'TRUE' : 'FALSE';
+    if (column.type === 'select') {
+        const opt = getSelectedOption(column, raw);
+        if (opt) return opt.label;
+        return typeof raw === 'string' ? raw : '';
+    }
+    return stripHtmlToPlainText(typeof raw === 'string' ? raw : '');
+};
+
+const buildTsv = (
+    rowsList: ExtendedChecklistRow[],
+    cols: ExtendedColumnConfig[],
+): string =>
+    rowsList
+        .map((row) => cols.map((col) => getCellPlainText(row, col)).join('\t'))
+        .join('\n');
+
+const copiedColumnKey = ref<string | null>(null);
+const copyColumnFailedKey = ref<string | null>(null);
+
+// In-memory copy of a column's values (kept alongside the system-clipboard
+// copy below). Pasting text cells via the native "paste" event races with
+// tiptap/ProseMirror's own paste handling on the contenteditable, which can
+// insert the wrong content. Pasting from this in-memory record instead
+// writes straight into the data model, sidestepping that race entirely.
+const lastCopiedColumn = ref<{
+    label: string;
+    rowIds: number[];
+    values: string[];
+    sourceType: ExtendedColumnConfig['type'];
+    sourceOptions?: SelectOption[];
+} | null>(null);
+const pastedColumnKey = ref<string | null>(null);
+
+// writeToClipboard()'s HTTP fallback uses document.execCommand('copy'),
+// which fires a real native "copy" event — the same one handleCopyEvent
+// listens for globally. Suppress that listener while we're doing a
+// programmatic column copy so it doesn't clobber the clipboard with the
+// full-row TSV instead.
+let suppressGlobalCopyEvent = false;
+
+// Copy a single column's values to the system clipboard — the selected rows
+// if any are checked/selected, otherwise every data row in the column.
+const copyColumnToClipboard = (column: ExtendedColumnConfig) => {
+    const rowsToCopy = hasSelectedRows.value
+        ? selectedRows.value
+        : filteredRows.value.filter((r) => r.row_type !== 'section_header');
+
+    const values = rowsToCopy.map((row) => getCellPlainText(row, column));
+
+    lastCopiedColumn.value = {
+        label: column.label,
+        rowIds: rowsToCopy.map((row) => row.id),
+        values,
+        sourceType: column.type,
+        sourceOptions: column.options?.map((opt) => ({ ...opt })),
+    };
+
+    suppressGlobalCopyEvent = true;
+    const ok = writeToClipboardSync(values.join('\n'));
+    suppressGlobalCopyEvent = false;
+
+    if (ok) {
+        copiedColumnKey.value = column.key;
+        setTimeout(() => {
+            copiedColumnKey.value = null;
+        }, 1500);
+    } else {
+        copyColumnFailedKey.value = column.key;
+        setTimeout(() => {
+            copyColumnFailedKey.value = null;
+        }, 2000);
+    }
+};
+
+// Paste the in-memory column copy into `column`, writing straight into the
+// same rows it was copied from — no native paste event, no clipboard read.
+// If the source column was a Select, bring its options along too (merged by
+// label) so pasted values resolve to real options, not fallback plain text.
+const pasteColumnFromMemory = (column: ExtendedColumnConfig) => {
+    const copied = lastCopiedColumn.value;
+    if (!copied) return;
+
+    let resolveValue = (label: string): unknown => parsePastedValue(column, label);
+
+    if (copied.sourceType === 'select' && copied.sourceOptions?.length) {
+        if (column.type !== 'select') {
+            column.type = 'select';
+        }
+        if (!column.options) {
+            column.options = [];
+        }
+        const options = column.options;
+
+        const labelToValue = new Map<string, string>();
+        options.forEach((opt) => labelToValue.set(opt.label.toLowerCase(), opt.value));
+
+        copied.sourceOptions.forEach((opt, idx) => {
+            const key = opt.label.toLowerCase();
+            if (!labelToValue.has(key)) {
+                const newValue = `option_${Date.now()}_${idx}`;
+                options.push({ value: newValue, label: opt.label, color: opt.color });
+                labelToValue.set(key, newValue);
+            }
+        });
+
+        resolveValue = (label: string) => labelToValue.get(label.toLowerCase()) ?? '';
+    }
+
+    copied.rowIds.forEach((rowId, i) => {
+        const targetRow = rows.value.find((r) => r.id === rowId);
+        if (!targetRow || targetRow.row_type === 'section_header') return;
+
+        targetRow.data[column.key] = resolveValue(copied.values[i]);
+        targetRow.updated_at = new Date().toISOString();
+        dirtyRowIds.add(targetRow.id);
+    });
+
+    hasContentChanges.value = true;
+
+    pastedColumnKey.value = column.key;
+    setTimeout(() => {
+        pastedColumnKey.value = null;
+    }, 1500);
+
+    nextTick(() => {
+        resizeAllTextareas();
+        saveRows();
+    });
+};
+
+// Copy selected rows to the system clipboard as tab-separated text, so they
+// can be pasted into Excel/Sheets. Keeps the existing internal row-clipboard
+// behavior (for pasting between checklists) working alongside this.
+const handleCopyEvent = (event: ClipboardEvent) => {
+    if (suppressGlobalCopyEvent) return;
+    if (!hasSelectedRows.value) return;
+    if ((event.target as HTMLElement)?.closest('[role="dialog"]')) return;
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) return;
+
+    const tsv = buildTsv(selectedRows.value, visibleColumns.value);
+    event.clipboardData?.setData('text/plain', tsv);
+    event.preventDefault();
+};
+
+const findCellFromElement = (
+    el: HTMLElement | null,
+): { rowIndex: number; colIndex: number } | null => {
+    const td = el?.closest('td');
+    const tr = el?.closest('tr[data-row-id]');
+    if (!td || !tr) return null;
+
+    const rowId = Number(tr.getAttribute('data-row-id'));
+    const rowIndex = displayRows.value.findIndex((r) => r.id === rowId);
+    if (rowIndex === -1) return null;
+    if (displayRows.value[rowIndex]?.row_type === 'section_header') {
+        return null;
+    }
+
+    const tds = Array.from(tr.querySelectorAll('td'));
+    const tdIndex = tds.indexOf(td as HTMLTableCellElement);
+    // The first <td> in a data row is the drag-handle/row-number column.
+    const colIndex = tdIndex - 1;
+    if (colIndex < 0 || colIndex >= visibleColumns.value.length) return null;
+
+    return { rowIndex, colIndex };
+};
+
+const parsePastedValue = (
+    column: ExtendedColumnConfig,
+    text: string,
+): unknown => {
+    const trimmed = text.trim();
+    if (column.type === 'checkbox') {
+        return ['true', '1', 'yes', 'x', '✓'].includes(
+            trimmed.toLowerCase(),
+        );
+    }
+    if (column.type === 'select') {
+        const match = column.options?.find(
+            (opt) =>
+                opt.label.toLowerCase() === trimmed.toLowerCase() ||
+                opt.value.toLowerCase() === trimmed.toLowerCase(),
+        );
+        return match ? match.value : trimmed;
+    }
+    return text;
+};
+
+// Paste a tab/newline-delimited block starting at the given cell, extending
+// the checklist with new rows if the pasted block is taller than what exists.
+const pasteGridAtCell = (
+    grid: string[][],
+    startRowIndex: number,
+    startColIndex: number,
+) => {
+    const width = Math.max(...grid.map((line) => line.length));
+    const targetCols = visibleColumns.value.slice(
+        startColIndex,
+        startColIndex + width,
+    );
+    if (targetCols.length === 0) return;
+
+    let rowsAdded = false;
+
+    grid.forEach((line, rOffset) => {
+        const targetIndex = startRowIndex + rOffset;
+        let targetRow = displayRows.value[targetIndex];
+
+        if (!targetRow) {
+            const newData: Record<string, unknown> = {};
+            columns.value.forEach((col) => {
+                newData[col.key] = col.type === 'checkbox' ? false : '';
+            });
+            const newRow: ExtendedChecklistRow = {
+                id: Date.now() + rOffset,
+                checklist_id: props.checklist.id,
+                data: newData,
+                order: rows.value.length,
+                row_type: 'normal',
+                background_color: null,
+                font_color: null,
+                font_weight: 'normal',
+                module: [],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                _isNew: true,
+            };
+            rows.value.push(newRow);
+            targetRow = newRow;
+            rowsAdded = true;
+        }
+
+        if (targetRow.row_type === 'section_header') return;
+
+        line.forEach((cellText, cOffset) => {
+            const column = targetCols[cOffset];
+            if (!column) return;
+            targetRow.data[column.key] = parsePastedValue(column, cellText);
+        });
+        targetRow.updated_at = new Date().toISOString();
+        dirtyRowIds.add(targetRow.id);
+    });
+
+    hasContentChanges.value = true;
+
+    if (visibleRowCount.value < rows.value.length) {
+        visibleRowCount.value = rows.value.length;
+    }
+
+    nextTick(() => {
+        resizeAllTextareas();
+        if (rowsAdded) {
+            saveRows();
+        } else {
+            saveDirtyRows();
+        }
+    });
+};
+
+const handlePasteEvent = (event: ClipboardEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('[role="dialog"]')) return;
+    if (!target?.closest('table')) return;
+
+    const text = event.clipboardData?.getData('text/plain') ?? '';
+    if (!text) return;
+
+    const lines = text.replace(/\r\n/g, '\n').split('\n');
+    // Drop a single trailing empty line (common when copying from Excel/Sheets).
+    if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+    const grid = lines.map((line) => line.split('\t'));
+
+    // Only intercept genuine multi-cell paste; let a single plain value paste
+    // natively into the focused field as usual.
+    if (grid.length <= 1 && (grid[0]?.length ?? 0) <= 1) return;
+
+    const cell = findCellFromElement(target);
+    if (!cell) return;
+
+    event.preventDefault();
+    pasteGridAtCell(grid, cell.rowIndex, cell.colIndex);
+};
+
 // Keyboard listener for Ctrl+C / Ctrl+V / Ctrl+A / Esc / Arrow navigation
 const handleKeyDown = (e: KeyboardEvent) => {
     // Skip if inside a dialog
@@ -1833,11 +2278,22 @@ const onScroll = () => {
     }
 };
 
+// Warn before leaving the page with unsaved edits
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    if (hasContentChanges.value || dirtyRowIds.size > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+};
+
 onMounted(() => {
     loadHiddenColumns();
     resizeAllTextareas();
     loadClipboard();
     document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('copy', handleCopyEvent);
+    document.addEventListener('paste', handlePasteEvent);
+    window.addEventListener('beforeunload', handleBeforeUnload);
     scrollContainerRef.value?.addEventListener('scroll', onScroll, {
         passive: true,
     });
@@ -1845,6 +2301,9 @@ onMounted(() => {
 
 onUnmounted(() => {
     document.removeEventListener('keydown', handleKeyDown, true);
+    document.removeEventListener('copy', handleCopyEvent);
+    document.removeEventListener('paste', handlePasteEvent);
+    window.removeEventListener('beforeunload', handleBeforeUnload);
     scrollContainerRef.value?.removeEventListener('scroll', onScroll);
 });
 </script>
@@ -2150,16 +2609,40 @@ onUnmounted(() => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel
-                                >Toggle Columns</DropdownMenuLabel
+                                >Toggle & Reorder Columns</DropdownMenuLabel
                             >
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                                v-for="column in columns"
+                                v-for="(column, colsIndex) in columns"
                                 :key="column.key"
+                                :class="{
+                                    'bg-primary/10':
+                                        dragOverColsIndex === colsIndex,
+                                    'opacity-50':
+                                        draggedColsIndex === colsIndex,
+                                }"
                                 @select.prevent="
                                     toggleColumnVisibility(column.key)
                                 "
+                                @dragover="
+                                    onColsDragOver(colsIndex, $event)
+                                "
+                                @dragleave="onColsDragLeave"
+                                @drop="onColsDrop(colsIndex, $event)"
                             >
+                                <div
+                                    draggable="true"
+                                    class="mr-1 shrink-0 cursor-grab rounded p-0.5 hover:bg-muted active:cursor-grabbing"
+                                    @click.stop
+                                    @dragstart="
+                                        onColsDragStart(colsIndex, $event)
+                                    "
+                                    @dragend="onColsDragEnd"
+                                >
+                                    <GripVertical
+                                        class="h-3.5 w-3.5 text-muted-foreground/50"
+                                    />
+                                </div>
                                 <Check
                                     v-if="!hiddenColumns.includes(column.key)"
                                     class="mr-2 h-4 w-4"
@@ -2267,6 +2750,19 @@ onUnmounted(() => {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem
+                                                    :value="NEW_CHECKLIST_OPTION"
+                                                    class="font-medium text-primary"
+                                                >
+                                                    <span
+                                                        class="flex items-center gap-1.5"
+                                                    >
+                                                        <Plus
+                                                            class="h-3.5 w-3.5"
+                                                        />
+                                                        Create new checklist
+                                                    </span>
+                                                </SelectItem>
+                                                <SelectItem
                                                     v-for="cl in checklists"
                                                     :key="cl.id"
                                                     :value="cl.id"
@@ -2278,8 +2774,20 @@ onUnmounted(() => {
                                     </div>
 
                                     <div
+                                        v-if="isCreatingNewChecklist"
+                                        class="space-y-2"
+                                    >
+                                        <Label>New Checklist Name</Label>
+                                        <Input
+                                            v-model="newChecklistName"
+                                            placeholder="Enter checklist name..."
+                                        />
+                                    </div>
+
+                                    <div
                                         v-if="
                                             selectedChecklistId &&
+                                            !isCreatingNewChecklist &&
                                             availableColumns.length > 0
                                         "
                                         class="space-y-2"
@@ -2375,7 +2883,9 @@ onUnmounted(() => {
                                             :disabled="
                                                 !selectedChecklistId ||
                                                 parsedNotes.length === 0 ||
-                                                !selectedColumnKey ||
+                                                (isCreatingNewChecklist
+                                                    ? !newChecklistName.trim()
+                                                    : !selectedColumnKey) ||
                                                 isImporting
                                             "
                                             class="gap-2"
@@ -2458,12 +2968,13 @@ onUnmounted(() => {
                     >
                 </div>
                 <div class="flex items-center gap-2">
+                    <!-- Was referencing undefined saveSnapshot/undoChanges; fixed to use the actual canUndo/undoLastSave -->
                     <Button
-                        v-if="saveSnapshot"
+                        v-if="canUndo"
                         variant="outline"
                         size="sm"
                         class="gap-1.5"
-                        @click="undoChanges"
+                        @click="undoLastSave"
                     >
                         <Undo2 class="h-3.5 w-3.5" />
                         Undo
@@ -2711,8 +3222,8 @@ onUnmounted(() => {
                         class="max-h-[calc(100vh-220px)] overflow-auto"
                     >
                         <table
-                            class="w-full border-collapse"
-                            style="table-layout: auto"
+                            class="min-w-full border-collapse"
+                            style="table-layout: fixed"
                         >
                             <thead
                                 class="sticky top-0 z-10 transition-shadow"
@@ -2725,7 +3236,7 @@ onUnmounted(() => {
                                             column, colIndex
                                         ) in visibleColumns"
                                         :key="column.key"
-                                        class="relative px-1 py-2 text-left align-top text-sm font-medium text-muted-foreground select-none"
+                                        class="group relative px-1 py-2 text-left align-top text-sm font-medium text-muted-foreground select-none"
                                         :style="{ width: column.width + 'px' }"
                                         @dragover="
                                             onColDragOver(colIndex, $event)
@@ -2739,7 +3250,9 @@ onUnmounted(() => {
                                                 draggedColIndex === colIndex,
                                         }"
                                     >
-                                        <div class="flex items-center gap-1">
+                                        <div
+                                            class="flex min-w-0 items-center gap-1"
+                                        >
                                             <div
                                                 draggable="true"
                                                 class="shrink-0 cursor-grab rounded p-0.5 hover:bg-muted active:cursor-grabbing"
@@ -2780,9 +3293,95 @@ onUnmounted(() => {
                                                     class="mr-1 h-4 w-4 cursor-pointer rounded border-gray-300"
                                                 />
                                             </template>
-                                            <span class="truncate">{{
+                                            <span class="min-w-0 flex-1 truncate">{{
                                                 column.label
                                             }}</span>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger as-child>
+                                                    <button
+                                                        type="button"
+                                                        class="ml-auto shrink-0 cursor-pointer rounded p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100"
+                                                        title="Column options"
+                                                        @click.stop
+                                                    >
+                                                        <MoreHorizontal
+                                                            class="h-3 w-3 text-muted-foreground/70"
+                                                        />
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent
+                                                    align="start"
+                                                >
+                                                    <DropdownMenuItem
+                                                        @select.prevent="
+                                                            copyColumnToClipboard(
+                                                                column,
+                                                            )
+                                                        "
+                                                    >
+                                                        <Copy
+                                                            class="mr-2 h-4 w-4"
+                                                        />
+                                                        {{
+                                                            copiedColumnKey ===
+                                                            column.key
+                                                                ? 'Copied!'
+                                                                : copyColumnFailedKey ===
+                                                                    column.key
+                                                                  ? 'Copy failed — try again'
+                                                                  : hasSelectedRows
+                                                                    ? `Copy Column (${selectedRows.length} selected)`
+                                                                    : 'Copy Column (all rows)'
+                                                        }}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        v-if="lastCopiedColumn"
+                                                        @select.prevent="
+                                                            pasteColumnFromMemory(
+                                                                column,
+                                                            )
+                                                        "
+                                                    >
+                                                        <Import
+                                                            class="mr-2 h-4 w-4"
+                                                        />
+                                                        {{
+                                                            pastedColumnKey ===
+                                                            column.key
+                                                                ? 'Pasted!'
+                                                                : `Paste "${lastCopiedColumn?.label}" here`
+                                                        }}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuLabel
+                                                        >Column
+                                                        Type</DropdownMenuLabel
+                                                    >
+                                                    <DropdownMenuItem
+                                                        v-for="opt in COLUMN_TYPE_OPTIONS"
+                                                        :key="opt.value"
+                                                        @click="
+                                                            setColumnType(
+                                                                column,
+                                                                opt.value,
+                                                            )
+                                                        "
+                                                    >
+                                                        <Check
+                                                            v-if="
+                                                                column.type ===
+                                                                opt.value
+                                                            "
+                                                            class="mr-2 h-4 w-4"
+                                                        />
+                                                        <span
+                                                            v-else
+                                                            class="mr-2 h-4 w-4"
+                                                        />
+                                                        {{ opt.label }}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                         <!-- Resize handle -->
                                         <div
@@ -3044,7 +3643,7 @@ onUnmounted(() => {
                                                         as-child
                                                     >
                                                         <button
-                                                            class="flex h-7 min-w-[80px] cursor-pointer items-center gap-1 rounded border px-2 text-sm hover:bg-muted/50"
+                                                            class="flex min-h-7 w-full min-w-[80px] cursor-pointer items-start gap-1 rounded border px-2 py-1 text-sm hover:bg-muted/50"
                                                             :class="{
                                                                 'pointer-events-none opacity-70':
                                                                     !canEdit,
@@ -3090,26 +3689,57 @@ onUnmounted(() => {
                                                             "
                                                         >
                                                             <span
-                                                                class="flex-1 truncate text-left"
+                                                                class="min-w-0 flex-1 text-left break-words whitespace-normal"
                                                             >
                                                                 {{
-                                                                    getSelectedOption(
+                                                                    getSelectCellDisplayText(
                                                                         column,
                                                                         row
                                                                             .data[
                                                                             column
                                                                                 .key
                                                                         ],
-                                                                    )?.label ||
-                                                                    'Select...'
+                                                                    )
                                                                 }}
                                                             </span>
                                                         </button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent
                                                         align="start"
-                                                        class="min-w-[120px]"
+                                                        class="min-w-[160px]"
                                                     >
+                                                        <div
+                                                            class="p-1"
+                                                            @click.stop
+                                                            @keydown.stop
+                                                        >
+                                                            <Input
+                                                                :model-value="
+                                                                    getSelectCellText(
+                                                                        column,
+                                                                        row
+                                                                            .data[
+                                                                            column
+                                                                                .key
+                                                                        ],
+                                                                    )
+                                                                "
+                                                                @update:model-value="
+                                                                    (val) =>
+                                                                        updateCell(
+                                                                            row,
+                                                                            column.key,
+                                                                            val,
+                                                                        )
+                                                                "
+                                                                placeholder="Custom text..."
+                                                                class="h-7 text-xs"
+                                                                :readonly="
+                                                                    !canEdit
+                                                                "
+                                                            />
+                                                        </div>
+                                                        <DropdownMenuSeparator />
                                                         <DropdownMenuItem
                                                             @click="
                                                                 updateCell(
@@ -3186,11 +3816,11 @@ onUnmounted(() => {
                                                 />
                                             </template>
                                             <template v-else>
-                                                <Input
+                                                <Textarea
                                                     :model-value="
-                                                        row.data[
+                                                        (row.data[
                                                             column.key
-                                                        ] as string
+                                                        ] as string) || ''
                                                     "
                                                     @update:model-value="
                                                         (val) =>
@@ -3200,8 +3830,15 @@ onUnmounted(() => {
                                                                 val,
                                                             )
                                                     "
-                                                    class="h-7 text-sm"
+                                                    class="h-full min-h-[28px] w-full resize-none overflow-hidden border-transparent bg-transparent px-2 py-1 text-sm break-words whitespace-pre-wrap focus:border-input"
+                                                    rows="1"
                                                     :readonly="!canEdit"
+                                                    @input="
+                                                        (e: Event) =>
+                                                            autoResizeTextarea(
+                                                                e.target as HTMLTextAreaElement,
+                                                            )
+                                                    "
                                                     @focus="onCellFocus(index)"
                                                     @blur="saveOnBlur"
                                                 />

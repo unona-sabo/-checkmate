@@ -133,3 +133,32 @@ test('import without section_row_id and no sections inserts after last filled ro
 
     expect($items)->toBe(['First', 'Second', 'Third']);
 });
+
+test('import notes into a new checklist creates the checklist with default columns and rows', function () {
+    $response = $this->post(route('checklists.import-notes-new-checklist', [$this->project]), [
+        'name' => 'Fresh Checklist',
+        'notes' => ['Note A', 'Note B'],
+    ]);
+
+    $newChecklist = $this->project->checklists()->where('name', 'Fresh Checklist')->first();
+
+    expect($newChecklist)->not->toBeNull();
+
+    $response->assertRedirect(route('checklists.show', [$this->project, $newChecklist]));
+
+    expect($newChecklist->columns_config)->toBe([
+        ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
+        ['key' => 'status', 'label' => 'Status', 'type' => 'checkbox'],
+    ]);
+
+    $items = $newChecklist->rows()->orderBy('order')->get()->pluck('data.item')->all();
+    expect($items)->toBe(['Note A', 'Note B']);
+});
+
+test('import notes into a new checklist requires a name', function () {
+    $response = $this->post(route('checklists.import-notes-new-checklist', [$this->project]), [
+        'notes' => ['Note A'],
+    ]);
+
+    $response->assertSessionHasErrors('name');
+});

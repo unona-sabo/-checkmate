@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('checklists/{checklist}/rows', [ChecklistController::class, 'patchRows'])->name('patch-rows');
         Route::put('checklists/{checklist}/note', [ChecklistController::class, 'updateNote'])->name('update-note');
         Route::post('checklists/{checklist}/import-notes', [ChecklistController::class, 'importFromNotes'])->name('import-notes');
+        Route::post('checklists/import-notes', [ChecklistController::class, 'importFromNotesToNewChecklist'])->name('import-notes-new-checklist');
         Route::get('checklists/{checklist}/export', [ChecklistController::class, 'export'])->name('export');
         Route::post('checklists/{checklist}/import', [ChecklistController::class, 'import'])->name('import');
         Route::post('checklists/{checklist}/copy-rows', [ChecklistController::class, 'copyRows'])->name('copy-rows');

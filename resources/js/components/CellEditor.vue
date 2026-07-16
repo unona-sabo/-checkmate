@@ -181,7 +181,7 @@ watch(
 <template>
     <div
         ref="containerRef"
-        class="relative min-h-[28px] w-full rounded-md border border-input bg-transparent px-2 py-1 text-sm break-words whitespace-pre-wrap shadow-xs"
+        class="relative min-h-[28px] w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1 text-sm break-words whitespace-pre-wrap shadow-xs"
         :class="[
             getFontWeightClass(fontWeight),
             isEditing ? 'ring-1 ring-ring' : '',
@@ -234,6 +234,18 @@ watch(
 </template>
 
 <style>
+/* overflow-wrap: break-word (Tailwind's break-words) doesn't shrink the
+   automatic minimum size by spec — a long unbroken token (URL, dotted
+   path, SNAKE_CASE constant) can still force the column wider than
+   intended. overflow-wrap: anywhere does count toward the minimum size,
+   so combine it with word-break: break-word as a fallback. */
+.cell-editor-content,
+.cell-editor-content .tiptap {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
 .cell-editor-content p {
     margin: 0;
     line-height: 1.5;

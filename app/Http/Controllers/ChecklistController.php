@@ -6,6 +6,7 @@ use App\Http\Requests\Checklist\BulkCreateRowsRequest;
 use App\Http\Requests\Checklist\CopyRowsRequest;
 use App\Http\Requests\Checklist\PatchChecklistRowsRequest;
 use App\Http\Requests\Checklist\ReorderChecklistsRequest;
+use App\Http\Requests\Checklist\StoreChecklistFromNotesRequest;
 use App\Http\Requests\Checklist\StoreChecklistNoteRequest;
 use App\Http\Requests\Checklist\StoreChecklistRequest;
 use App\Http\Requests\Checklist\UpdateChecklistRequest;
@@ -410,6 +411,35 @@ class ChecklistController extends Controller
 
         return redirect()->route('checklists.show', [$project, $checklist])
             ->with('success', count($validated['notes']).' items imported successfully.');
+    }
+
+    public function importFromNotesToNewChecklist(StoreChecklistFromNotesRequest $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
+
+        $columns = [
+            ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
+            ['key' => 'status', 'label' => 'Status', 'type' => 'checkbox'],
+        ];
+
+        $checklist = $project->checklists()->create([
+            'name' => $validated['name'],
+            'columns_config' => $columns,
+            'order' => ($project->checklists()->max('order') ?? -1) + 1,
+        ]);
+
+        foreach ($validated['notes'] as $index => $note) {
+            $checklist->rows()->create([
+                'data' => ['item' => $note, 'status' => false],
+                'order' => $index,
+                'row_type' => 'normal',
+            ]);
+        }
+
+        return redirect()->route('checklists.show', [$project, $checklist])
+            ->with('success', count($validated['notes']).' items imported into new checklist "'.$checklist->name.'".');
     }
 
     /**
