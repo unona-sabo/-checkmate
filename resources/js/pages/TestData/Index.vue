@@ -2189,16 +2189,30 @@ const formatCredentialsValues = (
                             <p class="mt-2 text-sm text-muted-foreground">
                                 Add test user credentials for your QA team.
                             </p>
-                            <RestrictedAction>
-                                <Button
-                                    variant="cta"
-                                    class="mt-4 cursor-pointer gap-2"
-                                    @click="openAddUserDialog"
-                                >
-                                    <Plus class="h-4 w-4" />
-                                    Add User
-                                </Button>
-                            </RestrictedAction>
+                            <div
+                                class="mt-4 flex items-center justify-center gap-2"
+                            >
+                                <RestrictedAction>
+                                    <Button
+                                        variant="cta"
+                                        class="cursor-pointer gap-2"
+                                        @click="openAddUserDialog"
+                                    >
+                                        <Plus class="h-4 w-4" />
+                                        Add User
+                                    </Button>
+                                </RestrictedAction>
+                                <RestrictedAction>
+                                    <Button
+                                        variant="outline"
+                                        class="cursor-pointer gap-2"
+                                        @click="openImportDialog"
+                                    >
+                                        <Download class="h-4 w-4" />
+                                        Import
+                                    </Button>
+                                </RestrictedAction>
+                            </div>
                         </div>
                     </div>
 
@@ -2789,16 +2803,30 @@ const formatCredentialsValues = (
                             <p class="mt-2 text-sm text-muted-foreground">
                                 Add test payment methods for your QA team.
                             </p>
-                            <RestrictedAction>
-                                <Button
-                                    variant="cta"
-                                    class="mt-4 cursor-pointer gap-2"
-                                    @click="openAddPaymentDialog"
-                                >
-                                    <Plus class="h-4 w-4" />
-                                    Add Payment
-                                </Button>
-                            </RestrictedAction>
+                            <div
+                                class="mt-4 flex items-center justify-center gap-2"
+                            >
+                                <RestrictedAction>
+                                    <Button
+                                        variant="cta"
+                                        class="cursor-pointer gap-2"
+                                        @click="openAddPaymentDialog"
+                                    >
+                                        <Plus class="h-4 w-4" />
+                                        Add Payment
+                                    </Button>
+                                </RestrictedAction>
+                                <RestrictedAction>
+                                    <Button
+                                        variant="outline"
+                                        class="cursor-pointer gap-2"
+                                        @click="openImportDialog"
+                                    >
+                                        <Download class="h-4 w-4" />
+                                        Import
+                                    </Button>
+                                </RestrictedAction>
+                            </div>
                         </div>
                     </div>
 
@@ -3343,16 +3371,30 @@ const formatCredentialsValues = (
                                 Store useful commands for deploy, database,
                                 testing, etc.
                             </p>
-                            <RestrictedAction>
-                                <Button
-                                    variant="cta"
-                                    class="mt-4 cursor-pointer gap-2"
-                                    @click="openAddCommandDialog"
-                                >
-                                    <Plus class="h-4 w-4" />
-                                    Add Command
-                                </Button>
-                            </RestrictedAction>
+                            <div
+                                class="mt-4 flex items-center justify-center gap-2"
+                            >
+                                <RestrictedAction>
+                                    <Button
+                                        variant="cta"
+                                        class="cursor-pointer gap-2"
+                                        @click="openAddCommandDialog"
+                                    >
+                                        <Plus class="h-4 w-4" />
+                                        Add Command
+                                    </Button>
+                                </RestrictedAction>
+                                <RestrictedAction>
+                                    <Button
+                                        variant="outline"
+                                        class="cursor-pointer gap-2"
+                                        @click="openImportDialog"
+                                    >
+                                        <Download class="h-4 w-4" />
+                                        Import
+                                    </Button>
+                                </RestrictedAction>
+                            </div>
                         </div>
                     </div>
 
@@ -3693,7 +3735,9 @@ const formatCredentialsValues = (
                                                         title="Open link"
                                                         @click.stop
                                                     >
-                                                        <ExternalLink class="h-4 w-4" />
+                                                        <ExternalLink
+                                                            class="h-4 w-4"
+                                                        />
                                                     </a>
                                                     <span
                                                         v-else
@@ -3799,16 +3843,30 @@ const formatCredentialsValues = (
                                 Store reference URLs with descriptions and
                                 comments.
                             </p>
-                            <RestrictedAction>
-                                <Button
-                                    variant="cta"
-                                    class="mt-4 cursor-pointer gap-2"
-                                    @click="openAddLinkDialog"
-                                >
-                                    <Plus class="h-4 w-4" />
-                                    Add Link
-                                </Button>
-                            </RestrictedAction>
+                            <div
+                                class="mt-4 flex items-center justify-center gap-2"
+                            >
+                                <RestrictedAction>
+                                    <Button
+                                        variant="cta"
+                                        class="cursor-pointer gap-2"
+                                        @click="openAddLinkDialog"
+                                    >
+                                        <Plus class="h-4 w-4" />
+                                        Add Link
+                                    </Button>
+                                </RestrictedAction>
+                                <RestrictedAction>
+                                    <Button
+                                        variant="outline"
+                                        class="cursor-pointer gap-2"
+                                        @click="openImportDialog"
+                                    >
+                                        <Download class="h-4 w-4" />
+                                        Import
+                                    </Button>
+                                </RestrictedAction>
+                            </div>
                         </div>
                     </div>
 
