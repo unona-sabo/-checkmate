@@ -11,6 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // MySQL won't drop this index while it's the only one covering the project_id
+        // foreign key, so add a temporary single-column index to cover it first.
+        Schema::table('bugreports', function ($table) {
+            $table->index('project_id', 'bugreports_project_id_temp_index');
+        });
+
         // Drop index that references the status column (SQLite can't drop column with index referencing it)
         Schema::table('bugreports', function ($table) {
             $table->dropIndex('bugreports_project_id_status_index');
@@ -40,6 +46,11 @@ return new class extends Migration
         Schema::table('bugreports', function ($table) {
             $table->index(['project_id', 'status'], 'bugreports_project_id_status_index');
         });
+
+        // The composite index above covers project_id again, so the temporary index is no longer needed.
+        Schema::table('bugreports', function ($table) {
+            $table->dropIndex('bugreports_project_id_temp_index');
+        });
     }
 
     /**
@@ -47,6 +58,12 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // MySQL won't drop this index while it's the only one covering the project_id
+        // foreign key, so add a temporary single-column index to cover it first.
+        Schema::table('bugreports', function ($table) {
+            $table->index('project_id', 'bugreports_project_id_temp_index');
+        });
+
         Schema::table('bugreports', function ($table) {
             $table->dropIndex('bugreports_project_id_status_index');
         });
@@ -72,6 +89,11 @@ return new class extends Migration
 
         Schema::table('bugreports', function ($table) {
             $table->index(['project_id', 'status'], 'bugreports_project_id_status_index');
+        });
+
+        // The composite index above covers project_id again, so the temporary index is no longer needed.
+        Schema::table('bugreports', function ($table) {
+            $table->dropIndex('bugreports_project_id_temp_index');
         });
     }
 };
