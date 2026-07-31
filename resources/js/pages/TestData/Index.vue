@@ -1733,7 +1733,9 @@ const formatCredentialsValues = (
                     </h1>
                     <RestrictedAction>
                         <Button
-                            v-if="activeTab === 'users'"
+                            v-if="
+                                activeTab === 'users' && localUsers.length > 0
+                            "
                             variant="cta"
                             class="cursor-pointer gap-2"
                             @click="openAddUserDialog"
@@ -1742,7 +1744,10 @@ const formatCredentialsValues = (
                             Add User
                         </Button>
                         <Button
-                            v-else-if="activeTab === 'payments'"
+                            v-else-if="
+                                activeTab === 'payments' &&
+                                localPayments.length > 0
+                            "
                             variant="cta"
                             class="cursor-pointer gap-2"
                             @click="openAddPaymentDialog"
@@ -1751,7 +1756,10 @@ const formatCredentialsValues = (
                             Add Payment
                         </Button>
                         <Button
-                            v-else-if="activeTab === 'commands'"
+                            v-else-if="
+                                activeTab === 'commands' &&
+                                localCommands.length > 0
+                            "
                             variant="cta"
                             class="cursor-pointer gap-2"
                             @click="openAddCommandDialog"
@@ -1760,7 +1768,9 @@ const formatCredentialsValues = (
                             Add Command
                         </Button>
                         <Button
-                            v-else
+                            v-else-if="
+                                activeTab === 'links' && localLinks.length > 0
+                            "
                             variant="cta"
                             class="cursor-pointer gap-2"
                             @click="openAddLinkDialog"
