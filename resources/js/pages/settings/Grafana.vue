@@ -33,6 +33,7 @@ function save() {
         preserveScroll: true,
         onSuccess: () => {
             form.reset('api_token');
+            form.defaults();
         },
     });
 }
@@ -51,11 +52,28 @@ function save() {
                 <form class="space-y-6" @submit.prevent="save">
                     <div class="grid gap-4 rounded-lg border p-4">
                         <div class="space-y-2">
-                            <Label for="api_token">Service Account Token</Label>
+                            <div class="flex items-center gap-2">
+                                <Label for="api_token"
+                                    >Service Account Token</Label
+                                >
+                                <span
+                                    v-if="settings.has_token"
+                                    class="text-sm text-green-600"
+                                >
+                                    Token saved
+                                </span>
+                                <span
+                                    v-else
+                                    class="text-sm text-muted-foreground"
+                                >
+                                    No token saved
+                                </span>
+                            </div>
                             <Input
                                 id="api_token"
                                 v-model="form.api_token"
                                 type="password"
+                                autocomplete="new-password"
                                 :placeholder="
                                     settings.has_token
                                         ? '••••••••••••••••'
@@ -133,7 +151,7 @@ function save() {
                     <div class="flex items-center gap-4">
                         <Button
                             type="submit"
-                            :disabled="form.processing"
+                            :disabled="form.processing || !form.isDirty"
                             class="cursor-pointer"
                         >
                             {{

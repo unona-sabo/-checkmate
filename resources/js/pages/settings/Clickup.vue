@@ -63,6 +63,7 @@ function saveSettings() {
         preserveScroll: true,
         onSuccess: () => {
             settingsForm.reset('api_token');
+            settingsForm.defaults();
         },
     });
 }
@@ -140,7 +141,21 @@ function formatStatus(status: string): string {
 
                     <form class="space-y-4" @submit.prevent="saveSettings">
                         <div class="space-y-2">
-                            <Label for="api_token">API Token</Label>
+                            <div class="flex items-center gap-2">
+                                <Label for="api_token">API Token</Label>
+                                <span
+                                    v-if="settings.has_token"
+                                    class="text-sm text-green-600"
+                                >
+                                    Token saved
+                                </span>
+                                <span
+                                    v-else
+                                    class="text-sm text-muted-foreground"
+                                >
+                                    No token saved
+                                </span>
+                            </div>
                             <Input
                                 id="api_token"
                                 v-model="settingsForm.api_token"
@@ -178,7 +193,9 @@ function formatStatus(status: string): string {
                         <Button
                             type="submit"
                             class="cursor-pointer"
-                            :disabled="settingsForm.processing"
+                            :disabled="
+                                settingsForm.processing || !settingsForm.isDirty
+                            "
                         >
                             {{
                                 settingsForm.processing
