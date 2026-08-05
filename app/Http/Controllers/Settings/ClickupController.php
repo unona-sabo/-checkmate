@@ -97,7 +97,10 @@ class ClickupController extends Controller
             }
 
             $secret = Str::random(32);
-            $endpoint = url('/api/webhooks/clickup');
+            // ClickUp requires an HTTPS endpoint; force the scheme in case
+            // the reverse proxy doesn't forward X-Forwarded-Proto and
+            // Laravel detects the request as plain HTTP.
+            $endpoint = preg_replace('#^http://#', 'https://', url('/api/webhooks/clickup'));
             $result = $service->registerWebhook($teams[0]['id'], $endpoint, $secret);
 
             $settings->update([
