@@ -91,6 +91,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('test-suites/bulk-copy-cases', [TestCaseController::class, 'bulkCopy'])->name('bulk-copy-cases');
         Route::get('test-suites/export-cases', [TestCaseController::class, 'export'])->name('export-cases');
         Route::post('test-suites/import-cases', [TestCaseController::class, 'importFromFile'])->name('import-cases');
+        Route::post('test-suites/import-cases-new-suite', [TestCaseController::class, 'importFromFileToNewSuite'])->name('import-cases-new-suite');
+        Route::post('test-suites/note-new-suite', [TestCaseController::class, 'storeNoteAsNewSuite'])->name('note-new-suite');
         Route::get('test-suites/copy-projects', [TestSuiteController::class, 'copyProjects'])->name('copy-projects');
         Route::get('test-suites/copy-suites', [TestSuiteController::class, 'copySuites'])->name('copy-suites');
         Route::get('test-suites/{testSuite}', [TestSuiteController::class, 'show'])->name('show');

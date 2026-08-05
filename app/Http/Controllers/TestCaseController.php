@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\TestCase\BulkDeleteTestCasesRequest;
 use App\Http\Requests\TestCase\BulkUpdateTestCasesRequest;
 use App\Http\Requests\TestCase\ImportTestCasesFromFileRequest;
+use App\Http\Requests\TestCase\ImportTestCasesFromFileToNewSuiteRequest;
 use App\Http\Requests\TestCase\MoveTestCasesRequest;
 use App\Http\Requests\TestCase\ReorderTestCasesRequest;
+use App\Http\Requests\TestCase\StoreTestCaseNoteAsNewSuiteRequest;
 use App\Http\Requests\TestCase\StoreTestCaseNoteRequest;
 use App\Http\Requests\TestCase\StoreTestCaseRequest;
 use App\Http\Requests\TestCase\UpdateTestCaseRequest;
@@ -383,11 +385,52 @@ class TestCaseController extends Controller
             return back()->withErrors(['test_suite_id' => 'The selected test suite does not belong to this project.']);
         }
 
-        $fieldMap = $this->buildFieldMap($validated['headers']);
+        $created = $this->importRowsIntoSuite($suite, $validated['headers'], $validated['rows']);
+
+        return back()->with('success', $created.' test case(s) imported successfully.');
+    }
+
+    /**
+     * Create a new test suite from a CSV file, importing its rows as test cases.
+     */
+    public function importFromFileToNewSuite(ImportTestCasesFromFileToNewSuiteRequest $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
+
+        $maxOrder = $project->testSuites()->whereNull('parent_id')->max('order') ?? 0;
+
+        $suite = $project->testSuites()->create([
+            'name' => $validated['name'],
+            'order' => $maxOrder + 1,
+        ]);
+
+        $created = $this->importRowsIntoSuite($suite, $validated['headers'], $validated['rows']);
+
+        if ($created === 0) {
+            $suite->delete();
+
+            return back()->withErrors(['rows' => 'No valid test cases found in the file (each row needs a title).']);
+        }
+
+        return redirect()->route('test-suites.show', [$project, $suite])
+            ->with('success', $created.' test case(s) imported into new suite "'.$suite->name.'".');
+    }
+
+    /**
+     * Import CSV rows as test cases into the given suite.
+     *
+     * @param  array<int, string>  $headers
+     * @param  array<int, array<int, mixed>>  $rows
+     */
+    private function importRowsIntoSuite(TestSuite $suite, array $headers, array $rows): int
+    {
+        $fieldMap = $this->buildFieldMap($headers);
         $maxOrder = $suite->testCases()->max('order') ?? 0;
         $created = 0;
 
-        foreach ($validated['rows'] as $row) {
+        foreach ($rows as $row) {
             $mapped = $this->mapRowToFields($row, $fieldMap);
 
             // Skip rows without a title
@@ -414,7 +457,39 @@ class TestCaseController extends Controller
             $created++;
         }
 
-        return back()->with('success', $created.' test case(s) imported successfully.');
+        return $created;
+    }
+
+    /**
+     * Create a new test suite along with a single test case built from
+     * pasted note lines (each line becomes a test step).
+     */
+    public function storeNoteAsNewSuite(StoreTestCaseNoteAsNewSuiteRequest $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
+
+        $maxOrder = $project->testSuites()->whereNull('parent_id')->max('order') ?? 0;
+
+        $suite = $project->testSuites()->create([
+            'name' => $validated['suite_name'],
+            'order' => $maxOrder + 1,
+        ]);
+
+        $testCase = $suite->testCases()->create([
+            'title' => $validated['title'],
+            'steps' => $validated['steps'],
+            'priority' => 'medium',
+            'severity' => 'major',
+            'type' => 'functional',
+            'automation_status' => 'not_automated',
+            'order' => 1,
+            'created_by' => auth()->id(),
+        ]);
+
+        return redirect("/projects/{$project->id}/test-suites/{$suite->id}/test-cases/{$testCase->id}")
+            ->with('success', 'New test suite and test case created successfully.');
     }
 
     /**

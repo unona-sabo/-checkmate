@@ -241,3 +241,108 @@ test('viewer cannot import', function () {
         ])
         ->assertForbidden();
 });
+
+test('import into new suite creates suite and test cases from parsed data', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-suites.import-cases-new-suite', $project),
+        [
+            'name' => 'Imported Suite',
+            'headers' => ['Title', 'Priority'],
+            'rows' => [
+                ['Login test', 'high'],
+                ['Signup test', 'low'],
+            ],
+        ]
+    );
+
+    $suite = TestSuite::where('project_id', $project->id)->where('name', 'Imported Suite')->first();
+
+    expect($suite)->not->toBeNull();
+    $response->assertRedirect(route('test-suites.show', [$project, $suite]));
+    $response->assertSessionHas('success');
+
+    $cases = TestCase::where('test_suite_id', $suite->id)->orderBy('order')->get();
+    expect($cases)->toHaveCount(2);
+    expect($cases[0]->title)->toBe('Login test');
+    expect($cases[0]->priority)->toBe('high');
+    expect($cases[1]->title)->toBe('Signup test');
+});
+
+test('import into new suite requires a name', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-suites.import-cases-new-suite', $project),
+        [
+            'headers' => ['Title'],
+            'rows' => [['Login test']],
+        ]
+    );
+
+    $response->assertSessionHasErrors('name');
+});
+
+test('import into new suite rolls back suite when no rows have a title', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-suites.import-cases-new-suite', $project),
+        [
+            'name' => 'Empty Suite',
+            'headers' => ['Description'],
+            'rows' => [['no title here']],
+        ]
+    );
+
+    $response->assertSessionHasErrors('rows');
+    expect(TestSuite::where('project_id', $project->id)->where('name', 'Empty Suite')->exists())->toBeFalse();
+});
+
+test('note as new suite creates suite and a single test case from note steps', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-suites.note-new-suite', $project),
+        [
+            'suite_name' => 'Notes Suite',
+            'title' => 'New test case from notes',
+            'steps' => [
+                ['action' => 'Open the app', 'expected' => null],
+                ['action' => 'Log in', 'expected' => 'User is logged in'],
+            ],
+        ]
+    );
+
+    $suite = TestSuite::where('project_id', $project->id)->where('name', 'Notes Suite')->first();
+    expect($suite)->not->toBeNull();
+
+    $testCase = TestCase::where('test_suite_id', $suite->id)->first();
+    expect($testCase)->not->toBeNull();
+    expect($testCase->title)->toBe('New test case from notes');
+    expect($testCase->steps)->toHaveCount(2);
+    expect($testCase->created_by)->toBe($user->id);
+
+    $response->assertRedirect("/projects/{$project->id}/test-suites/{$suite->id}/test-cases/{$testCase->id}");
+    $response->assertSessionHas('success');
+});
+
+test('note as new suite requires a suite name and at least one step', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-suites.note-new-suite', $project),
+        [
+            'title' => 'New test case',
+            'steps' => [],
+        ]
+    );
+
+    $response->assertSessionHasErrors(['suite_name', 'steps']);
+});

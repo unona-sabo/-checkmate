@@ -1331,6 +1331,158 @@ const importNoteAsTestCase = () => {
 onMounted(() => {
     loadDraft();
 });
+
+// Empty state — Create a Note (creates a new suite + a single test case)
+const showEmptyNoteDialog = ref(false);
+const emptyNoteSuiteName = ref('');
+const emptyNoteTitle = ref('');
+const emptyNoteContent = ref('');
+const isCreatingEmptyNote = ref(false);
+
+const emptyNoteParsedSteps = computed(() => {
+    if (!emptyNoteContent.value.trim()) return [];
+    return emptyNoteContent.value
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => ({
+            action: line.replace(/^[\d]+[.\)\-:\s]+/, '').trim(),
+            expected: null,
+        }))
+        .filter((step) => step.action.length > 0);
+});
+
+const openEmptyNoteDialog = () => {
+    emptyNoteSuiteName.value = '';
+    emptyNoteTitle.value = '';
+    emptyNoteContent.value = '';
+    showEmptyNoteDialog.value = true;
+};
+
+const submitEmptyNote = () => {
+    if (
+        !emptyNoteSuiteName.value.trim() ||
+        !emptyNoteTitle.value.trim() ||
+        emptyNoteParsedSteps.value.length === 0
+    )
+        return;
+
+    isCreatingEmptyNote.value = true;
+    router.post(
+        `/projects/${props.project.id}/test-suites/note-new-suite`,
+        {
+            suite_name: emptyNoteSuiteName.value.trim(),
+            title: emptyNoteTitle.value.trim(),
+            steps: emptyNoteParsedSteps.value,
+        },
+        {
+            onSuccess: () => {
+                showEmptyNoteDialog.value = false;
+                emptyNoteSuiteName.value = '';
+                emptyNoteTitle.value = '';
+                emptyNoteContent.value = '';
+                isCreatingEmptyNote.value = false;
+            },
+            onError: () => {
+                isCreatingEmptyNote.value = false;
+            },
+        },
+    );
+};
+
+// Empty state — Import (creates a new suite + imports test cases from a file)
+const showEmptyImportDialog = ref(false);
+const emptyImportSuiteName = ref('');
+const emptyImportFile = ref<File | null>(null);
+const emptyImportHeaders = ref<string[]>([]);
+const emptyImportRows = ref<any[][]>([]);
+const isImportingEmptyCases = ref(false);
+
+const emptyImportFieldMapping = computed(() => {
+    return emptyImportHeaders.value.map((h) => ({
+        header: h,
+        matchedField: getMatchedField(h),
+    }));
+});
+
+const emptyMatchedFieldCount = computed(
+    () => emptyImportFieldMapping.value.filter((m) => m.matchedField).length,
+);
+
+const onEmptyImportFileChange = async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    emptyImportFile.value = file;
+    emptyImportHeaders.value = [];
+    emptyImportRows.value = [];
+
+    try {
+        const XLSX = await import('xlsx');
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        if (json.length < 2) {
+            emptyImportHeaders.value = [];
+            emptyImportRows.value = [];
+            return;
+        }
+
+        emptyImportHeaders.value = (json[0] || []).map(String);
+        emptyImportRows.value = json
+            .slice(1)
+            .filter((row) =>
+                row.some(
+                    (cell) =>
+                        cell !== null &&
+                        cell !== undefined &&
+                        String(cell).trim() !== '',
+                ),
+            );
+    } catch {
+        emptyImportHeaders.value = [];
+        emptyImportRows.value = [];
+    }
+};
+
+const openEmptyImportDialog = () => {
+    emptyImportSuiteName.value = '';
+    emptyImportFile.value = null;
+    emptyImportHeaders.value = [];
+    emptyImportRows.value = [];
+    showEmptyImportDialog.value = true;
+};
+
+const submitEmptyImport = () => {
+    if (
+        !emptyImportSuiteName.value.trim() ||
+        emptyImportRows.value.length === 0
+    )
+        return;
+
+    isImportingEmptyCases.value = true;
+    router.post(
+        `/projects/${props.project.id}/test-suites/import-cases-new-suite`,
+        {
+            name: emptyImportSuiteName.value.trim(),
+            headers: emptyImportHeaders.value,
+            rows: emptyImportRows.value,
+        },
+        {
+            preserveState: false,
+            onSuccess: () => {
+                showEmptyImportDialog.value = false;
+                isImportingEmptyCases.value = false;
+            },
+            onError: () => {
+                isImportingEmptyCases.value = false;
+            },
+        },
+    );
+};
 </script>
 
 <template>
@@ -1369,17 +1521,38 @@ onMounted(() => {
                         Create your first test suite to organize your test cases
                         into logical groups.
                     </p>
-                    <RestrictedAction>
-                        <Link
-                            :href="`/projects/${project.id}/test-suites/create`"
-                            class="mt-4 inline-block"
-                        >
-                            <Button variant="cta" class="gap-2">
-                                <Plus class="h-4 w-4" />
-                                Create Test Suite
+                    <div class="mt-4 flex items-center justify-center gap-2">
+                        <RestrictedAction>
+                            <Link
+                                :href="`/projects/${project.id}/test-suites/create`"
+                            >
+                                <Button variant="cta" class="gap-2">
+                                    <Plus class="h-4 w-4" />
+                                    Create Test Suite
+                                </Button>
+                            </Link>
+                        </RestrictedAction>
+                        <RestrictedAction>
+                            <Button
+                                variant="outline"
+                                class="gap-2"
+                                @click="openEmptyNoteDialog"
+                            >
+                                <StickyNote class="h-4 w-4" />
+                                Create a Note
                             </Button>
-                        </Link>
-                    </RestrictedAction>
+                        </RestrictedAction>
+                        <RestrictedAction>
+                            <Button
+                                variant="outline"
+                                class="gap-2"
+                                @click="openEmptyImportDialog"
+                            >
+                                <Download class="h-4 w-4" />
+                                Import
+                            </Button>
+                        </RestrictedAction>
+                    </div>
                 </div>
             </div>
 
@@ -3446,6 +3619,247 @@ onMounted(() => {
                                 : `Import ${importRows.length} test case(s)`
                         }}
                     </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Empty State: Create a Note (new suite + test case) -->
+        <Dialog v-model:open="showEmptyNoteDialog">
+            <DialogContent
+                class="flex max-h-[75vh] max-w-2xl flex-col"
+                style="
+                    overflow: hidden !important;
+                    max-width: min(42rem, calc(100vw - 2rem)) !important;
+                "
+            >
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <StickyNote class="h-5 w-5 text-primary" />
+                        Create a Note
+                    </DialogTitle>
+                    <DialogDescription>
+                        Creates a new test suite with a single test case. Each
+                        line below becomes a test step.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div
+                    class="min-h-0 flex-1 space-y-4 overflow-y-auto px-0.5 py-4"
+                >
+                    <div class="space-y-2">
+                        <Label>New Suite Name</Label>
+                        <Input
+                            v-model="emptyNoteSuiteName"
+                            type="text"
+                            placeholder="e.g. Login Suite"
+                        />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label>Test Case Title</Label>
+                        <Input
+                            v-model="emptyNoteTitle"
+                            type="text"
+                            placeholder="e.g. Verify user login flow"
+                        />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label>Steps (one per line)</Label>
+                        <Textarea
+                            v-model="emptyNoteContent"
+                            placeholder="1. Navigate to the login page&#10;2. Enter valid credentials&#10;3. Click the login button&#10;4. Verify dashboard is displayed"
+                            rows="10"
+                            class="resize-y font-mono text-sm"
+                            style="
+                                white-space: pre-wrap;
+                                overflow-wrap: break-word;
+                                overflow-y: auto;
+                                max-height: 400px;
+                            "
+                        />
+                        <p
+                            v-if="emptyNoteParsedSteps.length > 0"
+                            class="text-sm text-muted-foreground"
+                        >
+                            {{ emptyNoteParsedSteps.length }} step(s) will be
+                            created
+                        </p>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        @click="showEmptyNoteDialog = false"
+                    >
+                        Cancel
+                    </Button>
+                    <RestrictedAction>
+                        <Button
+                            @click="submitEmptyNote"
+                            :disabled="
+                                !emptyNoteSuiteName.trim() ||
+                                !emptyNoteTitle.trim() ||
+                                emptyNoteParsedSteps.length === 0 ||
+                                isCreatingEmptyNote
+                            "
+                            class="gap-2"
+                        >
+                            <Plus class="h-4 w-4" />
+                            {{
+                                isCreatingEmptyNote
+                                    ? 'Creating...'
+                                    : 'Create Test Case'
+                            }}
+                        </Button>
+                    </RestrictedAction>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Empty State: Import (new suite + imported test cases) -->
+        <Dialog v-model:open="showEmptyImportDialog">
+            <DialogContent
+                class="flex max-h-[80vh] max-w-2xl flex-col"
+                style="
+                    overflow: hidden !important;
+                    max-width: min(42rem, calc(100vw - 2rem)) !important;
+                "
+            >
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Download class="h-5 w-5 text-primary" />
+                        Import Test Cases
+                    </DialogTitle>
+                    <DialogDescription>
+                        Upload a CSV or Excel file to create a new test suite
+                        populated with its rows as test cases.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
+                    <div class="space-y-2">
+                        <Label>New Suite Name</Label>
+                        <Input
+                            v-model="emptyImportSuiteName"
+                            type="text"
+                            placeholder="e.g. Imported Suite"
+                        />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label>File</Label>
+                        <div class="flex items-center gap-3">
+                            <input
+                                ref="emptyImportFileInput"
+                                type="file"
+                                accept=".csv,.xlsx,.xls"
+                                class="hidden"
+                                @change="onEmptyImportFileChange"
+                            />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                class="cursor-pointer gap-2"
+                                @click="
+                                    (
+                                        $refs.emptyImportFileInput as HTMLInputElement
+                                    ).click()
+                                "
+                            >
+                                <Upload class="h-4 w-4" />
+                                Choose File
+                            </Button>
+                            <span
+                                class="truncate text-sm text-muted-foreground"
+                                >{{
+                                    emptyImportFile?.name || 'No file selected'
+                                }}</span
+                            >
+                        </div>
+                    </div>
+
+                    <div v-if="emptyImportHeaders.length > 0" class="space-y-4">
+                        <div
+                            class="space-y-3 rounded-lg border bg-muted/30 p-4"
+                        >
+                            <div class="flex items-center justify-between">
+                                <Label>Column Mapping</Label>
+                                <span class="text-xs text-muted-foreground">
+                                    {{ emptyMatchedFieldCount }} of
+                                    {{ emptyImportHeaders.length }} columns
+                                    matched
+                                </span>
+                            </div>
+                            <div class="grid gap-1.5">
+                                <div
+                                    v-for="mapping in emptyImportFieldMapping"
+                                    :key="mapping.header"
+                                    class="flex items-center gap-2 text-sm"
+                                >
+                                    <span
+                                        class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset"
+                                        :class="
+                                            mapping.matchedField
+                                                ? 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20'
+                                                : 'bg-muted text-muted-foreground ring-border'
+                                        "
+                                    >
+                                        {{ mapping.header }}
+                                    </span>
+                                    <span
+                                        v-if="mapping.matchedField"
+                                        class="text-muted-foreground"
+                                        >&rarr;</span
+                                    >
+                                    <span
+                                        v-if="mapping.matchedField"
+                                        class="text-sm font-medium"
+                                        >{{ mapping.matchedField }}</span
+                                    >
+                                    <span
+                                        v-else
+                                        class="text-xs text-muted-foreground italic"
+                                        >ignored</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-sm text-muted-foreground">
+                            Found <strong>{{ emptyImportRows.length }}</strong>
+                            test case(s) to import
+                        </p>
+                    </div>
+                </div>
+
+                <DialogFooter class="flex gap-2 sm:justify-end">
+                    <Button
+                        variant="outline"
+                        @click="showEmptyImportDialog = false"
+                    >
+                        Cancel
+                    </Button>
+                    <RestrictedAction>
+                        <Button
+                            @click="submitEmptyImport"
+                            :disabled="
+                                !emptyImportSuiteName.trim() ||
+                                emptyImportRows.length === 0 ||
+                                isImportingEmptyCases ||
+                                emptyMatchedFieldCount === 0
+                            "
+                            class="gap-2"
+                        >
+                            <Download class="h-4 w-4" />
+                            {{
+                                isImportingEmptyCases
+                                    ? 'Importing...'
+                                    : `Import ${emptyImportRows.length} test case(s)`
+                            }}
+                        </Button>
+                    </RestrictedAction>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
