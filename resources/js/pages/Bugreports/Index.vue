@@ -231,31 +231,33 @@ const filteredBugreports = computed(() => {
                             </Badge>
                         </Button>
                     </template>
-                    <RestrictedAction>
-                        <Button
-                            variant="outline"
-                            class="cursor-pointer gap-2"
-                            title="Sync all bug reports from ClickUp"
-                            :disabled="isSyncingAll"
-                            @click="syncAllFromClickUp"
-                        >
-                            <RefreshCw
-                                class="h-4 w-4"
-                                :class="{ 'animate-spin': isSyncingAll }"
-                            />
-                            Sync from ClickUp
-                        </Button>
-                    </RestrictedAction>
-                    <RestrictedAction>
-                        <Link
-                            :href="`/projects/${project.id}/bugreports/create`"
-                        >
-                            <Button variant="cta" class="gap-2">
-                                <Plus class="h-4 w-4" />
-                                Report Bug
+                    <template v-if="bugreports.length > 0">
+                        <RestrictedAction>
+                            <Button
+                                variant="outline"
+                                class="cursor-pointer gap-2"
+                                title="Sync all bug reports from ClickUp"
+                                :disabled="isSyncingAll"
+                                @click="syncAllFromClickUp"
+                            >
+                                <RefreshCw
+                                    class="h-4 w-4"
+                                    :class="{ 'animate-spin': isSyncingAll }"
+                                />
+                                Sync from ClickUp
                             </Button>
-                        </Link>
-                    </RestrictedAction>
+                        </RestrictedAction>
+                        <RestrictedAction>
+                            <Link
+                                :href="`/projects/${project.id}/bugreports/create`"
+                            >
+                                <Button variant="cta" class="gap-2">
+                                    <Plus class="h-4 w-4" />
+                                    Report Bug
+                                </Button>
+                            </Link>
+                        </RestrictedAction>
+                    </template>
                 </div>
             </div>
 
