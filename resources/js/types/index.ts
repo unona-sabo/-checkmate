@@ -10,6 +10,10 @@ export type AppPageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {
     name: string;
+    flash: {
+        success: string | null;
+        error: string | null;
+    };
     auth: Auth;
     sidebarOpen: boolean;
     currentWorkspace: (Workspace & { role: string }) | null;

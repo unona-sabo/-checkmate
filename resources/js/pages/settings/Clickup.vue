@@ -145,6 +145,7 @@ function formatStatus(status: string): string {
                                 id="api_token"
                                 v-model="settingsForm.api_token"
                                 type="password"
+                                autocomplete="new-password"
                                 :placeholder="
                                     settings.has_token
                                         ? '••••••••••••••••'
