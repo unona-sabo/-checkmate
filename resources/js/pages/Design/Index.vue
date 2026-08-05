@@ -316,17 +316,17 @@ const categoryOptions = [
                                 {{ activeFilterCount }}
                             </Badge>
                         </Button>
+                        <RestrictedAction>
+                            <Button
+                                variant="cta"
+                                class="cursor-pointer gap-2"
+                                @click="openAddDialog"
+                            >
+                                <Plus class="h-4 w-4" />
+                                Add Link
+                            </Button>
+                        </RestrictedAction>
                     </template>
-                    <RestrictedAction>
-                        <Button
-                            variant="cta"
-                            class="cursor-pointer gap-2"
-                            @click="openAddDialog"
-                        >
-                            <Plus class="h-4 w-4" />
-                            Add Link
-                        </Button>
-                    </RestrictedAction>
                 </div>
             </div>
 
