@@ -1160,7 +1160,8 @@ const exportSelectedCsv = () => {
     window.location.href = `/projects/${props.project.id}/test-suites/export-cases?ids=${selectedTestCaseIds.value.join(',')}`;
 };
 
-// Note dialog state
+// Note dialog state (shared between the header's note dialog and the
+// empty-state note dialog — both draft to/from the same localStorage slot)
 const showNoteDialog = ref(false);
 const noteContent = ref('');
 const noteTitle = ref('');
@@ -1168,6 +1169,7 @@ const selectedParentSuiteId = ref<string>('');
 const selectedSubcategoryId = ref<string>('');
 const isImportingNote = ref(false);
 const hasDraft = ref(false);
+const emptyNoteSuiteName = ref('');
 const DRAFT_STORAGE_KEY = `test-suite-note-draft-${props.project.id}`;
 
 // Target suite ID: subcategory takes priority, then parent suite
@@ -1194,6 +1196,7 @@ interface NoteDraft {
     title: string;
     parentSuiteId: string;
     subcategoryId: string;
+    newSuiteName?: string;
 }
 
 const loadDraft = () => {
@@ -1220,6 +1223,7 @@ const saveDraft = () => {
         title: noteTitle.value,
         parentSuiteId: selectedParentSuiteId.value,
         subcategoryId: selectedSubcategoryId.value,
+        newSuiteName: emptyNoteSuiteName.value,
     };
     try {
         localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -1243,6 +1247,7 @@ const clearNotes = () => {
     noteTitle.value = '';
     selectedParentSuiteId.value = '';
     selectedSubcategoryId.value = '';
+    emptyNoteSuiteName.value = '';
     deleteDraft();
 };
 
@@ -1255,6 +1260,7 @@ const openDraft = () => {
             noteTitle.value = draft.title;
             selectedParentSuiteId.value = draft.parentSuiteId || '';
             selectedSubcategoryId.value = draft.subcategoryId || '';
+            emptyNoteSuiteName.value = draft.newSuiteName || '';
         }
     } catch (e) {
         console.error('Failed to open draft:', e);
@@ -1336,15 +1342,14 @@ onMounted(() => {
 });
 
 // Empty state — Create a Note (creates a new suite + a single test case)
+// Reuses the same noteContent/noteTitle/hasDraft draft slot as the header's
+// note dialog above, since it's the same underlying "note" concept.
 const showEmptyNoteDialog = ref(false);
-const emptyNoteSuiteName = ref('');
-const emptyNoteTitle = ref('');
-const emptyNoteContent = ref('');
 const isCreatingEmptyNote = ref(false);
 
 const emptyNoteParsedSteps = computed(() => {
-    if (!emptyNoteContent.value.trim()) return [];
-    return emptyNoteContent.value
+    if (!noteContent.value.trim()) return [];
+    return noteContent.value
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => line.length > 0)
@@ -1356,16 +1361,30 @@ const emptyNoteParsedSteps = computed(() => {
 });
 
 const openEmptyNoteDialog = () => {
-    emptyNoteSuiteName.value = '';
-    emptyNoteTitle.value = '';
-    emptyNoteContent.value = '';
     showEmptyNoteDialog.value = true;
 };
+
+watch(showEmptyNoteDialog, (open) => {
+    if (open) {
+        if (hasDraft.value) {
+            openDraft();
+        }
+        return;
+    }
+
+    if (noteContent.value.trim()) {
+        saveDraft();
+    }
+
+    noteContent.value = '';
+    noteTitle.value = '';
+    emptyNoteSuiteName.value = '';
+});
 
 const submitEmptyNote = () => {
     if (
         !emptyNoteSuiteName.value.trim() ||
-        !emptyNoteTitle.value.trim() ||
+        !noteTitle.value.trim() ||
         emptyNoteParsedSteps.value.length === 0
     )
         return;
@@ -1375,16 +1394,17 @@ const submitEmptyNote = () => {
         `/projects/${props.project.id}/test-suites/note-new-suite`,
         {
             suite_name: emptyNoteSuiteName.value.trim(),
-            title: emptyNoteTitle.value.trim(),
+            title: noteTitle.value.trim(),
             steps: emptyNoteParsedSteps.value,
         },
         {
             onSuccess: () => {
                 showEmptyNoteDialog.value = false;
                 emptyNoteSuiteName.value = '';
-                emptyNoteTitle.value = '';
-                emptyNoteContent.value = '';
+                noteTitle.value = '';
+                noteContent.value = '';
                 isCreatingEmptyNote.value = false;
+                deleteDraft();
             },
             onError: () => {
                 isCreatingEmptyNote.value = false;
@@ -1537,12 +1557,13 @@ const submitEmptyImport = () => {
                         </RestrictedAction>
                         <RestrictedAction>
                             <Button
-                                variant="outline"
+                                :variant="hasDraft ? 'cta' : 'outline'"
                                 class="gap-2"
                                 @click="openEmptyNoteDialog"
                             >
-                                <StickyNote class="h-4 w-4" />
-                                Create a Note
+                                <Pencil v-if="hasDraft" class="h-4 w-4" />
+                                <StickyNote v-else class="h-4 w-4" />
+                                {{ hasDraft ? 'Draft' : 'Create a Note' }}
                             </Button>
                         </RestrictedAction>
                         <RestrictedAction>
@@ -3635,7 +3656,7 @@ const submitEmptyImport = () => {
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <StickyNote class="h-5 w-5 text-primary" />
-                        Create a Note
+                        {{ hasDraft ? 'Edit Draft' : 'Create a Note' }}
                     </DialogTitle>
                     <DialogDescription>
                         Creates a new test suite with a single test case. Each
@@ -3658,7 +3679,7 @@ const submitEmptyImport = () => {
                     <div class="space-y-2">
                         <Label>Test Case Title</Label>
                         <Input
-                            v-model="emptyNoteTitle"
+                            v-model="noteTitle"
                             type="text"
                             placeholder="e.g. Verify user login flow"
                         />
@@ -3667,7 +3688,7 @@ const submitEmptyImport = () => {
                     <div class="space-y-2">
                         <Label>Steps (one per line)</Label>
                         <Textarea
-                            v-model="emptyNoteContent"
+                            v-model="noteContent"
                             placeholder="1. Navigate to the login page&#10;2. Enter valid credentials&#10;3. Click the login button&#10;4. Verify dashboard is displayed"
                             rows="10"
                             class="resize-y font-mono text-sm"
@@ -3688,32 +3709,48 @@ const submitEmptyImport = () => {
                     </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter class="flex justify-between sm:justify-between">
                     <Button
-                        variant="outline"
-                        @click="showEmptyNoteDialog = false"
+                        v-if="
+                            noteContent.trim() ||
+                            noteTitle.trim() ||
+                            emptyNoteSuiteName.trim()
+                        "
+                        variant="ghost"
+                        @click="clearNotes"
+                        class="gap-2 text-muted-foreground hover:text-destructive"
                     >
-                        Cancel
+                        <X class="h-4 w-4" />
+                        Clear
                     </Button>
-                    <RestrictedAction>
+                    <div v-else></div>
+                    <div class="flex gap-2">
                         <Button
-                            @click="submitEmptyNote"
-                            :disabled="
-                                !emptyNoteSuiteName.trim() ||
-                                !emptyNoteTitle.trim() ||
-                                emptyNoteParsedSteps.length === 0 ||
-                                isCreatingEmptyNote
-                            "
-                            class="gap-2"
+                            variant="outline"
+                            @click="showEmptyNoteDialog = false"
                         >
-                            <Plus class="h-4 w-4" />
-                            {{
-                                isCreatingEmptyNote
-                                    ? 'Creating...'
-                                    : 'Create Test Case'
-                            }}
+                            Cancel
                         </Button>
-                    </RestrictedAction>
+                        <RestrictedAction>
+                            <Button
+                                @click="submitEmptyNote"
+                                :disabled="
+                                    !emptyNoteSuiteName.trim() ||
+                                    !noteTitle.trim() ||
+                                    emptyNoteParsedSteps.length === 0 ||
+                                    isCreatingEmptyNote
+                                "
+                                class="gap-2"
+                            >
+                                <Plus class="h-4 w-4" />
+                                {{
+                                    isCreatingEmptyNote
+                                        ? 'Creating...'
+                                        : 'Create Test Case'
+                                }}
+                            </Button>
+                        </RestrictedAction>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
