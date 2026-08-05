@@ -1261,18 +1261,21 @@ const openDraft = () => {
     }
 };
 
-const onNoteDialogChange = (open: boolean) => {
-    if (open && hasDraft.value) {
-        openDraft();
+watch(showNoteDialog, (open) => {
+    if (open) {
+        if (hasDraft.value) {
+            openDraft();
+        }
+        return;
     }
-    if (!open && noteContent.value.trim()) {
+
+    if (noteContent.value.trim()) {
         saveDraft();
     }
-    if (!open) {
-        noteContent.value = '';
-        noteTitle.value = '';
-    }
-};
+
+    noteContent.value = '';
+    noteTitle.value = '';
+});
 
 // Reset subcategory when parent suite changes
 watch(selectedParentSuiteId, () => {
@@ -1715,10 +1718,7 @@ const submitEmptyImport = () => {
                                 </Badge>
                             </Button>
                             <RestrictedAction>
-                                <Dialog
-                                    v-model:open="showNoteDialog"
-                                    @update:open="onNoteDialogChange"
-                                >
+                                <Dialog v-model:open="showNoteDialog">
                                     <DialogTrigger as-child>
                                         <Button
                                             :variant="
