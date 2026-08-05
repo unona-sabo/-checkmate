@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AiGeneration;
+use App\Models\Documentation;
 use App\Models\Project;
 use App\Models\ProjectFeature;
 use App\Models\TestCase;
@@ -108,6 +109,88 @@ test('generate with text input returns test cases', function () {
     // Steps should be formatted as text with per-step expected results
     expect($response->json('test_cases.0.steps'))->toContain('Navigate to login page');
     expect($response->json('test_cases.0.steps'))->toContain('Expected: Login page is displayed');
+});
+
+test('generate with documentation input validates documentation_id is required', function () {
+    $response = $this->actingAs($this->user)->postJson(
+        route('ai-generator.generate', $this->project),
+        ['input_type' => 'documentation']
+    );
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['documentation_id']);
+});
+
+test('generate with documentation input strips HTML and returns test cases', function () {
+    $documentation = Documentation::factory()->create([
+        'project_id' => $this->project->id,
+        'title' => 'Login Feature',
+        'content' => '<p>The login page allows users to authenticate with <strong>email</strong> and password.</p>',
+    ]);
+
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [[
+                'content' => [
+                    'parts' => [[
+                        'text' => json_encode([
+                            [
+                                'title' => 'Verify login with valid credentials',
+                                'description' => 'Test that users can log in successfully',
+                                'preconditions' => 'User account exists',
+                                'steps' => [
+                                    ['action' => 'Navigate to login page', 'expected' => null],
+                                ],
+                                'expected_result' => 'User is redirected to dashboard',
+                                'priority' => 'high',
+                                'severity' => 'major',
+                                'type' => 'functional',
+                                'automation_status' => 'not_automated',
+                            ],
+                        ]),
+                    ]],
+                ],
+            ]],
+        ]),
+    ]);
+
+    config(['services.gemini.api_key' => 'test-key']);
+
+    $response = $this->actingAs($this->user)->postJson(
+        route('ai-generator.generate', $this->project),
+        [
+            'input_type' => 'documentation',
+            'documentation_id' => $documentation->id,
+            'provider' => 'gemini',
+        ]
+    );
+
+    $response->assertOk();
+    expect($response->json('test_cases.0.title'))->toBe('Verify login with valid credentials');
+
+    Http::assertSent(function ($request) {
+        $body = $request->body();
+
+        return str_contains($body, 'The login page allows users to authenticate with email and password.')
+            && ! str_contains($body, '<strong>');
+    });
+});
+
+test('generate with documentation input rejects a documentation from another project', function () {
+    $otherProject = Project::factory()->create();
+    $documentation = Documentation::factory()->create(['project_id' => $otherProject->id]);
+
+    config(['services.gemini.api_key' => 'test-key']);
+
+    $response = $this->actingAs($this->user)->postJson(
+        route('ai-generator.generate', $this->project),
+        [
+            'input_type' => 'documentation',
+            'documentation_id' => $documentation->id,
+        ]
+    );
+
+    $response->assertNotFound();
 });
 
 test('ai_generations record created on generate', function () {

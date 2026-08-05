@@ -15,6 +15,7 @@ import {
     RefreshCw,
     Trash2,
     Clipboard,
+    BookOpen,
 } from 'lucide-vue-next';
 import {
     ref,
@@ -41,11 +42,16 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
-import type { TestSuite, AIGeneratedTestCaseInput } from '@/types/checkmate';
+import type {
+    TestSuite,
+    Documentation,
+    AIGeneratedTestCaseInput,
+} from '@/types/checkmate';
 
 const props = defineProps<{
     project: Project;
     testSuites: Pick<TestSuite, 'id' | 'name' | 'parent_id'>[];
+    documentations: Pick<Documentation, 'id' | 'title' | 'parent_id'>[];
     defaultProvider: string;
     hasGeminiKey: boolean;
     hasClaudeKey: boolean;
@@ -62,12 +68,25 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 // Input state
-type InputTab = 'text' | 'file' | 'image';
+type InputTab = 'text' | 'file' | 'image' | 'documentation';
 const activeTab = ref<InputTab>('text');
 const textInput = ref('');
 const fileInput = ref<File | null>(null);
 const imageInput = ref<File | null>(null);
 const imagePreview = ref<string | null>(null);
+const selectedDocumentationId = ref<string>('');
+
+const documentationOptions = computed(() =>
+    props.documentations.map((doc) => {
+        const parent = doc.parent_id
+            ? props.documentations.find((d) => d.id === doc.parent_id)
+            : null;
+        return {
+            id: doc.id,
+            label: parent ? `${parent.title} / ${doc.title}` : doc.title,
+        };
+    }),
+);
 const countInput = ref('');
 const provider = ref(
     localStorage.getItem('ai_provider') || props.defaultProvider,
@@ -119,6 +138,8 @@ const canGenerate = computed(() => {
     if (activeTab.value === 'text' && !textInput.value.trim()) return false;
     if (activeTab.value === 'file' && !fileInput.value) return false;
     if (activeTab.value === 'image' && !imageInput.value) return false;
+    if (activeTab.value === 'documentation' && !selectedDocumentationId.value)
+        return false;
     return true;
 });
 
@@ -237,6 +258,11 @@ function buildFormData(): FormData {
         formData.append('file', fileInput.value);
     } else if (activeTab.value === 'image' && imageInput.value) {
         formData.append('image', imageInput.value);
+    } else if (
+        activeTab.value === 'documentation' &&
+        selectedDocumentationId.value
+    ) {
+        formData.append('documentation_id', selectedDocumentationId.value);
     }
 
     return formData;
@@ -476,6 +502,11 @@ const severityColors: Record<string, string> = {
                                             label: 'Image',
                                             icon: Image,
                                         },
+                                        {
+                                            key: 'documentation',
+                                            label: 'Documentation',
+                                            icon: BookOpen,
+                                        },
                                     ] as {
                                         key: InputTab;
                                         label: string;
@@ -678,6 +709,34 @@ const severityColors: Record<string, string> = {
                                         </Button>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Documentation input -->
+                            <div v-if="activeTab === 'documentation'">
+                                <Label>Documentation Page</Label>
+                                <Select v-model="selectedDocumentationId">
+                                    <SelectTrigger class="mt-1.5 w-full">
+                                        <SelectValue
+                                            placeholder="Select a documentation page..."
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="doc in documentationOptions"
+                                            :key="doc.id"
+                                            :value="String(doc.id)"
+                                        >
+                                            {{ doc.label }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <p
+                                    v-if="documentationOptions.length === 0"
+                                    class="mt-1.5 text-xs text-muted-foreground"
+                                >
+                                    No documentation pages found in this project
+                                    yet.
+                                </p>
                             </div>
                         </CardContent>
                     </Card>

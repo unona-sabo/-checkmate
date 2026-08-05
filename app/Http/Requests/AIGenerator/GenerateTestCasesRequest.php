@@ -12,10 +12,11 @@ class GenerateTestCasesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'input_type' => ['required', 'string', 'in:text,file,image'],
+            'input_type' => ['required', 'string', 'in:text,file,image,documentation'],
             'text' => ['required_if:input_type,text', 'nullable', 'string', 'max:50000'],
             'file' => ['required_if:input_type,file', 'nullable', 'file', 'mimes:txt,md', 'max:2048'],
             'image' => ['required_if:input_type,image', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'documentation_id' => ['required_if:input_type,documentation', 'nullable', 'integer', 'exists:documentations,id'],
             'count' => ['nullable', 'integer', 'min:1', 'max:20'],
             'provider' => ['nullable', 'string', 'in:gemini,claude,openai'],
             'custom_prompt' => ['nullable', 'string', 'max:5000'],
@@ -32,6 +33,7 @@ class GenerateTestCasesRequest extends FormRequest
             'text.required_if' => 'Text content is required when using text input.',
             'file.required_if' => 'A file is required when using file input.',
             'image.required_if' => 'An image is required when using image input.',
+            'documentation_id.required_if' => 'Please select a documentation page.',
             'text.max' => 'Text content must not exceed 50,000 characters.',
             'file.max' => 'File must not exceed 2MB.',
             'image.max' => 'Image must not exceed 10MB.',

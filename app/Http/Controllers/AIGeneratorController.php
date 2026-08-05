@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AIGenerator\GenerateTestCasesRequest;
 use App\Http\Requests\AIGenerator\ImportTestCasesRequest;
 use App\Models\AiGeneration;
+use App\Models\Documentation;
 use App\Models\Project;
 use App\Models\ProjectFeature;
 use App\Models\TestCase;
@@ -26,6 +27,11 @@ class AIGeneratorController extends Controller
             ->orderBy('name')
             ->get();
 
+        $documentations = $project->documentations()
+            ->select('id', 'title', 'parent_id')
+            ->orderBy('order')
+            ->get();
+
         $defaultProvider = config('services.ai.default_provider', 'gemini');
         $hasGeminiKey = ! empty(config('services.gemini.api_key'));
         $hasClaudeKey = ! empty(config('services.anthropic.api_key'));
@@ -34,11 +40,23 @@ class AIGeneratorController extends Controller
         return Inertia::render('AIGenerator/Index', [
             'project' => $project,
             'testSuites' => $testSuites,
+            'documentations' => $documentations,
             'defaultProvider' => $defaultProvider,
             'hasGeminiKey' => $hasGeminiKey,
             'hasClaudeKey' => $hasClaudeKey,
             'hasOpenaiKey' => $hasOpenaiKey,
         ]);
+    }
+
+    /**
+     * Plain-text content of a project's documentation page, for use as AI
+     * generation input (documentation content is stored as HTML).
+     */
+    private function documentationPlainText(Project $project, int $documentationId): string
+    {
+        $documentation = $project->documentations()->findOrFail($documentationId);
+
+        return strip_tags($documentation->content ?? '');
     }
 
     public function generate(GenerateTestCasesRequest $request, Project $project): JsonResponse
@@ -64,6 +82,10 @@ class AIGeneratorController extends Controller
             'text' => $service->generateFromText($validated['text'], $options),
             'file' => $service->generateFromFile($request->file('file')->getRealPath(), $options),
             'image' => $service->generateFromImage($request->file('image')->getRealPath(), $options),
+            'documentation' => $service->generateFromText(
+                $this->documentationPlainText($project, (int) $validated['documentation_id']),
+                $options
+            ),
         };
 
         $generation = AiGeneration::query()->create([
