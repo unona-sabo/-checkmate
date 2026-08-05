@@ -1196,6 +1196,28 @@ const saveChildReorder = () => {
     margin: 0.25rem 0;
 }
 
+.prose table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 0.75rem 0;
+    overflow: hidden;
+}
+
+.prose table td,
+.prose table th {
+    border: 1px solid var(--border);
+    padding: 0.375rem 0.5rem;
+    vertical-align: top;
+    box-sizing: border-box;
+}
+
+.prose table th {
+    background: var(--muted);
+    font-weight: 600;
+    text-align: left;
+}
+
 .search-highlight {
     background-color: rgb(147 197 253 / 0.5);
     border-radius: 0.125rem;
