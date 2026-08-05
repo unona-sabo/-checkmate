@@ -117,7 +117,9 @@ class ClickupController extends Controller
 
             return back()->with('success', 'Webhook registered successfully.');
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to register webhook: '.$e->getMessage());
+            $endpoint ??= 'unknown';
+
+            return back()->with('error', "Failed to register webhook (endpoint: {$endpoint}): ".$e->getMessage());
         }
     }
 }
