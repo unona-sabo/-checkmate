@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,20 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
+
+interface ConnectionTestResult {
+    base_url: string;
+    dns: {
+        host: string | null;
+        resolved: boolean;
+        ip: string | null;
+    };
+    connection: {
+        reachable: boolean;
+        status: number | null;
+        message: string | null;
+    };
+}
 
 const props = defineProps<{
     settings: {
@@ -36,6 +51,43 @@ function save() {
             form.defaults();
         },
     });
+}
+
+const testingConnection = ref(false);
+const testError = ref('');
+const testResult = ref<ConnectionTestResult | null>(null);
+
+async function testConnection() {
+    testingConnection.value = true;
+    testError.value = '';
+    testResult.value = null;
+
+    try {
+        const response = await fetch('/settings/grafana/test-connection', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN':
+                    document.querySelector<HTMLMetaElement>(
+                        'meta[name="csrf-token"]',
+                    )?.content ?? '',
+                Accept: 'application/json',
+            },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            testError.value = data.error || 'Failed to test connection.';
+            return;
+        }
+
+        testResult.value = data;
+    } catch {
+        testError.value = 'Network error while testing connection.';
+    } finally {
+        testingConnection.value = false;
+    }
 }
 </script>
 
@@ -174,6 +226,71 @@ function save() {
                         </Transition>
                     </div>
                 </form>
+
+                <!-- Connection Diagnostics -->
+                <div class="space-y-3 rounded-lg border p-4">
+                    <Heading
+                        variant="small"
+                        title="Connection Diagnostics"
+                        description="Test whether this server can reach Grafana over the network — useful when it works locally but not in production (e.g. Grafana only being reachable over a VPN/private network the server isn't on)."
+                    />
+
+                    <Button
+                        variant="outline"
+                        class="cursor-pointer"
+                        :disabled="testingConnection"
+                        @click="testConnection"
+                    >
+                        {{
+                            testingConnection ? 'Testing...' : 'Test Connection'
+                        }}
+                    </Button>
+
+                    <p v-if="testError" class="text-sm text-destructive">
+                        {{ testError }}
+                    </p>
+
+                    <div
+                        v-if="testResult"
+                        class="space-y-2 rounded-md bg-muted/30 p-3 text-sm"
+                    >
+                        <p>
+                            <span class="font-medium">Base URL:</span>
+                            {{ testResult.base_url }}
+                        </p>
+                        <p>
+                            <span class="font-medium">DNS resolution:</span>
+                            <span
+                                v-if="testResult.dns.resolved"
+                                class="text-green-600"
+                            >
+                                Resolved {{ testResult.dns.host }} →
+                                {{ testResult.dns.ip }}
+                            </span>
+                            <span v-else class="text-destructive">
+                                Could not resolve "{{ testResult.dns.host }}" —
+                                this server's DNS doesn't know this host. If
+                                it's only reachable via VPN/private network,
+                                this server likely isn't on it.
+                            </span>
+                        </p>
+                        <p>
+                            <span class="font-medium">Network reachable:</span>
+                            <span
+                                v-if="testResult.connection.reachable"
+                                class="text-green-600"
+                            >
+                                {{ testResult.connection.message }}
+                            </span>
+                            <span v-else class="text-destructive">
+                                {{
+                                    testResult.connection.message ||
+                                    'Connection failed.'
+                                }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
             </div>
         </SettingsLayout>
     </AppLayout>

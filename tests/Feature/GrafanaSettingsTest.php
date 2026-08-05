@@ -2,6 +2,8 @@
 
 use App\Models\GrafanaSetting;
 use App\Models\User;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
 
 test('grafana settings page renders for authenticated user', function () {
     $user = User::factory()->create();
@@ -102,4 +104,70 @@ test('grafana settings shows has_token true after saving', function () {
             ->where('settings.base_url', 'https://logging.example.io')
             ->where('settings.datasource_id', '1')
         );
+});
+
+test('grafana test connection requires base url', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/settings/grafana/test-connection')
+        ->assertStatus(422)
+        ->assertJson(['error' => 'Grafana Base URL is not configured.']);
+});
+
+test('grafana test connection reports dns failure for unresolvable host', function () {
+    $user = User::factory()->create();
+
+    GrafanaSetting::current()->update([
+        'base_url' => 'https://this-domain-does-not-exist.invalid',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson('/settings/grafana/test-connection')
+        ->assertOk()
+        ->assertJson([
+            'dns' => [
+                'host' => 'this-domain-does-not-exist.invalid',
+                'resolved' => false,
+                'ip' => null,
+            ],
+        ]);
+});
+
+test('grafana test connection reports reachable when server responds', function () {
+    Http::fake([
+        'logging.example.io/*' => Http::response(['status' => 'ok'], 200),
+    ]);
+
+    $user = User::factory()->create();
+
+    GrafanaSetting::current()->update([
+        'base_url' => 'https://logging.example.io',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson('/settings/grafana/test-connection')
+        ->assertOk();
+
+    $response->assertJsonPath('connection.reachable', true);
+    $response->assertJsonPath('connection.status', 200);
+});
+
+test('grafana test connection reports connection failure message', function () {
+    Http::fake(function () {
+        throw new ConnectionException('cURL error 6: Could not resolve host');
+    });
+
+    $user = User::factory()->create();
+
+    GrafanaSetting::current()->update([
+        'base_url' => 'https://logging.example.io',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson('/settings/grafana/test-connection')
+        ->assertOk();
+
+    $response->assertJsonPath('connection.reachable', false);
+    expect($response->json('connection.message'))->toContain('Could not resolve host');
 });
