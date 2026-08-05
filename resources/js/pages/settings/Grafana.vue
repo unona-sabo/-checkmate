@@ -9,6 +9,12 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
 
+interface ConnectionAttempt {
+    reachable: boolean;
+    status: number | null;
+    message: string | null;
+}
+
 interface ConnectionTestResult {
     base_url: string;
     dns: {
@@ -16,11 +22,8 @@ interface ConnectionTestResult {
         resolved: boolean;
         ip: string | null;
     };
-    connection: {
-        reachable: boolean;
-        status: number | null;
-        message: string | null;
-    };
+    connection: ConnectionAttempt;
+    ip_connection: (ConnectionAttempt & { ip: string }) | null;
 }
 
 const props = defineProps<{
@@ -56,6 +59,7 @@ function save() {
 const testingConnection = ref(false);
 const testError = ref('');
 const testResult = ref<ConnectionTestResult | null>(null);
+const manualIp = ref('');
 
 async function testConnection() {
     testingConnection.value = true;
@@ -73,6 +77,7 @@ async function testConnection() {
                     )?.content ?? '',
                 Accept: 'application/json',
             },
+            body: JSON.stringify({ ip: manualIp.value.trim() || undefined }),
         });
 
         const data = await response.json();
@@ -235,16 +240,31 @@ async function testConnection() {
                         description="Test whether this server can reach Grafana over the network — useful when it works locally but not in production (e.g. Grafana only being reachable over a VPN/private network the server isn't on)."
                     />
 
-                    <Button
-                        variant="outline"
-                        class="cursor-pointer"
-                        :disabled="testingConnection"
-                        @click="testConnection"
-                    >
-                        {{
-                            testingConnection ? 'Testing...' : 'Test Connection'
-                        }}
-                    </Button>
+                    <div class="flex flex-wrap items-end gap-2">
+                        <div class="space-y-1">
+                            <Label for="manual_ip" class="text-xs"
+                                >Test by IP (optional, bypasses DNS)</Label
+                            >
+                            <Input
+                                id="manual_ip"
+                                v-model="manualIp"
+                                placeholder="e.g. 10.1.1.105"
+                                class="w-48"
+                            />
+                        </div>
+                        <Button
+                            variant="outline"
+                            class="cursor-pointer"
+                            :disabled="testingConnection"
+                            @click="testConnection"
+                        >
+                            {{
+                                testingConnection
+                                    ? 'Testing...'
+                                    : 'Test Connection'
+                            }}
+                        </Button>
+                    </div>
 
                     <p v-if="testError" class="text-sm text-destructive">
                         {{ testError }}
@@ -287,6 +307,30 @@ async function testConnection() {
                                     testResult.connection.message ||
                                     'Connection failed.'
                                 }}
+                            </span>
+                        </p>
+                        <p v-if="testResult.ip_connection">
+                            <span class="font-medium"
+                                >Reachable by IP ({{
+                                    testResult.ip_connection.ip
+                                }}, bypassing DNS):</span
+                            >
+                            <span
+                                v-if="testResult.ip_connection.reachable"
+                                class="text-green-600"
+                            >
+                                {{ testResult.ip_connection.message }} — DNS is
+                                the only problem; adding this host to /etc/hosts
+                                on the server would fix it.
+                            </span>
+                            <span v-else class="text-destructive">
+                                {{
+                                    testResult.ip_connection.message ||
+                                    'Connection failed.'
+                                }}
+                                — the server has no network route to this host
+                                at all, not just a DNS problem. A VPN client or
+                                firewall rule is needed on the server itself.
                             </span>
                         </p>
                     </div>

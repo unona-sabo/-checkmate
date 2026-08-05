@@ -171,3 +171,40 @@ test('grafana test connection reports connection failure message', function () {
     $response->assertJsonPath('connection.reachable', false);
     expect($response->json('connection.message'))->toContain('Could not resolve host');
 });
+
+test('grafana test connection with manual ip bypasses dns via curl resolve', function () {
+    Http::fake([
+        'logging.example.io/*' => Http::response(['status' => 'ok'], 200),
+    ]);
+
+    $user = User::factory()->create();
+
+    GrafanaSetting::current()->update([
+        'base_url' => 'https://logging.example.io',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson('/settings/grafana/test-connection', ['ip' => '10.1.1.105'])
+        ->assertOk();
+
+    $response->assertJsonPath('ip_connection.ip', '10.1.1.105');
+    $response->assertJsonPath('ip_connection.reachable', true);
+});
+
+test('grafana test connection omits ip_connection when no ip provided', function () {
+    Http::fake([
+        'logging.example.io/*' => Http::response(['status' => 'ok'], 200),
+    ]);
+
+    $user = User::factory()->create();
+
+    GrafanaSetting::current()->update([
+        'base_url' => 'https://logging.example.io',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson('/settings/grafana/test-connection')
+        ->assertOk();
+
+    $response->assertJsonPath('ip_connection', null);
+});
