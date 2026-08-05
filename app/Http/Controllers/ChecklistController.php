@@ -16,6 +16,7 @@ use App\Models\Project;
 use App\Services\FeatureLinkingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -665,6 +666,112 @@ class ChecklistController extends Controller
 
         return redirect()->route('checklists.show', [$project, $checklist])
             ->with('success', $importedCount.' rows imported successfully.');
+    }
+
+    /**
+     * Create a new checklist from a CSV file, using its header row as columns.
+     */
+    public function importCsvToNewChecklist(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'file' => 'required|file|mimes:csv,txt|max:5120', // 5MB max
+        ], [
+            'name.required' => 'Please enter a name for the checklist.',
+            'file.required' => 'Please select a file to import.',
+            'file.mimes' => 'The file must be a CSV file.',
+            'file.max' => 'The file size must not exceed 5MB.',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        $validated = $validator->validated();
+
+        $file = $request->file('file');
+        $content = file_get_contents($file->getRealPath());
+
+        // Remove BOM if present
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+        // Parse CSV
+        $lines = array_filter(explode("\n", $content), fn ($line) => trim($line) !== '');
+
+        if (count($lines) < 1) {
+            return back()->withErrors(['file' => 'The CSV file is empty.']);
+        }
+
+        // Parse header row
+        $headerLine = array_shift($lines);
+        $headerLine = preg_replace('/[\x00-\x1F\x7F]/u', '', $headerLine);
+        $csvHeaders = str_getcsv($headerLine);
+        $csvHeaders = array_map(fn ($h) => trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/u', '', $h)), $csvHeaders);
+        $csvHeaders = array_values(array_filter($csvHeaders, fn ($h) => $h !== ''));
+
+        if (empty($csvHeaders)) {
+            return back()->withErrors(['file' => 'The CSV file has no columns.']);
+        }
+
+        // Build checklist columns from CSV headers, ensuring unique keys
+        $usedKeys = [];
+        $columns = [];
+        foreach ($csvHeaders as $header) {
+            $key = Str::slug($header, '_') ?: 'column';
+            $baseKey = $key;
+            $suffix = 1;
+            while (in_array($key, $usedKeys, true)) {
+                $key = $baseKey.'_'.$suffix++;
+            }
+            $usedKeys[] = $key;
+            $columns[] = ['key' => $key, 'label' => $header, 'type' => 'text'];
+        }
+
+        $checklist = $project->checklists()->create([
+            'name' => $validated['name'],
+            'columns_config' => $columns,
+            'order' => ($project->checklists()->max('order') ?? -1) + 1,
+        ]);
+
+        // Import data rows
+        $importedCount = 0;
+        foreach ($lines as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+
+            $line = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $line);
+            $csvRow = str_getcsv($line);
+
+            if (isset($csvRow[0])) {
+                $csvRow[0] = preg_replace('/^[\xEF\xBB\xBF]+/u', '', $csvRow[0]);
+            }
+
+            $data = [];
+            foreach ($columns as $index => $col) {
+                $value = $csvRow[$index] ?? '';
+                $value = trim(preg_replace('/^[\xEF\xBB\xBF]+/u', '', $value));
+                $data[$col['key']] = $value;
+            }
+
+            $checklist->rows()->create([
+                'data' => $data,
+                'order' => $importedCount,
+                'row_type' => 'normal',
+            ]);
+            $importedCount++;
+        }
+
+        if ($importedCount === 0) {
+            $checklist->delete();
+
+            return back()->withErrors(['file' => 'No data rows found in the CSV file.']);
+        }
+
+        return redirect()->route('checklists.show', [$project, $checklist])
+            ->with('success', $importedCount.' rows imported into new checklist "'.$checklist->name.'".');
     }
 
     /**
