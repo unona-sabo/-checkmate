@@ -185,3 +185,41 @@ test('export with ids returns only selected rows', function () {
     expect($content)->toContain('Included Row');
     expect($content)->not->toContain('Excluded Row');
 });
+
+test('export strips HTML from rich-text cell values', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $checklist = Checklist::factory()->create([
+        'project_id' => $project->id,
+        'columns_config' => [
+            ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
+        ],
+    ]);
+
+    ChecklistRow::create([
+        'checklist_id' => $checklist->id,
+        'data' => ['item' => '<p>Philippines</p>'],
+        'order' => 0,
+    ]);
+    ChecklistRow::create([
+        'checklist_id' => $checklist->id,
+        'data' => ['item' => '<p>Line one</p><p>Line two</p>'],
+        'order' => 1,
+    ]);
+    ChecklistRow::create([
+        'checklist_id' => $checklist->id,
+        'data' => ['item' => '<p><strong>Bold</strong> &amp; <em>italic</em></p>'],
+        'order' => 2,
+    ]);
+
+    $response = $this->actingAs($user)->get(
+        route('checklists.export', [$project, $checklist])
+    );
+
+    $content = $response->streamedContent();
+    expect($content)->toContain('Philippines');
+    expect($content)->not->toContain('<p>');
+    expect($content)->not->toContain('</p>');
+    expect($content)->toContain("Line one\nLine two");
+    expect($content)->toContain('Bold & italic');
+});

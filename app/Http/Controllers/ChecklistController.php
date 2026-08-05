@@ -490,6 +490,16 @@ class ChecklistController extends Controller
                                 break;
                             }
                         }
+                    } elseif ($col['type'] === 'text' && $value !== '') {
+                        // Text cells are edited via a rich-text mini editor and
+                        // stored as HTML (e.g. "<p>Philippines</p>") — export
+                        // as plain text instead of leaking markup. Paragraph
+                        // breaks and <br> become newlines before stripping
+                        // the remaining formatting tags.
+                        $value = (string) $value;
+                        $value = preg_replace('#</p>\s*<p>#i', "\n", $value);
+                        $value = preg_replace('#<br\s*/?>#i', "\n", $value);
+                        $value = trim(html_entity_decode(strip_tags($value)));
                     }
                     $rowData[] = $value;
                 }
