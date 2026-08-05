@@ -924,6 +924,17 @@ watch(showNoteDialog, (open) => {
                     </RestrictedAction>
 
                     <RestrictedAction>
+                        <Button
+                            variant="outline"
+                            class="gap-2"
+                            @click="showImportChecklistDialog = true"
+                        >
+                            <Import class="h-4 w-4" />
+                            Import
+                        </Button>
+                    </RestrictedAction>
+
+                    <RestrictedAction>
                         <Link
                             :href="`/projects/${project.id}/checklists/create`"
                         >
