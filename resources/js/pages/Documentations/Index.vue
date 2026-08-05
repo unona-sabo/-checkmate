@@ -13,6 +13,7 @@ import {
     Pencil,
     Download,
     Upload,
+    FileSpreadsheet,
 } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -32,8 +33,21 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useSearch } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -491,6 +505,111 @@ const submitImport = () => {
     );
 };
 
+// Flatten documents (with their direct children) for the document pickers
+// used by the File menu's Export/Import-into-document dialogs.
+const allDocumentsFlat = computed(() => {
+    const result: { id: number; label: string }[] = [];
+    for (const doc of localDocs.value) {
+        result.push({ id: doc.id, label: doc.title });
+        for (const child of doc.children ?? []) {
+            result.push({
+                id: child.id,
+                label: `${doc.title} / ${child.title}`,
+            });
+        }
+    }
+    return result;
+});
+
+// File menu — Export a selected document
+const showExportDialog = ref(false);
+const exportDocumentId = ref('');
+
+const submitExport = () => {
+    if (!exportDocumentId.value) return;
+    window.location.href = `/projects/${props.project.id}/documentations/${exportDocumentId.value}/export`;
+    showExportDialog.value = false;
+    exportDocumentId.value = '';
+};
+
+// File menu — Import into a selected existing document
+const showFileImportDialog = ref(false);
+const fileImportDocumentId = ref('');
+const fileImportFileInputRef = ref<HTMLInputElement | null>(null);
+const fileImportFile = ref<File | null>(null);
+const fileImportError = ref<string | null>(null);
+const isFileImporting = ref(false);
+
+const handleFileImportFileSelect = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    fileImportError.value = null;
+
+    if (!file) {
+        fileImportFile.value = null;
+        return;
+    }
+
+    const allowed = [
+        '.json',
+        '.pdf',
+        '.doc',
+        '.docx',
+        '.xls',
+        '.xlsx',
+        '.csv',
+        '.txt',
+    ];
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!allowed.includes(ext)) {
+        fileImportError.value =
+            'Unsupported format. Allowed: JSON, PDF, DOC, DOCX, XLS, XLSX, CSV, TXT.';
+        fileImportFile.value = null;
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        fileImportError.value = 'File is too large. Maximum size is 5MB.';
+        fileImportFile.value = null;
+        return;
+    }
+
+    fileImportFile.value = file;
+};
+
+const closeFileImportDialog = () => {
+    showFileImportDialog.value = false;
+    fileImportDocumentId.value = '';
+    fileImportFile.value = null;
+    fileImportError.value = null;
+};
+
+const submitFileImport = () => {
+    if (!fileImportDocumentId.value || !fileImportFile.value) return;
+
+    isFileImporting.value = true;
+    fileImportError.value = null;
+
+    const formData = new FormData();
+    formData.append('file', fileImportFile.value);
+
+    router.post(
+        `/projects/${props.project.id}/documentations/${fileImportDocumentId.value}/import`,
+        formData,
+        {
+            forceFormData: true,
+            onSuccess: () => {
+                closeFileImportDialog();
+                isFileImporting.value = false;
+            },
+            onError: (errors) => {
+                fileImportError.value = errors.file || 'Import failed.';
+                isFileImporting.value = false;
+            },
+        },
+    );
+};
+
 onMounted(() => {
     loadDraftFlag();
 });
@@ -508,16 +627,50 @@ onMounted(() => {
                     <FileText class="mt-1 h-6 w-6 shrink-0 text-primary" />
                     Documentations
                 </h1>
-                <RestrictedAction v-if="documentations.length > 0">
-                    <Link
-                        :href="`/projects/${project.id}/documentations/create`"
-                    >
-                        <Button variant="cta" class="cursor-pointer gap-2">
-                            <Plus class="h-4 w-4" />
-                            Documentation
-                        </Button>
-                    </Link>
-                </RestrictedAction>
+                <div
+                    v-if="documentations.length > 0"
+                    class="flex items-center gap-2"
+                >
+                    <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                            <Button
+                                variant="outline"
+                                class="cursor-pointer gap-1.5"
+                            >
+                                <FileSpreadsheet class="h-4 w-4" />
+                                File
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <RestrictedAction>
+                                <DropdownMenuItem
+                                    class="cursor-pointer"
+                                    @click="showFileImportDialog = true"
+                                >
+                                    <Download class="mr-2 h-4 w-4" />
+                                    Import
+                                </DropdownMenuItem>
+                            </RestrictedAction>
+                            <DropdownMenuItem
+                                class="cursor-pointer"
+                                @click="showExportDialog = true"
+                            >
+                                <Upload class="mr-2 h-4 w-4" />
+                                Export
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <RestrictedAction>
+                        <Link
+                            :href="`/projects/${project.id}/documentations/create`"
+                        >
+                            <Button variant="cta" class="cursor-pointer gap-2">
+                                <Plus class="h-4 w-4" />
+                                Documentation
+                            </Button>
+                        </Link>
+                    </RestrictedAction>
+                </div>
             </div>
 
             <div
@@ -1028,6 +1181,184 @@ onMounted(() => {
                             >
                                 <Download class="h-4 w-4" />
                                 {{ isImportingDoc ? 'Importing...' : 'Import' }}
+                            </Button>
+                        </RestrictedAction>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- File Menu: Export a selected document -->
+            <Dialog v-model:open="showExportDialog">
+                <DialogContent class="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <Upload class="h-5 w-5 text-primary" />
+                            Export Document
+                        </DialogTitle>
+                        <DialogDescription>
+                            Select a documentation page to export as JSON.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="space-y-2 py-4">
+                        <Label>Document</Label>
+                        <Select v-model="exportDocumentId">
+                            <SelectTrigger class="w-full">
+                                <SelectValue
+                                    placeholder="Select a document..."
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="doc in allDocumentsFlat"
+                                    :key="doc.id"
+                                    :value="String(doc.id)"
+                                >
+                                    {{ doc.label }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            @click="showExportDialog = false"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            @click="submitExport"
+                            :disabled="!exportDocumentId"
+                            class="gap-2"
+                        >
+                            <Upload class="h-4 w-4" />
+                            Export
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- File Menu: Import into a selected existing document -->
+            <Dialog
+                :open="showFileImportDialog"
+                @update:open="
+                    (v: boolean) => {
+                        if (!v) closeFileImportDialog();
+                    }
+                "
+            >
+                <DialogContent class="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <Download class="h-5 w-5 text-primary" />
+                            Import into Document
+                        </DialogTitle>
+                        <DialogDescription>
+                            Upload a file to add as a sub-page of the selected
+                            document. JSON files are imported as a documentation
+                            tree. PDF, DOC, Excel, CSV and TXT are parsed and
+                            added as a single page.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="space-y-4 py-4">
+                        <div class="space-y-2">
+                            <Label>Document</Label>
+                            <Select v-model="fileImportDocumentId">
+                                <SelectTrigger class="w-full">
+                                    <SelectValue
+                                        placeholder="Select a document..."
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="doc in allDocumentsFlat"
+                                        :key="doc.id"
+                                        :value="String(doc.id)"
+                                    >
+                                        {{ doc.label }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label>File</Label>
+                            <input
+                                ref="fileImportFileInputRef"
+                                type="file"
+                                accept=".json,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                                class="hidden"
+                                @change="handleFileImportFileSelect"
+                            />
+                            <Button
+                                variant="outline"
+                                class="w-full cursor-pointer justify-start gap-2 font-normal"
+                                @click="fileImportFileInputRef?.click()"
+                            >
+                                <Upload class="h-4 w-4 text-muted-foreground" />
+                                <span
+                                    :class="
+                                        fileImportFile
+                                            ? 'text-foreground'
+                                            : 'text-muted-foreground'
+                                    "
+                                >
+                                    {{
+                                        fileImportFile
+                                            ? fileImportFile.name
+                                            : 'Choose file...'
+                                    }}
+                                </span>
+                            </Button>
+                            <p class="text-xs text-muted-foreground">
+                                JSON, PDF, DOC, DOCX, XLS, XLSX, CSV, TXT — max
+                                5MB
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="fileImportFile"
+                            class="rounded-lg border bg-muted/30 p-3"
+                        >
+                            <p class="text-sm font-medium">
+                                {{ fileImportFile.name }}
+                            </p>
+                            <p class="text-xs text-muted-foreground">
+                                {{ (fileImportFile.size / 1024).toFixed(1) }}
+                                KB
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="fileImportError"
+                            class="rounded-lg border border-destructive/50 bg-destructive/10 p-3"
+                        >
+                            <p class="text-sm text-destructive">
+                                {{ fileImportError }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" @click="closeFileImportDialog"
+                            >Cancel</Button
+                        >
+                        <RestrictedAction>
+                            <Button
+                                @click="submitFileImport"
+                                :disabled="
+                                    !fileImportDocumentId ||
+                                    !fileImportFile ||
+                                    isFileImporting
+                                "
+                                class="gap-2"
+                            >
+                                <Download class="h-4 w-4" />
+                                {{
+                                    isFileImporting ? 'Importing...' : 'Import'
+                                }}
                             </Button>
                         </RestrictedAction>
                     </DialogFooter>
