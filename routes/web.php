@@ -270,6 +270,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('documentations/create', [DocumentationController::class, 'create'])->name('create');
         Route::post('documentations', [DocumentationController::class, 'store'])->name('store');
         Route::post('documentations/reorder', [DocumentationController::class, 'reorder'])->name('reorder');
+        Route::post('documentations/note', [DocumentationController::class, 'storeNote'])->name('store-note');
+        Route::post('documentations/import-new', [DocumentationController::class, 'importToNew'])->name('import-new');
         Route::get('documentations/{documentation}', [DocumentationController::class, 'show'])->name('show');
         Route::get('documentations/{documentation}/edit', [DocumentationController::class, 'edit'])->name('edit');
         Route::put('documentations/{documentation}', [DocumentationController::class, 'update'])->name('update');

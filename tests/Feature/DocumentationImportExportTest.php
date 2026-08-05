@@ -219,3 +219,131 @@ test('viewer cannot import documentation', function () {
 
     $response->assertForbidden();
 });
+
+test('import into new top-level documentation creates JSON tree without existing parent', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $json = json_encode([
+        'title' => 'Imported Root',
+        'content' => '<p>root content</p>',
+        'children' => [
+            ['title' => 'Child A'],
+        ],
+    ]);
+    $file = UploadedFile::fake()->createWithContent('doc.json', $json);
+
+    $response = $this->actingAs($user)->post(
+        route('documentations.import-new', $project),
+        ['file' => $file]
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success', '2 document(s) imported successfully.');
+
+    $root = Documentation::where('project_id', $project->id)->where('title', 'Imported Root')->first();
+    expect($root)->not->toBeNull();
+    expect($root->parent_id)->toBeNull();
+
+    $child = Documentation::where('parent_id', $root->id)->first();
+    expect($child)->not->toBeNull();
+    expect($child->title)->toBe('Child A');
+});
+
+test('import into new top-level documentation parses non-JSON file', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $file = UploadedFile::fake()->createWithContent('notes.txt', "First paragraph.\n\nSecond paragraph.");
+
+    $response = $this->actingAs($user)->post(
+        route('documentations.import-new', $project),
+        ['file' => $file]
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    $imported = Documentation::where('project_id', $project->id)->where('title', 'notes')->first();
+    expect($imported)->not->toBeNull();
+    expect($imported->parent_id)->toBeNull();
+});
+
+test('viewer cannot import into new top-level documentation', function () {
+    $owner = User::factory()->create();
+    $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+    $workspace->members()->attach($owner->id, ['role' => 'owner']);
+
+    $project = Project::factory()->create([
+        'user_id' => $owner->id,
+        'workspace_id' => $workspace->id,
+    ]);
+
+    $viewer = User::factory()->create();
+    $workspace->members()->attach($viewer->id, ['role' => 'viewer']);
+    $viewer->update(['current_workspace_id' => $workspace->id]);
+
+    $file = UploadedFile::fake()->createWithContent('doc.json', json_encode(['title' => 'Test']));
+
+    $response = $this->actingAs($viewer)->post(
+        route('documentations.import-new', $project),
+        ['file' => $file]
+    );
+
+    $response->assertForbidden();
+});
+
+test('store note creates a new top-level documentation', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('documentations.store-note', $project),
+        [
+            'title' => 'Quick Note',
+            'content' => '<p>Line one</p><p>Line two</p>',
+        ]
+    );
+
+    $documentation = Documentation::where('project_id', $project->id)->where('title', 'Quick Note')->first();
+    expect($documentation)->not->toBeNull();
+    expect($documentation->parent_id)->toBeNull();
+    expect($documentation->content)->toBe('<p>Line one</p><p>Line two</p>');
+
+    $response->assertRedirect(route('documentations.show', [$project, $documentation]));
+    $response->assertSessionHas('success');
+});
+
+test('store note requires title and content', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('documentations.store-note', $project),
+        []
+    );
+
+    $response->assertSessionHasErrors(['title', 'content']);
+});
+
+test('viewer cannot store a note', function () {
+    $owner = User::factory()->create();
+    $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+    $workspace->members()->attach($owner->id, ['role' => 'owner']);
+
+    $project = Project::factory()->create([
+        'user_id' => $owner->id,
+        'workspace_id' => $workspace->id,
+    ]);
+
+    $viewer = User::factory()->create();
+    $workspace->members()->attach($viewer->id, ['role' => 'viewer']);
+    $viewer->update(['current_workspace_id' => $workspace->id]);
+
+    $response = $this->actingAs($viewer)->post(
+        route('documentations.store-note', $project),
+        ['title' => 'Test', 'content' => 'content']
+    );
+
+    $response->assertForbidden();
+});

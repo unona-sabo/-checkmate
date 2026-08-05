@@ -209,6 +209,22 @@ class DocumentationController extends Controller
     {
         $this->authorize('update', $project);
 
+        return $this->handleImport($request, $project, $documentation->id);
+    }
+
+    /**
+     * Import a file as a new top-level documentation page (or tree), for
+     * projects that have no documentation to import into yet.
+     */
+    public function importToNew(Request $request, Project $project): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        return $this->handleImport($request, $project, null);
+    }
+
+    private function handleImport(Request $request, Project $project, ?int $parentId): RedirectResponse
+    {
         $request->validate([
             'file' => 'required|file|max:5120',
         ]);
@@ -218,7 +234,7 @@ class DocumentationController extends Controller
         $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
         $maxOrder = $project->documentations()
-            ->where('parent_id', $documentation->id)
+            ->where('parent_id', $parentId)
             ->max('order') ?? -1;
 
         // JSON files: import as documentation tree (existing behavior)
@@ -235,7 +251,7 @@ class DocumentationController extends Controller
                 return back()->withErrors(['file' => 'Invalid documentation JSON format.']);
             }
 
-            $count = $this->importDocumentation($data, $project, $documentation->id, $maxOrder + 1);
+            $count = $this->importDocumentation($data, $project, $parentId, $maxOrder + 1);
 
             return back()->with('success', "{$count} document(s) imported successfully.");
         }
@@ -248,7 +264,7 @@ class DocumentationController extends Controller
             $project->documentations()->create([
                 'title' => $parsed['title'],
                 'content' => $parsed['content'],
-                'parent_id' => $documentation->id,
+                'parent_id' => $parentId,
                 'order' => $maxOrder + 1,
             ]);
 
@@ -260,6 +276,32 @@ class DocumentationController extends Controller
 
             return back()->withErrors(['file' => 'Failed to parse the uploaded file.']);
         }
+    }
+
+    /**
+     * Create a new top-level documentation page from a quick note (plain
+     * title + content), for projects that have no documentation yet.
+     */
+    public function storeNote(Request $request, Project $project): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'content' => 'required|string',
+        ]);
+
+        $maxOrder = $project->documentations()->whereNull('parent_id')->max('order') ?? -1;
+
+        $documentation = $project->documentations()->create([
+            'title' => $validated['title'],
+            'content' => $validated['content'],
+            'parent_id' => null,
+            'order' => $maxOrder + 1,
+        ]);
+
+        return redirect()->route('documentations.show', [$project, $documentation])
+            ->with('success', 'Documentation created successfully.');
     }
 
     /**
@@ -287,7 +329,7 @@ class DocumentationController extends Controller
     /**
      * @param  array<string, mixed>  $data
      */
-    private function importDocumentation(array $data, Project $project, int $parentId, int $order): int
+    private function importDocumentation(array $data, Project $project, ?int $parentId, int $order): int
     {
         $doc = $project->documentations()->create([
             'title' => $data['title'] ?? 'Untitled',

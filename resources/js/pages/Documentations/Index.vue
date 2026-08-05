@@ -9,8 +9,12 @@ import {
     ExternalLink,
     ChevronRight,
     GripVertical,
+    StickyNote,
+    Pencil,
+    Download,
+    Upload,
 } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,7 +24,17 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useSearch } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
@@ -267,6 +281,219 @@ const highlightDescription = (content: string): string => {
             .substring(0, 200) + '...';
     return highlight(plain);
 };
+
+// Empty state — Create a Note (creates a new top-level documentation page)
+const showNoteDialog = ref(false);
+const noteTitle = ref('');
+const noteContent = ref('');
+const isCreatingNote = ref(false);
+const hasDraft = ref(false);
+const DRAFT_STORAGE_KEY = `documentation-note-draft-${props.project.id}`;
+
+interface NoteDraft {
+    title: string;
+    content: string;
+}
+
+const loadDraftFlag = () => {
+    try {
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+            const draft: NoteDraft = JSON.parse(saved);
+            if (draft.title?.trim() || draft.content?.trim()) {
+                hasDraft.value = true;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load draft:', e);
+    }
+};
+
+const saveDraft = () => {
+    if (!noteTitle.value.trim() && !noteContent.value.trim()) {
+        deleteDraft();
+        return;
+    }
+    try {
+        localStorage.setItem(
+            DRAFT_STORAGE_KEY,
+            JSON.stringify({
+                title: noteTitle.value,
+                content: noteContent.value,
+            }),
+        );
+        hasDraft.value = true;
+    } catch (e) {
+        console.error('Failed to save draft:', e);
+    }
+};
+
+const deleteDraft = () => {
+    try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        hasDraft.value = false;
+    } catch (e) {
+        console.error('Failed to delete draft:', e);
+    }
+};
+
+const openDraft = () => {
+    try {
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+            const draft: NoteDraft = JSON.parse(saved);
+            noteTitle.value = draft.title || '';
+            noteContent.value = draft.content || '';
+        }
+    } catch (e) {
+        console.error('Failed to open draft:', e);
+    }
+};
+
+const clearNote = () => {
+    noteTitle.value = '';
+    noteContent.value = '';
+    deleteDraft();
+};
+
+watch(showNoteDialog, (open) => {
+    if (open) {
+        if (hasDraft.value) {
+            openDraft();
+        }
+        return;
+    }
+
+    if (noteTitle.value.trim() || noteContent.value.trim()) {
+        saveDraft();
+    }
+
+    noteTitle.value = '';
+    noteContent.value = '';
+});
+
+const escapeHtml = (text: string): string =>
+    text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+const submitNote = () => {
+    if (!noteTitle.value.trim() || !noteContent.value.trim()) return;
+
+    isCreatingNote.value = true;
+
+    // Documentation content is rendered as HTML — turn each line into its
+    // own escaped paragraph rather than storing raw plain text.
+    const html = noteContent.value
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => `<p>${escapeHtml(line)}</p>`)
+        .join('');
+
+    router.post(
+        `/projects/${props.project.id}/documentations/note`,
+        {
+            title: noteTitle.value.trim(),
+            content: html,
+        },
+        {
+            onSuccess: () => {
+                showNoteDialog.value = false;
+                noteTitle.value = '';
+                noteContent.value = '';
+                isCreatingNote.value = false;
+                deleteDraft();
+            },
+            onError: () => {
+                isCreatingNote.value = false;
+            },
+        },
+    );
+};
+
+// Empty state — Import (creates new top-level documentation(s) from a file)
+const showImportDialog = ref(false);
+const importFileInput = ref<HTMLInputElement | null>(null);
+const importFile = ref<File | null>(null);
+const importError = ref<string | null>(null);
+const isImportingDoc = ref(false);
+
+const handleImportFileSelect = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    importError.value = null;
+
+    if (!file) {
+        importFile.value = null;
+        return;
+    }
+
+    const allowed = [
+        '.json',
+        '.pdf',
+        '.doc',
+        '.docx',
+        '.xls',
+        '.xlsx',
+        '.csv',
+        '.txt',
+    ];
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!allowed.includes(ext)) {
+        importError.value =
+            'Unsupported format. Allowed: JSON, PDF, DOC, DOCX, XLS, XLSX, CSV, TXT.';
+        importFile.value = null;
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        importError.value = 'File is too large. Maximum size is 5MB.';
+        importFile.value = null;
+        return;
+    }
+
+    importFile.value = file;
+};
+
+const closeImportDialog = () => {
+    showImportDialog.value = false;
+    importFile.value = null;
+    importError.value = null;
+};
+
+const submitImport = () => {
+    if (!importFile.value) return;
+
+    isImportingDoc.value = true;
+    importError.value = null;
+
+    const formData = new FormData();
+    formData.append('file', importFile.value);
+
+    router.post(
+        `/projects/${props.project.id}/documentations/import-new`,
+        formData,
+        {
+            forceFormData: true,
+            onSuccess: () => {
+                closeImportDialog();
+                isImportingDoc.value = false;
+            },
+            onError: (errors) => {
+                importError.value = errors.file || 'Import failed.';
+                isImportingDoc.value = false;
+            },
+        },
+    );
+};
+
+onMounted(() => {
+    loadDraftFlag();
+});
 </script>
 
 <template>
@@ -305,17 +532,42 @@ const highlightDescription = (content: string): string => {
                     <p class="mt-2 text-sm text-muted-foreground">
                         Create your first documentation page.
                     </p>
-                    <RestrictedAction>
-                        <Link
-                            :href="`/projects/${project.id}/documentations/create`"
-                            class="mt-4 inline-block"
-                        >
-                            <Button variant="cta" class="cursor-pointer gap-2">
-                                <Plus class="h-4 w-4" />
-                                Create Documentation
+                    <div class="mt-4 flex items-center justify-center gap-2">
+                        <RestrictedAction>
+                            <Link
+                                :href="`/projects/${project.id}/documentations/create`"
+                            >
+                                <Button
+                                    variant="cta"
+                                    class="cursor-pointer gap-2"
+                                >
+                                    <Plus class="h-4 w-4" />
+                                    Create Documentation
+                                </Button>
+                            </Link>
+                        </RestrictedAction>
+                        <RestrictedAction>
+                            <Button
+                                :variant="hasDraft ? 'cta' : 'outline'"
+                                class="cursor-pointer gap-2"
+                                @click="showNoteDialog = true"
+                            >
+                                <Pencil v-if="hasDraft" class="h-4 w-4" />
+                                <StickyNote v-else class="h-4 w-4" />
+                                {{ hasDraft ? 'Draft' : 'Create a Note' }}
                             </Button>
-                        </Link>
-                    </RestrictedAction>
+                        </RestrictedAction>
+                        <RestrictedAction>
+                            <Button
+                                variant="outline"
+                                class="cursor-pointer gap-2"
+                                @click="showImportDialog = true"
+                            >
+                                <Download class="h-4 w-4" />
+                                Import
+                            </Button>
+                        </RestrictedAction>
+                    </div>
                 </div>
             </div>
 
@@ -590,6 +842,197 @@ const highlightDescription = (content: string): string => {
                     </div>
                 </div>
             </template>
+
+            <!-- Create a Note Dialog -->
+            <Dialog v-model:open="showNoteDialog">
+                <DialogContent
+                    class="flex max-h-[75vh] max-w-2xl flex-col"
+                    style="
+                        overflow: hidden !important;
+                        max-width: min(42rem, calc(100vw - 2rem)) !important;
+                    "
+                >
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <StickyNote class="h-5 w-5 text-primary" />
+                            {{ hasDraft ? 'Edit Draft' : 'Create a Note' }}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Creates a new documentation page. Each line becomes
+                            a paragraph.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div
+                        class="min-h-0 flex-1 space-y-4 overflow-y-auto px-0.5 py-4"
+                    >
+                        <div class="space-y-2">
+                            <Label>Title</Label>
+                            <Input
+                                v-model="noteTitle"
+                                type="text"
+                                placeholder="e.g. Deployment Checklist"
+                            />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label>Content</Label>
+                            <Textarea
+                                v-model="noteContent"
+                                placeholder="Write your notes here — each line becomes a paragraph..."
+                                rows="10"
+                                class="resize-y text-sm"
+                                style="
+                                    white-space: pre-wrap;
+                                    overflow-wrap: break-word;
+                                    overflow-y: auto;
+                                    max-height: 400px;
+                                "
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter
+                        class="flex justify-between sm:justify-between"
+                    >
+                        <Button
+                            v-if="noteTitle.trim() || noteContent.trim()"
+                            variant="ghost"
+                            @click="clearNote"
+                            class="gap-2 text-muted-foreground hover:text-destructive"
+                        >
+                            <X class="h-4 w-4" />
+                            Clear
+                        </Button>
+                        <div v-else></div>
+                        <div class="flex gap-2">
+                            <Button
+                                variant="outline"
+                                @click="showNoteDialog = false"
+                            >
+                                Cancel
+                            </Button>
+                            <RestrictedAction>
+                                <Button
+                                    @click="submitNote"
+                                    :disabled="
+                                        !noteTitle.trim() ||
+                                        !noteContent.trim() ||
+                                        isCreatingNote
+                                    "
+                                    class="gap-2"
+                                >
+                                    <Plus class="h-4 w-4" />
+                                    {{
+                                        isCreatingNote
+                                            ? 'Creating...'
+                                            : 'Create Documentation'
+                                    }}
+                                </Button>
+                            </RestrictedAction>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Import Dialog -->
+            <Dialog
+                :open="showImportDialog"
+                @update:open="
+                    (v: boolean) => {
+                        if (!v) closeImportDialog();
+                    }
+                "
+            >
+                <DialogContent class="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <Download class="h-5 w-5 text-primary" />
+                            Import Documentation
+                        </DialogTitle>
+                        <DialogDescription>
+                            Upload a document file to create a new documentation
+                            page. JSON files are imported as a documentation
+                            tree. PDF, DOC, Excel, CSV and TXT are parsed and
+                            added as a single page.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="space-y-4 py-4">
+                        <div class="space-y-2">
+                            <Label>File</Label>
+                            <input
+                                ref="importFileInput"
+                                type="file"
+                                accept=".json,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                                class="hidden"
+                                @change="handleImportFileSelect"
+                            />
+                            <Button
+                                variant="outline"
+                                class="w-full cursor-pointer justify-start gap-2 font-normal"
+                                @click="importFileInput?.click()"
+                            >
+                                <Upload class="h-4 w-4 text-muted-foreground" />
+                                <span
+                                    :class="
+                                        importFile
+                                            ? 'text-foreground'
+                                            : 'text-muted-foreground'
+                                    "
+                                >
+                                    {{
+                                        importFile
+                                            ? importFile.name
+                                            : 'Choose file...'
+                                    }}
+                                </span>
+                            </Button>
+                            <p class="text-xs text-muted-foreground">
+                                JSON, PDF, DOC, DOCX, XLS, XLSX, CSV, TXT — max
+                                5MB
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="importFile"
+                            class="rounded-lg border bg-muted/30 p-3"
+                        >
+                            <p class="text-sm font-medium">
+                                {{ importFile.name }}
+                            </p>
+                            <p class="text-xs text-muted-foreground">
+                                {{ (importFile.size / 1024).toFixed(1) }} KB
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="importError"
+                            class="rounded-lg border border-destructive/50 bg-destructive/10 p-3"
+                        >
+                            <p class="text-sm text-destructive">
+                                {{ importError }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" @click="closeImportDialog"
+                            >Cancel</Button
+                        >
+                        <RestrictedAction>
+                            <Button
+                                @click="submitImport"
+                                :disabled="!importFile || isImportingDoc"
+                                class="gap-2"
+                            >
+                                <Download class="h-4 w-4" />
+                                {{ isImportingDoc ? 'Importing...' : 'Import' }}
+                            </Button>
+                        </RestrictedAction>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     </AppLayout>
 </template>
