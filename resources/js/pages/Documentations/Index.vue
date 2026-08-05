@@ -286,10 +286,16 @@ const saveReorder = () => {
     );
 };
 
+const decodeHtmlEntities = (text: string): string => {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+};
+
 const highlightDescription = (content: string): string => {
+    const withoutTags = content.replace(/<[^>]*>/g, ' ');
     const plain =
-        content
-            .replace(/<[^>]*>/g, ' ')
+        decodeHtmlEntities(withoutTags)
             .replace(/\s+/g, ' ')
             .trim()
             .substring(0, 200) + '...';
