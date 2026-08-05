@@ -9,6 +9,7 @@ use App\Models\ClickupSetting;
 use App\Services\ClickupService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -101,6 +102,12 @@ class ClickupController extends Controller
             // the reverse proxy doesn't forward X-Forwarded-Proto and
             // Laravel detects the request as plain HTTP.
             $endpoint = preg_replace('#^http://#', 'https://', url('/api/webhooks/clickup'));
+
+            Log::info('Registering ClickUp webhook', [
+                'endpoint' => $endpoint,
+                'teamId' => $teams[0]['id'],
+            ]);
+
             $result = $service->registerWebhook($teams[0]['id'], $endpoint, $secret);
 
             $settings->update([
