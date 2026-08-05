@@ -9,6 +9,7 @@ use App\Models\ClickupSetting;
 use App\Services\ClickupService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -28,7 +29,38 @@ class ClickupController extends Controller
                 'has_webhook' => ! empty($settings->webhook_id),
             ],
             'appStatuses' => ['to_do', 'in_progress', 'in_review', 'needs_changes', 'cancelled', 'done'],
+            'queueDiagnostics' => $this->queueDiagnostics(),
         ]);
+    }
+
+    /**
+     * Surface the export job queue's health directly in the browser, since
+     * this environment has no SSH/log access to inspect the jobs tables.
+     *
+     * @return array{pending: int, recentFailures: array<int, array{failed_at: string, message: string}>}
+     */
+    private function queueDiagnostics(): array
+    {
+        $pending = DB::table('jobs')
+            ->where('payload', 'like', '%ExportBugreportToClickUp%')
+            ->count();
+
+        $recentFailures = DB::table('failed_jobs')
+            ->where('payload', 'like', '%ExportBugreportToClickUp%')
+            ->orderByDesc('failed_at')
+            ->limit(3)
+            ->get(['exception', 'failed_at'])
+            ->map(fn ($row) => [
+                'failed_at' => $row->failed_at,
+                'message' => Str::limit(strtok($row->exception, "\n") ?: $row->exception, 300),
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'pending' => $pending,
+            'recentFailures' => $recentFailures,
+        ];
     }
 
     public function update(ClickupSettingsRequest $request): RedirectResponse

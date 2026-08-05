@@ -32,6 +32,10 @@ const props = defineProps<{
         has_webhook: boolean;
     };
     appStatuses: string[];
+    queueDiagnostics: {
+        pending: number;
+        recentFailures: { failed_at: string; message: string }[];
+    };
 }>();
 
 const breadcrumbItems: BreadcrumbItem[] = [
@@ -357,6 +361,59 @@ function formatStatus(status: string): string {
                         <span v-else class="text-sm text-muted-foreground">
                             No webhook registered
                         </span>
+                    </div>
+                </div>
+
+                <!-- Export Queue Diagnostics -->
+                <div class="space-y-4">
+                    <Heading
+                        variant="small"
+                        title="Bug Report Export Queue"
+                        description="Bug reports are exported to ClickUp via a background queue worker. If exports aren't showing up in ClickUp, check here."
+                    />
+
+                    <div class="space-y-3 rounded-lg border p-4 text-sm">
+                        <p>
+                            <span class="font-medium"
+                                >Pending export jobs:</span
+                            >
+                            {{ queueDiagnostics.pending }}
+                            <span
+                                v-if="queueDiagnostics.pending > 0"
+                                class="text-muted-foreground"
+                            >
+                                — if this number doesn't go down after a minute
+                                or two, the queue worker likely isn't running on
+                                the server.
+                            </span>
+                        </p>
+
+                        <div v-if="queueDiagnostics.recentFailures.length > 0">
+                            <p class="font-medium text-destructive">
+                                Recent export failures:
+                            </p>
+                            <ul class="mt-2 space-y-2">
+                                <li
+                                    v-for="(
+                                        failure, index
+                                    ) in queueDiagnostics.recentFailures"
+                                    :key="index"
+                                    class="rounded-md bg-destructive/10 p-3"
+                                >
+                                    <p class="text-xs text-muted-foreground">
+                                        {{ failure.failed_at }}
+                                    </p>
+                                    <p
+                                        class="mt-1 font-mono text-xs break-words text-destructive"
+                                    >
+                                        {{ failure.message }}
+                                    </p>
+                                </li>
+                            </ul>
+                        </div>
+                        <p v-else class="text-muted-foreground">
+                            No recent export failures recorded.
+                        </p>
                     </div>
                 </div>
             </div>
