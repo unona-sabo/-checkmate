@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, Deferred } from '@inertiajs/vue3';
-import { Bug, Plus, Search, X, Filter } from 'lucide-vue-next';
+import { Head, Link, Deferred, router } from '@inertiajs/vue3';
+import { Bug, Plus, Search, X, Filter, RefreshCw } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -60,6 +60,20 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const { searchQuery, highlight } = useSearch();
+
+const isSyncingAll = ref(false);
+
+const syncAllFromClickUp = () => {
+    isSyncingAll.value = true;
+    router.post(
+        `/projects/${props.project.id}/bugreports/sync-all-clickup`,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => (isSyncingAll.value = false),
+        },
+    );
+};
 
 // Filters
 const showFilters = ref(false);
@@ -217,6 +231,21 @@ const filteredBugreports = computed(() => {
                             </Badge>
                         </Button>
                     </template>
+                    <RestrictedAction>
+                        <Button
+                            variant="outline"
+                            class="cursor-pointer gap-2"
+                            title="Sync all bug reports from ClickUp"
+                            :disabled="isSyncingAll"
+                            @click="syncAllFromClickUp"
+                        >
+                            <RefreshCw
+                                class="h-4 w-4"
+                                :class="{ 'animate-spin': isSyncingAll }"
+                            />
+                            Sync from ClickUp
+                        </Button>
+                    </RestrictedAction>
                     <RestrictedAction>
                         <Link
                             :href="`/projects/${project.id}/bugreports/create`"

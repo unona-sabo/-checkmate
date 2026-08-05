@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\ExportBugreportToClickUp;
+use App\Jobs\SyncBugreportFromClickUp;
 use App\Models\Bugreport;
 use App\Models\ClickupSetting;
 use App\Models\Project;
@@ -154,6 +155,106 @@ test('sync from clickup returns info when already up to date', function () {
 
     $response->assertRedirect();
     $response->assertSessionHas('info');
+});
+
+test('sync all from clickup queues a job per linked bug report', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $linked1 = Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'clickup_task_id' => 'abc123',
+    ]);
+    $linked2 = Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'clickup_task_id' => 'def456',
+    ]);
+    Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'clickup_task_id' => null,
+    ]);
+
+    ClickupSetting::current()->update([
+        'api_token' => 'pk_test_token',
+        'list_id' => '123456',
+    ]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.sync-all-clickup', [$project])
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    Queue::assertPushed(SyncBugreportFromClickUp::class, 2);
+    Queue::assertPushed(SyncBugreportFromClickUp::class, fn ($job) => $job->bugreport->id === $linked1->id);
+    Queue::assertPushed(SyncBugreportFromClickUp::class, fn ($job) => $job->bugreport->id === $linked2->id);
+});
+
+test('sync all from clickup returns info when nothing is linked', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => null]);
+
+    ClickupSetting::current()->update([
+        'api_token' => 'pk_test_token',
+        'list_id' => '123456',
+    ]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.sync-all-clickup', [$project])
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('info');
+
+    Queue::assertNotPushed(SyncBugreportFromClickUp::class);
+});
+
+test('sync all from clickup returns error when not configured', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => 'abc123']);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.sync-all-clickup', [$project])
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+});
+
+test('sync bugreport from clickup job updates status when changed', function () {
+    Http::fake([
+        'api.clickup.com/api/v2/task/abc123' => Http::response([
+            'id' => 'abc123',
+            'status' => ['status' => 'done'],
+        ]),
+    ]);
+
+    $project = Project::factory()->create();
+    $bugreport = Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'status' => 'to_do',
+        'clickup_task_id' => 'abc123',
+    ]);
+
+    ClickupSetting::current()->update([
+        'api_token' => 'pk_test_token',
+        'list_id' => '123456',
+        'status_mapping' => [
+            'to_do' => 'to do',
+            'done' => 'done',
+        ],
+    ]);
+
+    (new SyncBugreportFromClickUp($bugreport))->handle();
+
+    $bugreport->refresh();
+    expect($bugreport->status)->toBe('done');
 });
 
 test('export job uploads attachments to clickup task', function () {

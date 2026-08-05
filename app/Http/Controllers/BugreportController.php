@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Bugreport\StoreBugreportRequest;
 use App\Http\Requests\Bugreport\UpdateBugreportRequest;
 use App\Jobs\ExportBugreportToClickUp;
+use App\Jobs\SyncBugreportFromClickUp;
 use App\Models\Attachment;
 use App\Models\Bugreport;
 use App\Models\ChecklistRow;
@@ -217,6 +218,34 @@ class BugreportController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to sync from ClickUp: '.$e->getMessage());
         }
+    }
+
+    public function syncAllFromClickUp(Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $settings = ClickupSetting::current();
+
+        if (! $settings->isConfigured()) {
+            return back()->with('error', 'ClickUp integration is not configured.');
+        }
+
+        $bugreports = $project->bugreports()
+            ->whereNotNull('clickup_task_id')
+            ->get();
+
+        if ($bugreports->isEmpty()) {
+            return back()->with('info', 'No bug reports are linked to ClickUp yet.');
+        }
+
+        // Dispatched one job per bug report (queued, processed one at a time)
+        // rather than looping synchronously here — syncing dozens of reports
+        // inline would risk request timeouts and ClickUp API rate limits.
+        foreach ($bugreports as $bugreport) {
+            SyncBugreportFromClickUp::dispatch($bugreport);
+        }
+
+        return back()->with('success', "Queued {$bugreports->count()} bug report(s) for sync from ClickUp.");
     }
 
     public function destroyAttachment(Project $project, Bugreport $bugreport, Attachment $attachment)
