@@ -2,6 +2,7 @@
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
+import { TableKit } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
 import { useEditor, EditorContent } from '@tiptap/vue-3';
 import axios from 'axios';
@@ -22,6 +23,8 @@ import {
     Link as LinkIcon,
     Unlink,
     ImagePlus,
+    Table as TableIcon,
+    Trash2,
 } from 'lucide-vue-next';
 import { watch } from 'vue';
 
@@ -68,6 +71,9 @@ const editor = useEditor({
         }),
         Placeholder.configure({
             placeholder: props.placeholder || 'Write your content here...',
+        }),
+        TableKit.configure({
+            table: { resizable: true },
         }),
     ],
     editorProps: {
@@ -127,6 +133,18 @@ const addImage = () => {
         }
     };
     input.click();
+};
+
+const insertTable = () => {
+    editor.value
+        ?.chain()
+        .focus()
+        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+        .run();
+};
+
+const deleteTable = () => {
+    editor.value?.chain().focus().deleteTable().run();
 };
 
 const setLink = () => {
@@ -343,6 +361,26 @@ watch(
             >
                 <ImagePlus class="h-4 w-4" />
             </button>
+            <button
+                type="button"
+                @click="insertTable"
+                :class="[
+                    'rounded p-1.5 transition-colors hover:bg-muted',
+                    { 'bg-muted text-primary': editor.isActive('table') },
+                ]"
+                title="Insert table"
+            >
+                <TableIcon class="h-4 w-4" />
+            </button>
+            <button
+                v-if="editor.isActive('table')"
+                type="button"
+                @click="deleteTable"
+                class="rounded p-1.5 transition-colors hover:bg-muted hover:text-destructive"
+                title="Delete table"
+            >
+                <Trash2 class="h-4 w-4" />
+            </button>
 
             <div class="mx-1 h-5 w-px bg-border" />
 
@@ -472,5 +510,50 @@ watch(
 
 .tiptap p {
     margin: 0.25rem 0;
+}
+
+.tiptap table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 0.75rem 0;
+    overflow: hidden;
+}
+
+.tiptap table td,
+.tiptap table th {
+    border: 1px solid var(--border);
+    padding: 0.375rem 0.5rem;
+    vertical-align: top;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.tiptap table th {
+    background: var(--muted);
+    font-weight: 600;
+    text-align: left;
+}
+
+.tiptap table .selectedCell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--primary) 15%, transparent);
+    pointer-events: none;
+}
+
+.tiptap table .column-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    bottom: 0;
+    width: 4px;
+    background-color: var(--primary);
+    pointer-events: none;
+}
+
+.tiptap .tableWrapper {
+    overflow-x: auto;
 }
 </style>
