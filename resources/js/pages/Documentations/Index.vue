@@ -508,7 +508,7 @@ onMounted(() => {
                     <FileText class="mt-1 h-6 w-6 shrink-0 text-primary" />
                     Documentations
                 </h1>
-                <RestrictedAction>
+                <RestrictedAction v-if="documentations.length > 0">
                     <Link
                         :href="`/projects/${project.id}/documentations/create`"
                     >
