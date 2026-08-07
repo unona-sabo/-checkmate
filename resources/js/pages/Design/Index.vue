@@ -277,12 +277,20 @@ const categoryOptions = [
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <div class="flex items-center justify-between">
-                <h1
-                    class="flex items-start gap-2 text-2xl font-bold tracking-tight"
-                >
-                    <Palette class="mt-1 h-6 w-6 shrink-0 text-primary" />
-                    Design Resources
-                </h1>
+                <div>
+                    <h1
+                        class="flex items-start gap-2 text-2xl font-bold tracking-tight"
+                    >
+                        <Palette class="mt-1 h-6 w-6 shrink-0 text-primary" />
+                        Design Resources
+                    </h1>
+                    <p
+                        v-if="designLinks.length === 0"
+                        class="text-muted-foreground"
+                    >
+                        Keep Figma files, prototypes, and other design assets in one place
+                    </p>
+                </div>
                 <div class="flex items-center gap-3">
                     <template v-if="designLinks.length > 0">
                         <div class="relative">
