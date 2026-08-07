@@ -126,7 +126,7 @@ const deleteNote = () => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
-                    <RestrictedAction>
+                    <RestrictedAction v-if="notes.length > 0">
                         <Link :href="`/projects/${project.id}/notes/create`">
                             <Button variant="cta" class="gap-2">
                                 <Plus class="h-4 w-4" />
