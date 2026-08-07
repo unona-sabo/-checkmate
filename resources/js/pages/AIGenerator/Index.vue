@@ -460,7 +460,7 @@ const severityColors: Record<string, string> = {
                         <h1 class="text-2xl font-bold">
                             AI Test Case Generator
                         </h1>
-                        <p class="text-sm text-muted-foreground">
+                        <p class="text-muted-foreground">
                             Generate test cases from documentation, files, or
                             screenshots using AI
                         </p>
