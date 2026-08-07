@@ -107,7 +107,7 @@ function freshState(tab: TabKey): TabState {
 }
 
 // ── Persistence ────────────────────────────────────────────────────────────
-const STORAGE_KEY = 'balance-calculator-tabs';
+const STORAGE_KEY = `balance-calculator-tabs-${props.project.id}`;
 
 function loadTabs(): Record<TabKey, TabState> {
     try {
@@ -370,7 +370,7 @@ interface AccrualRecord {
     updatedAt: string;
 }
 
-const HISTORY_KEY = 'balance-calculator-history';
+const HISTORY_KEY = `balance-calculator-history-${props.project.id}`;
 
 function loadHistory(): AccrualRecord[] {
     try {
