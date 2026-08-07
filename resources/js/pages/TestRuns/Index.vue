@@ -334,7 +334,7 @@ const resumeRun = (run: TestRun) => {
                             </Badge>
                         </Button>
                     </template>
-                    <RestrictedAction>
+                    <RestrictedAction v-if="testRuns.length > 0">
                         <DropdownMenu>
                             <DropdownMenuTrigger as-child>
                                 <Button
@@ -761,15 +761,41 @@ const resumeRun = (run: TestRun) => {
                         Create a test run to start executing your test cases.
                     </p>
                     <RestrictedAction>
-                        <Link
-                            :href="`/projects/${project.id}/test-runs/create`"
-                            class="mt-4 inline-block"
-                        >
-                            <Button variant="cta" class="gap-2">
-                                <Plus class="h-4 w-4" />
-                                Create Test Run
-                            </Button>
-                        </Link>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="cta" class="mt-4 cursor-pointer gap-2">
+                                    <Plus class="h-4 w-4" />
+                                    New Test Run
+                                    <ChevronDown class="ml-0.5 h-3 w-3" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center">
+                                <DropdownMenuItem
+                                    as-child
+                                    class="cursor-pointer"
+                                >
+                                    <Link
+                                        :href="`/projects/${project.id}/test-runs/create`"
+                                        class="flex items-center gap-2"
+                                    >
+                                        <FileText class="h-4 w-4" />
+                                        From Test Cases
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    as-child
+                                    class="cursor-pointer"
+                                >
+                                    <Link
+                                        :href="`/projects/${project.id}/test-runs/create?source=checklist`"
+                                        class="flex items-center gap-2"
+                                    >
+                                        <ListChecks class="h-4 w-4" />
+                                        From Checklist
+                                    </Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </RestrictedAction>
                 </div>
             </div>
