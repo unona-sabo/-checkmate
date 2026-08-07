@@ -1522,7 +1522,13 @@ const submitEmptyImport = () => {
                         <Layers class="h-6 w-6 text-primary" />
                         Test Suites
                     </h1>
-                    <p class="mt-1 text-sm text-muted-foreground">
+                    <p
+                        v-if="testSuites.length === 0"
+                        class="text-muted-foreground"
+                    >
+                        Organize test cases into suites for structured testing
+                    </p>
+                    <p v-else class="mt-1 text-sm text-muted-foreground">
                         {{ localTestSuites.length }} suites ·
                         {{ localTotalTestCases }} test cases
                         <span v-if="isSaving" class="ml-2 text-primary"
