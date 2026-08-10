@@ -6,6 +6,7 @@ import {
     CheckSquare,
     Layers,
     PlayCircle,
+    Bug,
     Calendar,
     Sparkles,
     GripVertical,
@@ -241,7 +242,7 @@ const saveOrder = () => {
                                 </div>
                             </CardHeader>
                             <CardContent class="relative p-4 pt-0">
-                                <div class="flex gap-3 text-sm">
+                                <div class="flex gap-2.5 text-sm">
                                     <div
                                         class="flex items-center gap-1.5 rounded-md bg-muted/50 px-2.5 py-1"
                                     >
@@ -270,6 +271,14 @@ const saveOrder = () => {
                                         />
                                         <span class="font-medium">{{
                                             project.test_runs_count || 0
+                                        }}</span>
+                                    </div>
+                                    <div
+                                        class="flex items-center gap-1.5 rounded-md bg-muted/50 px-2.5 py-1"
+                                    >
+                                        <Bug class="h-4 w-4 text-red-500" />
+                                        <span class="font-medium">{{
+                                            project.bugreports_count || 0
                                         }}</span>
                                     </div>
                                 </div>

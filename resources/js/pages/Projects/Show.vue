@@ -471,8 +471,9 @@ const getBugStatusColor = (status: string) => {
                                 <ClipboardList class="h-5 w-5 text-primary" />
                                 Checklists
                                 <span
+                                    v-if="project.checklists_count"
                                     class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground"
-                                    >{{ project.checklists_count ?? 0 }}</span
+                                    >{{ project.checklists_count }}</span
                                 >
                             </CardTitle>
                             <RestrictedAction>
@@ -542,8 +543,9 @@ const getBugStatusColor = (status: string) => {
                                 <Layers class="h-5 w-5 text-primary" />
                                 Test Suites
                                 <span
+                                    v-if="project.test_suites_count"
                                     class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground"
-                                    >{{ project.test_suites_count ?? 0 }}</span
+                                    >{{ project.test_suites_count }}</span
                                 >
                             </CardTitle>
                             <RestrictedAction>
@@ -610,8 +612,9 @@ const getBugStatusColor = (status: string) => {
                                 <Play class="h-5 w-5 text-primary" />
                                 Test Runs
                                 <span
+                                    v-if="project.test_runs_count"
                                     class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground"
-                                    >{{ project.test_runs_count ?? 0 }}</span
+                                    >{{ project.test_runs_count }}</span
                                 >
                             </CardTitle>
                             <RestrictedAction>
@@ -690,8 +693,9 @@ const getBugStatusColor = (status: string) => {
                                 <Bug class="h-5 w-5 text-primary" />
                                 Bug Reports
                                 <span
+                                    v-if="project.bugreports_count"
                                     class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground"
-                                    >{{ project.bugreports_count ?? 0 }}</span
+                                    >{{ project.bugreports_count }}</span
                                 >
                             </CardTitle>
                             <RestrictedAction>
@@ -779,8 +783,9 @@ const getBugStatusColor = (status: string) => {
                                 <Rocket class="h-5 w-5 text-primary" />
                                 Releases
                                 <span
+                                    v-if="project.releases_count"
                                     class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground"
-                                    >{{ project.releases_count ?? 0 }}</span
+                                    >{{ project.releases_count }}</span
                                 >
                             </CardTitle>
                             <RestrictedAction>
@@ -866,10 +871,9 @@ const getBugStatusColor = (status: string) => {
                                 <FileText class="h-5 w-5 text-primary" />
                                 Documentations
                                 <span
+                                    v-if="project.documentations_count"
                                     class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground"
-                                    >{{
-                                        project.documentations_count ?? 0
-                                    }}</span
+                                    >{{ project.documentations_count }}</span
                                 >
                             </CardTitle>
                             <RestrictedAction>

@@ -23,7 +23,7 @@ class ProjectController extends Controller
             : auth()->user()->projects();
 
         $projects = $query
-            ->withCount(['checklists', 'testSuites', 'testRuns'])
+            ->withCount(['checklists', 'testSuites', 'testRuns', 'bugreports'])
             ->orderBy('order')
             ->orderBy('created_at', 'desc')
             ->get();

@@ -171,6 +171,7 @@ class SectionConfigRegistry
                     'Fixed-on environment tracking (develop, staging, production)',
                     'Auto-save draft to localStorage with restore on return',
                     'ClickUp integration: export bug reports, sync statuses via webhook',
+                    'Bug report count badge on project cards',
                 ],
                 'model' => Bugreport::class,
             ],
