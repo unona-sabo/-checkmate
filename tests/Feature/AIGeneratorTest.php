@@ -467,6 +467,76 @@ test('parse-text endpoint extracts test cases from pasted text and ignores the c
     ]);
 });
 
+test('parse-text endpoint handles a single JSON object response without crashing', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [[
+                'content' => [
+                    'parts' => [[
+                        // AI returned one bare object instead of an array of objects.
+                        'text' => json_encode([
+                            'title' => 'Single case',
+                            'description' => 'Desc',
+                            'steps' => [['action' => 'Step one', 'expected' => null]],
+                            'priority' => 'medium',
+                            'severity' => 'major',
+                            'type' => 'functional',
+                            'automation_status' => 'not_automated',
+                        ]),
+                    ]],
+                ],
+            ]],
+        ]),
+    ]);
+
+    config(['services.gemini.api_key' => 'test-key']);
+
+    $response = $this->actingAs($this->user)->postJson(
+        route('ai-generator.parse-text', $this->project),
+        ['text' => 'TC-1: Single case']
+    );
+
+    $response->assertOk();
+    expect($response->json('test_cases'))->toHaveCount(1);
+    expect($response->json('test_cases.0.title'))->toBe('Single case');
+});
+
+test('parse-text endpoint ignores non-object entries in the AI response array', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [[
+                'content' => [
+                    'parts' => [[
+                        'text' => json_encode([
+                            'just a string, not a test case object',
+                            [
+                                'title' => 'Valid case',
+                                'description' => 'Desc',
+                                'steps' => [['action' => 'Step one', 'expected' => null]],
+                                'priority' => 'medium',
+                                'severity' => 'major',
+                                'type' => 'functional',
+                                'automation_status' => 'not_automated',
+                            ],
+                        ]),
+                    ]],
+                ],
+            ]],
+        ]),
+    ]);
+
+    config(['services.gemini.api_key' => 'test-key']);
+
+    $response = $this->actingAs($this->user)->postJson(
+        route('ai-generator.parse-text', $this->project),
+        ['text' => 'TC-1: Valid case']
+    );
+
+    $response->assertOk();
+    expect($response->json('test_cases'))->toHaveCount(1);
+    expect($response->json('test_cases.0.title'))->toBe('Valid case');
+});
+
 test('parse-text endpoint respects an explicit provider override', function () {
     Http::fake([
         'api.openai.com/*' => Http::response([

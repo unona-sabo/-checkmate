@@ -94,8 +94,21 @@ const breadcrumbs: BreadcrumbItem[] = [
 // Tab state
 const activeTab = ref<'users' | 'payments' | 'commands' | 'links'>('users');
 
-// Search
+// Search — debouncedSearchQuery lags behind searchQuery while typing, so the
+// (per-tab) filtering computeds below don't re-run on every keystroke.
 const searchQuery = ref('');
+const debouncedSearchQuery = ref('');
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+watch(searchQuery, (value) => {
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    if (value === '') {
+        debouncedSearchQuery.value = '';
+        return;
+    }
+    searchDebounceTimer = setTimeout(() => {
+        debouncedSearchQuery.value = value;
+    }, 300);
+});
 
 // Filters
 const validityFilter = ref<string>('all');
@@ -476,8 +489,8 @@ const uniqueRoles = computed(() => {
 const filteredUsers = computed(() => {
     let users = localUsers.value;
 
-    if (searchQuery.value.trim()) {
-        const q = searchQuery.value.toLowerCase();
+    if (debouncedSearchQuery.value.trim()) {
+        const q = debouncedSearchQuery.value.toLowerCase();
         users = users.filter(
             (u) =>
                 u.name.toLowerCase().includes(q) ||
@@ -509,8 +522,8 @@ const filteredUsers = computed(() => {
 const filteredPayments = computed(() => {
     let payments = localPayments.value;
 
-    if (searchQuery.value.trim()) {
-        const q = searchQuery.value.toLowerCase();
+    if (debouncedSearchQuery.value.trim()) {
+        const q = debouncedSearchQuery.value.toLowerCase();
         payments = payments.filter(
             (p) =>
                 p.name.toLowerCase().includes(q) ||
@@ -554,8 +567,8 @@ const uniqueCommandCategories = computed(() => {
 const filteredCommands = computed(() => {
     let commands = localCommands.value;
 
-    if (searchQuery.value.trim()) {
-        const q = searchQuery.value.toLowerCase();
+    if (debouncedSearchQuery.value.trim()) {
+        const q = debouncedSearchQuery.value.toLowerCase();
         commands = commands.filter(
             (c) =>
                 c.description.toLowerCase().includes(q) ||
@@ -583,8 +596,8 @@ const uniqueLinkCategories = computed(() => {
 const filteredLinks = computed(() => {
     let links = localLinks.value;
 
-    if (searchQuery.value.trim()) {
-        const q = searchQuery.value.toLowerCase();
+    if (debouncedSearchQuery.value.trim()) {
+        const q = debouncedSearchQuery.value.toLowerCase();
         links = links.filter(
             (l) =>
                 l.description.toLowerCase().includes(q) ||

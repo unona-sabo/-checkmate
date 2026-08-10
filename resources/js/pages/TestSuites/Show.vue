@@ -186,7 +186,7 @@ const totalTestCases = computed(() => {
 const isSaving = ref(false);
 
 // Search
-const { searchQuery, highlight } = useSearch();
+const { searchQuery, debouncedSearchQuery, highlight } = useSearch();
 
 // Filters
 const showFilters = ref(false);
@@ -233,7 +233,7 @@ const clearFilters = () => {
 };
 
 const filteredSections = computed(() => {
-    const query = searchQuery.value.trim().toLowerCase();
+    const query = debouncedSearchQuery.value.trim().toLowerCase();
     const hasSearch = query.length > 0;
     const hasFilters = activeFilterCount.value > 0;
 

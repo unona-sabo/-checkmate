@@ -186,12 +186,21 @@ class TestCaseController extends Controller
 
         $validated = $request->validated();
 
+        $projectSuiteIds = $project->testSuites()->pluck('id');
+
         foreach ($validated['cases'] as $caseData) {
+            if (isset($caseData['test_suite_id']) && ! $projectSuiteIds->contains($caseData['test_suite_id'])) {
+                continue;
+            }
+
             $updateData = ['order' => $caseData['order']];
             if (isset($caseData['test_suite_id'])) {
                 $updateData['test_suite_id'] = $caseData['test_suite_id'];
             }
-            TestCase::where('id', $caseData['id'])->update($updateData);
+
+            TestCase::whereIn('test_suite_id', $projectSuiteIds)
+                ->where('id', $caseData['id'])
+                ->update($updateData);
         }
 
         return back()->with('success', 'Test cases reordered successfully.');
@@ -302,11 +311,19 @@ class TestCaseController extends Controller
 
         $validated = $request->validated();
 
+        $projectSuiteIds = $project->testSuites()->pluck('id');
+
         foreach ($validated['cases'] as $caseData) {
-            TestCase::where('id', $caseData['id'])->update([
-                'order' => $caseData['order'],
-                'test_suite_id' => $caseData['test_suite_id'],
-            ]);
+            if (! $projectSuiteIds->contains($caseData['test_suite_id'])) {
+                continue;
+            }
+
+            TestCase::whereIn('test_suite_id', $projectSuiteIds)
+                ->where('id', $caseData['id'])
+                ->update([
+                    'order' => $caseData['order'],
+                    'test_suite_id' => $caseData['test_suite_id'],
+                ]);
         }
 
         return back()->with('success', 'Test cases reordered successfully.');
@@ -368,7 +385,7 @@ class TestCaseController extends Controller
 
         if ($validated['mode'] === 'choose') {
             $targetSuite = TestSuite::query()->findOrFail($validated['target_suite_id']);
-            abort_unless($targetSuite->project_id === $project->id, 403);
+            abort_unless($targetSuite->project_id === $project->id && ! $targetSuite->is_archived, 403);
 
             $nextOrder = (TestCase::query()->where('test_suite_id', $targetSuite->id)->max('order') ?? 0) + 1;
 

@@ -8,12 +8,12 @@ use App\Http\Requests\AIGenerator\ParseTestCasesRequest;
 use App\Models\AiGeneration;
 use App\Models\Documentation;
 use App\Models\Project;
-use App\Models\ProjectFeature;
 use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Services\AITestGeneratorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -179,11 +179,20 @@ class AIGeneratorController extends Controller
 
         // Link created test cases to features associated with the test suite
         $featureIds = $testSuite->projectFeatures()->pluck('project_features.id');
-        if ($featureIds->isNotEmpty()) {
+        if ($featureIds->isNotEmpty() && ! empty($createdCaseIds)) {
+            $now = now();
+            $pivotRows = [];
             foreach ($featureIds as $featureId) {
-                $feature = ProjectFeature::query()->find($featureId);
-                $feature->testCases()->syncWithoutDetaching($createdCaseIds);
+                foreach ($createdCaseIds as $caseId) {
+                    $pivotRows[] = [
+                        'feature_id' => $featureId,
+                        'test_case_id' => $caseId,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
             }
+            DB::table('feature_test_case')->insertOrIgnore($pivotRows);
         }
 
         // Update ai_generation record if provided

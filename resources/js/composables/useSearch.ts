@@ -1,4 +1,9 @@
-import { ref, computed, type Ref } from 'vue';
+import { ref, computed, watch, type Ref } from 'vue';
+
+// Delay before an expensive filter/search recompute reacts to typing.
+// Long enough to skip recomputing on every keystroke during normal typing,
+// short enough that the results feel responsive once typing pauses.
+const SEARCH_DEBOUNCE_MS = 300;
 
 export function escapeRegExp(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -22,16 +27,35 @@ export function containsHtml(text: string): boolean {
 export function useSearch() {
     const searchQuery = ref('');
 
+    // Mirrors searchQuery, but lags behind by SEARCH_DEBOUNCE_MS while the
+    // user is actively typing — use this (not searchQuery) as the input to
+    // any expensive filtering computed. Clearing the query still applies
+    // instantly, since there's no cost to showing everything again.
+    const debouncedSearchQuery = ref('');
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    watch(searchQuery, (value) => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        if (value === '') {
+            debouncedSearchQuery.value = '';
+            return;
+        }
+        debounceTimer = setTimeout(() => {
+            debouncedSearchQuery.value = value;
+        }, SEARCH_DEBOUNCE_MS);
+    });
+
     const clearSearch = () => {
         searchQuery.value = '';
     };
 
-    const isSearchActive = computed(() => searchQuery.value.trim().length > 0);
+    const isSearchActive = computed(
+        () => debouncedSearchQuery.value.trim().length > 0,
+    );
 
     const highlight = (text: string): string => {
         const safe = escapeHtml(text);
-        if (!searchQuery.value.trim()) return safe;
-        const query = escapeRegExp(searchQuery.value.trim());
+        if (!debouncedSearchQuery.value.trim()) return safe;
+        const query = escapeRegExp(debouncedSearchQuery.value.trim());
         return safe.replace(
             new RegExp(`(${query})`, 'gi'),
             '<mark class="search-highlight">$1</mark>',
@@ -40,8 +64,8 @@ export function useSearch() {
 
     const highlightRich = (text: string): string => {
         if (!containsHtml(text)) return highlight(text);
-        if (!searchQuery.value.trim()) return text;
-        const query = escapeRegExp(searchQuery.value.trim());
+        if (!debouncedSearchQuery.value.trim()) return text;
+        const query = escapeRegExp(debouncedSearchQuery.value.trim());
         const regex = new RegExp(`(${query})`, 'gi');
         return text.replace(/>([^<]+)</g, (match, content) => {
             return (
@@ -57,6 +81,7 @@ export function useSearch() {
 
     return {
         searchQuery,
+        debouncedSearchQuery,
         clearSearch,
         isSearchActive,
         highlight,

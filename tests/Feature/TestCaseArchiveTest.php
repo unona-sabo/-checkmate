@@ -175,6 +175,26 @@ test('unarchiving with mode choose moves every selected case to the target suite
     ]);
 });
 
+test('unarchiving with mode choose rejects a target suite that is itself archived', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $archiveSuite = TestSuite::factory()->create(['project_id' => $project->id, 'is_archived' => true]);
+    $anotherArchiveSuite = TestSuite::factory()->create(['project_id' => $project->id, 'is_archived' => true]);
+
+    $case = TestCase::factory()->create([
+        'test_suite_id' => $archiveSuite->id,
+        'archived_from_suite_id' => $archiveSuite->id,
+    ]);
+
+    $this->actingAs($user)->post(route('test-suites.unarchive-cases', $project), [
+        'test_case_ids' => [$case->id],
+        'mode' => 'choose',
+        'target_suite_id' => $anotherArchiveSuite->id,
+    ])->assertForbidden();
+
+    expect($case->refresh()->test_suite_id)->toBe($archiveSuite->id);
+});
+
 test('viewer cannot archive or unarchive test cases', function () {
     $owner = User::factory()->create();
     $viewer = User::factory()->create();

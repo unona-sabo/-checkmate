@@ -190,15 +190,18 @@ const getFlatSuiteTotalTestCases = (flatSuite: FlatSuite): number => {
     if (flatSuite.parentName) {
         return flatSuite.testCases.length;
     }
-    // If it's a parent suite, find it in localTestSuites and get total
-    const originalSuite = localTestSuites.value.find(
-        (s) => s.id === flatSuite.id,
-    );
-    if (originalSuite) {
-        return getSuiteTotalTestCases(originalSuite);
-    }
-    return flatSuite.testCases.length;
+    return suiteTotalTestCasesById.value.get(flatSuite.id) ?? flatSuite.testCases.length;
 };
+
+// Memoized totals keyed by suite id, so rendering the suite list doesn't
+// re-run an O(n) find() per row (previously O(n²) over localTestSuites).
+const suiteTotalTestCasesById = computed(() => {
+    const map = new Map<number, number>();
+    localTestSuites.value.forEach((suite) => {
+        map.set(suite.id, getSuiteTotalTestCases(suite));
+    });
+    return map;
+});
 
 // Mutable copies for drag-and-drop (moved here for proper order)
 const localTestSuites = ref<TestSuite[]>([...props.testSuites]);
@@ -594,7 +597,7 @@ const localTotalTestCases = computed(() => {
 });
 
 // Search
-const { searchQuery, highlight } = useSearch();
+const { searchQuery, debouncedSearchQuery, highlight } = useSearch();
 
 // Filters
 const showFilters = ref(false);
@@ -641,7 +644,7 @@ const clearFilters = () => {
 };
 
 const filteredFlatSuites = computed(() => {
-    const query = searchQuery.value.trim().toLowerCase();
+    const query = debouncedSearchQuery.value.trim().toLowerCase();
     const hasSearch = query.length > 0;
     const hasFilters = activeFilterCount.value > 0;
 

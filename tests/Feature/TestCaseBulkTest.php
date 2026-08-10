@@ -45,6 +45,55 @@ test('bulk delete only deletes cases from project suites', function () {
     expect(TestCase::find($otherCase->id))->not->toBeNull();
 });
 
+test('reorder only updates cases belonging to the project', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $ownCase = TestCase::factory()->create(['test_suite_id' => $suite->id, 'order' => 1]);
+
+    $otherProject = Project::factory()->create();
+    $otherSuite = TestSuite::factory()->create(['project_id' => $otherProject->id]);
+    $otherCase = TestCase::factory()->create(['test_suite_id' => $otherSuite->id, 'order' => 1]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-cases.reorder', [$project, $suite]),
+        [
+            'cases' => [
+                ['id' => $ownCase->id, 'order' => 5],
+                ['id' => $otherCase->id, 'order' => 99],
+            ],
+        ]
+    );
+
+    $response->assertRedirect();
+    expect($ownCase->refresh()->order)->toBe(5);
+    // Case from another project must be left untouched.
+    expect($otherCase->refresh()->order)->toBe(1);
+});
+
+test('reorder across suites rejects a target suite from another project', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $case = TestCase::factory()->create(['test_suite_id' => $suite->id, 'order' => 1]);
+
+    $otherProject = Project::factory()->create();
+    $foreignSuite = TestSuite::factory()->create(['project_id' => $otherProject->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-suites.reorder-cases', $project),
+        [
+            'cases' => [
+                ['id' => $case->id, 'order' => 3, 'test_suite_id' => $foreignSuite->id],
+            ],
+        ]
+    );
+
+    $response->assertRedirect();
+    // The case must not have been moved into a suite outside the project.
+    expect($case->refresh()->test_suite_id)->toBe($suite->id);
+});
+
 test('bulk copy replicates test cases to target suite', function () {
     $user = User::factory()->create();
     $project = Project::factory()->create(['user_id' => $user->id]);

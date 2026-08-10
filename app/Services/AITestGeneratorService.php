@@ -486,10 +486,31 @@ FOCUS AREAS FOR UI TESTING:
         $aiResponse = trim($aiResponse);
 
         // Extract JSON from markdown code blocks if present
-        if (preg_match('/```(?:json)?\s*(\[.*?\])\s*```/s', $aiResponse, $matches)) {
+        if (preg_match('/```(?:json)?\s*([\[{].*?[\]}])\s*```/s', $aiResponse, $matches)) {
             $aiResponse = $matches[1];
-        } elseif (preg_match('/\[.*\]/s', $aiResponse, $matches)) {
-            $aiResponse = $matches[0];
+        } else {
+            // Find whichever bracket ([ or {) opens first, and match it to the
+            // LAST occurrence of its own closing bracket. Matching "[" against
+            // the nearest "]" (as a naive /\[.*\]/ regex would) breaks when the
+            // top-level response is an object containing a nested array (e.g.
+            // {"title": ..., "steps": [...]}) — it would grab just the nested
+            // array instead of the whole object.
+            $openBracket = null;
+            $openPos = null;
+            foreach (['[', '{'] as $bracket) {
+                $pos = strpos($aiResponse, $bracket);
+                if ($pos !== false && ($openPos === null || $pos < $openPos)) {
+                    $openPos = $pos;
+                    $openBracket = $bracket;
+                }
+            }
+            if ($openBracket !== null) {
+                $closeBracket = $openBracket === '[' ? ']' : '}';
+                $closePos = strrpos($aiResponse, $closeBracket);
+                if ($closePos !== false && $closePos > $openPos) {
+                    $aiResponse = substr($aiResponse, $openPos, $closePos - $openPos + 1);
+                }
+            }
         }
 
         $parsed = json_decode($aiResponse, true);
@@ -497,6 +518,18 @@ FOCUS AREAS FOR UI TESTING:
         if (! is_array($parsed)) {
             Log::warning('AI response could not be parsed as JSON', ['response' => Str::limit($aiResponse, 500)]);
 
+            return [];
+        }
+
+        // A single JSON object (not a list) — treat it as one test case.
+        if (! array_is_list($parsed)) {
+            $parsed = [$parsed];
+        }
+
+        // Drop any entries that aren't objects (e.g. the AI returned a list of strings).
+        $parsed = array_values(array_filter($parsed, 'is_array'));
+
+        if (empty($parsed)) {
             return [];
         }
 

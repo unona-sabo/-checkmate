@@ -372,18 +372,18 @@ const addRowsType = ref<'normal' | 'section_header'>('normal');
 
 // Track content changes (excluding checkbox changes)
 const hasContentChanges = ref(false);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _checkboxKeys = computed(() =>
-    columns.value.filter((c) => c.type === 'checkbox').map((c) => c.key),
-);
 
 // Bumped on every row/column mutation so in-flight saves can tell whether
 // something changed after they captured their snapshot (avoids clobbering
 // newer edits when an older save's response arrives late).
 let changeVersion = 0;
-watch([rows, columns], () => {
-    changeVersion++;
-});
+watch(
+    [rows, columns],
+    () => {
+        changeVersion++;
+    },
+    { deep: true },
+);
 
 // Undo last save — tracks the state after each successful save
 type Snapshot = {
@@ -421,7 +421,7 @@ const dismissSaveError = () => {
 };
 
 // Search state
-const { searchQuery, isSearchActive } = useSearch();
+const { searchQuery, debouncedSearchQuery, isSearchActive } = useSearch();
 
 const {
     scrollContainerRef,
@@ -445,7 +445,7 @@ const {
     canDragRows,
 } = useChecklistFilters(
     rows,
-    searchQuery,
+    debouncedSearchQuery,
     computed(() => {
         const cbKeys = columns.value
             .filter((col) => col.type === 'checkbox')
