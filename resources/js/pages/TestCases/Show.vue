@@ -14,6 +14,7 @@ import {
     Link2,
     Check,
     Bug,
+    Archive,
 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
@@ -152,11 +153,18 @@ const navigateToCreateBugreport = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-[15px] p-6">
-            <div class="flex items-start justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+            >
                 <div>
                     <div class="flex flex-wrap items-center gap-3">
                         <h1 class="text-2xl font-bold tracking-tight">
+                            <Archive
+                                v-if="testSuite.is_archived"
+                                class="mr-2 inline-block h-6 w-6 align-text-top text-primary"
+                            />
                             <FileText
+                                v-else
                                 class="mr-2 inline-block h-6 w-6 align-text-top text-primary"
                             />{{ titleStart
                             }}<span class="whitespace-nowrap"
@@ -179,7 +187,7 @@ const navigateToCreateBugreport = () => {
                         />
                     </div>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                     <Button
                         variant="outline"
                         class="cursor-pointer gap-2"
@@ -211,7 +219,7 @@ const navigateToCreateBugreport = () => {
                 </div>
             </div>
 
-            <div class="grid gap-[15px] lg:grid-cols-3">
+            <div class="grid grid-cols-1 gap-[15px] lg:grid-cols-3">
                 <div class="space-y-[15px] lg:col-span-2">
                     <!-- Description -->
                     <Card v-if="testCase.description">

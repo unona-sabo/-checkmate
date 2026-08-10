@@ -432,9 +432,11 @@ const saveChildReorder = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="flex items-center justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight">
+                    <h1 class="text-2xl font-bold tracking-tight break-words">
                         <FileText
                             class="mr-2 inline-block h-6 w-6 align-text-top text-primary"
                         />{{ titleStart
@@ -465,7 +467,7 @@ const saveChildReorder = () => {
                         </Link>
                     </div>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
                             <Button variant="outline" class="gap-1.5">
@@ -515,9 +517,9 @@ const saveChildReorder = () => {
                 </div>
             </div>
 
-            <div class="grid gap-6 lg:grid-cols-4">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
                 <!-- Sidebar with navigation -->
-                <div class="sticky top-6 self-start lg:col-span-1">
+                <div class="self-start lg:sticky lg:top-6 lg:col-span-1">
                     <div class="rounded-xl border bg-card shadow-sm">
                         <div class="border-b bg-muted/30 p-3">
                             <div class="flex items-center justify-between">

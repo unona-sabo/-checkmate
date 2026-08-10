@@ -636,9 +636,11 @@ const breakdownLabels: Record<string, string> = {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
             <!-- Header -->
-            <div class="flex items-center justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex flex-wrap items-center gap-3">
                         <Rocket class="h-6 w-6" />
                         <Badge variant="outline" class="font-mono text-sm"
                             >v{{ release.version }}</Badge
@@ -808,7 +810,7 @@ const breakdownLabels: Record<string, string> = {
                 <!-- Tab: Overview -->
                 <div v-if="activeTab === 'overview'" class="space-y-6 p-6">
                     <!-- Decision-Support Cards -->
-                    <div class="grid gap-4 md:grid-cols-3">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <!-- Card 1: Release Readiness -->
                         <div class="space-y-3 rounded-lg border p-4">
                             <div class="flex items-center justify-between">
@@ -1217,7 +1219,7 @@ const breakdownLabels: Record<string, string> = {
                     </div>
 
                     <!-- Release info -->
-                    <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div class="rounded-lg border p-4">
                             <p class="mb-1 text-sm text-muted-foreground">
                                 Planned Date
@@ -1391,7 +1393,7 @@ const breakdownLabels: Record<string, string> = {
                                 <div
                                     v-for="item in items"
                                     :key="item.id"
-                                    class="group flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted/30"
+                                    class="group flex flex-wrap items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted/30"
                                     :class="{
                                         'border-l-2 border-red-500 bg-red-50/50 dark:bg-red-950/10':
                                             item.is_blocker &&
@@ -1435,7 +1437,7 @@ const breakdownLabels: Record<string, string> = {
                                             {{ item.description }}
                                         </p>
                                         <div
-                                            class="mt-0.5 flex items-center gap-2"
+                                            class="mt-0.5 flex flex-wrap items-center gap-2"
                                         >
                                             <Badge
                                                 v-if="

@@ -574,7 +574,7 @@ const passRate = computed(() => {
 <template>
     <Head :title="`Automation - ${project.name}`" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6 px-[150px] py-6">
+        <div class="space-y-6 px-4 py-6 sm:px-6 lg:px-37.5">
             <!-- Header -->
             <div>
                 <h1
@@ -591,7 +591,7 @@ const passRate = computed(() => {
             <!-- Stats Cards (if we have results) -->
             <div
                 v-if="latestRunStats && latestRunStats.total"
-                class="grid grid-cols-4 gap-4"
+                class="grid grid-cols-2 gap-4 sm:grid-cols-4"
             >
                 <Card>
                     <CardContent class="px-4 py-3">
@@ -1183,7 +1183,7 @@ const passRate = computed(() => {
                         <div
                             v-for="result in filteredResults"
                             :key="result.id"
-                            class="flex items-center justify-between rounded-md border px-4 py-2.5 transition-colors hover:bg-muted/50"
+                            class="flex flex-col gap-2 rounded-md border px-4 py-2.5 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between"
                         >
                             <div class="flex min-w-0 flex-1 items-center gap-3">
                                 <component
@@ -1226,7 +1226,9 @@ const passRate = computed(() => {
                                     </div>
                                 </div>
                             </div>
-                            <div class="ml-4 flex shrink-0 items-center gap-3">
+                            <div
+                                class="ml-7 flex shrink-0 items-center gap-3 sm:ml-4"
+                            >
                                 <Badge
                                     :variant="
                                         automationResultVariant(result.status)

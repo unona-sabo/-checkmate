@@ -115,13 +115,13 @@ function formatDateTime(dateString: string | null): string {
         <div class="w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-6">
             <!-- Header: Logo + Description -->
             <div
-                class="mb-6 flex items-center gap-6 rounded-xl border border-border bg-card p-6"
+                class="mb-6 flex flex-col items-center gap-4 rounded-xl border border-border bg-card p-6 text-center sm:flex-row sm:items-center sm:gap-6 sm:text-left"
             >
                 <div class="shrink-0 text-center">
                     <img
                         src="/images/logo2.png"
                         alt="CheckMate"
-                        class="h-32 w-auto rounded-2xl"
+                        class="h-20 w-auto rounded-2xl sm:h-32"
                     />
                     <p
                         class="mt-2 text-xs font-light tracking-widest text-muted-foreground/80 uppercase"
@@ -145,9 +145,9 @@ function formatDateTime(dateString: string | null): string {
             </div>
 
             <!-- Grid layout: Sidebar + Content -->
-            <div class="grid gap-6 lg:grid-cols-4">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
                 <!-- Sidebar with navigation -->
-                <div class="sticky top-6 self-start lg:col-span-1">
+                <div class="self-start lg:sticky lg:top-6 lg:col-span-1">
                     <div class="rounded-xl border bg-card shadow-sm">
                         <div class="border-b bg-muted/30 p-3">
                             <div

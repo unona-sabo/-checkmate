@@ -35,6 +35,7 @@ import {
     Link2,
     Filter,
     LocateFixed,
+    Keyboard,
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import CellEditor from '@/components/CellEditor.vue';
@@ -75,6 +76,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useCanEdit } from '@/composables/useCanEdit';
 import {
     useChecklistClipboard,
@@ -1059,13 +1066,6 @@ const getFontWeightClass = (weight: string) => {
     }
 };
 
-// Get all checkbox column keys
-const checkboxColumnKeys = computed(() => {
-    return columns.value
-        .filter((col) => col.type === 'checkbox')
-        .map((col) => col.key);
-});
-
 // Manual row selection by clicking row numbers
 const manualSelectedIds = ref<Set<number>>(new Set());
 let lastClickedRowId: number | null = null;
@@ -1127,16 +1127,13 @@ const getRowNumber = (row: ExtendedChecklistRow): number => {
     return 0;
 };
 
-// Get selected rows (checkbox-checked OR manually selected — respects active filters/search)
+// Get manually selected rows (via the row-number selector — respects active filters/search)
 const selectedRows = computed(() => {
-    const checkboxKeys = checkboxColumnKeys.value;
     const manualIds = manualSelectedIds.value;
 
-    return filteredRows.value.filter((row) => {
-        if (row.row_type === 'section_header') return false;
-        if (manualIds.has(row.id)) return true;
-        return checkboxKeys.some((key) => !!row.data[key]);
-    });
+    return filteredRows.value.filter(
+        (row) => row.row_type !== 'section_header' && manualIds.has(row.id),
+    );
 });
 
 // Check if any rows are selected
@@ -2272,9 +2269,14 @@ const handleKeyDown = (e: KeyboardEvent) => {
 
 // Track scroll for sticky header shadow
 const isScrolled = ref(false);
+// Track horizontal scroll to hint that more columns are off-screen
+const canScrollRight = ref(false);
 const onScroll = () => {
     if (scrollContainerRef.value) {
         isScrolled.value = scrollContainerRef.value.scrollTop > 0;
+        const el = scrollContainerRef.value;
+        canScrollRight.value =
+            el.scrollWidth - el.clientWidth - el.scrollLeft > 1;
     }
 };
 
@@ -2297,6 +2299,8 @@ onMounted(() => {
     scrollContainerRef.value?.addEventListener('scroll', onScroll, {
         passive: true,
     });
+    window.addEventListener('resize', onScroll);
+    nextTick(onScroll);
 });
 
 onUnmounted(() => {
@@ -2304,6 +2308,7 @@ onUnmounted(() => {
     document.removeEventListener('copy', handleCopyEvent);
     document.removeEventListener('paste', handlePasteEvent);
     window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('resize', onScroll);
     scrollContainerRef.value?.removeEventListener('scroll', onScroll);
 });
 </script>
@@ -2396,7 +2401,9 @@ onUnmounted(() => {
                     {{ filteredDataRowCount }}
                     {{ filteredDataRowCount === 1 ? 'row' : 'rows' }} found
                 </span>
-                <div class="ml-auto flex items-center gap-1.5">
+                <div
+                    class="flex w-full flex-wrap items-center gap-1.5 sm:ml-auto sm:w-auto"
+                >
                     <!-- Undo last save -->
                     <RestrictedAction>
                         <Button
@@ -2410,6 +2417,52 @@ onUnmounted(() => {
                             <Undo2 class="h-3.5 w-3.5" />
                         </Button>
                     </RestrictedAction>
+                    <!-- Keyboard shortcuts hint, shown while rows are selected -->
+                    <TooltipProvider v-if="hasSelectedRows" :delay-duration="150">
+                        <Tooltip>
+                            <TooltipTrigger as-child>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    class="h-8 w-8"
+                                    title="Keyboard shortcuts"
+                                >
+                                    <Keyboard class="h-3.5 w-3.5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" class="w-64 text-xs">
+                                <p class="mb-1.5 font-medium">
+                                    Keyboard shortcuts
+                                </p>
+                                <div class="space-y-1">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span>Select range</span>
+                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">Shift+Click</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span>Select all rows</span>
+                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">Ctrl/Cmd+A</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span>Clear selection</span>
+                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">Esc</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span>Copy selected rows</span>
+                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">Ctrl/Cmd+C</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span>Paste rows</span>
+                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">Ctrl/Cmd+V</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span>Move between cells</span>
+                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">↑ ↓ Tab</kbd>
+                                    </div>
+                                </div>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                     <!-- Actions dropdown when rows are selected -->
                     <RestrictedAction>
                         <DropdownMenu v-if="hasSelectedRows">
@@ -3216,7 +3269,11 @@ onUnmounted(() => {
             </Card>
 
             <Card v-if="hasLoadedRows">
-                <CardContent class="p-0">
+                <CardContent class="relative p-0">
+                    <div
+                        v-if="canScrollRight"
+                        class="pointer-events-none absolute top-0 right-0 z-20 h-full w-6 bg-gradient-to-l from-background/80 to-transparent"
+                    />
                     <div
                         ref="scrollContainerRef"
                         class="max-h-[calc(100vh-220px)] overflow-auto"

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AIGenerator\GenerateTestCasesRequest;
 use App\Http\Requests\AIGenerator\ImportTestCasesRequest;
+use App\Http\Requests\AIGenerator\ParseTestCasesRequest;
 use App\Models\AiGeneration;
 use App\Models\Documentation;
 use App\Models\Project;
@@ -94,6 +95,33 @@ class AIGeneratorController extends Controller
             'provider' => $service->getProvider(),
             'model' => $service->getModel(),
             'input_type' => $validated['input_type'],
+            'test_cases_generated' => count($testCases),
+        ]);
+
+        return response()->json([
+            'test_cases' => $testCases,
+            'generation_id' => $generation->id,
+            'provider' => $service->getProvider(),
+            'model' => $service->getModel(),
+        ]);
+    }
+
+    public function parseText(ParseTestCasesRequest $request, Project $project): JsonResponse
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
+
+        $service = new AITestGeneratorService($validated['provider'] ?? null);
+
+        $testCases = $service->parseFromText($validated['text']);
+
+        $generation = AiGeneration::query()->create([
+            'project_id' => $project->id,
+            'user_id' => $request->user()->id,
+            'provider' => $service->getProvider(),
+            'model' => $service->getModel(),
+            'input_type' => 'paste',
             'test_cases_generated' => count($testCases),
         ]);
 

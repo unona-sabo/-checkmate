@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { Head, useForm, router } from '@inertiajs/vue3';
-import { Edit, Plus, Trash2, Paperclip, Download } from 'lucide-vue-next';
+import {
+    Edit,
+    Plus,
+    Trash2,
+    Paperclip,
+    Download,
+    Archive,
+    ArchiveRestore,
+    AlertTriangle,
+} from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import FeatureSelector from '@/components/FeatureSelector.vue';
 import FileDropZone from '@/components/FileDropZone.vue';
@@ -57,6 +66,13 @@ const props = defineProps<{
     testSuite: TestSuite;
     testCase: TestCase;
     features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
+    allTestSuites: {
+        id: number;
+        name: string;
+        parent_id: number | null;
+        is_archived: boolean;
+    }[];
+    archiveSuites: { id: number; name: string }[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -143,6 +159,113 @@ const deleteTestCase = () => {
     router.delete(
         `/projects/${props.project.id}/test-suites/${props.testSuite.id}/test-cases/${props.testCase.id}`,
     );
+};
+
+const suiteShowUrl = `/projects/${props.project.id}/test-suites/${props.testSuite.id}`;
+
+// Archive dialog
+const showArchiveDialog = ref(false);
+const archiveMode = ref<'existing' | 'new'>('existing');
+const archiveSuiteId = ref('');
+const archiveSuiteName = ref('Archive');
+const isArchiving = ref(false);
+
+const openArchiveDialog = () => {
+    archiveMode.value = props.archiveSuites.length > 0 ? 'existing' : 'new';
+    archiveSuiteId.value = props.archiveSuites[0]
+        ? String(props.archiveSuites[0].id)
+        : '';
+    archiveSuiteName.value = 'Archive';
+    showArchiveDialog.value = true;
+};
+
+const canArchive = computed(() => {
+    if (archiveMode.value === 'existing') return !!archiveSuiteId.value;
+    return !!archiveSuiteName.value.trim();
+});
+
+const submitArchive = () => {
+    if (!canArchive.value) return;
+    isArchiving.value = true;
+
+    const payload: Record<string, unknown> = {
+        test_case_ids: [props.testCase.id],
+    };
+    if (archiveMode.value === 'existing') {
+        payload.archive_suite_id = Number(archiveSuiteId.value);
+    } else {
+        payload.archive_suite_name = archiveSuiteName.value.trim();
+    }
+
+    router.post(`/projects/${props.project.id}/test-suites/archive-cases`, payload, {
+        onSuccess: () => {
+            router.visit(suiteShowUrl);
+        },
+        onFinish: () => {
+            isArchiving.value = false;
+        },
+    });
+};
+
+// Unarchive dialog
+const showUnarchiveDialog = ref(false);
+const unarchiveMode = ref<'original' | 'choose'>('original');
+const unarchiveTargetSuiteId = ref('');
+const isUnarchiving = ref(false);
+const unarchiveError = ref('');
+
+const unarchiveSuiteOptions = computed(() => {
+    const byId = new Map(props.allTestSuites.map((s) => [s.id, s]));
+    return props.allTestSuites
+        .filter((s) => !s.is_archived)
+        .map((s) => {
+            const parent = s.parent_id ? byId.get(s.parent_id) : null;
+            return {
+                id: s.id,
+                label: parent ? `${parent.name} / ${s.name}` : s.name,
+            };
+        });
+});
+
+const openUnarchiveDialog = () => {
+    unarchiveMode.value = 'original';
+    unarchiveTargetSuiteId.value = unarchiveSuiteOptions.value[0]
+        ? String(unarchiveSuiteOptions.value[0].id)
+        : '';
+    unarchiveError.value = '';
+    showUnarchiveDialog.value = true;
+};
+
+const canUnarchive = computed(() => {
+    if (unarchiveMode.value === 'choose') return !!unarchiveTargetSuiteId.value;
+    return true;
+});
+
+const submitUnarchive = () => {
+    if (!canUnarchive.value) return;
+    isUnarchiving.value = true;
+    unarchiveError.value = '';
+
+    const payload: Record<string, unknown> = {
+        test_case_ids: [props.testCase.id],
+        mode: unarchiveMode.value,
+    };
+    if (unarchiveMode.value === 'choose') {
+        payload.target_suite_id = Number(unarchiveTargetSuiteId.value);
+    }
+
+    router.post(`/projects/${props.project.id}/test-suites/unarchive-cases`, payload, {
+        onSuccess: () => {
+            router.visit(suiteShowUrl);
+        },
+        onError: (errors) => {
+            unarchiveError.value =
+                errors.mode ||
+                'This test case could not be unarchived automatically.';
+            unarchiveMode.value = 'choose';
+            isUnarchiving.value = false;
+        },
+    });
 };
 </script>
 
@@ -268,7 +391,7 @@ const deleteTestCase = () => {
                                 />
                             </div>
 
-                            <div class="grid gap-4 md:grid-cols-2">
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div class="space-y-2">
                                     <Label>Priority</Label>
                                     <Select v-model="form.priority">
@@ -519,7 +642,7 @@ const deleteTestCase = () => {
                                 <FileDropZone v-model="form.attachments" :errors="attachmentErrors" />
                             </div>
 
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <Button
                                     type="submit"
                                     :disabled="form.processing"
@@ -535,6 +658,26 @@ const deleteTestCase = () => {
                                     "
                                 >
                                     Cancel
+                                </Button>
+                                <Button
+                                    v-if="!testSuite.is_archived"
+                                    type="button"
+                                    variant="outline"
+                                    class="ml-auto gap-2"
+                                    @click="openArchiveDialog"
+                                >
+                                    <Archive class="h-4 w-4" />
+                                    Archive Test Case
+                                </Button>
+                                <Button
+                                    v-else
+                                    type="button"
+                                    variant="outline"
+                                    class="ml-auto gap-2"
+                                    @click="openUnarchiveDialog"
+                                >
+                                    <ArchiveRestore class="h-4 w-4" />
+                                    Unarchive Test Case
                                 </Button>
                             </div>
                         </form>
@@ -591,5 +734,191 @@ const deleteTestCase = () => {
                 </Card>
             </div>
         </div>
+
+        <!-- Archive Test Case Dialog -->
+        <Dialog v-model:open="showArchiveDialog">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Archive class="h-5 w-5 text-primary" />
+                        Archive Test Case
+                    </DialogTitle>
+                    <DialogDescription>
+                        Move "{{ testCase.title }}" into an archive suite.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4 py-2">
+                    <div class="flex gap-1 rounded-lg bg-muted p-1">
+                        <button
+                            type="button"
+                            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                            :class="
+                                archiveMode === 'existing'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            @click="archiveMode = 'existing'"
+                        >
+                            Existing Archive Suite
+                        </button>
+                        <button
+                            type="button"
+                            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                            :class="
+                                archiveMode === 'new'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            @click="archiveMode = 'new'"
+                        >
+                            New Archive Suite
+                        </button>
+                    </div>
+
+                    <div v-if="archiveMode === 'existing'" class="space-y-2">
+                        <Label>Archive Suite</Label>
+                        <Select
+                            v-if="archiveSuites.length > 0"
+                            v-model="archiveSuiteId"
+                        >
+                            <SelectTrigger>
+                                <SelectValue
+                                    placeholder="Select an archive suite..."
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="suite in archiveSuites"
+                                    :key="suite.id"
+                                    :value="String(suite.id)"
+                                >
+                                    {{ suite.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p v-else class="text-sm text-muted-foreground">
+                            No archive suites yet — switch to "New Archive
+                            Suite" to create one.
+                        </p>
+                    </div>
+
+                    <div v-else class="space-y-2">
+                        <Label>Suite Name</Label>
+                        <Input
+                            v-model="archiveSuiteName"
+                            placeholder="e.g. Archive"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="showArchiveDialog = false"
+                        >Cancel</Button
+                    >
+                    <Button
+                        @click="submitArchive"
+                        :disabled="!canArchive || isArchiving"
+                        class="gap-2"
+                    >
+                        <Archive class="h-4 w-4" />
+                        {{ isArchiving ? 'Archiving...' : 'Archive' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Unarchive Test Case Dialog -->
+        <Dialog v-model:open="showUnarchiveDialog">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <ArchiveRestore class="h-5 w-5 text-primary" />
+                        Unarchive Test Case
+                    </DialogTitle>
+                    <DialogDescription>
+                        Move "{{ testCase.title }}" out of this archive
+                        suite.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4 py-2">
+                    <div class="flex gap-1 rounded-lg bg-muted p-1">
+                        <button
+                            type="button"
+                            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                            :class="
+                                unarchiveMode === 'original'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            @click="unarchiveMode = 'original'"
+                        >
+                            Original Suite
+                        </button>
+                        <button
+                            type="button"
+                            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                            :class="
+                                unarchiveMode === 'choose'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            @click="unarchiveMode = 'choose'"
+                        >
+                            Choose a Suite
+                        </button>
+                    </div>
+
+                    <div
+                        v-if="unarchiveError"
+                        class="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
+                    >
+                        <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
+                        {{ unarchiveError }}
+                    </div>
+
+                    <p
+                        v-if="unarchiveMode === 'original'"
+                        class="text-sm text-muted-foreground"
+                    >
+                        The test case returns to the suite it was archived
+                        from, if it still exists.
+                    </p>
+
+                    <div v-else class="space-y-2">
+                        <Label>Target Suite</Label>
+                        <Select v-model="unarchiveTargetSuiteId">
+                            <SelectTrigger>
+                                <SelectValue
+                                    placeholder="Select a test suite..."
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="option in unarchiveSuiteOptions"
+                                    :key="option.id"
+                                    :value="String(option.id)"
+                                >
+                                    {{ option.label }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        @click="showUnarchiveDialog = false"
+                        >Cancel</Button
+                    >
+                    <Button
+                        @click="submitUnarchive"
+                        :disabled="!canUnarchive || isUnarchiving"
+                        class="gap-2"
+                    >
+                        <ArchiveRestore class="h-4 w-4" />
+                        {{ isUnarchiving ? 'Unarchiving...' : 'Unarchive' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

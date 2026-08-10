@@ -881,15 +881,17 @@ const flattenPayload = (
                     }}
                 </Badge>
 
-                <div class="ml-auto flex items-center gap-2">
-                    <div class="relative">
+                <div
+                    class="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto"
+                >
+                    <div class="relative w-full sm:w-auto">
                         <Search
                             class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                         />
                         <Input
                             v-model="searchQuery"
                             placeholder="Search by ID or name..."
-                            class="w-52 bg-background/60 pr-8 pl-9"
+                            class="w-full bg-background/60 pr-8 pl-9 sm:w-52"
                         />
                         <button
                             v-if="searchQuery"

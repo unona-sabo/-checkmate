@@ -1052,8 +1052,10 @@ const severityColors: Record<string, string> = {
                         <!-- Results header -->
                         <Card>
                             <CardContent class="py-4">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
+                                <div
+                                    class="flex flex-wrap items-center justify-between gap-3"
+                                >
+                                    <div class="flex flex-wrap items-center gap-2">
                                         <CheckCircle
                                             class="h-5 w-5 text-green-500"
                                         />

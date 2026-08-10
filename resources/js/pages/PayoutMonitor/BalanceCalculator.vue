@@ -487,8 +487,10 @@ const groupedHistory = computed(() => {
             </div>
 
             <!-- Tabs -->
-            <div class="flex items-center justify-between border-b">
-                <div class="flex gap-0">
+            <div
+                class="flex flex-col gap-2 border-b sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div class="flex gap-0 overflow-x-auto">
                     <button
                         class="relative px-5 py-2.5 text-sm font-medium transition-colors cursor-pointer"
                         :class="!showHistory && activeTab === 'active'
@@ -521,7 +523,10 @@ const groupedHistory = computed(() => {
                         </span>
                     </button>
                 </div>
-                <div v-if="!showHistory" class="mb-1 flex items-center gap-2">
+                <div
+                    v-if="!showHistory"
+                    class="mb-1 flex flex-wrap items-center gap-2"
+                >
                     <Button
                         variant="outline"
                         size="sm"

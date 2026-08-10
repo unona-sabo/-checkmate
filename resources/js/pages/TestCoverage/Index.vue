@@ -625,7 +625,9 @@ const refreshData = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
             <!-- Header -->
-            <div class="flex items-center justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div>
                     <h1
                         class="flex items-center gap-2 text-2xl font-bold text-foreground"
@@ -637,12 +639,12 @@ const refreshData = () => {
                         AI-powered insights into your test coverage
                     </p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <RestrictedAction>
                         <Button
                             variant="outline"
                             @click="autoLinkAll"
-                            class="cursor-pointer"
+                            class="w-full cursor-pointer sm:w-auto"
                         >
                             <Wand2 class="mr-1 h-4 w-4" />
                             Auto-Link All
@@ -652,7 +654,7 @@ const refreshData = () => {
                         <Button
                             variant="outline"
                             @click="showAddFeatureDialog = true"
-                            class="cursor-pointer"
+                            class="w-full cursor-pointer sm:w-auto"
                         >
                             <Plus class="mr-1 h-4 w-4" />
                             Add Feature
@@ -661,7 +663,7 @@ const refreshData = () => {
                     <Button
                         variant="outline"
                         @click="refreshData"
-                        class="cursor-pointer"
+                        class="w-full cursor-pointer sm:w-auto"
                     >
                         <RefreshCw class="mr-1 h-4 w-4" />
                         Refresh
@@ -670,7 +672,9 @@ const refreshData = () => {
             </div>
 
             <!-- Statistics Cards -->
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <div
+                class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
+            >
                 <Card>
                     <CardContent class="flex items-center gap-4 p-5">
                         <div class="rounded-lg bg-primary/10 p-3">
@@ -762,15 +766,12 @@ const refreshData = () => {
             <!-- Tabs -->
             <Card>
                 <div class="border-b">
-                    <nav
-                        class="flex gap-0 overflow-x-auto px-4"
-                        aria-label="Tabs"
-                    >
+                    <nav class="flex flex-wrap gap-0 px-2 sm:px-4" aria-label="Tabs">
                         <button
                             v-for="tab in tabs"
                             :key="tab.key"
                             @click="activeTab = tab.key"
-                            class="flex cursor-pointer items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors"
+                            class="flex cursor-pointer items-center gap-1.5 border-b-2 px-2.5 py-3 text-sm font-medium whitespace-nowrap transition-colors sm:gap-2 sm:px-4"
                             :class="
                                 activeTab === tab.key
                                     ? 'border-primary text-primary'
@@ -788,9 +789,9 @@ const refreshData = () => {
                     <!-- Selected feature banner -->
                     <div
                         v-if="selectedFeature"
-                        class="mb-6 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-4 py-3"
+                        class="mb-6 flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                     >
-                        <div class="flex items-center gap-3">
+                        <div class="flex min-w-0 items-center gap-3">
                             <Target class="h-5 w-5 text-primary" />
                             <div>
                                 <span class="font-medium text-foreground">{{
@@ -840,7 +841,7 @@ const refreshData = () => {
                                     : 'Coverage by Module'
                             }}
                         </h3>
-                        <div class="grid gap-4 md:grid-cols-2">
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <Card
                                 v-for="mod in displayedCoverageByModule"
                                 :key="mod.module"
@@ -897,11 +898,13 @@ const refreshData = () => {
 
                     <!-- Features list -->
                     <div>
-                        <div class="mb-4 flex items-center justify-between">
+                        <div
+                            class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                        >
                             <h3 class="text-lg font-semibold text-foreground">
                                 Project Features
                             </h3>
-                            <div class="relative w-64">
+                            <div class="relative w-full sm:w-64">
                                 <Search
                                     class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                                 />
@@ -940,7 +943,7 @@ const refreshData = () => {
                                 :key="feature.id"
                             >
                                 <div
-                                    class="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/30"
+                                    class="flex flex-col gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/30 sm:flex-row sm:items-center sm:justify-between"
                                     :class="{
                                         'rounded-b-none border-b-0':
                                             expandedFeatureId === feature.id,
@@ -949,10 +952,12 @@ const refreshData = () => {
                                     }"
                                 >
                                     <div
-                                        class="flex-1 cursor-pointer"
+                                        class="min-w-0 flex-1 cursor-pointer"
                                         @click="selectFeature(feature.id)"
                                     >
-                                        <div class="flex items-center gap-2">
+                                        <div
+                                            class="flex flex-wrap items-center gap-2"
+                                        >
                                             <span
                                                 class="font-medium text-foreground"
                                                 >{{ feature.name }}</span
@@ -991,7 +996,9 @@ const refreshData = () => {
                                             {{ feature.description }}
                                         </p>
                                     </div>
-                                    <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex flex-wrap items-center gap-3 sm:shrink-0"
+                                    >
                                         <button
                                             @click="toggleExpanded(feature.id)"
                                             class="cursor-pointer text-sm font-medium"
@@ -1237,7 +1244,9 @@ const refreshData = () => {
                     <div
                         class="mb-8 rounded-lg bg-gradient-to-r from-violet-600 to-blue-600 p-8 text-white"
                     >
-                        <div class="flex items-center justify-between gap-6">
+                        <div
+                            class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
+                        >
                             <div class="flex-1">
                                 <h2
                                     class="mb-2 flex items-center gap-2 text-2xl font-bold"
@@ -1271,7 +1280,7 @@ const refreshData = () => {
                                 <Button
                                     @click="runAnalysis"
                                     :disabled="isAnalyzing || !hasAnthropicKey"
-                                    class="cursor-pointer bg-white px-8 py-6 font-bold text-violet-600 hover:bg-violet-50"
+                                    class="w-full cursor-pointer bg-white px-8 py-6 font-bold text-violet-600 hover:bg-violet-50 sm:w-auto"
                                 >
                                     <Loader2
                                         v-if="isAnalyzing"
@@ -1371,7 +1380,7 @@ const refreshData = () => {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div class="grid gap-4 md:grid-cols-2">
+                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div
                                         v-for="area in analysisResults.well_covered"
                                         :key="area.feature"
@@ -1495,9 +1504,13 @@ const refreshData = () => {
                                     gap.priority === 'low',
                             }"
                         >
-                            <div class="flex items-start justify-between gap-4">
-                                <div class="flex-1">
-                                    <div class="mb-2 flex items-center gap-3">
+                            <div
+                                class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+                            >
+                                <div class="min-w-0 flex-1">
+                                    <div
+                                        class="mb-2 flex flex-wrap items-center gap-3"
+                                    >
                                         <h4
                                             class="text-lg font-bold text-foreground"
                                         >
@@ -1575,10 +1588,10 @@ const refreshData = () => {
                         <div
                             v-for="gap in gaps"
                             :key="gap.id"
-                            class="flex items-center justify-between rounded-lg border p-4"
+                            class="flex items-center justify-between gap-3 rounded-lg border p-4"
                         >
-                            <div>
-                                <div class="flex items-center gap-2">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <span class="font-medium text-foreground">{{
                                         gap.feature
                                     }}</span>
@@ -1604,7 +1617,7 @@ const refreshData = () => {
                                 </p>
                             </div>
                             <ChevronRight
-                                class="h-5 w-5 text-muted-foreground"
+                                class="h-5 w-5 shrink-0 text-muted-foreground"
                             />
                         </div>
                     </div>

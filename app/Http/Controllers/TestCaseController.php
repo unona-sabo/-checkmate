@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TestCase\ArchiveTestCasesRequest;
 use App\Http\Requests\TestCase\BulkDeleteTestCasesRequest;
 use App\Http\Requests\TestCase\BulkUpdateTestCasesRequest;
 use App\Http\Requests\TestCase\ImportTestCasesFromFileRequest;
@@ -11,6 +12,7 @@ use App\Http\Requests\TestCase\ReorderTestCasesRequest;
 use App\Http\Requests\TestCase\StoreTestCaseNoteAsNewSuiteRequest;
 use App\Http\Requests\TestCase\StoreTestCaseNoteRequest;
 use App\Http\Requests\TestCase\StoreTestCaseRequest;
+use App\Http\Requests\TestCase\UnarchiveTestCasesRequest;
 use App\Http\Requests\TestCase\UpdateTestCaseRequest;
 use App\Models\Attachment;
 use App\Models\Bugreport;
@@ -110,11 +112,19 @@ class TestCaseController extends Controller
             ->orderBy('module')->orderBy('name')
             ->get(['id', 'name', 'module', 'priority']);
 
+        $allTestSuites = $project->testSuites()
+            ->orderBy('name')
+            ->get(['id', 'name', 'parent_id', 'is_archived']);
+
+        $archiveSuites = $allTestSuites->where('is_archived', true)->values();
+
         return Inertia::render('TestCases/Edit', [
             'project' => $project,
             'testSuite' => $testSuite,
             'testCase' => $testCase,
             'features' => $features,
+            'allTestSuites' => $allTestSuites,
+            'archiveSuites' => $archiveSuites,
         ]);
     }
 
@@ -300,6 +310,120 @@ class TestCaseController extends Controller
         }
 
         return back()->with('success', 'Test cases reordered successfully.');
+    }
+
+    public function archive(ArchiveTestCasesRequest $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
+
+        if (! empty($validated['archive_suite_id'])) {
+            $archiveSuite = TestSuite::query()->findOrFail($validated['archive_suite_id']);
+            abort_unless($archiveSuite->project_id === $project->id && $archiveSuite->is_archived, 403);
+        } else {
+            $maxOrder = $project->testSuites()->whereNull('parent_id')->max('order') ?? 0;
+
+            $archiveSuite = $project->testSuites()->create([
+                'name' => $validated['archive_suite_name'],
+                'type' => 'functional',
+                'is_archived' => true,
+                'order' => $maxOrder + 1,
+            ]);
+        }
+
+        $projectSuiteIds = $project->testSuites()->pluck('id');
+
+        $testCases = TestCase::query()
+            ->whereIn('id', $validated['test_case_ids'])
+            ->whereIn('test_suite_id', $projectSuiteIds)
+            ->get();
+
+        $nextOrder = (TestCase::query()->where('test_suite_id', $archiveSuite->id)->max('order') ?? 0) + 1;
+
+        foreach ($testCases as $testCase) {
+            $testCase->update([
+                'archived_from_suite_id' => $testCase->test_suite_id,
+                'test_suite_id' => $archiveSuite->id,
+                'order' => $nextOrder,
+            ]);
+            $nextOrder++;
+        }
+
+        return back()->with('success', $testCases->count()." test case(s) archived to \"{$archiveSuite->name}\".");
+    }
+
+    public function unarchive(UnarchiveTestCasesRequest $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
+
+        $projectSuiteIds = $project->testSuites()->pluck('id');
+
+        $testCases = TestCase::query()
+            ->whereIn('id', $validated['test_case_ids'])
+            ->whereIn('test_suite_id', $projectSuiteIds)
+            ->get();
+
+        if ($validated['mode'] === 'choose') {
+            $targetSuite = TestSuite::query()->findOrFail($validated['target_suite_id']);
+            abort_unless($targetSuite->project_id === $project->id, 403);
+
+            $nextOrder = (TestCase::query()->where('test_suite_id', $targetSuite->id)->max('order') ?? 0) + 1;
+
+            foreach ($testCases as $testCase) {
+                $testCase->update([
+                    'test_suite_id' => $targetSuite->id,
+                    'archived_from_suite_id' => null,
+                    'order' => $nextOrder,
+                ]);
+                $nextOrder++;
+            }
+
+            return back()->with('success', $testCases->count()." test case(s) unarchived to \"{$targetSuite->name}\".");
+        }
+
+        $movedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($testCases->groupBy('archived_from_suite_id') as $originalSuiteId => $group) {
+            $originalSuite = $originalSuiteId ? TestSuite::query()->find($originalSuiteId) : null;
+
+            if (! $originalSuite || $originalSuite->project_id !== $project->id) {
+                $skippedCount += $group->count();
+
+                continue;
+            }
+
+            $nextOrder = (TestCase::query()->where('test_suite_id', $originalSuite->id)->max('order') ?? 0) + 1;
+
+            foreach ($group as $testCase) {
+                $testCase->update([
+                    'test_suite_id' => $originalSuite->id,
+                    'archived_from_suite_id' => null,
+                    'order' => $nextOrder,
+                ]);
+                $nextOrder++;
+                $movedCount++;
+            }
+        }
+
+        $response = back();
+
+        if ($skippedCount > 0) {
+            $response = $response->withErrors([
+                'mode' => $skippedCount === 1
+                    ? 'The original suite for 1 test case no longer exists. Choose a suite for it below.'
+                    : "The original suite for {$skippedCount} test case(s) no longer exists. Choose a suite for them below.",
+            ]);
+        }
+
+        if ($movedCount > 0) {
+            $response = $response->with('success', "{$movedCount} test case(s) returned to their original suite.");
+        }
+
+        return $response;
     }
 
     public function export(Request $request, Project $project): StreamedResponse

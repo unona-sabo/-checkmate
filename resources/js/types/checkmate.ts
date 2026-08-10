@@ -137,6 +137,7 @@ export interface TestSuite {
     type: string;
     module: string[] | null;
     order: number;
+    is_archived: boolean;
     created_at: string;
     updated_at: string;
     test_cases_count?: number;
@@ -153,6 +154,7 @@ export interface TestSuite {
 export interface TestCase {
     id: number;
     test_suite_id: number;
+    archived_from_suite_id: number | null;
     title: string;
     description: string | null;
     preconditions: string | null;

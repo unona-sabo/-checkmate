@@ -287,7 +287,9 @@ const resumeRun = (run: TestRun) => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="flex items-center justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div>
                     <h1
                         class="flex items-start gap-2 text-2xl font-bold tracking-tight"
@@ -299,9 +301,9 @@ const resumeRun = (run: TestRun) => {
                         Execute and track test case results
                     </p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <template v-if="testRuns.length > 0">
-                        <div class="relative">
+                        <div class="relative w-full sm:w-auto">
                             <Search
                                 class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                             />
@@ -309,7 +311,7 @@ const resumeRun = (run: TestRun) => {
                                 v-model="searchQuery"
                                 type="text"
                                 placeholder="Search test runs..."
-                                class="w-56 bg-background/60 pr-8 pl-9"
+                                class="w-full bg-background/60 pr-8 pl-9 sm:w-56"
                             />
                             <button
                                 v-if="searchQuery"
@@ -420,7 +422,7 @@ const resumeRun = (run: TestRun) => {
                         </div>
                     </div>
                     <!-- Row 1: Status, Source, Priority -->
-                    <div class="grid grid-cols-3 gap-x-3 gap-y-2.5">
+                    <div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
                         <div class="relative">
                             <Label
                                 class="mb-1 block text-[11px] text-muted-foreground"
@@ -515,7 +517,7 @@ const resumeRun = (run: TestRun) => {
                         </div>
                     </div>
                     <!-- Row 2: Environment, Created From, Created To -->
-                    <div class="mt-2.5 grid grid-cols-3 gap-x-3 gap-y-2.5">
+                    <div class="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
                         <div class="relative">
                             <Label
                                 class="mb-1 block text-[11px] text-muted-foreground"
@@ -585,7 +587,7 @@ const resumeRun = (run: TestRun) => {
                         </div>
                     </div>
                     <!-- Row 3: Author, Completed From, Completed To -->
-                    <div class="mt-2.5 grid grid-cols-3 gap-x-3 gap-y-2.5">
+                    <div class="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
                         <Deferred data="users">
                             <template #fallback>
                                 <div>
@@ -669,7 +671,7 @@ const resumeRun = (run: TestRun) => {
                         </div>
                     </div>
                     <!-- Row 4: Passed, Failed, Total Checks -->
-                    <div class="mt-2.5 grid grid-cols-3 gap-x-3 gap-y-2.5">
+                    <div class="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
                         <div>
                             <Label
                                 class="mb-1 block text-[11px] text-muted-foreground"

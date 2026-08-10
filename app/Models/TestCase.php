@@ -16,6 +16,7 @@ class TestCase extends Model
 
     protected $fillable = [
         'test_suite_id',
+        'archived_from_suite_id',
         'title',
         'description',
         'preconditions',
@@ -49,6 +50,11 @@ class TestCase extends Model
     public function testSuite(): BelongsTo
     {
         return $this->belongsTo(TestSuite::class);
+    }
+
+    public function archivedFromSuite(): BelongsTo
+    {
+        return $this->belongsTo(TestSuite::class, 'archived_from_suite_id');
     }
 
     public function creator(): BelongsTo

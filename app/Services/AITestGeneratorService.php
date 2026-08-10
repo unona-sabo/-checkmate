@@ -80,6 +80,23 @@ class AITestGeneratorService
         return $this->generateFromText($content, $options);
     }
 
+    /**
+     * @param  array{language?: string}  $options
+     * @return list<array{title: string, description: string, preconditions: string, steps: string, expected_result: string, priority: string, type: string}>
+     *
+     * @throws ConnectionException
+     */
+    public function parseFromText(string $text, array $options = []): array
+    {
+        $prompt = $this->buildParsePrompt($text, $options);
+
+        return match ($this->provider) {
+            'claude' => $this->claudeGenerate($prompt, $options),
+            'openai' => $this->openaiGenerate($prompt, $options),
+            default => $this->geminiGenerate([['text' => $prompt]], $options),
+        };
+    }
+
     public function getProvider(): string
     {
         return $this->provider;
@@ -361,6 +378,52 @@ FIELD RULES:
 - automation_status: Always \"not_automated\" for AI-generated tests
 
 {$countInstruction}";
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    private function buildParsePrompt(string $text, array $options): string
+    {
+        $customPrompt = ! empty($options['custom_prompt'])
+            ? "\n\nADDITIONAL REQUIREMENTS:\n{$options['custom_prompt']}"
+            : '';
+
+        return "You are an expert QA engineer. The text below already contains test cases written by a person or another tool, in some arbitrary format. Your job is to EXTRACT every test case that is already present and convert each one to the exact JSON schema below. Do not invent new test cases, do not skip any that are present, and do not merge multiple cases into one.
+
+The source text may use any structure — numbered cases like \"TC-20:\", section/group headers like \"Блок 6: Географія\" (a header is context for grouping, not a separate test case), labels such as \"Steps:\"/\"Кроки:\" and \"Expected Result:\"/\"Очікуваний результат:\", markdown tables, or plain prose. Recognize these patterns regardless of language and regardless of whether labels are in English or another language.
+
+IMPORTANT: Keep all extracted content (titles, descriptions, steps, expected results) in the SAME LANGUAGE as the source text. Do not translate anything.
+
+SOURCE TEXT:
+{$text}{$customPrompt}
+
+IMPORTANT: Return ONLY valid JSON, no additional text before or after.
+
+Return a JSON array with this exact structure:
+[
+  {
+    \"title\": \"Clear, specific test case title (from the source, cleaned up)\",
+    \"description\": \"What this test validates (1-2 sentences, infer if not explicit)\",
+    \"preconditions\": \"Required setup before running test, if mentioned\",
+    \"steps\": [
+      {\"action\": \"Navigate to login page\", \"expected\": \"Login page is displayed\"},
+      {\"action\": \"Enter valid credentials and click Login\", \"expected\": \"User is redirected to dashboard\"}
+    ],
+    \"expected_result\": \"Overall expected outcome when all steps complete\",
+    \"priority\": \"critical|high|medium|low\",
+    \"severity\": \"blocker|critical|major|minor|trivial\",
+    \"type\": \"functional|integration|regression|security|performance|usability|smoke|exploratory\",
+    \"automation_status\": \"not_automated\"
+  }
+]
+
+FIELD RULES:
+- title: Clear, testable statement (max 255 chars)
+- steps: Array of objects with \"action\" (required) and \"expected\" (optional per step). If the source has a single combined \"Steps\" block and a single \"Expected Result\" for the whole case, put the steps as one or more action entries and the overall outcome in expected_result rather than forcing it per step.
+- priority/severity/type/automation_status: infer a reasonable value from context if not stated explicitly; default priority to medium, severity to major, type to functional, automation_status to not_automated
+
+Extract every single test case present in the source text — do not stop early.";
     }
 
     /**

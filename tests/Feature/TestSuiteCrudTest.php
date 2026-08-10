@@ -22,6 +22,48 @@ test('index page renders with test suites for authenticated user', function () {
     );
 });
 
+test('index page exposes AI provider availability for the paste-ai-test-cases dialog', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    TestSuite::factory()->count(2)->create(['project_id' => $project->id]);
+
+    config(['services.gemini.api_key' => 'test-key']);
+    config(['services.openai.api_key' => 'test-key']);
+    config(['services.anthropic.api_key' => null]);
+
+    $response = $this->actingAs($user)->get(route('test-suites.index', $project));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('TestSuites/Index')
+        ->where('hasGeminiKey', true)
+        ->where('hasOpenaiKey', true)
+        ->where('hasClaudeKey', false)
+        ->has('defaultAiProvider')
+    );
+});
+
+test('show page exposes AI provider availability for the paste-ai-test-cases dialog', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+
+    config(['services.gemini.api_key' => 'test-key']);
+    config(['services.anthropic.api_key' => null]);
+    config(['services.openai.api_key' => null]);
+
+    $response = $this->actingAs($user)->get(route('test-suites.show', [$project, $suite]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('TestSuites/Show')
+        ->where('hasGeminiKey', true)
+        ->where('hasClaudeKey', false)
+        ->where('hasOpenaiKey', false)
+        ->has('defaultAiProvider')
+    );
+});
+
 test('store creates test suite with valid data', function () {
     $user = User::factory()->create();
     $project = Project::factory()->create(['user_id' => $user->id]);

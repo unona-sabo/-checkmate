@@ -248,7 +248,9 @@ const getBugStatusColor = (status: string) => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="flex items-center justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div>
                     <h1
                         class="flex items-start gap-2 text-2xl font-bold tracking-tight"
@@ -273,7 +275,7 @@ const getBugStatusColor = (status: string) => {
                     </p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <div class="relative">
+                    <div class="relative w-full sm:w-auto">
                         <Search
                             class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                         />
@@ -281,7 +283,7 @@ const getBugStatusColor = (status: string) => {
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search project..."
-                            class="w-72 bg-background/60 pr-8 pl-9"
+                            class="w-full bg-background/60 pr-8 pl-9 sm:w-72"
                         />
                         <button
                             v-if="searchQuery"

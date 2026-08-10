@@ -213,16 +213,16 @@ const formatDate = (date: string | null): string => {
                 </div>
                 <div
                     v-if="releases.length"
-                    class="mt-4 flex items-center justify-end gap-2"
+                    class="mt-4 flex flex-wrap items-center justify-end gap-2"
                 >
-                    <div class="relative">
+                    <div class="relative w-full sm:w-auto">
                         <Search
                             class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                         />
                         <Input
                             v-model="searchQuery"
                             placeholder="Search releases..."
-                            class="w-56 bg-background/60 pr-8 pl-9"
+                            class="w-full bg-background/60 pr-8 pl-9 sm:w-56"
                         />
                         <button
                             v-if="searchQuery"
@@ -325,7 +325,7 @@ const formatDate = (date: string | null): string => {
                         </div>
                     </div>
                     <!-- Row 1: Planned From, Planned To -->
-                    <div class="grid grid-cols-2 gap-x-3 gap-y-2.5">
+                    <div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
                         <div class="relative">
                             <Label
                                 class="mb-1 block text-[11px] text-muted-foreground"
@@ -366,7 +366,7 @@ const formatDate = (date: string | null): string => {
                         </div>
                     </div>
                     <!-- Row 2: Actual From, Actual To -->
-                    <div class="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5">
+                    <div class="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
                         <div class="relative">
                             <Label
                                 class="mb-1 block text-[11px] text-muted-foreground"

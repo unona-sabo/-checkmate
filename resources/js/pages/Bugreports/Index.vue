@@ -189,7 +189,9 @@ const filteredBugreports = computed(() => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="flex items-center justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div>
                     <h1
                         class="flex items-start gap-2 text-2xl font-bold tracking-tight"
@@ -204,9 +206,9 @@ const filteredBugreports = computed(() => {
                         Track and manage bugs found during testing
                     </p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <template v-if="bugreports.length > 0">
-                        <div class="relative">
+                        <div class="relative w-full sm:w-auto">
                             <Search
                                 class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                             />
@@ -214,7 +216,7 @@ const filteredBugreports = computed(() => {
                                 v-model="searchQuery"
                                 type="text"
                                 placeholder="Search bugreports..."
-                                class="w-56 bg-background/60 pr-8 pl-9"
+                                class="w-full bg-background/60 pr-8 pl-9 sm:w-56"
                             />
                             <button
                                 v-if="searchQuery"
@@ -313,7 +315,7 @@ const filteredBugreports = computed(() => {
                     </div>
                     <div class="space-y-2.5">
                         <!-- Row 1: Status, Priority, Severity -->
-                        <div class="grid grid-cols-3 gap-x-3">
+                        <div class="grid grid-cols-1 gap-x-3 sm:grid-cols-3">
                             <div class="relative">
                                 <Label
                                     class="mb-1 block text-[11px] text-muted-foreground"
@@ -422,7 +424,7 @@ const filteredBugreports = computed(() => {
                             </div>
                         </div>
                         <!-- Row 2: Feature, Fixed On, Author -->
-                        <div class="grid grid-cols-3 gap-x-3">
+                        <div class="grid grid-cols-1 gap-x-3 sm:grid-cols-3">
                             <div class="relative">
                                 <Label
                                     class="mb-1 block text-[11px] text-muted-foreground"
@@ -540,7 +542,7 @@ const filteredBugreports = computed(() => {
                             </Deferred>
                         </div>
                         <!-- Row 3: Created From, Created To -->
-                        <div class="grid grid-cols-3 gap-x-3">
+                        <div class="grid grid-cols-1 gap-x-3 sm:grid-cols-3">
                             <div class="relative">
                                 <Label
                                     class="mb-1 block text-[11px] text-muted-foreground"
@@ -581,7 +583,7 @@ const filteredBugreports = computed(() => {
                             </div>
                         </div>
                         <!-- Row 4: Updated From, Updated To, Results count -->
-                        <div class="grid grid-cols-3 gap-x-3">
+                        <div class="grid grid-cols-1 gap-x-3 sm:grid-cols-3">
                             <div class="relative">
                                 <Label
                                     class="mb-1 block text-[11px] text-muted-foreground"
@@ -677,7 +679,7 @@ const filteredBugreports = computed(() => {
                 </p>
             </div>
 
-            <div v-else class="grid gap-2.5 md:grid-cols-2">
+            <div v-else class="grid grid-cols-1 gap-2.5 md:grid-cols-2">
                 <Link
                     v-for="bug in filteredBugreports"
                     :key="bug.id"

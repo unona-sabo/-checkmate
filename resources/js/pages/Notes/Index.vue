@@ -100,15 +100,20 @@ const deleteNote = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="flex items-center justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <h1
                     class="flex items-start gap-2 text-2xl font-bold tracking-tight"
                 >
                     <StickyNote class="mt-1 h-6 w-6 shrink-0 text-primary" />
                     Notes
                 </h1>
-                <div class="flex items-center gap-3">
-                    <div v-if="notes.length > 0" class="relative">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div
+                        v-if="notes.length > 0"
+                        class="relative w-full sm:w-auto"
+                    >
                         <Search
                             class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                         />
@@ -116,7 +121,7 @@ const deleteNote = () => {
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search notes..."
-                            class="w-56 bg-background/60 pr-8 pl-9"
+                            class="w-full bg-background/60 pr-8 pl-9 sm:w-56"
                         />
                         <button
                             v-if="searchQuery"

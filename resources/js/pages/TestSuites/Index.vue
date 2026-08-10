@@ -27,6 +27,10 @@ import {
     Zap,
     RotateCcw,
     Bot,
+    Sparkles,
+    AlertTriangle,
+    Archive,
+    ArchiveRestore,
 } from 'lucide-vue-next';
 import { ref, computed, onMounted, watch } from 'vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
@@ -35,6 +39,7 @@ import RestrictedAction from '@/components/RestrictedAction.vue';
 import TranslateButtons from '@/components/TranslateButtons.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
@@ -65,13 +70,18 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useSearch } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { priorityVariant, testTypeVariant } from '@/lib/badge-variants';
+import {
+    priorityVariant,
+    severityVariant,
+    testTypeVariant,
+} from '@/lib/badge-variants';
 import {
     type BreadcrumbItem,
     type Project,
     type TestSuite,
     type TestCase,
 } from '@/types';
+import type { AIGeneratedTestCaseInput } from '@/types/checkmate';
 
 const getTypeIcon = (type: string) => {
     switch (type) {
@@ -89,6 +99,11 @@ const props = defineProps<{
     testSuites: TestSuite[];
     users: { id: number; name: string }[];
     availableFeatures: { id: number; name: string; module: string[] | null }[];
+    archiveSuites: { id: number; name: string }[];
+    defaultAiProvider: string;
+    hasGeminiKey: boolean;
+    hasClaudeKey: boolean;
+    hasOpenaiKey: boolean;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -107,6 +122,7 @@ interface FlatSuite {
     parentName?: string;
     testCases: TestCase[];
     projectFeatures?: { id: number; name?: string; module?: string[] | null }[];
+    is_archived: boolean;
 }
 
 const flatSuites = computed<FlatSuite[]>(() => {
@@ -121,6 +137,7 @@ const flatSuites = computed<FlatSuite[]>(() => {
                 type: suite.type,
                 testCases: suite.test_cases,
                 projectFeatures: suite.project_features,
+                is_archived: suite.is_archived,
             });
         }
 
@@ -134,6 +151,7 @@ const flatSuites = computed<FlatSuite[]>(() => {
                     parentName: suite.name,
                     testCases: child.test_cases,
                     projectFeatures: child.project_features,
+                    is_archived: child.is_archived,
                 });
             }
         });
@@ -548,6 +566,7 @@ const localFlatSuites = computed<FlatSuite[]>(() => {
             type: suite.type,
             testCases: suite.test_cases || [],
             projectFeatures: suite.project_features,
+            is_archived: suite.is_archived,
         });
 
         // Add all child suites (even without test cases)
@@ -559,6 +578,7 @@ const localFlatSuites = computed<FlatSuite[]>(() => {
                 parentName: suite.name,
                 testCases: child.test_cases || [],
                 projectFeatures: child.project_features,
+                is_archived: child.is_archived,
             });
         });
     });
@@ -912,6 +932,102 @@ const copyToSuite = () => {
     );
 };
 
+// Archive dialog
+const showArchiveDialog = ref(false);
+const archiveMode = ref<'existing' | 'new'>('existing');
+const archiveSuiteId = ref('');
+const archiveSuiteName = ref('Archive');
+const isArchiving = ref(false);
+
+const openArchiveDialog = () => {
+    archiveMode.value = props.archiveSuites.length > 0 ? 'existing' : 'new';
+    archiveSuiteId.value = props.archiveSuites[0]
+        ? String(props.archiveSuites[0].id)
+        : '';
+    archiveSuiteName.value = 'Archive';
+    showArchiveDialog.value = true;
+};
+
+const canArchive = computed(() => {
+    if (archiveMode.value === 'existing') return !!archiveSuiteId.value;
+    return !!archiveSuiteName.value.trim();
+});
+
+const submitArchive = () => {
+    if (!canArchive.value || selectedTestCaseIds.value.length === 0) return;
+    isArchiving.value = true;
+
+    const payload: Record<string, unknown> = {
+        test_case_ids: selectedTestCaseIds.value,
+    };
+    if (archiveMode.value === 'existing') {
+        payload.archive_suite_id = Number(archiveSuiteId.value);
+    } else {
+        payload.archive_suite_name = archiveSuiteName.value.trim();
+    }
+
+    router.post(`/projects/${props.project.id}/test-suites/archive-cases`, payload, {
+        preserveState: false,
+        onSuccess: () => {
+            showArchiveDialog.value = false;
+            selectedTestCaseIds.value = [];
+            isArchiving.value = false;
+        },
+        onError: () => {
+            isArchiving.value = false;
+        },
+    });
+};
+
+// Unarchive dialog
+const showUnarchiveDialog = ref(false);
+const unarchiveMode = ref<'original' | 'choose'>('original');
+const unarchiveTargetSuiteId = ref('');
+const isUnarchiving = ref(false);
+const unarchiveError = ref('');
+
+const openUnarchiveDialog = () => {
+    unarchiveMode.value = 'original';
+    unarchiveTargetSuiteId.value = unarchiveSuiteOptions.value[0]
+        ? String(unarchiveSuiteOptions.value[0].id)
+        : '';
+    unarchiveError.value = '';
+    showUnarchiveDialog.value = true;
+};
+
+const canUnarchive = computed(() => {
+    if (unarchiveMode.value === 'choose') return !!unarchiveTargetSuiteId.value;
+    return true;
+});
+
+const submitUnarchive = () => {
+    if (!canUnarchive.value || selectedTestCaseIds.value.length === 0) return;
+    isUnarchiving.value = true;
+    unarchiveError.value = '';
+
+    const payload: Record<string, unknown> = {
+        test_case_ids: selectedTestCaseIds.value,
+        mode: unarchiveMode.value,
+    };
+    if (unarchiveMode.value === 'choose') {
+        payload.target_suite_id = Number(unarchiveTargetSuiteId.value);
+    }
+
+    router.post(`/projects/${props.project.id}/test-suites/unarchive-cases`, payload, {
+        onSuccess: () => {
+            showUnarchiveDialog.value = false;
+            selectedTestCaseIds.value = [];
+            isUnarchiving.value = false;
+        },
+        onError: (errors) => {
+            unarchiveError.value =
+                errors.mode || 'Some test cases could not be unarchived.';
+            unarchiveMode.value = 'choose';
+            isUnarchiving.value = false;
+        },
+    });
+};
+
 // Delete Test Cases dialog
 const showDeleteDialog = ref(false);
 const isDeleting = ref(false);
@@ -1158,6 +1274,218 @@ const exportAllCsv = () => {
 const exportSelectedCsv = () => {
     if (selectedTestCaseIds.value.length === 0) return;
     window.location.href = `/projects/${props.project.id}/test-suites/export-cases?ids=${selectedTestCaseIds.value.join(',')}`;
+};
+
+// Paste AI Test Cases dialog state
+type AiParsedCase = AIGeneratedTestCaseInput & {
+    approved: boolean;
+    editing: boolean;
+};
+
+const showAiPasteDialog = ref(false);
+const aiPasteText = ref('');
+const aiProvider = ref(
+    localStorage.getItem('ai_provider') || props.defaultAiProvider,
+);
+const isParsingAiText = ref(false);
+const aiParseError = ref('');
+const aiParsedCases = ref<AiParsedCase[]>([]);
+const aiGenerationId = ref<number | null>(null);
+const isImportingAiCases = ref(false);
+const aiEditingIndex = ref<number | null>(null);
+const aiTargetMode = ref<'existing' | 'new'>('existing');
+const aiTargetSuiteId = ref<string>('');
+const aiNewSuiteName = ref('AI Imported Tests');
+
+watch(aiProvider, (val) => {
+    localStorage.setItem('ai_provider', val);
+});
+
+const availableAiProviders = computed(() => {
+    const options: { value: string; label: string }[] = [];
+    if (props.hasGeminiKey) options.push({ value: 'gemini', label: 'Gemini' });
+    if (props.hasClaudeKey) options.push({ value: 'claude', label: 'Claude' });
+    if (props.hasOpenaiKey) options.push({ value: 'openai', label: 'OpenAI' });
+    return options;
+});
+
+// Flat list of suites + their subcategories for the target-suite picker
+const aiSuiteOptions = computed(() => {
+    const options: { id: number; label: string }[] = [];
+    props.testSuites.forEach((suite) => {
+        options.push({ id: suite.id, label: suite.name });
+        suite.children?.forEach((child) => {
+            options.push({ id: child.id, label: `${suite.name} / ${child.name}` });
+        });
+    });
+    return options;
+});
+
+// Non-archived suites for the Unarchive dialog's "choose a suite" picker
+const unarchiveSuiteOptions = computed(() => {
+    const options: { id: number; label: string }[] = [];
+    props.testSuites.forEach((suite) => {
+        if (!suite.is_archived) options.push({ id: suite.id, label: suite.name });
+        suite.children?.forEach((child) => {
+            if (!child.is_archived) {
+                options.push({
+                    id: child.id,
+                    label: `${suite.name} / ${child.name}`,
+                });
+            }
+        });
+    });
+    return options;
+});
+
+const approvedAiCases = computed(() =>
+    aiParsedCases.value.filter((c) => c.approved),
+);
+
+const canImportAiCases = computed(() => {
+    if (approvedAiCases.value.length === 0) return false;
+    if (aiTargetMode.value === 'existing') return !!aiTargetSuiteId.value;
+    return !!aiNewSuiteName.value.trim();
+});
+
+const openAiPasteDialog = () => {
+    aiPasteText.value = '';
+    aiParseError.value = '';
+    aiParsedCases.value = [];
+    aiGenerationId.value = null;
+    aiEditingIndex.value = null;
+    aiTargetMode.value = props.testSuites.length > 0 ? 'existing' : 'new';
+    aiTargetSuiteId.value = aiSuiteOptions.value[0]
+        ? String(aiSuiteOptions.value[0].id)
+        : '';
+    aiNewSuiteName.value = 'AI Imported Tests';
+    showAiPasteDialog.value = true;
+};
+
+const closeAiPasteDialog = () => {
+    showAiPasteDialog.value = false;
+    aiPasteText.value = '';
+    aiParseError.value = '';
+    aiParsedCases.value = [];
+    aiGenerationId.value = null;
+    aiEditingIndex.value = null;
+};
+
+const parseAiText = async () => {
+    if (!aiPasteText.value.trim()) return;
+
+    isParsingAiText.value = true;
+    aiParseError.value = '';
+
+    try {
+        const response = await fetch(
+            `/projects/${props.project.id}/ai-generator/parse-text`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN':
+                        document.querySelector<HTMLMetaElement>(
+                            'meta[name="csrf-token"]',
+                        )?.content ?? '',
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({
+                    text: aiPasteText.value,
+                    provider: aiProvider.value,
+                }),
+            },
+        );
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.message || `Parsing failed (${response.status})`);
+        }
+
+        const data = await response.json();
+        aiParsedCases.value = (data.test_cases || []).map(
+            (tc: AIGeneratedTestCaseInput) => ({
+                ...tc,
+                approved: true,
+                editing: false,
+            }),
+        );
+        aiGenerationId.value = data.generation_id;
+
+        if (aiParsedCases.value.length === 0) {
+            aiParseError.value =
+                'No test cases could be recognized in this text. Try adjusting the formatting.';
+        }
+    } catch (error: unknown) {
+        aiParseError.value =
+            error instanceof Error
+                ? error.message
+                : 'An unexpected error occurred.';
+    } finally {
+        isParsingAiText.value = false;
+    }
+};
+
+const toggleAiApproval = (index: number) => {
+    aiParsedCases.value[index].approved = !aiParsedCases.value[index].approved;
+};
+
+const approveAllAiCases = () => {
+    aiParsedCases.value.forEach((c) => (c.approved = true));
+};
+
+const rejectAllAiCases = () => {
+    aiParsedCases.value.forEach((c) => (c.approved = false));
+};
+
+const importAiCases = () => {
+    if (!canImportAiCases.value) return;
+    isImportingAiCases.value = true;
+
+    const payload: Record<string, unknown> = {
+        test_cases: approvedAiCases.value.map(
+            ({
+                title,
+                description,
+                preconditions,
+                steps,
+                expected_result,
+                priority,
+                severity,
+                type,
+                automation_status,
+            }) => ({
+                title,
+                description,
+                preconditions,
+                steps,
+                expected_result,
+                priority,
+                severity,
+                type,
+                automation_status,
+            }),
+        ),
+    };
+
+    if (aiTargetMode.value === 'existing') {
+        payload.test_suite_id = Number(aiTargetSuiteId.value);
+    } else {
+        payload.test_suite_name = aiNewSuiteName.value.trim();
+    }
+
+    if (aiGenerationId.value) {
+        payload.ai_generation_id = aiGenerationId.value;
+    }
+
+    router.post(`/projects/${props.project.id}/ai-generator/save`, payload, {
+        onSuccess: () => {
+            closeAiPasteDialog();
+        },
+        onFinish: () => {
+            isImportingAiCases.value = false;
+        },
+    });
 };
 
 // Note dialog state (shared between the header's note dialog and the
@@ -1550,7 +1878,9 @@ const submitEmptyImport = () => {
                         Create your first test suite to organize your test cases
                         into logical groups.
                     </p>
-                    <div class="mt-4 flex items-center justify-center gap-2">
+                    <div
+                        class="mt-4 flex flex-wrap items-center justify-center gap-2"
+                    >
                         <RestrictedAction>
                             <Link
                                 :href="`/projects/${project.id}/test-suites/create`"
@@ -1589,19 +1919,19 @@ const submitEmptyImport = () => {
             <!-- Main Content -->
             <div v-else class="flex min-h-0 flex-1 flex-col">
                 <!-- Action Header -->
-                <div class="mb-3 flex items-center gap-6">
-                    <!-- Spacer for left column -->
-                    <div class="w-[430px] shrink-0"></div>
+                <div class="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
+                    <!-- Spacer for left column (only present when the nav sits beside this row) -->
+                    <div class="hidden w-[430px] shrink-0 lg:block"></div>
                     <!-- Right side - Selection controls and New Test Suite button -->
                     <div
-                        class="flex max-w-4xl flex-1 items-center justify-between pr-2"
+                        class="flex w-full max-w-4xl flex-1 flex-col gap-3 pr-2 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div
                             v-if="
                                 localTotalTestCases > 0 &&
                                 filteredFlatSuites.length > 0
                             "
-                            class="flex items-center gap-3"
+                            class="flex flex-wrap items-center gap-3"
                         >
                             <button
                                 type="button"
@@ -1678,6 +2008,22 @@ const submitEmptyImport = () => {
                                             <FolderPlus class="mr-2 h-4 w-4" />
                                             Create Subcategory
                                         </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            class="cursor-pointer"
+                                            @click="openArchiveDialog"
+                                        >
+                                            <Archive class="mr-2 h-4 w-4" />
+                                            Archive
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            class="cursor-pointer"
+                                            @click="openUnarchiveDialog"
+                                        >
+                                            <ArchiveRestore
+                                                class="mr-2 h-4 w-4"
+                                            />
+                                            Unarchive
+                                        </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem
                                             class="cursor-pointer text-destructive focus:text-destructive"
@@ -1691,7 +2037,7 @@ const submitEmptyImport = () => {
                             </RestrictedAction>
                         </div>
                         <div v-else></div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             <DropdownMenu>
                                 <DropdownMenuTrigger as-child>
                                     <Button
@@ -1727,6 +2073,14 @@ const submitEmptyImport = () => {
                                         Export Selected ({{
                                             selectedTestCaseIds.length
                                         }})
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        class="cursor-pointer"
+                                        @click="openAiPasteDialog"
+                                    >
+                                        <Sparkles class="mr-2 h-4 w-4" />
+                                        Paste AI Test Cases
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -2052,9 +2406,11 @@ const submitEmptyImport = () => {
                 </div>
 
                 <!-- Two Column Layout -->
-                <div class="flex min-h-0 flex-1 gap-6">
+                <div class="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row">
                     <!-- Left: Test Suites Navigation -->
-                    <div class="sticky top-6 w-[430px] shrink-0 self-start">
+                    <div
+                        class="w-full shrink-0 self-start lg:sticky lg:top-6 lg:w-[430px]"
+                    >
                         <div class="rounded-xl border bg-card shadow-sm">
                             <div class="border-b bg-muted/30 p-3">
                                 <div
@@ -2139,7 +2495,9 @@ const submitEmptyImport = () => {
                                                 :class="
                                                     activeSuiteId === suite.id
                                                         ? ''
-                                                        : 'text-primary'
+                                                        : suite.is_archived
+                                                          ? 'text-gray-500'
+                                                          : 'text-primary'
                                                 "
                                             />
                                             <span
@@ -2201,7 +2559,9 @@ const submitEmptyImport = () => {
                                                         activeSuiteId ===
                                                         child.id
                                                             ? ''
-                                                            : 'text-yellow-500'
+                                                            : child.is_archived
+                                                              ? 'text-gray-500'
+                                                              : 'text-yellow-500'
                                                     "
                                                 />
                                                 <span
@@ -2251,7 +2611,7 @@ const submitEmptyImport = () => {
 
                     <!-- Right: Test Cases List -->
                     <div
-                        class="relative min-h-0 max-w-4xl flex-1 overflow-y-auto pr-2"
+                        class="relative min-h-0 w-full max-w-4xl flex-1 overflow-y-auto pr-2"
                     >
                         <!-- Filter Dropdown -->
                         <div
@@ -2289,7 +2649,9 @@ const submitEmptyImport = () => {
                                     </button>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-3 gap-x-3 gap-y-2.5">
+                            <div
+                                class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3"
+                            >
                                 <!-- Type -->
                                 <div class="relative">
                                     <Label
@@ -2787,20 +3149,32 @@ const submitEmptyImport = () => {
                                             />
                                         </div>
                                         <div
-                                            class="flex shrink-0 items-center justify-center rounded-lg transition-colors"
+                                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors"
                                             :class="[
-                                                suite.parentName
-                                                    ? 'h-8 w-8 bg-yellow-500/10 group-hover/header:bg-primary/10'
-                                                    : 'h-8 w-8 bg-primary/10',
+                                                suite.is_archived
+                                                    ? 'bg-gray-500/10'
+                                                    : suite.parentName
+                                                      ? 'bg-yellow-500/10 group-hover/header:bg-primary/10'
+                                                      : 'bg-primary/10',
                                             ]"
                                         >
                                             <Boxes
                                                 v-if="suite.parentName"
-                                                class="h-3.5 w-3.5 text-yellow-500 transition-colors group-hover/header:text-primary"
+                                                class="h-3.5 w-3.5 transition-colors"
+                                                :class="
+                                                    suite.is_archived
+                                                        ? 'text-gray-500'
+                                                        : 'text-yellow-500 group-hover/header:text-primary'
+                                                "
                                             />
                                             <Layers
                                                 v-else
-                                                class="h-4 w-4 text-primary"
+                                                class="h-4 w-4"
+                                                :class="
+                                                    suite.is_archived
+                                                        ? 'text-gray-500'
+                                                        : 'text-primary'
+                                                "
                                             />
                                         </div>
                                         <div class="min-w-0">
@@ -2849,6 +3223,14 @@ const submitEmptyImport = () => {
                                                     ? 'case'
                                                     : 'cases'
                                             }}
+                                        </Badge>
+                                        <Badge
+                                            v-if="suite.is_archived"
+                                            variant="outline"
+                                            class="ml-1 shrink-0 text-xs"
+                                        >
+                                            <Archive class="mr-1 h-3 w-3" />
+                                            Archive
                                         </Badge>
                                         <Badge
                                             :variant="
@@ -2981,8 +3363,12 @@ const submitEmptyImport = () => {
                                             <div
                                                 class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/50 transition-colors group-hover:bg-primary/10"
                                             >
+                                                <Archive
+                                                    v-if="suite.is_archived"
+                                                    class="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-primary"
+                                                />
                                                 <Bot
-                                                    v-if="
+                                                    v-else-if="
                                                         testCase.automation_status ===
                                                         'automated'
                                                     "
@@ -3306,6 +3692,201 @@ const submitEmptyImport = () => {
                     >
                         <Copy class="h-4 w-4" />
                         {{ isCopying ? 'Copying...' : 'Copy' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Archive Test Cases Dialog -->
+        <Dialog v-model:open="showArchiveDialog">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Archive class="h-5 w-5 text-primary" />
+                        Archive Test Cases
+                    </DialogTitle>
+                    <DialogDescription>
+                        Move {{ selectedTestCaseIds.length }} test case(s)
+                        into an archive suite.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4 py-2">
+                    <div class="flex gap-1 rounded-lg bg-muted p-1">
+                        <button
+                            type="button"
+                            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                            :class="
+                                archiveMode === 'existing'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            @click="archiveMode = 'existing'"
+                        >
+                            Existing Archive Suite
+                        </button>
+                        <button
+                            type="button"
+                            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                            :class="
+                                archiveMode === 'new'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            @click="archiveMode = 'new'"
+                        >
+                            New Archive Suite
+                        </button>
+                    </div>
+
+                    <div v-if="archiveMode === 'existing'" class="space-y-2">
+                        <Label>Archive Suite</Label>
+                        <Select
+                            v-if="archiveSuites.length > 0"
+                            v-model="archiveSuiteId"
+                        >
+                            <SelectTrigger>
+                                <SelectValue
+                                    placeholder="Select an archive suite..."
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="suite in archiveSuites"
+                                    :key="suite.id"
+                                    :value="String(suite.id)"
+                                >
+                                    {{ suite.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p v-else class="text-sm text-muted-foreground">
+                            No archive suites yet — switch to "New Archive
+                            Suite" to create one.
+                        </p>
+                    </div>
+
+                    <div v-else class="space-y-2">
+                        <Label>Suite Name</Label>
+                        <Input
+                            v-model="archiveSuiteName"
+                            placeholder="e.g. Archive"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="showArchiveDialog = false"
+                        >Cancel</Button
+                    >
+                    <Button
+                        @click="submitArchive"
+                        :disabled="!canArchive || isArchiving"
+                        class="gap-2"
+                    >
+                        <Archive class="h-4 w-4" />
+                        {{
+                            isArchiving
+                                ? 'Archiving...'
+                                : `Archive ${selectedTestCaseIds.length} test case(s)`
+                        }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Unarchive Test Cases Dialog -->
+        <Dialog v-model:open="showUnarchiveDialog">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <ArchiveRestore class="h-5 w-5 text-primary" />
+                        Unarchive Test Cases
+                    </DialogTitle>
+                    <DialogDescription>
+                        Move {{ selectedTestCaseIds.length }} test case(s) out
+                        of their archive suite.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4 py-2">
+                    <div class="flex gap-1 rounded-lg bg-muted p-1">
+                        <button
+                            type="button"
+                            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                            :class="
+                                unarchiveMode === 'original'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            @click="unarchiveMode = 'original'"
+                        >
+                            Original Suite
+                        </button>
+                        <button
+                            type="button"
+                            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                            :class="
+                                unarchiveMode === 'choose'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            @click="unarchiveMode = 'choose'"
+                        >
+                            Choose a Suite
+                        </button>
+                    </div>
+
+                    <div
+                        v-if="unarchiveError"
+                        class="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
+                    >
+                        <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
+                        {{ unarchiveError }}
+                    </div>
+
+                    <p
+                        v-if="unarchiveMode === 'original'"
+                        class="text-sm text-muted-foreground"
+                    >
+                        Each test case returns to the suite it was archived
+                        from. Cases with no recorded suite will be skipped.
+                    </p>
+
+                    <div v-else class="space-y-2">
+                        <Label>Target Suite</Label>
+                        <Select v-model="unarchiveTargetSuiteId">
+                            <SelectTrigger>
+                                <SelectValue
+                                    placeholder="Select a test suite..."
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="option in unarchiveSuiteOptions"
+                                    :key="option.id"
+                                    :value="String(option.id)"
+                                >
+                                    {{ option.label }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        @click="showUnarchiveDialog = false"
+                        >Cancel</Button
+                    >
+                    <Button
+                        @click="submitUnarchive"
+                        :disabled="!canUnarchive || isUnarchiving"
+                        class="gap-2"
+                    >
+                        <ArchiveRestore class="h-4 w-4" />
+                        {{
+                            isUnarchiving
+                                ? 'Unarchiving...'
+                                : `Unarchive ${selectedTestCaseIds.length} test case(s)`
+                        }}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -3903,6 +4484,589 @@ const submitEmptyImport = () => {
                             }}
                         </Button>
                     </RestrictedAction>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Paste AI Test Cases Dialog -->
+        <Dialog
+            :open="showAiPasteDialog"
+            @update:open="(v: boolean) => !v && closeAiPasteDialog()"
+        >
+            <DialogContent
+                class="flex max-h-[85vh] max-w-2xl flex-col"
+                style="
+                    overflow: hidden !important;
+                    max-width: min(42rem, calc(100vw - 2rem)) !important;
+                "
+            >
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Sparkles class="h-5 w-5 text-primary" />
+                        Paste AI Test Cases
+                    </DialogTitle>
+                    <DialogDescription>
+                        Paste test cases generated by any AI tool, in any
+                        format — we'll recognize them and convert each one
+                        into a CheckMate test case for you to review before
+                        saving.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
+                    <template v-if="aiParsedCases.length === 0">
+                        <div
+                            v-if="availableAiProviders.length > 0"
+                            class="space-y-2"
+                        >
+                            <Label>AI Provider</Label>
+                            <Select v-model="aiProvider">
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="option in availableAiProviders"
+                                        :key="option.value"
+                                        :value="option.value"
+                                    >
+                                        {{ option.label }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div
+                            v-else
+                            class="flex items-start gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400"
+                        >
+                            <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
+                            No AI provider is configured. Add a Gemini,
+                            Claude, or OpenAI API key in your .env file.
+                        </div>
+                        <div class="space-y-2">
+                            <Label>Test case text</Label>
+                            <Textarea
+                                v-model="aiPasteText"
+                                placeholder="Paste your AI-generated test cases here — numbered cases, tables, plain steps/expected result blocks, any format works..."
+                                rows="12"
+                                class="font-mono text-sm"
+                            />
+                        </div>
+                    </template>
+
+                    <div
+                        v-if="aiParseError"
+                        class="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
+                    >
+                        <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
+                        {{ aiParseError }}
+                    </div>
+
+                    <!-- Review list -->
+                    <div v-if="aiParsedCases.length > 0" class="space-y-4">
+                        <!-- Target suite -->
+                        <div class="space-y-2 rounded-lg border bg-muted/30 p-3">
+                            <Label class="text-xs">Target Test Suite</Label>
+                            <div class="flex gap-1 rounded-lg bg-muted p-1">
+                                <button
+                                    type="button"
+                                    class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                                    :class="
+                                        aiTargetMode === 'existing'
+                                            ? 'bg-background text-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    "
+                                    @click="aiTargetMode = 'existing'"
+                                >
+                                    Existing Suite
+                                </button>
+                                <button
+                                    type="button"
+                                    class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                                    :class="
+                                        aiTargetMode === 'new'
+                                            ? 'bg-background text-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    "
+                                    @click="aiTargetMode = 'new'"
+                                >
+                                    New Suite
+                                </button>
+                            </div>
+
+                            <Select
+                                v-if="aiTargetMode === 'existing'"
+                                v-model="aiTargetSuiteId"
+                            >
+                                <SelectTrigger>
+                                    <SelectValue
+                                        placeholder="Select a test suite..."
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="option in aiSuiteOptions"
+                                        :key="option.id"
+                                        :value="String(option.id)"
+                                    >
+                                        {{ option.label }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            <Input
+                                v-else
+                                v-model="aiNewSuiteName"
+                                placeholder="e.g. AI Imported Tests"
+                            />
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm text-muted-foreground">
+                                Found
+                                <strong>{{ aiParsedCases.length }}</strong>
+                                test case(s) —
+                                {{ approvedAiCases.length }} approved
+                            </p>
+                            <div class="flex gap-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    class="cursor-pointer text-xs"
+                                    @click="approveAllAiCases"
+                                    >All</Button
+                                >
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    class="cursor-pointer text-xs"
+                                    @click="rejectAllAiCases"
+                                    >None</Button
+                                >
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-3">
+                            <Card
+                                v-for="(tc, index) in aiParsedCases"
+                                :key="index"
+                                class="transition-colors"
+                                :class="tc.approved ? '' : 'opacity-50'"
+                            >
+                                <CardContent class="py-4">
+                                    <div class="flex items-start gap-3">
+                                        <Checkbox
+                                            :model-value="tc.approved"
+                                            class="mt-1 cursor-pointer"
+                                            @update:model-value="
+                                                toggleAiApproval(index)
+                                            "
+                                        />
+                                        <div class="min-w-0 flex-1">
+                                            <!-- View mode -->
+                                            <template
+                                                v-if="aiEditingIndex !== index"
+                                            >
+                                                <div
+                                                    class="flex items-start justify-between gap-2"
+                                                >
+                                                    <h3
+                                                        class="leading-snug font-medium"
+                                                    >
+                                                        {{ tc.title }}
+                                                    </h3>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        class="shrink-0 cursor-pointer"
+                                                        @click="
+                                                            aiEditingIndex =
+                                                                index
+                                                        "
+                                                    >
+                                                        <Pencil
+                                                            class="h-3.5 w-3.5"
+                                                        />
+                                                    </Button>
+                                                </div>
+
+                                                <div
+                                                    class="mt-1.5 flex flex-wrap gap-1.5"
+                                                >
+                                                    <Badge
+                                                        :variant="
+                                                            priorityVariant(
+                                                                tc.priority,
+                                                            )
+                                                        "
+                                                        class="text-xs"
+                                                        >{{
+                                                            tc.priority
+                                                        }}</Badge
+                                                    >
+                                                    <Badge
+                                                        :variant="
+                                                            severityVariant(
+                                                                tc.severity,
+                                                            )
+                                                        "
+                                                        class="text-xs"
+                                                        >{{
+                                                            tc.severity
+                                                        }}</Badge
+                                                    >
+                                                    <Badge
+                                                        variant="outline"
+                                                        class="text-xs"
+                                                        >{{ tc.type }}</Badge
+                                                    >
+                                                </div>
+
+                                                <p
+                                                    v-if="tc.description"
+                                                    class="mt-2 text-sm text-muted-foreground"
+                                                >
+                                                    {{ tc.description }}
+                                                </p>
+
+                                                <div
+                                                    v-if="tc.preconditions"
+                                                    class="mt-2"
+                                                >
+                                                    <p
+                                                        class="text-xs font-medium text-muted-foreground"
+                                                    >
+                                                        Preconditions
+                                                    </p>
+                                                    <p class="text-sm">
+                                                        {{ tc.preconditions }}
+                                                    </p>
+                                                </div>
+
+                                                <div
+                                                    v-if="tc.steps"
+                                                    class="mt-2"
+                                                >
+                                                    <p
+                                                        class="text-xs font-medium text-muted-foreground"
+                                                    >
+                                                        Steps
+                                                    </p>
+                                                    <pre
+                                                        class="mt-0.5 text-sm whitespace-pre-wrap"
+                                                        >{{ tc.steps }}</pre
+                                                    >
+                                                </div>
+
+                                                <div
+                                                    v-if="tc.expected_result"
+                                                    class="mt-2"
+                                                >
+                                                    <p
+                                                        class="text-xs font-medium text-muted-foreground"
+                                                    >
+                                                        Expected Result
+                                                    </p>
+                                                    <p class="text-sm">
+                                                        {{
+                                                            tc.expected_result
+                                                        }}
+                                                    </p>
+                                                </div>
+                                            </template>
+
+                                            <!-- Edit mode -->
+                                            <template v-else>
+                                                <div class="space-y-3">
+                                                    <div>
+                                                        <Label class="text-xs"
+                                                            >Title</Label
+                                                        >
+                                                        <Input
+                                                            v-model="tc.title"
+                                                            class="mt-1"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label class="text-xs"
+                                                            >Description</Label
+                                                        >
+                                                        <Textarea
+                                                            v-model="
+                                                                tc.description
+                                                            "
+                                                            class="mt-1"
+                                                            rows="2"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label class="text-xs"
+                                                            >Preconditions</Label
+                                                        >
+                                                        <Input
+                                                            v-model="
+                                                                tc.preconditions
+                                                            "
+                                                            class="mt-1"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label class="text-xs"
+                                                            >Steps</Label
+                                                        >
+                                                        <Textarea
+                                                            v-model="tc.steps"
+                                                            class="mt-1"
+                                                            rows="4"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label class="text-xs"
+                                                            >Expected
+                                                            Result</Label
+                                                        >
+                                                        <Textarea
+                                                            v-model="
+                                                                tc.expected_result
+                                                            "
+                                                            class="mt-1"
+                                                            rows="2"
+                                                        />
+                                                    </div>
+                                                    <div
+                                                        class="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                                                    >
+                                                        <div>
+                                                            <Label
+                                                                class="text-xs"
+                                                                >Priority</Label
+                                                            >
+                                                            <Select
+                                                                v-model="
+                                                                    tc.priority
+                                                                "
+                                                            >
+                                                                <SelectTrigger
+                                                                    class="mt-1"
+                                                                >
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem
+                                                                        value="critical"
+                                                                        >Critical</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="high"
+                                                                        >High</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="medium"
+                                                                        >Medium</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="low"
+                                                                        >Low</SelectItem
+                                                                    >
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div>
+                                                            <Label
+                                                                class="text-xs"
+                                                                >Severity</Label
+                                                            >
+                                                            <Select
+                                                                v-model="
+                                                                    tc.severity
+                                                                "
+                                                            >
+                                                                <SelectTrigger
+                                                                    class="mt-1"
+                                                                >
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem
+                                                                        value="blocker"
+                                                                        >Blocker</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="critical"
+                                                                        >Critical</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="major"
+                                                                        >Major</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="minor"
+                                                                        >Minor</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="trivial"
+                                                                        >Trivial</SelectItem
+                                                                    >
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
+                                                    <div
+                                                        class="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                                                    >
+                                                        <div>
+                                                            <Label
+                                                                class="text-xs"
+                                                                >Type</Label
+                                                            >
+                                                            <Select
+                                                                v-model="
+                                                                    tc.type
+                                                                "
+                                                            >
+                                                                <SelectTrigger
+                                                                    class="mt-1"
+                                                                >
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem
+                                                                        value="functional"
+                                                                        >Functional</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="smoke"
+                                                                        >Smoke</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="regression"
+                                                                        >Regression</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="integration"
+                                                                        >Integration</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="acceptance"
+                                                                        >Acceptance</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="performance"
+                                                                        >Performance</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="security"
+                                                                        >Security</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="usability"
+                                                                        >Usability</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="other"
+                                                                        >Other</SelectItem
+                                                                    >
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div>
+                                                            <Label
+                                                                class="text-xs"
+                                                                >Automation</Label
+                                                            >
+                                                            <Select
+                                                                v-model="
+                                                                    tc.automation_status
+                                                                "
+                                                            >
+                                                                <SelectTrigger
+                                                                    class="mt-1"
+                                                                >
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem
+                                                                        value="not_automated"
+                                                                        >Not
+                                                                        Automated</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="automated"
+                                                                        >Automated</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="in_progress"
+                                                                        >In
+                                                                        Progress</SelectItem
+                                                                    >
+                                                                    <SelectItem
+                                                                        value="cannot_automate"
+                                                                        >Cannot
+                                                                        Automate</SelectItem
+                                                                    >
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        class="cursor-pointer gap-1.5"
+                                                        @click="
+                                                            aiEditingIndex = null
+                                                        "
+                                                    >
+                                                        <Check
+                                                            class="h-3.5 w-3.5"
+                                                        />
+                                                        Done
+                                                    </Button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </div>
+
+                <DialogFooter class="flex gap-2 sm:justify-end">
+                    <Button variant="outline" @click="closeAiPasteDialog"
+                        >Cancel</Button
+                    >
+                    <Button
+                        v-if="aiParsedCases.length === 0"
+                        @click="parseAiText"
+                        :disabled="
+                            !aiPasteText.trim() ||
+                            isParsingAiText ||
+                            availableAiProviders.length === 0
+                        "
+                        class="gap-2"
+                    >
+                        <Loader2
+                            v-if="isParsingAiText"
+                            class="h-4 w-4 animate-spin"
+                        />
+                        <Sparkles v-else class="h-4 w-4" />
+                        {{ isParsingAiText ? 'Parsing...' : 'Parse Test Cases' }}
+                    </Button>
+                    <Button
+                        v-else
+                        @click="importAiCases"
+                        :disabled="!canImportAiCases || isImportingAiCases"
+                        class="gap-2"
+                    >
+                        <Loader2
+                            v-if="isImportingAiCases"
+                            class="h-4 w-4 animate-spin"
+                        />
+                        <Check v-else class="h-4 w-4" />
+                        {{
+                            isImportingAiCases
+                                ? 'Importing...'
+                                : `Import ${approvedAiCases.length} test case(s)`
+                        }}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

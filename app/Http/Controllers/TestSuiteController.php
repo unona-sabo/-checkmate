@@ -42,11 +42,19 @@ class TestSuiteController extends Controller
             ->orderBy('module')->orderBy('name')
             ->get(['id', 'name', 'module']);
 
+        $archiveSuites = $project->testSuites()->where('is_archived', true)
+            ->orderBy('name')->get(['id', 'name']);
+
         return Inertia::render('TestSuites/Index', [
             'project' => $project,
             'testSuites' => $testSuites,
             'users' => $users,
             'availableFeatures' => $availableFeatures,
+            'archiveSuites' => $archiveSuites,
+            'defaultAiProvider' => config('services.ai.default_provider', 'gemini'),
+            'hasGeminiKey' => ! empty(config('services.gemini.api_key')),
+            'hasClaudeKey' => ! empty(config('services.anthropic.api_key')),
+            'hasOpenaiKey' => ! empty(config('services.openai.api_key')),
         ]);
     }
 
@@ -128,11 +136,23 @@ class TestSuiteController extends Controller
             ->orderBy('module')->orderBy('name')
             ->get(['id', 'name', 'module']);
 
+        $allTestSuites = $project->testSuites()
+            ->orderBy('name')
+            ->get(['id', 'name', 'parent_id', 'is_archived']);
+
+        $archiveSuites = $allTestSuites->where('is_archived', true)->values();
+
         return Inertia::render('TestSuites/Show', [
             'project' => $project,
             'testSuite' => $testSuite,
             'users' => $users,
             'availableFeatures' => $availableFeatures,
+            'allTestSuites' => $allTestSuites,
+            'archiveSuites' => $archiveSuites,
+            'defaultAiProvider' => config('services.ai.default_provider', 'gemini'),
+            'hasGeminiKey' => ! empty(config('services.gemini.api_key')),
+            'hasClaudeKey' => ! empty(config('services.anthropic.api_key')),
+            'hasOpenaiKey' => ! empty(config('services.openai.api_key')),
         ]);
     }
 

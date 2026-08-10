@@ -280,7 +280,7 @@ const submit = () => {
                                 />
                             </div>
 
-                            <div class="grid gap-4 md:grid-cols-2">
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div class="space-y-2">
                                     <Label>Priority</Label>
                                     <Select v-model="form.priority">

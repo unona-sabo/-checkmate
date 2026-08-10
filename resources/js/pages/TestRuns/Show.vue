@@ -678,9 +678,9 @@ const addCasesCount = computed(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <!-- Header -->
-            <div class="flex items-start justify-between">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight">
+                    <h1 class="text-2xl font-bold tracking-tight break-words">
                         <Play
                             class="mr-2 inline-block h-6 w-6 align-text-top text-primary"
                         />{{ titleStart
@@ -781,8 +781,8 @@ const addCasesCount = computed(() => {
                         </span>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <div class="relative">
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative w-full sm:w-auto">
                         <Search
                             class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                         />
@@ -790,7 +790,7 @@ const addCasesCount = computed(() => {
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search test cases..."
-                            class="w-56 bg-background/60 pr-8 pl-9"
+                            class="w-full bg-background/60 pr-8 pl-9 sm:w-56"
                         />
                         <button
                             v-if="searchQuery"
@@ -865,7 +865,7 @@ const addCasesCount = computed(() => {
             <!-- Progress Stats -->
             <Card>
                 <CardContent class="p-6">
-                    <div class="flex items-center gap-8">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
                         <div class="flex-1">
                             <div class="mb-2 flex items-center justify-between">
                                 <span class="text-sm font-medium"
@@ -880,7 +880,7 @@ const addCasesCount = computed(() => {
                                 class="h-3"
                             />
                         </div>
-                        <div class="flex gap-6">
+                        <div class="flex flex-wrap gap-4 sm:gap-6">
                             <div
                                 v-if="formatElapsed(liveElapsed)"
                                 class="text-center"

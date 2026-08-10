@@ -388,6 +388,135 @@ test('save validates test_cases are required', function () {
     $response->assertSessionHasErrors('test_cases');
 });
 
+test('parse-text endpoint validates text is required', function () {
+    $response = $this->actingAs($this->user)->postJson(
+        route('ai-generator.parse-text', $this->project),
+        []
+    );
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['text']);
+});
+
+test('parse-text endpoint extracts test cases from pasted text and ignores the configured provider input', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [[
+                'content' => [
+                    'parts' => [[
+                        'text' => json_encode([
+                            [
+                                'title' => "Перевірка обов'язковості регіону (Ямайка / Австралія)",
+                                'description' => 'Validates region requirement for specific countries',
+                                'preconditions' => '',
+                                'steps' => [
+                                    ['action' => 'При створенні реквізиту обрати країну Ямайка або Австралія', 'expected' => null],
+                                ],
+                                'expected_result' => 'API countries повертає масив штатів/провінцій в атрибуті regions',
+                                'priority' => 'medium',
+                                'severity' => 'major',
+                                'type' => 'functional',
+                                'automation_status' => 'not_automated',
+                            ],
+                            [
+                                'title' => 'Країни без регіонів',
+                                'description' => 'Validates behaviour when regions array is empty',
+                                'preconditions' => '',
+                                'steps' => [
+                                    ['action' => 'Обрати країну, для якої масив regions приходить порожнім', 'expected' => null],
+                                ],
+                                'expected_result' => 'Поле регіону/штату не відображається на UI',
+                                'priority' => 'medium',
+                                'severity' => 'major',
+                                'type' => 'functional',
+                                'automation_status' => 'not_automated',
+                            ],
+                        ]),
+                    ]],
+                ],
+            ]],
+        ]),
+    ]);
+
+    config(['services.gemini.api_key' => 'test-key']);
+    config(['services.ai.default_provider' => 'gemini']);
+
+    $response = $this->actingAs($this->user)->postJson(
+        route('ai-generator.parse-text', $this->project),
+        [
+            'text' => "Блок 6: Географія (Регіони)\nTC-20: Перевірка обов'язковості регіону (Ямайка / Австралія)\nКроки: При створенні реквізиту обрати країну Ямайка або Австралія.\nОчікуваний результат: API countries повертає масив штатів/провінцій в атрибуті regions.\n\nTC-21: Країни без регіонів\nКроки: Обрати країну, для якої масив regions приходить порожнім.\nОчікуваний результат: Поле регіону/штату не відображається на UI.",
+        ]
+    );
+
+    $response->assertOk();
+    $response->assertJsonStructure([
+        'test_cases' => [['title', 'description', 'preconditions', 'steps', 'expected_result', 'priority', 'severity', 'type', 'automation_status']],
+        'generation_id',
+        'provider',
+        'model',
+    ]);
+
+    expect($response->json('test_cases'))->toHaveCount(2);
+    expect($response->json('provider'))->toBe('gemini');
+
+    $this->assertDatabaseHas('ai_generations', [
+        'id' => $response->json('generation_id'),
+        'project_id' => $this->project->id,
+        'input_type' => 'paste',
+        'test_cases_generated' => 2,
+    ]);
+});
+
+test('parse-text endpoint respects an explicit provider override', function () {
+    Http::fake([
+        'api.openai.com/*' => Http::response([
+            'choices' => [[
+                'message' => [
+                    'content' => json_encode([[
+                        'title' => 'Test case from OpenAI',
+                        'description' => 'Desc',
+                        'preconditions' => '',
+                        'steps' => [['action' => 'Step one', 'expected' => null]],
+                        'expected_result' => 'Pass',
+                        'priority' => 'medium',
+                        'severity' => 'major',
+                        'type' => 'functional',
+                        'automation_status' => 'not_automated',
+                    ]]),
+                ],
+            ]],
+        ]),
+    ]);
+
+    config(['services.openai.api_key' => 'test-key']);
+    config(['services.ai.default_provider' => 'gemini']);
+
+    $response = $this->actingAs($this->user)->postJson(
+        route('ai-generator.parse-text', $this->project),
+        ['text' => 'TC-1: Some case', 'provider' => 'openai']
+    );
+
+    $response->assertOk();
+    expect($response->json('provider'))->toBe('openai');
+    expect($response->json('test_cases.0.title'))->toBe('Test case from OpenAI');
+});
+
+test('parse-text endpoint is forbidden for a viewer', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+    $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+    $workspace->members()->attach($viewer->id, ['role' => 'viewer']);
+    $project = Project::factory()->create([
+        'user_id' => $owner->id,
+        'workspace_id' => $workspace->id,
+    ]);
+
+    $this->actingAs($viewer)->postJson(
+        route('ai-generator.parse-text', $project),
+        ['text' => 'Some test case text']
+    )->assertForbidden();
+});
+
 test('save links test cases to features associated with the test suite', function () {
     $suite = TestSuite::factory()->create(['project_id' => $this->project->id]);
     $feature = ProjectFeature::factory()->create(['project_id' => $this->project->id]);

@@ -204,7 +204,7 @@ const submit = () => {
                                 />
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div class="space-y-2">
                                     <Label for="expected_result"
                                         >Expected Result</Label
@@ -236,7 +236,7 @@ const submit = () => {
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-3 gap-4">
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                 <div class="space-y-2">
                                     <Label>Severity</Label>
                                     <Select v-model="form.severity">

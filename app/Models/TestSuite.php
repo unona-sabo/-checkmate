@@ -20,12 +20,14 @@ class TestSuite extends Model
         'type',
         'module',
         'order',
+        'is_archived',
     ];
 
     protected function casts(): array
     {
         return [
             'module' => 'array',
+            'is_archived' => 'boolean',
         ];
     }
 

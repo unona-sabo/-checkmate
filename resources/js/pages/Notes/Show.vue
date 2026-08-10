@@ -113,9 +113,11 @@ const formatDate = (date: string) => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="flex items-center justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <h1
-                    class="flex items-start gap-2 text-2xl font-bold tracking-tight"
+                    class="flex flex-wrap items-start gap-2 text-2xl font-bold tracking-tight break-words"
                 >
                     <StickyNote class="mt-1 h-6 w-6 shrink-0 text-yellow-500" />
                     {{ note.title || 'Untitled Note' }}
@@ -126,7 +128,7 @@ const formatDate = (date: string) => {
                         {{ note.is_draft ? 'Draft' : 'Published' }}
                     </Badge>
                 </h1>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                     <RestrictedAction>
                         <Link
                             :href="`/projects/${project.id}/notes/${note.id}`"

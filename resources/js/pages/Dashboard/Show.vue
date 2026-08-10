@@ -249,8 +249,8 @@ function formatDateTime(dateString: string | null): string {
             </div>
 
             <!-- Toolbar: Search + Add -->
-            <div class="mb-4 flex items-center gap-3">
-                <div class="relative flex-1">
+            <div class="mb-4 flex flex-wrap items-center gap-3">
+                <div class="relative min-w-[140px] flex-1">
                     <Search
                         class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                     />

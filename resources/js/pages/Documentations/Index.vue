@@ -626,7 +626,9 @@ onMounted(() => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="flex items-center justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <h1
                     class="flex items-start gap-2 text-2xl font-bold tracking-tight"
                 >
@@ -635,7 +637,7 @@ onMounted(() => {
                 </h1>
                 <div
                     v-if="documentations.length > 0"
-                    class="flex items-center gap-2"
+                    class="flex flex-wrap items-center gap-2"
                 >
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
@@ -731,9 +733,9 @@ onMounted(() => {
             </div>
 
             <template v-else>
-                <div class="grid gap-6 lg:grid-cols-4">
+                <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
                     <!-- Sidebar with navigation -->
-                    <div class="sticky top-6 self-start lg:col-span-1">
+                    <div class="self-start lg:sticky lg:top-6 lg:col-span-1">
                         <div class="rounded-xl border bg-card shadow-sm">
                             <div class="border-b bg-muted/30 p-3">
                                 <div

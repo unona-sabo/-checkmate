@@ -228,8 +228,10 @@ const syncFromClickUp = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-[15px] p-6">
-            <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold tracking-tight">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <h1 class="text-2xl font-bold tracking-tight break-words">
                     <Bug
                         class="mr-2 inline-block h-6 w-6 align-text-top text-primary"
                     />{{ titleStart
@@ -246,7 +248,7 @@ const syncFromClickUp = () => {
                             /><Link2 v-else class="h-4 w-4" /></button
                     ></span>
                 </h1>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                     <Button
                         v-if="testSuites.length > 0"
                         variant="outline"
@@ -279,7 +281,7 @@ const syncFromClickUp = () => {
                 </div>
             </div>
 
-            <div class="grid gap-[15px] lg:grid-cols-3">
+            <div class="grid grid-cols-1 gap-[15px] lg:grid-cols-3">
                 <div class="space-y-[15px] lg:col-span-2">
                     <Card>
                         <CardHeader>
@@ -306,7 +308,7 @@ const syncFromClickUp = () => {
                         </CardContent>
                     </Card>
 
-                    <div class="grid gap-6 md:grid-cols-2">
+                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <Card v-if="bugreport.expected_result">
                             <CardHeader>
                                 <CardTitle>Expected Result</CardTitle>

@@ -89,6 +89,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('test-suites/reorder-cases', [TestCaseController::class, 'reorderAcrossSuites'])->name('reorder-cases');
         Route::post('test-suites/bulk-delete-cases', [TestCaseController::class, 'bulkDestroy'])->name('bulk-destroy-cases');
         Route::post('test-suites/bulk-copy-cases', [TestCaseController::class, 'bulkCopy'])->name('bulk-copy-cases');
+        Route::post('test-suites/archive-cases', [TestCaseController::class, 'archive'])->name('archive-cases');
+        Route::post('test-suites/unarchive-cases', [TestCaseController::class, 'unarchive'])->name('unarchive-cases');
         Route::get('test-suites/export-cases', [TestCaseController::class, 'export'])->name('export-cases');
         Route::post('test-suites/import-cases', [TestCaseController::class, 'importFromFile'])->name('import-cases');
         Route::post('test-suites/import-cases-new-suite', [TestCaseController::class, 'importFromFileToNewSuite'])->name('import-cases-new-suite');
@@ -287,6 +289,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('projects/{project}')->name('ai-generator.')->group(function () {
         Route::get('ai-generator', [AIGeneratorController::class, 'index'])->name('index');
         Route::post('ai-generator/generate', [AIGeneratorController::class, 'generate'])->name('generate');
+        Route::post('ai-generator/parse-text', [AIGeneratorController::class, 'parseText'])->name('parse-text');
         Route::post('ai-generator/save', [AIGeneratorController::class, 'save'])->name('save');
     });
 

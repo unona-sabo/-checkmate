@@ -191,7 +191,7 @@ const roleColors: Record<string, string> = {
                 <form
                     v-if="canManage"
                     @submit.prevent="addMember"
-                    class="flex items-end gap-3"
+                    class="flex flex-col gap-3 sm:flex-row sm:items-end"
                 >
                     <div class="flex-1 space-y-1">
                         <Label for="member-email">Email</Label>
@@ -207,7 +207,7 @@ const roleColors: Record<string, string> = {
                         />
                         <InputError :message="addMemberForm.errors.email" />
                     </div>
-                    <div class="w-32 space-y-1">
+                    <div class="w-full space-y-1 sm:w-32">
                         <Label for="member-role">Role</Label>
                         <Select v-model="addMemberForm.role">
                             <SelectTrigger id="member-role">
@@ -231,13 +231,16 @@ const roleColors: Record<string, string> = {
                     <div
                         v-for="member in members"
                         :key="member.id"
-                        class="flex items-center justify-between px-4 py-3"
+                        class="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
                     >
-                        <div class="flex flex-col">
-                            <span class="font-medium">{{ member.name }}</span>
-                            <span class="text-sm text-muted-foreground">{{
-                                member.email
+                        <div class="flex min-w-0 flex-col">
+                            <span class="truncate font-medium">{{
+                                member.name
                             }}</span>
+                            <span
+                                class="truncate text-sm text-muted-foreground"
+                                >{{ member.email }}</span
+                            >
                         </div>
                         <div class="flex items-center gap-3">
                             <template
