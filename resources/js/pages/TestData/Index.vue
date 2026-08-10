@@ -1740,12 +1740,20 @@ const formatCredentialsValues = (
                 <div
                     class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <h1
-                        class="flex items-start gap-2 text-2xl font-bold tracking-tight"
-                    >
-                        <Database class="mt-1 h-6 w-6 shrink-0 text-primary" />
-                        Test Data
-                    </h1>
+                    <div>
+                        <h1
+                            class="flex items-start gap-2 text-2xl font-bold tracking-tight"
+                        >
+                            <Database
+                                class="mt-1 h-6 w-6 shrink-0 text-primary"
+                            />
+                            Test Data
+                        </h1>
+                        <p class="text-muted-foreground">
+                            Manage reusable test users, payment methods,
+                            commands, and links for testing
+                        </p>
+                    </div>
                     <RestrictedAction>
                         <Button
                             v-if="

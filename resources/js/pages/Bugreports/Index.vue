@@ -199,10 +199,7 @@ const filteredBugreports = computed(() => {
                         <Bug class="mt-1 h-6 w-6 shrink-0 text-primary" />
                         Bugreports
                     </h1>
-                    <p
-                        v-if="bugreports.length === 0"
-                        class="text-muted-foreground"
-                    >
+                    <p class="text-muted-foreground">
                         Track and manage bugs found during testing
                     </p>
                 </div>

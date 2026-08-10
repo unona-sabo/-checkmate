@@ -286,10 +286,7 @@ const categoryOptions = [
                         <Palette class="mt-1 h-6 w-6 shrink-0 text-primary" />
                         Design Resources
                     </h1>
-                    <p
-                        v-if="designLinks.length === 0"
-                        class="text-muted-foreground"
-                    >
+                    <p class="text-muted-foreground">
                         Keep Figma files, prototypes, and other design assets in one place
                     </p>
                 </div>

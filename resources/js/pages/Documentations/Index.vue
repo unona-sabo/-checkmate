@@ -629,12 +629,18 @@ onMounted(() => {
             <div
                 class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
-                <h1
-                    class="flex items-start gap-2 text-2xl font-bold tracking-tight"
-                >
-                    <FileText class="mt-1 h-6 w-6 shrink-0 text-primary" />
-                    Documentations
-                </h1>
+                <div>
+                    <h1
+                        class="flex items-start gap-2 text-2xl font-bold tracking-tight"
+                    >
+                        <FileText class="mt-1 h-6 w-6 shrink-0 text-primary" />
+                        Documentations
+                    </h1>
+                    <p class="text-muted-foreground">
+                        Organize and maintain living documentation for your
+                        project
+                    </p>
+                </div>
                 <div
                     v-if="documentations.length > 0"
                     class="flex flex-wrap items-center gap-2"

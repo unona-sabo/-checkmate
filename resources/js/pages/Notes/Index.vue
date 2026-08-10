@@ -103,12 +103,19 @@ const deleteNote = () => {
             <div
                 class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
-                <h1
-                    class="flex items-start gap-2 text-2xl font-bold tracking-tight"
-                >
-                    <StickyNote class="mt-1 h-6 w-6 shrink-0 text-primary" />
-                    Notes
-                </h1>
+                <div>
+                    <h1
+                        class="flex items-start gap-2 text-2xl font-bold tracking-tight"
+                    >
+                        <StickyNote
+                            class="mt-1 h-6 w-6 shrink-0 text-primary"
+                        />
+                        Notes
+                    </h1>
+                    <p class="text-muted-foreground">
+                        Capture and organize notes for your project
+                    </p>
+                </div>
                 <div class="flex flex-wrap items-center gap-3">
                     <div
                         v-if="notes.length > 0"
