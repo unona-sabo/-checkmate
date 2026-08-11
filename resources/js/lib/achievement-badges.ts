@@ -306,7 +306,7 @@ export const ACHIEVEMENT_BADGES: Record<BadgeId, AchievementBadgeConfig> = {
         name: 'Checklist Squad',
         description: 'Created 5 checklists',
         unlockedAsset: asset('first_5_checklists_unlocked.png'),
-        lockedAsset: asset('first_5_checklists_locked.png'),
+        lockedAsset: asset('first_5_checklist_locked.png'),
         animation: 'sparkles',
         duration: 3,
     },
@@ -314,7 +314,7 @@ export const ACHIEVEMENT_BADGES: Record<BadgeId, AchievementBadgeConfig> = {
         id: 'first-5-test-cases',
         name: 'Case Builder',
         description: 'Created 5 test cases',
-        unlockedAsset: asset('first_5_test_cases_unlocked.png'),
+        unlockedAsset: asset('first_5_test_case_unlocked.png'),
         lockedAsset: asset('first_5_test_cases_locked.png'),
         animation: 'grow',
         duration: 3,
@@ -345,7 +345,7 @@ export const ACHIEVEMENT_BADGES: Record<BadgeId, AchievementBadgeConfig> = {
         // notification (fired on every active day, not just once — see
         // GOOD_DAY_TOAST_VARIANTS below) picks randomly among all variants.
         unlockedAsset: asset('Good%20day/good_work_day_unlocked.png'),
-        lockedAsset: asset('good_work_day_locked.png'),
+        lockedAsset: asset('Good%20day/good_work_day_locked.png'),
         animation: 'pulse-glow',
         duration: 3,
     },
