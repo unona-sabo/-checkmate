@@ -384,7 +384,13 @@ function formatStatus(status: string): string {
                 </div>
 
                 <!-- Export Queue Diagnostics -->
-                <div class="space-y-4">
+                <div
+                    v-if="
+                        queueDiagnostics.pending > 0 ||
+                        queueDiagnostics.recentFailures.length > 0
+                    "
+                    class="space-y-4"
+                >
                     <Heading
                         variant="small"
                         title="Bug Report Export Queue"
