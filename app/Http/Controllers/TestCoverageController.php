@@ -8,6 +8,7 @@ use App\Http\Requests\TestCoverage\StoreCoverageFeatureRequest;
 use App\Http\Requests\TestCoverage\StoreCoverageGapRequest;
 use App\Http\Requests\TestCoverage\UpdateCoverageFeatureRequest;
 use App\Models\AiGeneratedTestCase;
+use App\Models\AiSetting;
 use App\Models\Project;
 use App\Models\ProjectFeature;
 use App\Services\AchievementService;
@@ -22,9 +23,20 @@ class TestCoverageController extends Controller
 {
     public function __construct(
         private CoverageCalculator $calculator,
-        private ClaudeAIService $aiService,
         private AchievementService $achievements,
     ) {}
+
+    /**
+     * Build a Claude client using the current project's own workspace key —
+     * AI keys are workspace-scoped, so this can't be a constructor-injected
+     * singleton.
+     */
+    private function claudeServiceFor(Project $project): ClaudeAIService
+    {
+        $settings = $project->workspace ? AiSetting::forWorkspace($project->workspace) : null;
+
+        return new ClaudeAIService($settings?->apiKeyFor('claude'));
+    }
 
     public function index(Project $project): Response
     {
@@ -67,7 +79,7 @@ class TestCoverageController extends Controller
             'latestAnalysis' => $latestAnalysis,
             'features' => $features,
             'gaps' => $gaps,
-            'hasAnthropicKey' => ! empty(config('services.anthropic.api_key')),
+            'hasAnthropicKey' => ($project->workspace ? AiSetting::forWorkspace($project->workspace) : null)?->apiKeyFor('claude') !== null,
             'allTestCases' => $allTestCases,
             'allChecklists' => $allChecklists,
         ]);
@@ -110,7 +122,7 @@ class TestCoverageController extends Controller
             ])
             ->toArray();
 
-        $analysis = $this->aiService->analyzeCoverage($testCases, $features, $documentation);
+        $analysis = $this->claudeServiceFor($project)->analyzeCoverage($testCases, $features, $documentation);
 
         $coverageAnalysis = $project->coverageAnalyses()->create([
             'analysis_data' => $analysis,
@@ -136,7 +148,7 @@ class TestCoverageController extends Controller
 
         $gap = $request->validated();
 
-        $generatedCases = $this->aiService->generateTestCases($gap);
+        $generatedCases = $this->claudeServiceFor($project)->generateTestCases($gap);
 
         $feature = $project->features()->where('name', $gap['feature'])->first();
 

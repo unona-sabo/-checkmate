@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AiSetting;
 use App\Models\Project;
 use App\Models\ProjectFeature;
 use App\Models\TestCase;
@@ -23,13 +24,15 @@ test('index page renders with test suites for authenticated user', function () {
 });
 
 test('index page exposes AI provider availability for the paste-ai-test-cases dialog', function () {
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     TestSuite::factory()->count(2)->create(['project_id' => $project->id]);
 
-    config(['services.gemini.api_key' => 'test-key']);
-    config(['services.openai.api_key' => 'test-key']);
-    config(['services.anthropic.api_key' => null]);
+    AiSetting::forWorkspace($workspace)->update([
+        'gemini_api_key' => 'test-key',
+        'openai_api_key' => 'test-key',
+        'anthropic_api_key' => null,
+    ]);
 
     $response = $this->actingAs($user)->get(route('test-suites.index', $project));
 
@@ -44,13 +47,15 @@ test('index page exposes AI provider availability for the paste-ai-test-cases di
 });
 
 test('show page exposes AI provider availability for the paste-ai-test-cases dialog', function () {
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     $suite = TestSuite::factory()->create(['project_id' => $project->id]);
 
-    config(['services.gemini.api_key' => 'test-key']);
-    config(['services.anthropic.api_key' => null]);
-    config(['services.openai.api_key' => null]);
+    AiSetting::forWorkspace($workspace)->update([
+        'gemini_api_key' => 'test-key',
+        'anthropic_api_key' => null,
+        'openai_api_key' => null,
+    ]);
 
     $response = $this->actingAs($user)->get(route('test-suites.show', [$project, $suite]));
 

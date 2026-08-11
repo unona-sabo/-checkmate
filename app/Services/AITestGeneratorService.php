@@ -9,14 +9,14 @@ use Illuminate\Support\Str;
 
 class AITestGeneratorService
 {
-    private string $provider;
-
     private string $model;
 
-    public function __construct(?string $provider = null)
-    {
-        $this->provider = $provider ?? config('services.ai.default_provider', 'gemini');
-        $this->model = match ($this->provider) {
+    public function __construct(
+        private string $provider,
+        private ?string $apiKey = null,
+        ?string $model = null,
+    ) {
+        $this->model = $model ?? match ($this->provider) {
             'gemini' => config('services.gemini.model', 'gemini-2.0-flash'),
             'openai' => config('services.openai.model', 'gpt-4o-mini'),
             default => 'claude-sonnet-4-20250514',
@@ -116,10 +116,10 @@ class AITestGeneratorService
      */
     private function geminiGenerate(array $parts, array $options): array
     {
-        $apiKey = config('services.gemini.api_key');
+        $apiKey = $this->apiKey;
 
         if (empty($apiKey)) {
-            throw new \RuntimeException('Gemini API key is not configured. Set GEMINI_API_KEY in your .env file.');
+            throw new \RuntimeException('Gemini API key is not configured for this workspace. Go to Workspace Settings → AI Providers to set it up.');
         }
 
         try {
@@ -158,10 +158,10 @@ class AITestGeneratorService
      */
     private function claudeGenerate(string $prompt, array $options): array
     {
-        $apiKey = config('services.anthropic.api_key');
+        $apiKey = $this->apiKey;
 
         if (empty($apiKey)) {
-            throw new \RuntimeException('Anthropic API key is not configured. Set ANTHROPIC_API_KEY in your .env file.');
+            throw new \RuntimeException('Anthropic API key is not configured for this workspace. Go to Workspace Settings → AI Providers to set it up.');
         }
 
         try {
@@ -193,10 +193,10 @@ class AITestGeneratorService
      */
     private function claudeGenerateWithImage(string $prompt, string $imageData, string $mimeType, array $options): array
     {
-        $apiKey = config('services.anthropic.api_key');
+        $apiKey = $this->apiKey;
 
         if (empty($apiKey)) {
-            throw new \RuntimeException('Anthropic API key is not configured. Set ANTHROPIC_API_KEY in your .env file.');
+            throw new \RuntimeException('Anthropic API key is not configured for this workspace. Go to Workspace Settings → AI Providers to set it up.');
         }
 
         try {
@@ -241,10 +241,10 @@ class AITestGeneratorService
      */
     private function openaiGenerate(string $prompt, array $options): array
     {
-        $apiKey = config('services.openai.api_key');
+        $apiKey = $this->apiKey;
 
         if (empty($apiKey)) {
-            throw new \RuntimeException('OpenAI API key is not configured. Set OPENAI_API_KEY in your .env file.');
+            throw new \RuntimeException('OpenAI API key is not configured for this workspace. Go to Workspace Settings → AI Providers to set it up.');
         }
 
         try {
@@ -281,10 +281,10 @@ class AITestGeneratorService
      */
     private function openaiGenerateWithImage(string $prompt, string $imageData, string $mimeType, array $options): array
     {
-        $apiKey = config('services.openai.api_key');
+        $apiKey = $this->apiKey;
 
         if (empty($apiKey)) {
-            throw new \RuntimeException('OpenAI API key is not configured. Set OPENAI_API_KEY in your .env file.');
+            throw new \RuntimeException('OpenAI API key is not configured for this workspace. Go to Workspace Settings → AI Providers to set it up.');
         }
 
         try {

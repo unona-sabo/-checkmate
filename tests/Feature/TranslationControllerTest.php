@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AiSetting;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
@@ -56,10 +57,9 @@ test('translate calls gemini api by default and returns translated text', functi
     ]);
 
     config(['services.ai.default_provider' => 'gemini']);
-    config(['services.gemini.api_key' => 'test-key']);
-
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
 
     $this->actingAs($user)->postJson(route('translate', $project), [
         'text' => 'Hello',
@@ -75,10 +75,9 @@ test('translate uses provider from request when specified', function () {
         ]),
     ]);
 
-    config(['services.anthropic.api_key' => 'test-key']);
-
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['anthropic_api_key' => 'test-key']);
 
     $this->actingAs($user)->postJson(route('translate', $project), [
         'text' => 'Привіт',
@@ -108,10 +107,9 @@ test('translate returns 500 when api fails', function () {
     ]);
 
     config(['services.ai.default_provider' => 'gemini']);
-    config(['services.gemini.api_key' => 'test-key']);
-
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
 
     $this->actingAs($user)->postJson(route('translate', $project), [
         'text' => 'Hello',

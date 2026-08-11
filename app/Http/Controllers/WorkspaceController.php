@@ -32,6 +32,7 @@ class WorkspaceController extends Controller
                 ...$workspace->toArray(),
                 'clickup_configured' => $workspace->clickupSetting?->isConfigured() ?? false,
                 'grafana_configured' => $workspace->grafanaSetting?->isConfigured() ?? false,
+                'ai_configured' => $workspace->aiSetting?->isConfigured() ?? false,
             ],
             'members' => $members,
             'roles' => WorkspaceRole::values(),

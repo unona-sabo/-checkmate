@@ -65,4 +65,12 @@ class Workspace extends Model
     {
         return $this->hasOne(GrafanaSetting::class);
     }
+
+    /**
+     * Get the AI provider settings for the workspace, if any.
+     */
+    public function aiSetting(): HasOne
+    {
+        return $this->hasOne(AiSetting::class);
+    }
 }

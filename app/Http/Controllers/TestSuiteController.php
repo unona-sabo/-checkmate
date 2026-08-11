@@ -6,6 +6,7 @@ use App\Http\Requests\TestSuite\CopySuitesRequest;
 use App\Http\Requests\TestSuite\ReorderTestSuitesRequest;
 use App\Http\Requests\TestSuite\StoreTestSuiteRequest;
 use App\Http\Requests\TestSuite\UpdateTestSuiteRequest;
+use App\Models\AiSetting;
 use App\Models\Project;
 use App\Models\TestCase;
 use App\Models\TestSuite;
@@ -46,16 +47,18 @@ class TestSuiteController extends Controller
         $archiveSuites = $project->testSuites()->where('is_archived', true)
             ->orderBy('name')->get(['id', 'name']);
 
+        $aiSettings = $project->workspace ? AiSetting::forWorkspace($project->workspace) : null;
+
         return Inertia::render('TestSuites/Index', [
             'project' => $project,
             'testSuites' => $testSuites,
             'users' => $users,
             'availableFeatures' => $availableFeatures,
             'archiveSuites' => $archiveSuites,
-            'defaultAiProvider' => config('services.ai.default_provider', 'gemini'),
-            'hasGeminiKey' => ! empty(config('services.gemini.api_key')),
-            'hasClaudeKey' => ! empty(config('services.anthropic.api_key')),
-            'hasOpenaiKey' => ! empty(config('services.openai.api_key')),
+            'defaultAiProvider' => $aiSettings?->default_provider ?? config('services.ai.default_provider', 'gemini'),
+            'hasGeminiKey' => $aiSettings?->apiKeyFor('gemini') !== null,
+            'hasClaudeKey' => $aiSettings?->apiKeyFor('claude') !== null,
+            'hasOpenaiKey' => $aiSettings?->apiKeyFor('openai') !== null,
         ]);
     }
 
@@ -144,6 +147,8 @@ class TestSuiteController extends Controller
 
         $archiveSuites = $allTestSuites->where('is_archived', true)->values();
 
+        $aiSettings = $project->workspace ? AiSetting::forWorkspace($project->workspace) : null;
+
         return Inertia::render('TestSuites/Show', [
             'project' => $project,
             'testSuite' => $testSuite,
@@ -151,10 +156,10 @@ class TestSuiteController extends Controller
             'availableFeatures' => $availableFeatures,
             'allTestSuites' => $allTestSuites,
             'archiveSuites' => $archiveSuites,
-            'defaultAiProvider' => config('services.ai.default_provider', 'gemini'),
-            'hasGeminiKey' => ! empty(config('services.gemini.api_key')),
-            'hasClaudeKey' => ! empty(config('services.anthropic.api_key')),
-            'hasOpenaiKey' => ! empty(config('services.openai.api_key')),
+            'defaultAiProvider' => $aiSettings?->default_provider ?? config('services.ai.default_provider', 'gemini'),
+            'hasGeminiKey' => $aiSettings?->apiKeyFor('gemini') !== null,
+            'hasClaudeKey' => $aiSettings?->apiKeyFor('claude') !== null,
+            'hasOpenaiKey' => $aiSettings?->apiKeyFor('openai') !== null,
         ]);
     }
 

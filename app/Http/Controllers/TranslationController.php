@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AiSetting;
 use App\Models\Project;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +16,8 @@ class TranslationController extends Controller
 
     private string $model;
 
+    private ?string $apiKey = null;
+
     public function translate(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
@@ -25,8 +28,11 @@ class TranslationController extends Controller
             'provider' => 'sometimes|in:gemini,claude,openai',
         ]);
 
-        $this->provider = $validated['provider'] ?? config('services.ai.default_provider', 'gemini');
-        $this->model = match ($this->provider) {
+        $settings = $project->workspace ? AiSetting::forWorkspace($project->workspace) : null;
+
+        $this->provider = $validated['provider'] ?? $settings?->default_provider ?? config('services.ai.default_provider', 'gemini');
+        $this->apiKey = $settings?->apiKeyFor($this->provider);
+        $this->model = $settings?->modelFor($this->provider) ?? match ($this->provider) {
             'gemini' => config('services.gemini.model', 'gemini-2.0-flash'),
             'openai' => config('services.openai.model', 'gpt-4o-mini'),
             default => 'claude-sonnet-4-20250514',
@@ -56,10 +62,10 @@ class TranslationController extends Controller
      */
     private function geminiTranslate(string $prompt): string
     {
-        $apiKey = config('services.gemini.api_key');
+        $apiKey = $this->apiKey;
 
         if (empty($apiKey)) {
-            throw new \RuntimeException('Gemini API key is not configured. Set GEMINI_API_KEY in your .env file.');
+            throw new \RuntimeException('Gemini API key is not configured for this workspace. Go to Workspace Settings → AI Providers to set it up.');
         }
 
         $response = Http::timeout(60)->post(
@@ -86,10 +92,10 @@ class TranslationController extends Controller
      */
     private function claudeTranslate(string $prompt): string
     {
-        $apiKey = config('services.anthropic.api_key');
+        $apiKey = $this->apiKey;
 
         if (empty($apiKey)) {
-            throw new \RuntimeException('Anthropic API key is not configured. Set ANTHROPIC_API_KEY in your .env file.');
+            throw new \RuntimeException('Anthropic API key is not configured for this workspace. Go to Workspace Settings → AI Providers to set it up.');
         }
 
         $response = Http::withHeaders([
@@ -109,10 +115,10 @@ class TranslationController extends Controller
      */
     private function openaiTranslate(string $prompt): string
     {
-        $apiKey = config('services.openai.api_key');
+        $apiKey = $this->apiKey;
 
         if (empty($apiKey)) {
-            throw new \RuntimeException('OpenAI API key is not configured. Set OPENAI_API_KEY in your .env file.');
+            throw new \RuntimeException('OpenAI API key is not configured for this workspace. Go to Workspace Settings → AI Providers to set it up.');
         }
 
         $response = Http::withHeaders([

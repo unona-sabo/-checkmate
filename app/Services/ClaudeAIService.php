@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Log;
 
 class ClaudeAIService
 {
+    public function __construct(private ?string $apiKey = null) {}
+
     /**
      * @param  list<array<string, mixed>>  $testCases
      * @param  list<array<string, mixed>>  $features
@@ -155,10 +157,10 @@ Return JSON array with this structure:
      */
     private function callClaude(string $prompt): array
     {
-        $apiKey = config('services.anthropic.api_key');
+        $apiKey = $this->apiKey;
 
         if (empty($apiKey)) {
-            throw new \RuntimeException('Anthropic API key is not configured.');
+            throw new \RuntimeException('Anthropic API key is not configured for this workspace. Go to Workspace Settings → AI Providers to set it up.');
         }
 
         try {

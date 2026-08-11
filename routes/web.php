@@ -24,6 +24,7 @@ use App\Http\Controllers\TestSuiteController;
 use App\Http\Controllers\TranslationController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
+use App\Http\Controllers\Workspaces\AiController as WorkspaceAiController;
 use App\Http\Controllers\Workspaces\ClickupController as WorkspaceClickupController;
 use App\Http\Controllers\Workspaces\GrafanaController as WorkspaceGrafanaController;
 use Illuminate\Support\Facades\Route;
@@ -66,6 +67,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('workspaces/settings/grafana', [WorkspaceGrafanaController::class, 'show'])->name('workspaces.grafana.show');
     Route::put('workspaces/settings/grafana', [WorkspaceGrafanaController::class, 'update'])->name('workspaces.grafana.update');
     Route::post('workspaces/settings/grafana/test-connection', [WorkspaceGrafanaController::class, 'testConnection'])->name('workspaces.grafana.test-connection');
+
+    Route::get('workspaces/settings/ai', [WorkspaceAiController::class, 'show'])->name('workspaces.ai.show');
+    Route::put('workspaces/settings/ai', [WorkspaceAiController::class, 'update'])->name('workspaces.ai.update');
 
     // Projects
     Route::post('projects/reorder', [ProjectController::class, 'reorder'])->name('projects.reorder');

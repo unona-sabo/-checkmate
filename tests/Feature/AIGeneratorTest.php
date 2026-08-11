@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AiGeneration;
+use App\Models\AiSetting;
 use App\Models\Documentation;
 use App\Models\Project;
 use App\Models\ProjectFeature;
@@ -11,8 +12,11 @@ use App\Models\Workspace;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
-    $this->project = Project::factory()->create(['user_id' => $this->user->id]);
+    [$this->user, $this->workspace] = createUserWithWorkspace();
+    $this->project = Project::factory()->create([
+        'user_id' => $this->user->id,
+        'workspace_id' => $this->workspace->id,
+    ]);
 });
 
 test('index renders for authorized user', function () {
@@ -83,7 +87,7 @@ test('generate with text input returns test cases', function () {
         ]),
     ]);
 
-    config(['services.gemini.api_key' => 'test-key']);
+    AiSetting::forWorkspace($this->workspace)->update(['gemini_api_key' => 'test-key']);
 
     $response = $this->actingAs($this->user)->postJson(
         route('ai-generator.generate', $this->project),
@@ -154,7 +158,7 @@ test('generate with documentation input strips HTML and returns test cases', fun
         ]),
     ]);
 
-    config(['services.gemini.api_key' => 'test-key']);
+    AiSetting::forWorkspace($this->workspace)->update(['gemini_api_key' => 'test-key']);
 
     $response = $this->actingAs($this->user)->postJson(
         route('ai-generator.generate', $this->project),
@@ -180,7 +184,7 @@ test('generate with documentation input rejects a documentation from another pro
     $otherProject = Project::factory()->create();
     $documentation = Documentation::factory()->create(['project_id' => $otherProject->id]);
 
-    config(['services.gemini.api_key' => 'test-key']);
+    AiSetting::forWorkspace($this->workspace)->update(['gemini_api_key' => 'test-key']);
 
     $response = $this->actingAs($this->user)->postJson(
         route('ai-generator.generate', $this->project),
@@ -216,7 +220,7 @@ test('ai_generations record created on generate', function () {
         ]),
     ]);
 
-    config(['services.gemini.api_key' => 'test-key']);
+    AiSetting::forWorkspace($this->workspace)->update(['gemini_api_key' => 'test-key']);
 
     $this->actingAs($this->user)->postJson(
         route('ai-generator.generate', $this->project),
@@ -438,7 +442,7 @@ test('parse-text endpoint extracts test cases from pasted text and ignores the c
         ]),
     ]);
 
-    config(['services.gemini.api_key' => 'test-key']);
+    AiSetting::forWorkspace($this->workspace)->update(['gemini_api_key' => 'test-key']);
     config(['services.ai.default_provider' => 'gemini']);
 
     $response = $this->actingAs($this->user)->postJson(
@@ -489,7 +493,7 @@ test('parse-text endpoint handles a single JSON object response without crashing
         ]),
     ]);
 
-    config(['services.gemini.api_key' => 'test-key']);
+    AiSetting::forWorkspace($this->workspace)->update(['gemini_api_key' => 'test-key']);
 
     $response = $this->actingAs($this->user)->postJson(
         route('ai-generator.parse-text', $this->project),
@@ -525,7 +529,7 @@ test('parse-text endpoint ignores non-object entries in the AI response array', 
         ]),
     ]);
 
-    config(['services.gemini.api_key' => 'test-key']);
+    AiSetting::forWorkspace($this->workspace)->update(['gemini_api_key' => 'test-key']);
 
     $response = $this->actingAs($this->user)->postJson(
         route('ai-generator.parse-text', $this->project),
@@ -558,7 +562,7 @@ test('parse-text endpoint respects an explicit provider override', function () {
         ]),
     ]);
 
-    config(['services.openai.api_key' => 'test-key']);
+    AiSetting::forWorkspace($this->workspace)->update(['openai_api_key' => 'test-key']);
     config(['services.ai.default_provider' => 'gemini']);
 
     $response = $this->actingAs($this->user)->postJson(

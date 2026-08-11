@@ -184,7 +184,7 @@ const roleColors: Record<string, string> = {
                 <Heading
                     variant="small"
                     title="Integrations"
-                    description="Each workspace has its own ClickUp and Grafana connection"
+                    description="Each workspace has its own ClickUp, Grafana, and AI provider connection"
                 />
 
                 <div class="grid gap-3">
@@ -221,6 +221,23 @@ const roleColors: Record<string, string> = {
                         >
                             {{
                                 workspace.grafana_configured
+                                    ? 'Connected'
+                                    : 'Not connected'
+                            }}
+                        </Badge>
+                    </Link>
+                    <Link
+                        href="/workspaces/settings/ai"
+                        class="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+                    >
+                        <span class="font-medium">AI Providers</span>
+                        <Badge
+                            :variant="
+                                workspace.ai_configured ? 'success' : 'outline'
+                            "
+                        >
+                            {{
+                                workspace.ai_configured
                                     ? 'Connected'
                                     : 'Not connected'
                             }}

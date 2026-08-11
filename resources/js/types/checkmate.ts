@@ -24,8 +24,10 @@ export interface Bugreport {
     project_id: number;
     title: string;
     status:
+        | 'triage'
         | 'to_do'
         | 'in_progress'
+        | 'blocked'
         | 'in_review'
         | 'needs_changes'
         | 'cancelled'
@@ -504,6 +506,7 @@ export interface Workspace {
     role?: string;
     clickup_configured?: boolean;
     grafana_configured?: boolean;
+    ai_configured?: boolean;
     created_at?: string;
     updated_at?: string;
 }

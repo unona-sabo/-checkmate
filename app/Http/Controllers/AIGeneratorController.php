@@ -6,6 +6,7 @@ use App\Http\Requests\AIGenerator\GenerateTestCasesRequest;
 use App\Http\Requests\AIGenerator\ImportTestCasesRequest;
 use App\Http\Requests\AIGenerator\ParseTestCasesRequest;
 use App\Models\AiGeneration;
+use App\Models\AiSetting;
 use App\Models\Documentation;
 use App\Models\Project;
 use App\Models\TestCase;
@@ -34,10 +35,11 @@ class AIGeneratorController extends Controller
             ->orderBy('order')
             ->get();
 
-        $defaultProvider = config('services.ai.default_provider', 'gemini');
-        $hasGeminiKey = ! empty(config('services.gemini.api_key'));
-        $hasClaudeKey = ! empty(config('services.anthropic.api_key'));
-        $hasOpenaiKey = ! empty(config('services.openai.api_key'));
+        $settings = $project->workspace ? AiSetting::forWorkspace($project->workspace) : null;
+        $defaultProvider = $settings?->default_provider ?? config('services.ai.default_provider', 'gemini');
+        $hasGeminiKey = $settings?->apiKeyFor('gemini') !== null;
+        $hasClaudeKey = $settings?->apiKeyFor('claude') !== null;
+        $hasOpenaiKey = $settings?->apiKeyFor('openai') !== null;
 
         return Inertia::render('AIGenerator/Index', [
             'project' => $project,
@@ -66,11 +68,12 @@ class AIGeneratorController extends Controller
         $this->authorize('update', $project);
 
         $validated = $request->validated();
-        $provider = $validated['provider'] ?? null;
+        $settings = $project->workspace ? AiSetting::forWorkspace($project->workspace) : null;
+        $provider = $validated['provider'] ?? $settings?->default_provider ?? config('services.ai.default_provider', 'gemini');
         $count = $validated['count'] ?? null;
         $customPrompt = $validated['custom_prompt'] ?? null;
 
-        $service = new AITestGeneratorService($provider);
+        $service = new AITestGeneratorService($provider, $settings?->apiKeyFor($provider), $settings?->modelFor($provider));
 
         $language = $validated['language'] ?? null;
 
@@ -114,8 +117,10 @@ class AIGeneratorController extends Controller
         $this->authorize('update', $project);
 
         $validated = $request->validated();
+        $settings = $project->workspace ? AiSetting::forWorkspace($project->workspace) : null;
+        $provider = $validated['provider'] ?? $settings?->default_provider ?? config('services.ai.default_provider', 'gemini');
 
-        $service = new AITestGeneratorService($validated['provider'] ?? null);
+        $service = new AITestGeneratorService($provider, $settings?->apiKeyFor($provider), $settings?->modelFor($provider));
 
         $testCases = $service->parseFromText($validated['text']);
 
