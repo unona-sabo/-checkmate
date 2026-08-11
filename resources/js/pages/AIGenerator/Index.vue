@@ -88,12 +88,35 @@ const documentationOptions = computed(() =>
     }),
 );
 const countInput = ref('');
-const provider = ref(
-    localStorage.getItem('ai_provider') || props.defaultProvider,
-);
+
+const availableAiProviders = computed(() => {
+    const options: { value: string; label: string }[] = [];
+    if (props.hasGeminiKey) options.push({ value: 'gemini', label: 'Gemini' });
+    if (props.hasClaudeKey) options.push({ value: 'claude', label: 'Claude' });
+    if (props.hasOpenaiKey) options.push({ value: 'openai', label: 'OpenAI' });
+    return options;
+});
+
+function initialAiProvider(): string {
+    const stored = localStorage.getItem('ai_provider');
+    const candidates = [stored, props.defaultProvider];
+
+    for (const candidate of candidates) {
+        if (
+            candidate &&
+            availableAiProviders.value.some((o) => o.value === candidate)
+        ) {
+            return candidate;
+        }
+    }
+
+    return availableAiProviders.value[0]?.value ?? '';
+}
+
+const provider = ref(initialAiProvider());
 
 watch(provider, (val) => {
-    localStorage.setItem('ai_provider', val);
+    if (val) localStorage.setItem('ai_provider', val);
 });
 const customPrompt = ref('');
 const language = ref('auto');
@@ -451,13 +474,9 @@ const severityColors: Record<string, string> = {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div
-                        class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"
-                    >
-                        <Sparkles class="h-5 w-5 text-primary" />
-                    </div>
                     <div>
-                        <h1 class="text-2xl font-bold">
+                        <h1 class="flex items-center gap-2 text-2xl font-bold">
+                            <Sparkles class="h-6 w-6 shrink-0 text-primary" />
                             AI Test Case Generator
                         </h1>
                         <p class="text-muted-foreground">
@@ -780,36 +799,19 @@ const severityColors: Record<string, string> = {
                                         Leave empty for auto, or enter 1-20.
                                     </p>
                                 </div>
-                                <div>
+                                <div v-if="availableAiProviders.length > 0">
                                     <Label>AI Provider</Label>
                                     <Select v-model="provider">
                                         <SelectTrigger class="mt-1.5">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="gemini">
-                                                Gemini
-                                                {{
-                                                    hasGeminiKey
-                                                        ? ''
-                                                        : '(no key)'
-                                                }}
-                                            </SelectItem>
-                                            <SelectItem value="claude">
-                                                Claude
-                                                {{
-                                                    hasClaudeKey
-                                                        ? ''
-                                                        : '(no key)'
-                                                }}
-                                            </SelectItem>
-                                            <SelectItem value="openai">
-                                                OpenAI
-                                                {{
-                                                    hasOpenaiKey
-                                                        ? ''
-                                                        : '(no key)'
-                                                }}
+                                            <SelectItem
+                                                v-for="option in availableAiProviders"
+                                                :key="option.value"
+                                                :value="option.value"
+                                            >
+                                                {{ option.label }}
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -836,19 +838,15 @@ const severityColors: Record<string, string> = {
                             </div>
 
                             <div
-                                v-if="!hasApiKey"
+                                v-if="availableAiProviders.length === 0"
                                 class="flex items-center gap-2 rounded-md bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
                             >
                                 <AlertTriangle class="h-4 w-4 shrink-0" />
                                 <span>
-                                    {{
-                                        provider === 'gemini'
-                                            ? 'GEMINI_API_KEY'
-                                            : provider === 'openai'
-                                              ? 'OPENAI_API_KEY'
-                                              : 'ANTHROPIC_API_KEY'
-                                    }}
-                                    is not configured in your .env file.
+                                    No AI provider is configured for this
+                                    workspace. Go to Workspace Settings → AI
+                                    Providers to add a Gemini, Claude, or OpenAI
+                                    API key.
                                 </span>
                             </div>
 
@@ -1055,7 +1053,9 @@ const severityColors: Record<string, string> = {
                                 <div
                                     class="flex flex-wrap items-center justify-between gap-3"
                                 >
-                                    <div class="flex flex-wrap items-center gap-2">
+                                    <div
+                                        class="flex flex-wrap items-center gap-2"
+                                    >
                                         <CheckCircle
                                             class="h-5 w-5 text-green-500"
                                         />

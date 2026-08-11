@@ -123,8 +123,21 @@ function save() {
                             id="gemini_model"
                             v-model="form.gemini_model"
                             :disabled="!canManage"
-                            placeholder="gemini-2.0-flash"
+                            placeholder="gemini-flash-latest"
                         />
+                        <p class="text-xs text-muted-foreground">
+                            Defaults to Google's rolling "latest" alias, so it
+                            keeps working as Google retires older model
+                            versions. Set a specific version here only if you
+                            need reproducible output — see
+                            <a
+                                href="https://ai.google.dev/gemini-api/docs/models"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="underline"
+                                >Google's current model list</a
+                            >.
+                        </p>
                     </div>
                 </div>
 

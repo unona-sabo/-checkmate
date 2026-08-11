@@ -33,7 +33,7 @@ class TranslationController extends Controller
         $this->provider = $validated['provider'] ?? $settings?->default_provider ?? config('services.ai.default_provider', 'gemini');
         $this->apiKey = $settings?->apiKeyFor($this->provider);
         $this->model = $settings?->modelFor($this->provider) ?? match ($this->provider) {
-            'gemini' => config('services.gemini.model', 'gemini-2.0-flash'),
+            'gemini' => config('services.gemini.model', 'gemini-flash-latest'),
             'openai' => config('services.openai.model', 'gpt-4o-mini'),
             default => 'claude-sonnet-4-20250514',
         };

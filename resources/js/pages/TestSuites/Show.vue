@@ -749,17 +749,21 @@ const submitArchive = () => {
         payload.archive_suite_name = archiveSuiteName.value.trim();
     }
 
-    router.post(`/projects/${props.project.id}/test-suites/archive-cases`, payload, {
-        preserveState: false,
-        onSuccess: () => {
-            showArchiveDialog.value = false;
-            selectedTestCaseIds.value = [];
-            isArchiving.value = false;
+    router.post(
+        `/projects/${props.project.id}/test-suites/archive-cases`,
+        payload,
+        {
+            preserveState: false,
+            onSuccess: () => {
+                showArchiveDialog.value = false;
+                selectedTestCaseIds.value = [];
+                isArchiving.value = false;
+            },
+            onError: () => {
+                isArchiving.value = false;
+            },
         },
-        onError: () => {
-            isArchiving.value = false;
-        },
-    });
+    );
 };
 
 // Unarchive dialog
@@ -811,21 +815,25 @@ const submitUnarchive = () => {
         payload.target_suite_id = Number(unarchiveTargetSuiteId.value);
     }
 
-    router.post(`/projects/${props.project.id}/test-suites/unarchive-cases`, payload, {
-        onSuccess: () => {
-            showUnarchiveDialog.value = false;
-            selectedTestCaseIds.value = [];
-            isUnarchiving.value = false;
+    router.post(
+        `/projects/${props.project.id}/test-suites/unarchive-cases`,
+        payload,
+        {
+            onSuccess: () => {
+                showUnarchiveDialog.value = false;
+                selectedTestCaseIds.value = [];
+                isUnarchiving.value = false;
+            },
+            onError: (errors) => {
+                // Some cases had no resolvable original suite — keep the
+                // dialog open and let the user pick a suite for the rest.
+                unarchiveError.value =
+                    errors.mode || 'Some test cases could not be unarchived.';
+                unarchiveMode.value = 'choose';
+                isUnarchiving.value = false;
+            },
         },
-        onError: (errors) => {
-            // Some cases had no resolvable original suite — keep the
-            // dialog open and let the user pick a suite for the rest.
-            unarchiveError.value =
-                errors.mode || 'Some test cases could not be unarchived.';
-            unarchiveMode.value = 'choose';
-            isUnarchiving.value = false;
-        },
-    });
+    );
 };
 
 // Delete Test Cases dialog
@@ -1057,9 +1065,6 @@ type AiParsedCase = AIGeneratedTestCaseInput & {
 
 const showAiPasteDialog = ref(false);
 const aiPasteText = ref('');
-const aiProvider = ref(
-    localStorage.getItem('ai_provider') || props.defaultAiProvider,
-);
 const isParsingAiText = ref(false);
 const aiParseError = ref('');
 const aiParsedCases = ref<AiParsedCase[]>([]);
@@ -1067,16 +1072,34 @@ const aiGenerationId = ref<number | null>(null);
 const isImportingAiCases = ref(false);
 const aiEditingIndex = ref<number | null>(null);
 
-watch(aiProvider, (val) => {
-    localStorage.setItem('ai_provider', val);
-});
-
 const availableAiProviders = computed(() => {
     const options: { value: string; label: string }[] = [];
     if (props.hasGeminiKey) options.push({ value: 'gemini', label: 'Gemini' });
     if (props.hasClaudeKey) options.push({ value: 'claude', label: 'Claude' });
     if (props.hasOpenaiKey) options.push({ value: 'openai', label: 'OpenAI' });
     return options;
+});
+
+function initialAiProvider(): string {
+    const stored = localStorage.getItem('ai_provider');
+    const candidates = [stored, props.defaultAiProvider];
+
+    for (const candidate of candidates) {
+        if (
+            candidate &&
+            availableAiProviders.value.some((o) => o.value === candidate)
+        ) {
+            return candidate;
+        }
+    }
+
+    return availableAiProviders.value[0]?.value ?? '';
+}
+
+const aiProvider = ref(initialAiProvider());
+
+watch(aiProvider, (val) => {
+    if (val) localStorage.setItem('ai_provider', val);
 });
 
 const approvedAiCases = computed(() =>
@@ -1129,7 +1152,9 @@ const parseAiText = async () => {
 
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
-            throw new Error(data.message || `Parsing failed (${response.status})`);
+            throw new Error(
+                data.message || `Parsing failed (${response.status})`,
+            );
         }
 
         const data = await response.json();
@@ -1913,7 +1938,9 @@ onMounted(() => {
                             </button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
+                    <div
+                        class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3"
+                    >
                         <!-- Type -->
                         <div class="relative">
                             <Label
@@ -2902,8 +2929,8 @@ onMounted(() => {
                         Archive Test Cases
                     </DialogTitle>
                     <DialogDescription>
-                        Move {{ selectedTestCaseIds.length }} test case(s)
-                        into an archive suite.
+                        Move {{ selectedTestCaseIds.length }} test case(s) into
+                        an archive suite.
                     </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4 py-2">
@@ -3384,10 +3411,9 @@ onMounted(() => {
                         Paste AI Test Cases
                     </DialogTitle>
                     <DialogDescription>
-                        Paste test cases generated by any AI tool, in any
-                        format — we'll recognize them and convert each one
-                        into a CheckMate test case for you to review before
-                        saving.
+                        Paste test cases generated by any AI tool, in any format
+                        — we'll recognize them and convert each one into a
+                        CheckMate test case for you to review before saving.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -3416,8 +3442,9 @@ onMounted(() => {
                             class="flex items-start gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400"
                         >
                             <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
-                            No AI provider is configured. Add a Gemini,
-                            Claude, or OpenAI API key in your .env file.
+                            No AI provider is configured for this workspace. Go
+                            to Workspace Settings → AI Providers to add a
+                            Gemini, Claude, or OpenAI API key.
                         </div>
                         <div class="space-y-2">
                             <Label>Test case text</Label>
@@ -3587,9 +3614,7 @@ onMounted(() => {
                                                         Expected Result
                                                     </p>
                                                     <p class="text-sm">
-                                                        {{
-                                                            tc.expected_result
-                                                        }}
+                                                        {{ tc.expected_result }}
                                                     </p>
                                                 </div>
                                             </template>
@@ -3832,7 +3857,8 @@ onMounted(() => {
                                                         size="sm"
                                                         class="cursor-pointer gap-1.5"
                                                         @click="
-                                                            aiEditingIndex = null
+                                                            aiEditingIndex =
+                                                                null
                                                         "
                                                     >
                                                         <Check
@@ -3869,7 +3895,9 @@ onMounted(() => {
                             class="h-4 w-4 animate-spin"
                         />
                         <Sparkles v-else class="h-4 w-4" />
-                        {{ isParsingAiText ? 'Parsing...' : 'Parse Test Cases' }}
+                        {{
+                            isParsingAiText ? 'Parsing...' : 'Parse Test Cases'
+                        }}
                     </Button>
                     <Button
                         v-else
