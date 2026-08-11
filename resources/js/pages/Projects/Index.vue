@@ -143,7 +143,7 @@ const saveOrder = () => {
                         >
                     </p>
                 </div>
-                <RestrictedAction>
+                <RestrictedAction v-if="projects.length > 0">
                     <Link href="/projects/create">
                         <Button variant="cta" class="gap-2">
                             <Plus class="h-4 w-4" />

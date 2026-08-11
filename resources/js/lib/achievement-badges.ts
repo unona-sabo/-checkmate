@@ -68,8 +68,21 @@ export interface AchievementBadgeConfig {
 const asset = (file: string): string => `/images/badges/${file}`;
 
 export const ACHIEVEMENT_BADGES: Record<BadgeId, AchievementBadgeConfig> = {
-    // "First X" achievements first — they're the easiest to reach and the
-    // most common ones new users unlock, so they lead the Achievements page.
+    'good-work-day': {
+        id: 'good-work-day',
+        name: 'Good Work Day',
+        description: 'Stayed active in CheckMate on a good work day',
+        // The Achievements page always shows this default variant; the toast
+        // notification (fired on every login, not just once — see
+        // GOOD_DAY_TOAST_VARIANTS below) picks randomly among all variants.
+        unlockedAsset: asset('Good%20day/good_work_day_unlocked.png'),
+        lockedAsset: asset('Good%20day/good_work_day_locked.png'),
+        animation: 'pulse-glow',
+        duration: 3,
+    },
+
+    // "First X" achievements next — they're the easiest to reach and the
+    // most common ones new users unlock, so they lead the rest of the page.
     'first-blood': {
         id: 'first-blood',
         name: 'First Bug',
@@ -337,19 +350,6 @@ export const ACHIEVEMENT_BADGES: Record<BadgeId, AchievementBadgeConfig> = {
         animation: 'blink',
         duration: 3,
     },
-    'good-work-day': {
-        id: 'good-work-day',
-        name: 'Good Work Day',
-        description: 'Stayed active in CheckMate on a good work day',
-        // The Achievements page always shows this default variant; the toast
-        // notification (fired on every active day, not just once — see
-        // GOOD_DAY_TOAST_VARIANTS below) picks randomly among all variants.
-        unlockedAsset: asset('Good%20day/good_work_day_unlocked.png'),
-        lockedAsset: asset('Good%20day/good_work_day_locked.png'),
-        animation: 'pulse-glow',
-        duration: 3,
-    },
-
     // Legend depends on every achievement above, so it comes last.
     legend: {
         id: 'legend',

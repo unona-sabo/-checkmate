@@ -29,13 +29,8 @@ use App\Http\Controllers\Workspaces\ClickupController as WorkspaceClickupControl
 use App\Http\Controllers\Workspaces\GrafanaController as WorkspaceGrafanaController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use Laravel\Fortify\Features;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
-})->name('welcome');
+Route::get('/', fn () => redirect()->route('login'))->name('welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('home', [HomeController::class, 'index'])->name('home');
