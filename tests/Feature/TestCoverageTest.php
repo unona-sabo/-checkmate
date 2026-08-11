@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AiSetting;
 use App\Models\Checklist;
 use App\Models\CoverageAnalysis;
 use App\Models\Project;
@@ -8,6 +9,7 @@ use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Models\User;
 use App\Models\Workspace;
+use Illuminate\Support\Facades\Http;
 
 // ===== Index =====
 
@@ -27,7 +29,10 @@ test('index page renders with coverage statistics', function () {
         ->has('coverageByModule')
         ->has('features', 5)
         ->has('gaps')
-        ->has('hasAnthropicKey')
+        ->has('defaultAiProvider')
+        ->has('hasGeminiKey')
+        ->has('hasClaudeKey')
+        ->has('hasOpenaiKey')
     );
 });
 
@@ -286,6 +291,112 @@ test('coverage history requires authentication', function () {
     $project = Project::factory()->create();
 
     $this->getJson(route('test-coverage.history', $project))->assertUnauthorized();
+});
+
+// ===== AI Analysis =====
+
+test('ai analysis uses the selected provider', function () {
+    Http::fake([
+        'api.openai.com/*' => Http::response([
+            'choices' => [[
+                'message' => [
+                    'content' => json_encode([
+                        'summary' => 'Solid coverage overall.',
+                        'overall_coverage' => 80,
+                        'gaps' => [],
+                    ]),
+                ],
+            ]],
+        ]),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['openai_api_key' => 'test-key']);
+
+    $response = $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
+        'provider' => 'openai',
+    ]);
+
+    $response->assertOk();
+    expect($response->json('analysis.summary'))->toBe('Solid coverage overall.');
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'openai.com'));
+});
+
+test('ai analysis includes custom instructions in the prompt', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [[
+                'content' => [
+                    'parts' => [['text' => json_encode(['summary' => 'ok', 'overall_coverage' => 50, 'gaps' => []])]],
+                ],
+            ]],
+        ]),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+
+    $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
+        'provider' => 'gemini',
+        'custom_instructions' => 'Focus only on payment and security flows.',
+    ]);
+
+    Http::assertSent(fn ($request) => str_contains($request->body(), 'Focus only on payment and security flows.'));
+});
+
+test('ai analysis falls back to the workspace default provider when none is given', function () {
+    Http::fake([
+        'api.anthropic.com/*' => Http::response([
+            'content' => [['text' => json_encode(['summary' => 'ok', 'overall_coverage' => 50, 'gaps' => []])]],
+        ]),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['anthropic_api_key' => 'test-key', 'default_provider' => 'claude']);
+
+    $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project))->assertOk();
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'anthropic.com'));
+});
+
+test('ai analysis validation rejects an unknown provider', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+
+    $response = $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
+        'provider' => 'not-a-provider',
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['provider']);
+});
+
+test('running ai analysis again creates a new coverage analysis record', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [[
+                'content' => [
+                    'parts' => [['text' => json_encode(['summary' => 'ok', 'overall_coverage' => 50, 'gaps' => []])]],
+                ],
+            ]],
+        ]),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+
+    $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), ['provider' => 'gemini'])->assertOk();
+    $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
+        'provider' => 'gemini',
+        'custom_instructions' => 'Re-check with a focus on edge cases.',
+    ])->assertOk();
+
+    expect($project->coverageAnalyses()->count())->toBe(2);
 });
 
 // ===== RBAC =====

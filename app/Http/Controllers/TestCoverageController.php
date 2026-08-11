@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\TestCoverage\AttachChecklistRequest;
 use App\Http\Requests\TestCoverage\AttachTestCaseRequest;
+use App\Http\Requests\TestCoverage\RunCoverageAnalysisRequest;
 use App\Http\Requests\TestCoverage\StoreCoverageFeatureRequest;
 use App\Http\Requests\TestCoverage\StoreCoverageGapRequest;
 use App\Http\Requests\TestCoverage\UpdateCoverageFeatureRequest;
@@ -12,7 +13,7 @@ use App\Models\AiSetting;
 use App\Models\Project;
 use App\Models\ProjectFeature;
 use App\Services\AchievementService;
-use App\Services\ClaudeAIService;
+use App\Services\CoverageAnalysisService;
 use App\Services\CoverageCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -27,15 +28,17 @@ class TestCoverageController extends Controller
     ) {}
 
     /**
-     * Build a Claude client using the current project's own workspace key —
-     * AI keys are workspace-scoped, so this can't be a constructor-injected
-     * singleton.
+     * Build an AI client for the given provider using the current project's
+     * own workspace key — AI keys are workspace-scoped, so this can't be a
+     * constructor-injected singleton.
      */
-    private function claudeServiceFor(Project $project): ClaudeAIService
+    private function coverageServiceFor(Project $project, ?string $provider = null): CoverageAnalysisService
     {
         $settings = $project->workspace ? AiSetting::forWorkspace($project->workspace) : null;
 
-        return new ClaudeAIService($settings?->apiKeyFor('claude'));
+        $provider ??= $settings?->default_provider ?? config('services.ai.default_provider', 'gemini');
+
+        return new CoverageAnalysisService($provider, $settings?->apiKeyFor($provider), $settings?->modelFor($provider));
     }
 
     public function index(Project $project): Response
@@ -72,6 +75,8 @@ class TestCoverageController extends Controller
             ->orderBy('name')
             ->get();
 
+        $aiSettings = $project->workspace ? AiSetting::forWorkspace($project->workspace) : null;
+
         return Inertia::render('TestCoverage/Index', [
             'project' => $project,
             'statistics' => $stats,
@@ -79,15 +84,20 @@ class TestCoverageController extends Controller
             'latestAnalysis' => $latestAnalysis,
             'features' => $features,
             'gaps' => $gaps,
-            'hasAnthropicKey' => ($project->workspace ? AiSetting::forWorkspace($project->workspace) : null)?->apiKeyFor('claude') !== null,
+            'defaultAiProvider' => $aiSettings?->default_provider ?? config('services.ai.default_provider', 'gemini'),
+            'hasGeminiKey' => $aiSettings?->apiKeyFor('gemini') !== null,
+            'hasClaudeKey' => $aiSettings?->apiKeyFor('claude') !== null,
+            'hasOpenaiKey' => $aiSettings?->apiKeyFor('openai') !== null,
             'allTestCases' => $allTestCases,
             'allChecklists' => $allChecklists,
         ]);
     }
 
-    public function runAIAnalysis(Project $project): JsonResponse
+    public function runAIAnalysis(RunCoverageAnalysisRequest $request, Project $project): JsonResponse
     {
         $this->authorize('update', $project);
+
+        $validated = $request->validated();
 
         $testCases = $project->testSuites()
             ->with('testCases')
@@ -122,7 +132,8 @@ class TestCoverageController extends Controller
             ])
             ->toArray();
 
-        $analysis = $this->claudeServiceFor($project)->analyzeCoverage($testCases, $features, $documentation);
+        $analysis = $this->coverageServiceFor($project, $validated['provider'] ?? null)
+            ->analyzeCoverage($testCases, $features, $documentation, $validated['custom_instructions'] ?? null);
 
         $coverageAnalysis = $project->coverageAnalyses()->create([
             'analysis_data' => $analysis,
@@ -148,7 +159,7 @@ class TestCoverageController extends Controller
 
         $gap = $request->validated();
 
-        $generatedCases = $this->claudeServiceFor($project)->generateTestCases($gap);
+        $generatedCases = $this->coverageServiceFor($project, $gap['provider'] ?? null)->generateTestCases($gap);
 
         $feature = $project->features()->where('name', $gap['feature'])->first();
 

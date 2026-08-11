@@ -26,13 +26,11 @@ const translate = async (targetLanguage: 'en' | 'uk') => {
     translating.value = targetLanguage;
 
     try {
-        const provider = localStorage.getItem('ai_provider');
         const response = await axios.post(
             `/projects/${props.projectId}/translate`,
             {
                 text: props.text,
                 target_language: targetLanguage,
-                ...(provider ? { provider } : {}),
             },
         );
 

@@ -2,7 +2,7 @@
 
 use App\Models\AiSetting;
 use App\Services\AITestGeneratorService;
-use App\Services\ClaudeAIService;
+use App\Services\CoverageAnalysisService;
 use Illuminate\Support\Facades\Http;
 
 test('ai settings page is displayed', function () {
@@ -134,7 +134,7 @@ test('a workspace claude key does not leak into another workspace claude service
     $settingsB = AiSetting::forWorkspace($workspaceB);
     expect($settingsB->apiKeyFor('claude'))->toBeNull();
 
-    $service = new ClaudeAIService($settingsB->apiKeyFor('claude'));
+    $service = new CoverageAnalysisService('claude', $settingsB->apiKeyFor('claude'));
 
     expect(fn () => $service->analyzeCoverage([], []))
         ->toThrow(Exception::class, 'Anthropic API key is not configured for this workspace. Go to Workspace Settings → AI Providers to set it up.');

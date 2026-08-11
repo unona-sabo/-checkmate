@@ -80,7 +80,10 @@ const props = defineProps<{
     latestAnalysis: CoverageAnalysis | null;
     features: ProjectFeature[];
     gaps: CoverageGap[];
-    hasAnthropicKey: boolean;
+    defaultAiProvider: string;
+    hasGeminiKey: boolean;
+    hasClaudeKey: boolean;
+    hasOpenaiKey: boolean;
     allTestCases: TestCaseSummary[];
     allChecklists: Pick<Checklist, 'id' | 'name' | 'module'>[];
 }>();
@@ -119,6 +122,29 @@ const generatingForGap = ref<string | null>(null);
 const generatedTestCases = ref<Record<string, unknown>[]>([]);
 const showGeneratedModal = ref(false);
 const currentGapName = ref('');
+const customInstructions = ref('');
+
+const availableAiProviders = computed(() => {
+    const options: { value: string; label: string }[] = [];
+    if (props.hasGeminiKey) options.push({ value: 'gemini', label: 'Gemini' });
+    if (props.hasClaudeKey) options.push({ value: 'claude', label: 'Claude' });
+    if (props.hasOpenaiKey) options.push({ value: 'openai', label: 'OpenAI' });
+    return options;
+});
+
+function initialAiProvider(): string {
+    if (
+        availableAiProviders.value.some(
+            (o) => o.value === props.defaultAiProvider,
+        )
+    ) {
+        return props.defaultAiProvider;
+    }
+
+    return availableAiProviders.value[0]?.value ?? '';
+}
+
+const aiProvider = ref(initialAiProvider());
 
 // Manage features
 const showAddFeatureDialog = ref(false);
@@ -301,6 +327,10 @@ const runAnalysis = async () => {
                         )?.content || '',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
+                body: JSON.stringify({
+                    provider: aiProvider.value,
+                    custom_instructions: customInstructions.value.trim(),
+                }),
             },
         );
         const data = await response.json();
@@ -340,7 +370,7 @@ const generateTestCases = async (gap: AIGap) => {
                         )?.content || '',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify(gap),
+                body: JSON.stringify({ ...gap, provider: aiProvider.value }),
             },
         );
         const data = await response.json();
@@ -1239,10 +1269,8 @@ const refreshData = () => {
                     <div
                         class="mb-8 rounded-lg bg-gradient-to-r from-violet-600 to-blue-600 p-8 text-white"
                     >
-                        <div
-                            class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
-                        >
-                            <div class="flex-1">
+                        <div class="flex flex-col gap-6">
+                            <div>
                                 <h2
                                     class="mb-2 flex items-center gap-2 text-2xl font-bold"
                                 >
@@ -1250,17 +1278,20 @@ const refreshData = () => {
                                     AI-Powered Coverage Analysis
                                 </h2>
                                 <p class="text-violet-100">
-                                    Leverage Claude AI to analyze your test
-                                    coverage, identify gaps, and get intelligent
+                                    Analyze your test coverage against your
+                                    features, test cases, and documentation to
+                                    identify gaps and get intelligent
                                     recommendations.
                                 </p>
                                 <div
-                                    v-if="!hasAnthropicKey"
+                                    v-if="availableAiProviders.length === 0"
                                     class="mt-4 rounded-lg border border-red-300 bg-red-500/20 p-3"
                                 >
                                     <p class="text-sm">
-                                        Anthropic API key not configured. Add
-                                        ANTHROPIC_API_KEY to your .env file.
+                                        No AI provider is configured for this
+                                        workspace. Go to Workspace Settings → AI
+                                        Providers to add a Gemini, Claude, or
+                                        OpenAI API key.
                                     </p>
                                 </div>
                                 <p
@@ -1271,10 +1302,53 @@ const refreshData = () => {
                                     {{ formatDate(latestAnalysis.analyzed_at) }}
                                 </p>
                             </div>
+
+                            <div
+                                v-if="availableAiProviders.length > 0"
+                                class="grid gap-4 lg:grid-cols-[200px_1fr]"
+                            >
+                                <div>
+                                    <Label class="text-violet-100"
+                                        >AI Provider</Label
+                                    >
+                                    <Select v-model="aiProvider">
+                                        <SelectTrigger
+                                            class="mt-1.5 border-white/30 bg-white/10 text-white"
+                                        >
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem
+                                                v-for="option in availableAiProviders"
+                                                :key="option.value"
+                                                :value="option.value"
+                                            >
+                                                {{ option.label }}
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label class="text-violet-100"
+                                        >Additional Instructions
+                                        (optional)</Label
+                                    >
+                                    <Textarea
+                                        v-model="customInstructions"
+                                        placeholder="e.g. Focus on security and payment flows, ignore admin-only features..."
+                                        class="mt-1.5 border-white/30 bg-white/10 text-white placeholder:text-violet-200"
+                                        rows="2"
+                                    />
+                                </div>
+                            </div>
+
                             <RestrictedAction>
                                 <Button
                                     @click="runAnalysis"
-                                    :disabled="isAnalyzing || !hasAnthropicKey"
+                                    :disabled="
+                                        isAnalyzing ||
+                                        availableAiProviders.length === 0
+                                    "
                                     class="w-full cursor-pointer bg-white px-8 py-6 font-bold text-violet-600 hover:bg-violet-50 sm:w-auto"
                                 >
                                     <Loader2
@@ -1285,7 +1359,9 @@ const refreshData = () => {
                                     {{
                                         isAnalyzing
                                             ? 'Analyzing...'
-                                            : 'Run AI Analysis'
+                                            : latestAnalysis
+                                              ? 'Run AI Analysis Again'
+                                              : 'Run AI Analysis'
                                     }}
                                 </Button>
                             </RestrictedAction>

@@ -17,14 +17,7 @@ import {
     Clipboard,
     BookOpen,
 } from 'lucide-vue-next';
-import {
-    ref,
-    computed,
-    useTemplateRef,
-    onMounted,
-    onUnmounted,
-    watch,
-} from 'vue';
+import { ref, computed, useTemplateRef, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -98,26 +91,18 @@ const availableAiProviders = computed(() => {
 });
 
 function initialAiProvider(): string {
-    const stored = localStorage.getItem('ai_provider');
-    const candidates = [stored, props.defaultProvider];
-
-    for (const candidate of candidates) {
-        if (
-            candidate &&
-            availableAiProviders.value.some((o) => o.value === candidate)
-        ) {
-            return candidate;
-        }
+    if (
+        availableAiProviders.value.some(
+            (o) => o.value === props.defaultProvider,
+        )
+    ) {
+        return props.defaultProvider;
     }
 
     return availableAiProviders.value[0]?.value ?? '';
 }
 
 const provider = ref(initialAiProvider());
-
-watch(provider, (val) => {
-    if (val) localStorage.setItem('ai_provider', val);
-});
 const customPrompt = ref('');
 const language = ref('auto');
 

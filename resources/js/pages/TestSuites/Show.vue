@@ -1081,26 +1081,18 @@ const availableAiProviders = computed(() => {
 });
 
 function initialAiProvider(): string {
-    const stored = localStorage.getItem('ai_provider');
-    const candidates = [stored, props.defaultAiProvider];
-
-    for (const candidate of candidates) {
-        if (
-            candidate &&
-            availableAiProviders.value.some((o) => o.value === candidate)
-        ) {
-            return candidate;
-        }
+    if (
+        availableAiProviders.value.some(
+            (o) => o.value === props.defaultAiProvider,
+        )
+    ) {
+        return props.defaultAiProvider;
     }
 
     return availableAiProviders.value[0]?.value ?? '';
 }
 
 const aiProvider = ref(initialAiProvider());
-
-watch(aiProvider, (val) => {
-    if (val) localStorage.setItem('ai_provider', val);
-});
 
 const approvedAiCases = computed(() =>
     aiParsedCases.value.filter((c) => c.approved),

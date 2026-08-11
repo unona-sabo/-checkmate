@@ -15,6 +15,7 @@ class StoreCoverageGapRequest extends FormRequest
             'module' => 'nullable|string',
             'category' => 'nullable|string',
             'priority' => 'required|string',
+            'provider' => 'nullable|string|in:gemini,claude,openai',
         ];
     }
 }
