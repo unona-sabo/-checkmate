@@ -56,6 +56,7 @@ class HandleInertiaRequests extends Middleware
                 'slug' => $workspace->slug,
                 'owner_id' => $workspace->owner_id,
                 'role' => $user->workspaceRole($workspace)?->value,
+                'hidden_sidebar_categories' => $workspace->hidden_sidebar_categories ?? [],
             ] : null,
             'workspaces' => $user ? $user->workspaces()->select('workspaces.id', 'name', 'slug')->get()->map(fn ($ws) => [
                 'id' => $ws->id,

@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -27,10 +28,16 @@ import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { AppPageProps, Workspace, WorkspaceMember } from '@/types';
 
+type SidebarCategoryOption = {
+    value: string;
+    label: string;
+};
+
 type Props = {
     workspace: Workspace;
     members: WorkspaceMember[];
     roles: string[];
+    sidebarCategories: SidebarCategoryOption[];
 };
 
 const props = defineProps<Props>();
@@ -54,6 +61,34 @@ function updateWorkspace() {
     renameForm.put('/workspaces/settings', {
         preserveScroll: true,
     });
+}
+
+// Sidebar category visibility
+const hiddenCategories = ref<string[]>([
+    ...(props.workspace.hidden_sidebar_categories ?? []),
+]);
+const sidebarCategoriesSaving = ref(false);
+
+function isCategoryVisible(value: string): boolean {
+    return !hiddenCategories.value.includes(value);
+}
+
+function toggleCategory(value: string, visible: boolean) {
+    hiddenCategories.value = visible
+        ? hiddenCategories.value.filter((v) => v !== value)
+        : [...hiddenCategories.value, value];
+
+    sidebarCategoriesSaving.value = true;
+    router.put(
+        '/workspaces/settings/sidebar',
+        { hidden_categories: hiddenCategories.value },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                sidebarCategoriesSaving.value = false;
+            },
+        },
+    );
 }
 
 // Add member form
@@ -177,6 +212,39 @@ const roleColors: Record<string, string> = {
                         Save
                     </Button>
                 </form>
+            </div>
+
+            <!-- Sidebar Categories -->
+            <div class="space-y-6">
+                <Heading
+                    variant="small"
+                    title="Sidebar Categories"
+                    description="Choose which project sections show up in the sidebar for this workspace. All are shown by default."
+                />
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div
+                        v-for="category in sidebarCategories"
+                        :key="category.value"
+                        class="flex items-center gap-2"
+                    >
+                        <Checkbox
+                            :id="`sidebar-category-${category.value}`"
+                            :model-value="isCategoryVisible(category.value)"
+                            :disabled="!canManage || sidebarCategoriesSaving"
+                            @update:model-value="
+                                (value) =>
+                                    toggleCategory(
+                                        category.value,
+                                        value === true,
+                                    )
+                            "
+                        />
+                        <Label :for="`sidebar-category-${category.value}`">
+                            {{ category.label }}
+                        </Label>
+                    </div>
+                </div>
             </div>
 
             <!-- Integrations -->

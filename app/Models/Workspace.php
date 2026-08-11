@@ -17,7 +17,15 @@ class Workspace extends Model
         'name',
         'slug',
         'owner_id',
+        'hidden_sidebar_categories',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'hidden_sidebar_categories' => 'array',
+        ];
+    }
 
     public function getRouteKeyName(): string
     {

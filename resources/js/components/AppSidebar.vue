@@ -36,16 +36,20 @@ import {
 import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { home } from '@/routes';
-import { type NavItem, type Project } from '@/types';
+import { type AppPageProps, type NavItem, type Project } from '@/types';
 import AppLogo from './AppLogo.vue';
 
-const page = usePage();
+const page = usePage<AppPageProps>();
 const { isCurrentUrlPrefix } = useCurrentUrl();
 
 const currentProject = computed(() => {
     const props = page.props as Record<string, unknown>;
     return props.project as Project | undefined;
 });
+
+const hiddenSidebarCategories = computed(
+    () => page.props.currentWorkspace?.hidden_sidebar_categories ?? [],
+);
 
 const mainNavItems: NavItem[] = [
     {
@@ -63,78 +67,94 @@ const mainNavItems: NavItem[] = [
 const projectSubItems = computed(() => {
     if (!currentProject.value) return [];
     const projectId = currentProject.value.id;
+    const hidden = hiddenSidebarCategories.value;
+
     return [
         {
+            key: 'checklists',
             title: 'Checklists',
             href: `/projects/${projectId}/checklists`,
             icon: ClipboardList,
         },
         {
+            key: 'test-suites',
             title: 'Test Suites',
             href: `/projects/${projectId}/test-suites`,
             icon: Layers,
         },
         {
+            key: 'test-runs',
             title: 'Test Runs',
             href: `/projects/${projectId}/test-runs`,
             icon: Play,
         },
         {
+            key: 'bugreports',
             title: 'Bugreports',
             href: `/projects/${projectId}/bugreports`,
             icon: Bug,
         },
         {
+            key: 'design',
             title: 'Design',
             href: `/projects/${projectId}/design`,
             icon: Palette,
         },
         {
+            key: 'automation',
             title: 'Automation',
             href: `/projects/${projectId}/automation`,
             icon: Drama,
         },
         {
+            key: 'releases',
             title: 'Releases',
             href: `/projects/${projectId}/releases`,
             icon: Rocket,
         },
         {
+            key: 'test-coverage',
             title: 'Test Coverage',
             href: `/projects/${projectId}/test-coverage`,
             icon: BarChart3,
         },
         {
+            key: 'ai-generator',
             title: 'AI Generator',
             href: `/projects/${projectId}/ai-generator`,
             icon: Sparkles,
         },
         {
+            key: 'test-data',
             title: 'Test Data',
             href: `/projects/${projectId}/test-data`,
             icon: Database,
         },
         {
+            key: 'payout-monitor',
             title: 'Payout Monitor',
             href: `/projects/${projectId}/payout-monitor`,
             icon: Activity,
         },
         {
+            key: 'balance-calculator',
             title: 'Balance Calculator',
             href: `/projects/${projectId}/balance-calculator`,
             icon: Calculator,
         },
         {
+            key: 'documentations',
             title: 'Documentations',
             href: `/projects/${projectId}/documentations`,
             icon: FileText,
         },
         {
+            key: 'notes',
             title: 'Notes',
             href: `/projects/${projectId}/notes`,
             icon: StickyNote,
         },
-    ];
+    ].filter((item) => !hidden.includes(item.key));
 });
 </script>
 

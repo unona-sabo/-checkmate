@@ -507,6 +507,7 @@ export interface Workspace {
     clickup_configured?: boolean;
     grafana_configured?: boolean;
     ai_configured?: boolean;
+    hidden_sidebar_categories?: string[];
     created_at?: string;
     updated_at?: string;
 }

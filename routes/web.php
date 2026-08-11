@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('workspaces/settings', [WorkspaceController::class, 'show'])->name('workspaces.show');
     Route::put('workspaces/settings', [WorkspaceController::class, 'update'])->name('workspaces.update');
     Route::put('workspaces/transfer', [WorkspaceController::class, 'transferOwnership'])->name('workspaces.transfer');
+    Route::put('workspaces/settings/sidebar', [WorkspaceController::class, 'updateSidebarCategories'])->name('workspaces.sidebar.update');
     Route::delete('workspaces/settings', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
     Route::post('workspaces/members', [WorkspaceMemberController::class, 'store'])->name('workspaces.members.store');
     Route::put('workspaces/members/{member}', [WorkspaceMemberController::class, 'update'])->name('workspaces.members.update');

@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SidebarCategory;
 use App\Enums\WorkspaceRole;
 use App\Http\Requests\Workspace\StoreWorkspaceRequest;
 use App\Http\Requests\Workspace\SwitchWorkspaceRequest;
 use App\Http\Requests\Workspace\TransferOwnershipRequest;
+use App\Http\Requests\Workspace\UpdateSidebarCategoriesRequest;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -36,6 +38,10 @@ class WorkspaceController extends Controller
             ],
             'members' => $members,
             'roles' => WorkspaceRole::values(),
+            'sidebarCategories' => array_map(
+                fn (SidebarCategory $category) => ['value' => $category->value, 'label' => $category->label()],
+                SidebarCategory::cases(),
+            ),
         ]);
     }
 
@@ -76,6 +82,19 @@ class WorkspaceController extends Controller
         $workspace->update($validated);
 
         return back()->with('success', 'Workspace updated successfully.');
+    }
+
+    public function updateSidebarCategories(UpdateSidebarCategoriesRequest $request)
+    {
+        $workspace = $request->attributes->get('workspace');
+
+        $this->authorize('update', $workspace);
+
+        $validated = $request->validated();
+
+        $workspace->update(['hidden_sidebar_categories' => $validated['hidden_categories'] ?? []]);
+
+        return back()->with('success', 'Sidebar categories updated successfully.');
     }
 
     public function destroy(Request $request)
