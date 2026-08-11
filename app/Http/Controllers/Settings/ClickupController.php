@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ClickupSettingsRequest;
 use App\Http\Requests\Settings\ClickupStatusMappingRequest;
 use App\Models\ClickupSetting;
+use App\Services\AchievementService;
 use App\Services\ClickupService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -63,7 +64,7 @@ class ClickupController extends Controller
         ];
     }
 
-    public function update(ClickupSettingsRequest $request): RedirectResponse
+    public function update(ClickupSettingsRequest $request, AchievementService $achievements): RedirectResponse
     {
         $settings = ClickupSetting::current();
 
@@ -71,6 +72,10 @@ class ClickupController extends Controller
             'api_token' => $request->validated('api_token'),
             'list_id' => $request->validated('list_id'),
         ]);
+
+        if ($settings->isConfigured()) {
+            $achievements->checkClickupConnector($request->user());
+        }
 
         return back()->with('success', 'ClickUp settings saved.');
     }

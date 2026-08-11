@@ -20,6 +20,7 @@ use App\Models\ChecklistRow;
 use App\Models\Project;
 use App\Models\TestCase;
 use App\Models\TestSuite;
+use App\Services\AchievementService;
 use App\Services\AttachmentService;
 use App\Services\FeatureLinkingService;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class TestCaseController extends Controller
     public function __construct(
         private readonly AttachmentService $attachmentService,
         private readonly FeatureLinkingService $featureLinkingService,
+        private readonly AchievementService $achievements,
     ) {}
 
     public function create(Project $project, TestSuite $testSuite): Response
@@ -172,10 +174,12 @@ class TestCaseController extends Controller
 
         $testCase->note()->updateOrCreate(
             ['test_case_id' => $testCase->id],
-            ['content' => $validated['content']]
+            ['content' => $validated['content'], 'updated_by' => $request->user()->id]
         );
 
         $testCase->touch();
+
+        $this->achievements->checkDetailOriented($request->user());
 
         return back()->with('success', 'Note updated successfully.');
     }

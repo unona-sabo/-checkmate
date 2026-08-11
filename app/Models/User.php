@@ -27,6 +27,10 @@ class User extends Authenticatable
         'email',
         'password',
         'current_workspace_id',
+        'last_active_date',
+        'current_streak_days',
+        'night_owl_days',
+        'early_bird_days',
     ];
 
     /**
@@ -52,7 +56,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'last_active_date' => 'date',
         ];
+    }
+
+    /**
+     * Get all achievements unlocked by the user.
+     */
+    public function achievements(): HasMany
+    {
+        return $this->hasMany(UserAchievement::class);
     }
 
     /**

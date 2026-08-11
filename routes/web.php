@@ -6,6 +6,7 @@ use App\Http\Controllers\BugreportController;
 use App\Http\Controllers\ChecklistController;
 use App\Http\Controllers\DesignLinkController;
 use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\FocusSessionController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\PayoutMonitorController;
@@ -39,6 +40,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('home/{section}/features', [HomeController::class, 'storeFeature'])->name('home.store-feature');
     Route::put('home/{section}/features/{featureDescription}', [HomeController::class, 'updateFeature'])->name('home.update-feature');
     Route::delete('home/{section}/features/{featureDescription}', [HomeController::class, 'destroyFeature'])->name('home.destroy-feature');
+
+    Route::get('achievements-demo', fn () => Inertia::render('AchievementsDemo'))->name('achievements-demo');
+    Route::post('focus-sessions/ping', [FocusSessionController::class, 'ping'])->name('focus-sessions.ping');
 
     // Workspaces
     Route::post('workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');

@@ -42,6 +42,10 @@ const sidebarNavItems: NavItem[] = [
         title: 'Grafana',
         href: '/settings/grafana',
     },
+    {
+        title: 'Achievements',
+        href: '/settings/achievements',
+    },
 ];
 
 const { isCurrentUrl } = useCurrentUrl();

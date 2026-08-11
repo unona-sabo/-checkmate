@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\GrafanaSettingsRequest;
 use App\Models\GrafanaSetting;
+use App\Services\AchievementService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -29,7 +30,7 @@ class GrafanaController extends Controller
         ]);
     }
 
-    public function update(GrafanaSettingsRequest $request): RedirectResponse
+    public function update(GrafanaSettingsRequest $request, AchievementService $achievements): RedirectResponse
     {
         $settings = GrafanaSetting::current();
 
@@ -38,6 +39,10 @@ class GrafanaController extends Controller
             ->toArray();
 
         $settings->update($data);
+
+        if ($settings->isConfigured()) {
+            $achievements->checkGrafanaGuru($request->user());
+        }
 
         return back()->with('success', 'Grafana settings saved.');
     }

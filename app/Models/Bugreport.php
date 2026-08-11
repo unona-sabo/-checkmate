@@ -22,6 +22,7 @@ class Bugreport extends Model
         'severity',
         'priority',
         'status',
+        'resolved_at',
         'environment',
         'fixed_on',
         'assigned_to',
@@ -36,6 +37,7 @@ class Bugreport extends Model
     {
         return [
             'fixed_on' => 'array',
+            'resolved_at' => 'datetime',
         ];
     }
 

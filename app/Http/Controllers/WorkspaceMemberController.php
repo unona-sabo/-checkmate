@@ -6,11 +6,12 @@ use App\Enums\WorkspaceRole;
 use App\Http\Requests\WorkspaceMember\StoreWorkspaceMemberRequest;
 use App\Http\Requests\WorkspaceMember\UpdateWorkspaceMemberRequest;
 use App\Models\User;
+use App\Services\AchievementService;
 use Illuminate\Http\Request;
 
 class WorkspaceMemberController extends Controller
 {
-    public function store(StoreWorkspaceMemberRequest $request)
+    public function store(StoreWorkspaceMemberRequest $request, AchievementService $achievements)
     {
         $workspace = $request->attributes->get('workspace');
 
@@ -25,6 +26,8 @@ class WorkspaceMemberController extends Controller
         }
 
         $workspace->members()->attach($user->id, ['role' => $validated['role']]);
+
+        $achievements->checkTeamPlayer($user);
 
         return back()->with('success', "{$user->name} has been added to the workspace.");
     }

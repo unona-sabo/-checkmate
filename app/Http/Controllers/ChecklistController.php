@@ -13,6 +13,8 @@ use App\Http\Requests\Checklist\UpdateChecklistRequest;
 use App\Http\Requests\Checklist\UpdateChecklistRowsRequest;
 use App\Models\Checklist;
 use App\Models\Project;
+use App\Models\User;
+use App\Services\AchievementService;
 use App\Services\FeatureLinkingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -23,7 +25,30 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChecklistController extends Controller
 {
-    public function __construct(private readonly FeatureLinkingService $featureLinkingService) {}
+    public function __construct(
+        private readonly FeatureLinkingService $featureLinkingService,
+        private readonly AchievementService $achievements,
+    ) {}
+
+    /**
+     * Mark the checklist completed (once) when every non-header row is checked off,
+     * and check the checklist-champion achievement for the user who completed it.
+     */
+    private function maybeMarkChecklistCompleted(Checklist $checklist, ?User $user): void
+    {
+        if (! $user || $checklist->completed_by) {
+            return;
+        }
+
+        $rows = $checklist->rows()->where('row_type', '!=', 'section_header')->get();
+
+        if ($rows->isEmpty() || $rows->contains(fn ($row) => ($row->data['status'] ?? false) !== true)) {
+            return;
+        }
+
+        $checklist->update(['completed_by' => $user->id, 'completed_at' => now()]);
+        $this->achievements->checkChecklistChampion($user);
+    }
 
     public function index(Project $project): Response
     {
@@ -242,6 +267,8 @@ class ChecklistController extends Controller
 
         $checklist->rows()->whereNotIn('id', $existingIds)->delete();
 
+        $this->maybeMarkChecklistCompleted($checklist, $request->user());
+
         return back()->with('success', 'Checklist rows updated successfully.');
     }
 
@@ -283,6 +310,8 @@ class ChecklistController extends Controller
 
             $checklist->rows()->where('id', $rowData['id'])->update($updateData);
         }
+
+        $this->maybeMarkChecklistCompleted($checklist, $request->user());
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true]);

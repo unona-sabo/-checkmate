@@ -20,6 +20,8 @@ class Checklist extends Model
         'order',
         'category',
         'module',
+        'completed_by',
+        'completed_at',
     ];
 
     protected function casts(): array
@@ -27,7 +29,16 @@ class Checklist extends Model
         return [
             'columns_config' => 'array',
             'module' => 'array',
+            'completed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the user who completed the checklist.
+     */
+    public function completedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'completed_by');
     }
 
     /**

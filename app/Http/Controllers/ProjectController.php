@@ -7,6 +7,7 @@ use App\Http\Requests\Project\SearchProjectRequest;
 use App\Http\Requests\Project\StoreProjectRequest;
 use App\Http\Requests\Project\UpdateProjectRequest;
 use App\Models\Project;
+use App\Services\AchievementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -57,7 +58,7 @@ class ProjectController extends Controller
         return Inertia::render('Projects/Create');
     }
 
-    public function store(StoreProjectRequest $request)
+    public function store(StoreProjectRequest $request, AchievementService $achievements)
     {
         $this->authorize('create', Project::class);
 
@@ -69,6 +70,9 @@ class ProjectController extends Controller
             ...$validated,
             'workspace_id' => $workspace?->id,
         ]);
+
+        $achievements->checkProjectStarter($request->user());
+        $achievements->checkTeamPlayer($request->user());
 
         return redirect()->route('projects.show', $project)
             ->with('success', 'Project created successfully.');

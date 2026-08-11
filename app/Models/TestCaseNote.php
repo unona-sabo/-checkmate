@@ -13,6 +13,7 @@ class TestCaseNote extends Model
     protected $fillable = [
         'test_case_id',
         'content',
+        'updated_by',
     ];
 
     /**
@@ -21,5 +22,13 @@ class TestCaseNote extends Model
     public function testCase(): BelongsTo
     {
         return $this->belongsTo(TestCase::class);
+    }
+
+    /**
+     * Get the user who last updated the note.
+     */
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

@@ -10,6 +10,7 @@ use App\Http\Requests\TestCoverage\UpdateCoverageFeatureRequest;
 use App\Models\AiGeneratedTestCase;
 use App\Models\Project;
 use App\Models\ProjectFeature;
+use App\Services\AchievementService;
 use App\Services\ClaudeAIService;
 use App\Services\CoverageCalculator;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +23,7 @@ class TestCoverageController extends Controller
     public function __construct(
         private CoverageCalculator $calculator,
         private ClaudeAIService $aiService,
+        private AchievementService $achievements,
     ) {}
 
     public function index(Project $project): Response
@@ -119,6 +121,8 @@ class TestCoverageController extends Controller
             'gaps_count' => count($analysis['gaps'] ?? []),
             'analyzed_at' => now(),
         ]);
+
+        $this->achievements->checkPerfectionist(auth()->user(), $project);
 
         return response()->json([
             'analysis' => $analysis,

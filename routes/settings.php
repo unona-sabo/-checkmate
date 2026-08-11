@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\AchievementController;
 use App\Http\Controllers\Settings\BackupController;
 use App\Http\Controllers\Settings\ClickupController;
 use App\Http\Controllers\Settings\GrafanaController;
@@ -48,4 +49,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/grafana', [GrafanaController::class, 'show'])->name('grafana.show');
     Route::put('settings/grafana', [GrafanaController::class, 'update'])->name('grafana.update');
     Route::post('settings/grafana/test-connection', [GrafanaController::class, 'testConnection'])->name('grafana.test-connection');
+
+    Route::get('settings/achievements', [AchievementController::class, 'show'])->name('achievements.show');
 });

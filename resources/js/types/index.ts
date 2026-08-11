@@ -13,6 +13,7 @@ export type AppPageProps<
     flash: {
         success: string | null;
         error: string | null;
+        achievement: Array<{ key: string; name: string }> | null;
     };
     auth: Auth;
     sidebarOpen: boolean;
