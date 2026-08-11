@@ -88,6 +88,7 @@ import {
 } from '@/composables/useChecklistClipboard';
 import { useChecklistDragDrop } from '@/composables/useChecklistDragDrop';
 import { useChecklistFilters } from '@/composables/useChecklistFilters';
+import { useChecklistHistory } from '@/composables/useChecklistHistory';
 import {
     writeToClipboard,
     writeToClipboardSync,
@@ -385,31 +386,50 @@ watch(
     { deep: true },
 );
 
-// Undo last save — tracks the state after each successful save
+// Undo — keeps the last few saves as diffs (not full copies) against this
+// anchor snapshot of the state as of the most recent successful save.
 type Snapshot = {
     rows: ExtendedChecklistRow[];
     columns: ExtendedColumnConfig[];
 };
-// State after the last successful save (current "clean" state)
 let lastSavedState: Snapshot = {
     rows: JSON.parse(JSON.stringify(rows.value)),
     columns: JSON.parse(JSON.stringify(columns.value)),
 };
-// State after the save before that (what undo reverts to)
-const previousSavedState = ref<Snapshot | null>(null);
+const history = useChecklistHistory(3);
 const saveError = ref(false);
 const isSaving = ref(false);
-const canUndo = computed(() => previousSavedState.value !== null);
+const canUndo = history.canUndo;
+// Set right before saving a just-undone state, so that save doesn't record
+// a (no-op) history step for its own revert.
+let skipNextHistoryPush = false;
+
+const recordSaveInHistory = () => {
+    if (skipNextHistoryPush) {
+        skipNextHistoryPush = false;
+    } else {
+        history.push(
+            lastSavedState.rows,
+            lastSavedState.columns,
+            rows.value,
+            columns.value,
+        );
+    }
+    lastSavedState = {
+        rows: JSON.parse(JSON.stringify(rows.value)),
+        columns: JSON.parse(JSON.stringify(columns.value)),
+    };
+};
 
 const undoLastSave = () => {
-    if (!previousSavedState.value) return;
-    const snapshot = previousSavedState.value;
-    previousSavedState.value = null;
+    const reverted = history.undo(lastSavedState.rows, lastSavedState.columns);
+    if (!reverted) return;
 
-    rows.value = JSON.parse(JSON.stringify(snapshot.rows));
-    columns.value = JSON.parse(JSON.stringify(snapshot.columns));
+    rows.value = reverted.rows;
+    columns.value = reverted.columns;
     hasContentChanges.value = true;
     saveError.value = false;
+    skipNextHistoryPush = true;
     nextTick(() => {
         resizeAllTextareas();
         saveRows();
@@ -884,12 +904,7 @@ const saveRows = () => {
                 if (versionAtSave === changeVersion) {
                     hasContentChanges.value = false;
                 }
-                // Shift: previous saved = what was last saved, last saved = current
-                previousSavedState.value = lastSavedState;
-                lastSavedState = {
-                    rows: JSON.parse(JSON.stringify(rows.value)),
-                    columns: JSON.parse(JSON.stringify(columns.value)),
-                };
+                recordSaveInHistory();
             },
             onError: () => {
                 saveError.value = true;
@@ -936,11 +951,7 @@ const saveDirtyRows = async () => {
         if (versionAtSave === changeVersion) {
             hasContentChanges.value = false;
         }
-        previousSavedState.value = lastSavedState;
-        lastSavedState = {
-            rows: JSON.parse(JSON.stringify(rows.value)),
-            columns: JSON.parse(JSON.stringify(columns.value)),
-        };
+        recordSaveInHistory();
     } catch {
         saveError.value = true;
     } finally {
