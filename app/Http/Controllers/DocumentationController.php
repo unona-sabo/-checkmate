@@ -81,6 +81,7 @@ class DocumentationController extends Controller
 
         $this->attachmentService->storeFromRequest($documentation, $request, 'attachments/documentations');
         $achievements->checkFirstDocument($request->user());
+        $achievements->checkFirstFiveDocuments($request->user());
 
         return redirect()->route('documentations.show', [$project, $documentation])
             ->with('success', 'Documentation created successfully.');

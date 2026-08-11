@@ -87,6 +87,8 @@ class TestCaseController extends Controller
 
         $this->linkTestCaseToChecklistRows($project, $testSuite, $testCase, $validated);
 
+        $this->achievements->checkFirstFiveTestCases($request->user());
+
         return redirect("/projects/{$project->id}/test-suites/{$testSuite->id}/test-cases/{$testCase->id}")
             ->with('success', 'Test case created successfully.');
     }
@@ -602,6 +604,10 @@ class TestCaseController extends Controller
             $created++;
         }
 
+        if ($created > 0 && auth()->user()) {
+            $this->achievements->checkFirstFiveTestCases(auth()->user());
+        }
+
         return $created;
     }
 
@@ -632,6 +638,8 @@ class TestCaseController extends Controller
             'order' => 1,
             'created_by' => auth()->id(),
         ]);
+
+        $this->achievements->checkFirstFiveTestCases($request->user());
 
         return redirect("/projects/{$project->id}/test-suites/{$suite->id}/test-cases/{$testCase->id}")
             ->with('success', 'New test suite and test case created successfully.');

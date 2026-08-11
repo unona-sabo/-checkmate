@@ -57,6 +57,7 @@ class NoteController extends Controller
 
         $project->notes()->create($validated);
         $achievements->checkFirstNote($request->user());
+        $achievements->checkFirstFiveNotes($request->user());
 
         return redirect()->route('projects.notes.index', $project)
             ->with('success', 'Note created successfully.');

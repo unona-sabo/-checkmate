@@ -174,7 +174,7 @@ class TestRunController extends Controller
         ]);
     }
 
-    public function update(UpdateTestRunRequest $request, Project $project, TestRun $testRun)
+    public function update(UpdateTestRunRequest $request, Project $project, TestRun $testRun, AchievementService $achievements)
     {
         $this->authorize('update', $project);
 
@@ -183,6 +183,7 @@ class TestRunController extends Controller
         if ($validated['status'] === 'completed' && $testRun->status !== 'completed') {
             $validated['completed_at'] = now();
             $validated['completed_by'] = auth()->id();
+            $achievements->checkFirstCompletedTestRun($request->user());
         }
 
         $testRun->update($validated);
@@ -201,9 +202,11 @@ class TestRunController extends Controller
             ->with('success', 'Test run deleted successfully.');
     }
 
-    public function complete(Project $project, TestRun $testRun)
+    public function complete(Project $project, TestRun $testRun, AchievementService $achievements)
     {
         $this->authorize('update', $project);
+
+        $wasAlreadyCompleted = $testRun->status === 'completed';
 
         $data = [
             'status' => 'completed',
@@ -217,6 +220,10 @@ class TestRunController extends Controller
         }
 
         $testRun->update($data);
+
+        if (! $wasAlreadyCompleted) {
+            $achievements->checkFirstCompletedTestRun(auth()->user());
+        }
 
         return back()->with('success', 'Test run completed.');
     }

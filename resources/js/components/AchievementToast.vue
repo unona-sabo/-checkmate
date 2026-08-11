@@ -2,7 +2,10 @@
 import { usePage } from '@inertiajs/vue3';
 import { nextTick, ref, watch } from 'vue';
 import AchievementBadge from '@/components/AchievementBadge.vue';
-import type { BadgeId } from '@/lib/achievement-badges';
+import {
+    type BadgeId,
+    GOOD_DAY_TOAST_VARIANTS,
+} from '@/lib/achievement-badges';
 import {
     achievementToastQueue,
     type AchievementToastItem,
@@ -15,11 +18,23 @@ const queue = ref<AchievementToastItem[]>([]);
 const current = ref<AchievementToastItem | null>(null);
 const visible = ref(false);
 
+function randomGoodDayVariant(): string {
+    return GOOD_DAY_TOAST_VARIANTS[
+        Math.floor(Math.random() * GOOD_DAY_TOAST_VARIANTS.length)
+    ];
+}
+
 watch(
     () => page.props.flash?.achievement,
     (items) => {
         if (items && items.length > 0) {
-            queue.value.push(...items);
+            queue.value.push(
+                ...items.map((item) =>
+                    item.key === 'good-work-day'
+                        ? { ...item, srcOverride: randomGoodDayVariant() }
+                        : item,
+                ),
+            );
             showNext();
         }
     },

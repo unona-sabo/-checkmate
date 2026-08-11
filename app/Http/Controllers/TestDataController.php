@@ -12,6 +12,7 @@ use App\Models\TestCommand;
 use App\Models\TestLink;
 use App\Models\TestPaymentMethod;
 use App\Models\TestUser;
+use App\Services\AchievementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -58,7 +59,7 @@ class TestDataController extends Controller
 
     // ===== Test Users =====
 
-    public function storeUser(UpsertTestUserRequest $request, Project $project): RedirectResponse
+    public function storeUser(UpsertTestUserRequest $request, Project $project, AchievementService $achievements): RedirectResponse
     {
         $this->authorize('update', $project);
 
@@ -69,6 +70,8 @@ class TestDataController extends Controller
             'created_by' => auth()->id(),
             'order' => ($project->testUsers()->max('order') ?? -1) + 1,
         ]);
+
+        $achievements->checkFirstTestData($request->user());
 
         return back()->with('success', 'Test user created successfully.');
     }
@@ -106,7 +109,7 @@ class TestDataController extends Controller
 
     // ===== Payment Methods =====
 
-    public function storePayment(UpsertPaymentMethodRequest $request, Project $project): RedirectResponse
+    public function storePayment(UpsertPaymentMethodRequest $request, Project $project, AchievementService $achievements): RedirectResponse
     {
         $this->authorize('update', $project);
 
@@ -117,6 +120,8 @@ class TestDataController extends Controller
             'created_by' => auth()->id(),
             'order' => ($project->testPaymentMethods()->max('order') ?? -1) + 1,
         ]);
+
+        $achievements->checkFirstTestData($request->user());
 
         return back()->with('success', 'Payment method created successfully.');
     }
@@ -154,7 +159,7 @@ class TestDataController extends Controller
 
     // ===== Test Commands =====
 
-    public function storeCommand(UpsertTestCommandRequest $request, Project $project): RedirectResponse
+    public function storeCommand(UpsertTestCommandRequest $request, Project $project, AchievementService $achievements): RedirectResponse
     {
         $this->authorize('update', $project);
 
@@ -165,6 +170,8 @@ class TestDataController extends Controller
             'created_by' => auth()->id(),
             'order' => ($project->testCommands()->max('order') ?? -1) + 1,
         ]);
+
+        $achievements->checkFirstTestData($request->user());
 
         return back()->with('success', 'Command created successfully.');
     }
@@ -202,7 +209,7 @@ class TestDataController extends Controller
 
     // ===== Test Links =====
 
-    public function storeLink(UpsertTestLinkRequest $request, Project $project): RedirectResponse
+    public function storeLink(UpsertTestLinkRequest $request, Project $project, AchievementService $achievements): RedirectResponse
     {
         $this->authorize('update', $project);
 
@@ -213,6 +220,8 @@ class TestDataController extends Controller
             'created_by' => auth()->id(),
             'order' => ($project->testLinks()->max('order') ?? -1) + 1,
         ]);
+
+        $achievements->checkFirstTestData($request->user());
 
         return back()->with('success', 'Link created successfully.');
     }
@@ -250,7 +259,7 @@ class TestDataController extends Controller
 
     // ===== Import =====
 
-    public function importUsers(Request $request, Project $project): RedirectResponse
+    public function importUsers(Request $request, Project $project, AchievementService $achievements): RedirectResponse
     {
         $this->authorize('update', $project);
 
@@ -286,10 +295,12 @@ class TestDataController extends Controller
             ]);
         }
 
+        $achievements->checkFirstTestData($request->user());
+
         return back()->with('success', count($validated['rows']).' user(s) imported successfully.');
     }
 
-    public function importPayments(Request $request, Project $project): RedirectResponse
+    public function importPayments(Request $request, Project $project, AchievementService $achievements): RedirectResponse
     {
         $this->authorize('update', $project);
 
@@ -336,10 +347,12 @@ class TestDataController extends Controller
             ]);
         }
 
+        $achievements->checkFirstTestData($request->user());
+
         return back()->with('success', count($validated['rows']).' payment(s) imported successfully.');
     }
 
-    public function importCommands(Request $request, Project $project): RedirectResponse
+    public function importCommands(Request $request, Project $project, AchievementService $achievements): RedirectResponse
     {
         $this->authorize('update', $project);
 
@@ -362,10 +375,12 @@ class TestDataController extends Controller
             ]);
         }
 
+        $achievements->checkFirstTestData($request->user());
+
         return back()->with('success', count($validated['rows']).' command(s) imported successfully.');
     }
 
-    public function importLinks(Request $request, Project $project): RedirectResponse
+    public function importLinks(Request $request, Project $project, AchievementService $achievements): RedirectResponse
     {
         $this->authorize('update', $project);
 
@@ -386,6 +401,8 @@ class TestDataController extends Controller
                 'order' => $maxOrder + $index + 1,
             ]);
         }
+
+        $achievements->checkFirstTestData($request->user());
 
         return back()->with('success', count($validated['rows']).' link(s) imported successfully.');
     }

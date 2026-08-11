@@ -31,6 +31,9 @@ class User extends Authenticatable
         'current_streak_days',
         'night_owl_days',
         'early_bird_days',
+        'checklists_created_count',
+        'documents_created_count',
+        'notes_created_count',
     ];
 
     /**

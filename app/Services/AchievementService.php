@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Bugreport;
 use App\Models\Checklist;
 use App\Models\Project;
+use App\Models\TestCase;
 use App\Models\TestCaseNote;
 use App\Models\User;
 use App\Models\UserAchievement;
@@ -40,6 +41,14 @@ class AchievementService
         'first-test-run' => 'Test Runner',
         'first-release' => 'Release Manager',
         'first-ai-generation' => 'AI Pioneer',
+        'first-5-checklists' => 'Checklist Squad',
+        'first-5-test-cases' => 'Case Builder',
+        'completed-1-test-run' => 'Run Closer',
+        'first-design' => 'Design Debut',
+        'first-test-data' => 'Data Ready',
+        'first-5-documents' => 'Doc Squad',
+        'first-5-notes' => 'Note Squad',
+        'good-work-day' => 'Good Work Day',
     ];
 
     /**
@@ -70,6 +79,14 @@ class AchievementService
         'first-test-run',
         'first-release',
         'first-ai-generation',
+        'first-5-checklists',
+        'first-5-test-cases',
+        'completed-1-test-run',
+        'first-design',
+        'first-test-data',
+        'first-5-documents',
+        'first-5-notes',
+        'good-work-day',
     ];
 
     public function unlock(User $user, string $key): void
@@ -242,6 +259,31 @@ class AchievementService
         if ($user->early_bird_days >= 10) {
             $this->unlock($user, 'early-bird');
         }
+
+        $this->checkGoodWorkDay($user);
+    }
+
+    /**
+     * Unlocked the first time this fires (a permanent badge on the
+     * Achievements page), but the flash notification itself repeats on
+     * every day the user is active — see `trackDailyActivity()`, which only
+     * calls this once per calendar day. The frontend picks a random image
+     * from the "Good day" folder for each toast (see GOOD_DAY_TOAST_VARIANTS).
+     */
+    public function checkGoodWorkDay(User $user): void
+    {
+        UserAchievement::firstOrCreate(
+            ['user_id' => $user->id, 'achievement_key' => 'good-work-day'],
+            ['unlocked_at' => now()],
+        );
+
+        if (request()?->hasSession()) {
+            $queue = session('achievement', []);
+            $queue[] = ['key' => 'good-work-day', 'name' => $this->name('good-work-day')];
+            session()->flash('achievement', $queue);
+        }
+
+        $this->maybeUnlockLegend($user);
     }
 
     /**
@@ -282,5 +324,54 @@ class AchievementService
     public function checkFirstAiGeneration(User $user): void
     {
         $this->unlock($user, 'first-ai-generation');
+    }
+
+    public function checkFirstFiveChecklists(User $user): void
+    {
+        $user->increment('checklists_created_count');
+
+        if ($user->checklists_created_count >= 5) {
+            $this->unlock($user, 'first-5-checklists');
+        }
+    }
+
+    public function checkFirstFiveTestCases(User $user): void
+    {
+        if (TestCase::where('created_by', $user->id)->count() >= 5) {
+            $this->unlock($user, 'first-5-test-cases');
+        }
+    }
+
+    public function checkFirstCompletedTestRun(User $user): void
+    {
+        $this->unlock($user, 'completed-1-test-run');
+    }
+
+    public function checkFirstDesign(User $user): void
+    {
+        $this->unlock($user, 'first-design');
+    }
+
+    public function checkFirstTestData(User $user): void
+    {
+        $this->unlock($user, 'first-test-data');
+    }
+
+    public function checkFirstFiveDocuments(User $user): void
+    {
+        $user->increment('documents_created_count');
+
+        if ($user->documents_created_count >= 5) {
+            $this->unlock($user, 'first-5-documents');
+        }
+    }
+
+    public function checkFirstFiveNotes(User $user): void
+    {
+        $user->increment('notes_created_count');
+
+        if ($user->notes_created_count >= 5) {
+            $this->unlock($user, 'first-5-notes');
+        }
     }
 }

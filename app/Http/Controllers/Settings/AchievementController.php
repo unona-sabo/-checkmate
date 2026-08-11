@@ -38,6 +38,14 @@ class AchievementController extends Controller
         'first-test-run',
         'first-release',
         'first-ai-generation',
+        'first-5-checklists',
+        'first-5-test-cases',
+        'completed-1-test-run',
+        'first-design',
+        'first-test-data',
+        'first-5-documents',
+        'first-5-notes',
+        'good-work-day',
     ];
 
     public function show(Request $request): Response

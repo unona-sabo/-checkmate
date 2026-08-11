@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\DesignLink\UpsertDesignLinkRequest;
 use App\Models\DesignLink;
 use App\Models\Project;
+use App\Services\AchievementService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,7 +27,7 @@ class DesignLinkController extends Controller
         ]);
     }
 
-    public function store(UpsertDesignLinkRequest $request, Project $project): RedirectResponse
+    public function store(UpsertDesignLinkRequest $request, Project $project, AchievementService $achievements): RedirectResponse
     {
         $this->authorize('update', $project);
 
@@ -36,6 +37,8 @@ class DesignLinkController extends Controller
             ...$validated,
             'created_by' => auth()->id(),
         ]);
+
+        $achievements->checkFirstDesign($request->user());
 
         return back()->with('success', 'Design link created successfully.');
     }

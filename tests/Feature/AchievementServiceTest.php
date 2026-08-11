@@ -231,7 +231,7 @@ test('night owl and early bird count distinct days in the right hour windows', f
         ->and(unlockedKeys($user))->toContain('early-bird');
 });
 
-test('legend unlocks automatically once all other 22 achievements are unlocked', function () {
+test('legend unlocks automatically once all other achievements are unlocked', function () {
     $user = User::factory()->create();
 
     $keys = [
@@ -240,7 +240,9 @@ test('legend unlocks automatically once all other 22 achievements are unlocked',
         'grafana-guru', 'project-starter', 'perfectionist', 'night-owl',
         'early-bird', 'marathon', 'first-test-suite', 'first-checklist',
         'first-document', 'first-note', 'first-test-run', 'first-release',
-        'first-ai-generation',
+        'first-ai-generation', 'first-5-checklists', 'first-5-test-cases',
+        'completed-1-test-run', 'first-design', 'first-test-data',
+        'first-5-documents', 'first-5-notes', 'good-work-day',
     ];
 
     foreach ($keys as $key) {
@@ -354,4 +356,160 @@ test('first ai generation check unlocks AI Pioneer', function () {
     $this->service->checkFirstAiGeneration($user);
 
     expect(unlockedKeys($user))->toContain('first-ai-generation');
+});
+
+test('creating 5 checklists unlocks Checklist Squad', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    for ($i = 0; $i < 4; $i++) {
+        $this->actingAs($user)
+            ->post(route('checklists.store', $project), ['name' => "Checklist {$i}"])
+            ->assertRedirect();
+    }
+
+    expect(unlockedKeys($user))->not->toContain('first-5-checklists');
+
+    $this->actingAs($user)
+        ->post(route('checklists.store', $project), ['name' => 'Checklist 5'])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-5-checklists');
+});
+
+test('creating 5 test cases unlocks Case Builder', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $testSuite = TestSuite::factory()->create(['project_id' => $project->id]);
+
+    for ($i = 0; $i < 4; $i++) {
+        $this->actingAs($user)
+            ->post(route('test-cases.store', [$project, $testSuite]), [
+                'title' => "Test case {$i}",
+                'priority' => 'medium',
+                'severity' => 'major',
+                'type' => 'functional',
+                'automation_status' => 'not_automated',
+            ])
+            ->assertRedirect();
+    }
+
+    expect(unlockedKeys($user))->not->toContain('first-5-test-cases');
+
+    $this->actingAs($user)
+        ->post(route('test-cases.store', [$project, $testSuite]), [
+            'title' => 'Test case 5',
+            'priority' => 'medium',
+            'severity' => 'major',
+            'type' => 'functional',
+            'automation_status' => 'not_automated',
+        ])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-5-test-cases');
+});
+
+test('completing the first test run unlocks Run Closer', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $testSuite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $testCase = TestCase::factory()->create(['test_suite_id' => $testSuite->id]);
+
+    $this->actingAs($user)
+        ->post(route('test-runs.store', $project), [
+            'name' => 'Regression Run',
+            'test_case_ids' => [$testCase->id],
+        ])
+        ->assertRedirect();
+
+    $testRun = $project->testRuns()->first();
+
+    expect(unlockedKeys($user))->not->toContain('completed-1-test-run');
+
+    $this->actingAs($user)
+        ->post(route('test-runs.complete', [$project, $testRun]))
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('completed-1-test-run');
+});
+
+test('adding the first design link unlocks Design Debut', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('design-links.store', $project), [
+            'title' => 'Homepage',
+            'url' => 'https://figma.com/file/123',
+        ])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-design');
+});
+
+test('adding the first test data entry unlocks Data Ready', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('test-data.users.store', $project), ['name' => 'QA User', 'email' => 'qa@example.com'])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-test-data');
+});
+
+test('creating 5 documents unlocks Doc Squad', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    for ($i = 0; $i < 4; $i++) {
+        $this->actingAs($user)
+            ->post(route('documentations.store', $project), ['title' => "Doc {$i}"])
+            ->assertRedirect();
+    }
+
+    expect(unlockedKeys($user))->not->toContain('first-5-documents');
+
+    $this->actingAs($user)
+        ->post(route('documentations.store', $project), ['title' => 'Doc 5'])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-5-documents');
+});
+
+test('creating 5 notes unlocks Note Squad', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    for ($i = 0; $i < 4; $i++) {
+        $this->actingAs($user)
+            ->post(route('projects.notes.store', $project), ['content' => "Note {$i}"])
+            ->assertRedirect();
+    }
+
+    expect(unlockedKeys($user))->not->toContain('first-5-notes');
+
+    $this->actingAs($user)
+        ->post(route('projects.notes.store', $project), ['content' => 'Note 5'])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-5-notes');
+});
+
+test('good work day unlocks once but flashes a notification every active day', function () {
+    $user = User::factory()->create();
+
+    Carbon::setTestNow(Carbon::parse('2026-01-01 10:00:00'));
+    $this->service->trackDailyActivity($user->fresh());
+
+    expect(unlockedKeys($user))->toContain('good-work-day');
+    expect(UserAchievement::where('user_id', $user->id)->where('achievement_key', 'good-work-day')->count())->toBe(1);
+
+    Carbon::setTestNow(Carbon::now()->addDay());
+    $this->service->trackDailyActivity($user->fresh());
+
+    Carbon::setTestNow();
+
+    // Still only unlocked once permanently, even though the daily check ran twice.
+    expect(UserAchievement::where('user_id', $user->id)->where('achievement_key', 'good-work-day')->count())->toBe(1);
 });

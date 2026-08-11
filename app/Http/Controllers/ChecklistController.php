@@ -134,6 +134,7 @@ class ChecklistController extends Controller
         }
 
         $this->achievements->checkFirstChecklist($request->user());
+        $this->achievements->checkFirstFiveChecklists($request->user());
 
         return redirect()->route('checklists.show', [$project, $checklist])
             ->with('success', 'Checklist created successfully.');
