@@ -33,6 +33,13 @@ class AchievementService
         'streak-master' => 'Streak Master',
         'legend' => 'Legend',
         'marathon' => 'Marathon',
+        'first-test-suite' => 'Suite Starter',
+        'first-checklist' => 'Checklist Creator',
+        'first-document' => 'Documentarian',
+        'first-note' => 'Note Taker',
+        'first-test-run' => 'Test Runner',
+        'first-release' => 'Release Manager',
+        'first-ai-generation' => 'AI Pioneer',
     ];
 
     /**
@@ -56,6 +63,13 @@ class AchievementService
         'early-bird',
         'streak-master',
         'marathon',
+        'first-test-suite',
+        'first-checklist',
+        'first-document',
+        'first-note',
+        'first-test-run',
+        'first-release',
+        'first-ai-generation',
     ];
 
     public function unlock(User $user, string $key): void
@@ -228,5 +242,45 @@ class AchievementService
         if ($user->early_bird_days >= 10) {
             $this->unlock($user, 'early-bird');
         }
+    }
+
+    /**
+     * The following "first X" checks are unconditional — `unlock()` is
+     * idempotent, so calling it on every creation only actually unlocks
+     * and notifies the first time for each user.
+     */
+    public function checkFirstTestSuite(User $user): void
+    {
+        $this->unlock($user, 'first-test-suite');
+    }
+
+    public function checkFirstChecklist(User $user): void
+    {
+        $this->unlock($user, 'first-checklist');
+    }
+
+    public function checkFirstDocument(User $user): void
+    {
+        $this->unlock($user, 'first-document');
+    }
+
+    public function checkFirstNote(User $user): void
+    {
+        $this->unlock($user, 'first-note');
+    }
+
+    public function checkFirstTestRun(User $user): void
+    {
+        $this->unlock($user, 'first-test-run');
+    }
+
+    public function checkFirstRelease(User $user): void
+    {
+        $this->unlock($user, 'first-release');
+    }
+
+    public function checkFirstAiGeneration(User $user): void
+    {
+        $this->unlock($user, 'first-ai-generation');
     }
 }

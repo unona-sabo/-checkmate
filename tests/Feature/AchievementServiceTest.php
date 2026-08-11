@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\Release;
 use App\Models\TestCase;
 use App\Models\TestCaseNote;
+use App\Models\TestSuite;
 use App\Models\User;
 use App\Models\UserAchievement;
 use App\Models\Workspace;
@@ -230,14 +231,16 @@ test('night owl and early bird count distinct days in the right hour windows', f
         ->and(unlockedKeys($user))->toContain('early-bird');
 });
 
-test('legend unlocks automatically once all other 15 achievements are unlocked', function () {
+test('legend unlocks automatically once all other 22 achievements are unlocked', function () {
     $user = User::factory()->create();
 
     $keys = [
         'first-blood', 'bug-hunter', 'exterminator', 'checklist-champion',
         'detail-oriented', 'clickup-connector', 'speed-demon', 'team-player',
         'grafana-guru', 'project-starter', 'perfectionist', 'night-owl',
-        'early-bird', 'marathon',
+        'early-bird', 'marathon', 'first-test-suite', 'first-checklist',
+        'first-document', 'first-note', 'first-test-run', 'first-release',
+        'first-ai-generation',
     ];
 
     foreach ($keys as $key) {
@@ -260,4 +263,95 @@ test('marathon unlocks via the focus session ping endpoint', function () {
         ->assertJson(['ok' => true]);
 
     expect(unlockedKeys($user))->toContain('marathon');
+});
+
+test('first-x achievement checks are idempotent — unlock only fires once', function () {
+    $user = User::factory()->create();
+
+    $this->service->checkFirstTestSuite($user);
+    $this->service->checkFirstTestSuite($user);
+
+    expect(UserAchievement::where('user_id', $user->id)->where('achievement_key', 'first-test-suite')->count())->toBe(1);
+});
+
+test('creating the first test suite unlocks Suite Starter', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('test-suites.store', $project), ['name' => 'Smoke Suite'])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-test-suite');
+});
+
+test('creating the first checklist unlocks Checklist Creator', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('checklists.store', $project), ['name' => 'Release Checklist'])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-checklist');
+});
+
+test('creating the first documentation unlocks Documentarian', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('documentations.store', $project), ['title' => 'API Overview'])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-document');
+});
+
+test('creating the first note unlocks Note Taker', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('projects.notes.store', $project), ['content' => 'Remember to check X'])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-note');
+});
+
+test('creating the first test run unlocks Test Runner', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $testSuite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $testCase = TestCase::factory()->create(['test_suite_id' => $testSuite->id]);
+
+    $this->actingAs($user)
+        ->post(route('test-runs.store', $project), [
+            'name' => 'Regression Run',
+            'test_case_ids' => [$testCase->id],
+        ])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-test-run');
+});
+
+test('creating the first release unlocks Release Manager', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('releases.store', $project), [
+            'version' => '1.0.0',
+            'name' => 'Initial Release',
+        ])
+        ->assertRedirect();
+
+    expect(unlockedKeys($user))->toContain('first-release');
+});
+
+test('first ai generation check unlocks AI Pioneer', function () {
+    $user = User::factory()->create();
+
+    $this->service->checkFirstAiGeneration($user);
+
+    expect(unlockedKeys($user))->toContain('first-ai-generation');
 });

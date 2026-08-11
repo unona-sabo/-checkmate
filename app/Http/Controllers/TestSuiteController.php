@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Models\User;
+use App\Services\AchievementService;
 use App\Services\FeatureLinkingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -78,7 +79,7 @@ class TestSuiteController extends Controller
         ]);
     }
 
-    public function store(StoreTestSuiteRequest $request, Project $project)
+    public function store(StoreTestSuiteRequest $request, Project $project, AchievementService $achievements)
     {
         $this->authorize('update', $project);
 
@@ -96,6 +97,7 @@ class TestSuiteController extends Controller
 
         $testSuite = $project->testSuites()->create($validated);
         $this->featureLinkingService->syncWithCascadeToTestCases($testSuite, $featureIds);
+        $achievements->checkFirstTestSuite($request->user());
 
         if ($testCaseIds) {
             $projectSuiteIds = $project->testSuites()->pluck('id');

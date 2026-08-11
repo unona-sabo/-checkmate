@@ -10,7 +10,7 @@ use Inertia\Response;
 class AchievementController extends Controller
 {
     /**
-     * All 15 achievement keys, matching `resources/js/lib/achievement-badges.ts`.
+     * All achievement keys, matching `resources/js/lib/achievement-badges.ts`.
      *
      * @var list<string>
      */
@@ -31,6 +31,13 @@ class AchievementController extends Controller
         'streak-master',
         'legend',
         'marathon',
+        'first-test-suite',
+        'first-checklist',
+        'first-document',
+        'first-note',
+        'first-test-run',
+        'first-release',
+        'first-ai-generation',
     ];
 
     public function show(Request $request): Response

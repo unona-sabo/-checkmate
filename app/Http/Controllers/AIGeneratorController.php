@@ -10,6 +10,7 @@ use App\Models\Documentation;
 use App\Models\Project;
 use App\Models\TestCase;
 use App\Models\TestSuite;
+use App\Services\AchievementService;
 use App\Services\AITestGeneratorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -60,7 +61,7 @@ class AIGeneratorController extends Controller
         return strip_tags($documentation->content ?? '');
     }
 
-    public function generate(GenerateTestCasesRequest $request, Project $project): JsonResponse
+    public function generate(GenerateTestCasesRequest $request, Project $project, AchievementService $achievements): JsonResponse
     {
         $this->authorize('update', $project);
 
@@ -97,6 +98,8 @@ class AIGeneratorController extends Controller
             'input_type' => $validated['input_type'],
             'test_cases_generated' => count($testCases),
         ]);
+
+        $achievements->checkFirstAiGeneration($request->user());
 
         return response()->json([
             'test_cases' => $testCases,

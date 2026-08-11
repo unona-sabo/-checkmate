@@ -133,6 +133,8 @@ class ChecklistController extends Controller
             $this->featureLinkingService->sync($checklist, $validated['feature_ids']);
         }
 
+        $this->achievements->checkFirstChecklist($request->user());
+
         return redirect()->route('checklists.show', [$project, $checklist])
             ->with('success', 'Checklist created successfully.');
     }

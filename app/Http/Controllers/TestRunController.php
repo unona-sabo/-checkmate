@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\TestRun;
 use App\Models\TestRunCase;
 use App\Models\User;
+use App\Services\AchievementService;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -65,7 +66,7 @@ class TestRunController extends Controller
         return Inertia::render('TestRuns/Create', $props);
     }
 
-    public function store(StoreTestRunRequest $request, Project $project)
+    public function store(StoreTestRunRequest $request, Project $project, AchievementService $achievements)
     {
         $this->authorize('update', $project);
 
@@ -90,6 +91,7 @@ class TestRunController extends Controller
         }
 
         $testRun->updateStats();
+        $achievements->checkFirstTestRun($request->user());
 
         return redirect()->route('test-runs.show', [$project, $testRun])
             ->with('success', 'Test run created successfully.');

@@ -72,7 +72,7 @@ function showNext() {
         >
             <div
                 v-if="current && visible"
-                class="achievement-toast-card pointer-events-auto relative flex items-center gap-3 overflow-hidden rounded-xl border border-amber-400/40 p-3 pr-5 shadow-lg shadow-amber-900/20"
+                class="achievement-toast-card pointer-events-auto relative flex items-center gap-3 overflow-hidden rounded-xl border border-amber-300/60 p-3 pr-5 shadow-lg shadow-amber-900/10"
             >
                 <AchievementBadge
                     :id="current.key as BadgeId"
@@ -82,11 +82,11 @@ function showNext() {
                 />
                 <div class="relative z-10">
                     <p
-                        class="text-xs font-medium tracking-wide text-amber-100/80 uppercase"
+                        class="text-xs font-medium tracking-wide text-amber-700/80 uppercase"
                     >
                         Achievement unlocked
                     </p>
-                    <p class="text-sm font-semibold text-white">
+                    <p class="text-sm font-semibold text-amber-950">
                         {{ current.name }}
                     </p>
                 </div>
@@ -99,11 +99,11 @@ function showNext() {
 .achievement-toast-card {
     background: linear-gradient(
         -45deg,
-        #78350f,
-        #b45309,
-        #f59e0b,
-        #fde68a,
-        #b45309
+        #fef9c3,
+        #fef08a,
+        #fde047,
+        #fef3c7,
+        #fef08a
     );
     background-size: 300% 300%;
     animation: achievement-toast-shimmer 3s ease infinite;
@@ -116,7 +116,7 @@ function showNext() {
     background: linear-gradient(
         115deg,
         transparent 20%,
-        rgba(255, 255, 255, 0.35) 35%,
+        rgba(255, 255, 255, 0.55) 35%,
         transparent 50%
     );
     background-size: 250% 100%;

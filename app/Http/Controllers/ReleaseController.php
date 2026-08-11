@@ -14,6 +14,7 @@ use App\Models\Release;
 use App\Models\ReleaseChecklistItem;
 use App\Models\ReleaseFeature;
 use App\Models\TestRun;
+use App\Services\AchievementService;
 use App\Services\ReleaseMetricsCalculator;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -21,7 +22,10 @@ use Inertia\Response;
 
 class ReleaseController extends Controller
 {
-    public function __construct(private ReleaseMetricsCalculator $metricsCalculator) {}
+    public function __construct(
+        private ReleaseMetricsCalculator $metricsCalculator,
+        private AchievementService $achievements,
+    ) {}
 
     public function index(Project $project): Response
     {
@@ -64,6 +68,7 @@ class ReleaseController extends Controller
         ]);
 
         $this->createDefaultChecklistItems($release);
+        $this->achievements->checkFirstRelease($request->user());
 
         return back();
     }

@@ -6,6 +6,7 @@ use App\Http\Requests\Note\UpsertNoteRequest;
 use App\Models\Documentation;
 use App\Models\Note;
 use App\Models\Project;
+use App\Services\AchievementService;
 use Inertia\Inertia;
 
 class NoteController extends Controller
@@ -48,13 +49,14 @@ class NoteController extends Controller
     /**
      * Store a newly created note in storage.
      */
-    public function store(UpsertNoteRequest $request, Project $project)
+    public function store(UpsertNoteRequest $request, Project $project, AchievementService $achievements)
     {
         $this->authorize('update', $project);
 
         $validated = $request->validated();
 
         $project->notes()->create($validated);
+        $achievements->checkFirstNote($request->user());
 
         return redirect()->route('projects.notes.index', $project)
             ->with('success', 'Note created successfully.');

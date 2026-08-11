@@ -37,7 +37,14 @@ export type BadgeId =
     | 'early-bird'
     | 'streak-master'
     | 'legend'
-    | 'marathon';
+    | 'marathon'
+    | 'first-test-suite'
+    | 'first-checklist'
+    | 'first-document'
+    | 'first-note'
+    | 'first-test-run'
+    | 'first-release'
+    | 'first-ai-generation';
 
 export interface AchievementBadgeConfig {
     id: BadgeId;
@@ -192,17 +199,76 @@ export const ACHIEVEMENT_BADGES: Record<BadgeId, AchievementBadgeConfig> = {
         id: 'marathon',
         name: 'Marathon',
         description: 'Worked continuously in CheckMate for over an hour',
-        // The permanent Achievements page always shows this one variant;
-        // MARATHON_TOAST_VARIANTS below picks randomly among all of them
-        // for the popup notification instead.
-        unlockedAsset: asset(
-            'marathon/01_marathon_hourglass_sparkle_unlocked_80.png',
-        ),
-        lockedAsset: asset(
-            'marathon/01_marathon_hourglass_sparkle_locked_80.png',
-        ),
+        // The permanent Achievements page always shows this "Time Champion"
+        // variant; MARATHON_TOAST_VARIANTS below picks randomly among all
+        // six variants for the popup notification instead.
+        unlockedAsset: asset('marathon/02_time_champion.png'),
+        lockedAsset: asset('marathon/02_time_champion_locked.png'),
         animation: 'hourglass',
         duration: 3,
+    },
+    'first-test-suite': {
+        id: 'first-test-suite',
+        name: 'Suite Starter',
+        description: 'Created your first test suite',
+        unlockedAsset: asset('first_test_suite_unlocked.png'),
+        lockedAsset: asset('first_test_suite_locked.png'),
+        animation: 'grow',
+        duration: 3,
+    },
+    'first-checklist': {
+        id: 'first-checklist',
+        name: 'Checklist Creator',
+        description: 'Created your first checklist',
+        unlockedAsset: asset('first_checklist_unlocked.png'),
+        lockedAsset: asset('first_checklist_locked.png'),
+        animation: 'sparkles',
+        duration: 3,
+    },
+    'first-document': {
+        id: 'first-document',
+        name: 'Documentarian',
+        description: 'Created your first document',
+        unlockedAsset: asset('first_document_unlocked.png'),
+        lockedAsset: asset('first_document_locked.png'),
+        animation: 'scan',
+        duration: 3,
+    },
+    'first-note': {
+        id: 'first-note',
+        name: 'Note Taker',
+        description: 'Created your first note',
+        unlockedAsset: asset('first_note_unlocked.png'),
+        lockedAsset: asset('first_note_locked.png'),
+        animation: 'blink',
+        duration: 3,
+    },
+    'first-test-run': {
+        id: 'first-test-run',
+        name: 'Test Runner',
+        description: 'Started your first test run',
+        unlockedAsset: asset('first_test_run_unlocked.png'),
+        lockedAsset: asset('first_test_run_locked.png'),
+        animation: 'launch',
+        duration: 3,
+    },
+    'first-release': {
+        id: 'first-release',
+        name: 'Release Manager',
+        description: 'Created your first release',
+        unlockedAsset: asset('first_release_unlocked.png'),
+        lockedAsset: asset('first_release_locked.png'),
+        animation: 'rotate-shine',
+        duration: 4,
+    },
+    'first-ai-generation': {
+        id: 'first-ai-generation',
+        name: 'AI Pioneer',
+        description: 'Generated test cases with AI for the first time',
+        unlockedAsset: asset('first_ai_generation_unlocked.png'),
+        lockedAsset: asset('first_ai_generation_locked.png'),
+        animation: 'pulse-glow',
+        duration: 2.5,
     },
 };
 
@@ -215,10 +281,10 @@ export const ACHIEVEMENT_BADGE_LIST: AchievementBadgeConfig[] =
  * asset stored on `ACHIEVEMENT_BADGES.marathon` above.
  */
 export const MARATHON_TOAST_VARIANTS: string[] = [
-    asset('marathon/01_marathon_hourglass_sparkle_unlocked_80.png'),
-    asset('marathon/02_marathon_hourglass_clock_unlocked_80.png'),
-    asset('marathon/03_marathon_hourglass_ribbon_unlocked_80.png'),
-    asset('marathon/04_marathon_stopwatch_unlocked_80.png'),
-    asset('marathon/05_marathon_hourglass_crown_unlocked_80.png'),
-    asset('marathon/06_marathon_progress_hourglass_unlocked_80.png'),
+    asset('marathon/01_time_sprinter.png'),
+    asset('marathon/02_time_champion.png'),
+    asset('marathon/03_day_night_grinder.png'),
+    asset('marathon/04_steady_builder.png'),
+    asset('marathon/05_dedication_heart.png'),
+    asset('marathon/06_productivity_rocket.png'),
 ];

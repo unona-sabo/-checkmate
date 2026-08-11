@@ -9,6 +9,7 @@ use App\Http\Requests\Documentation\UpdateDocumentationRequest;
 use App\Models\Attachment;
 use App\Models\Documentation;
 use App\Models\Project;
+use App\Services\AchievementService;
 use App\Services\AttachmentService;
 use App\Services\DocumentParserService;
 use Illuminate\Http\RedirectResponse;
@@ -62,7 +63,7 @@ class DocumentationController extends Controller
         ]);
     }
 
-    public function store(StoreDocumentationRequest $request, Project $project)
+    public function store(StoreDocumentationRequest $request, Project $project, AchievementService $achievements)
     {
         $this->authorize('update', $project);
 
@@ -79,6 +80,7 @@ class DocumentationController extends Controller
         );
 
         $this->attachmentService->storeFromRequest($documentation, $request, 'attachments/documentations');
+        $achievements->checkFirstDocument($request->user());
 
         return redirect()->route('documentations.show', [$project, $documentation])
             ->with('success', 'Documentation created successfully.');
