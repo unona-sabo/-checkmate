@@ -28,8 +28,10 @@ interface Bugreport {
     severity: 'critical' | 'major' | 'minor' | 'trivial';
     priority: 'high' | 'medium' | 'low';
     status:
+        | 'triage'
         | 'to_do'
         | 'in_progress'
+        | 'blocked'
         | 'in_review'
         | 'needs_changes'
         | 'cancelled'
@@ -326,11 +328,17 @@ const filteredBugreports = computed(() => {
                                         <SelectValue placeholder="All" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="triage"
+                                            >Triage</SelectItem
+                                        >
                                         <SelectItem value="to_do"
                                             >To Do</SelectItem
                                         >
                                         <SelectItem value="in_progress"
                                             >In Progress</SelectItem
+                                        >
+                                        <SelectItem value="blocked"
+                                            >Blocked</SelectItem
                                         >
                                         <SelectItem value="in_review"
                                             >In Review</SelectItem

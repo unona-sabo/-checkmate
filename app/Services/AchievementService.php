@@ -259,16 +259,16 @@ class AchievementService
         if ($user->early_bird_days >= 10) {
             $this->unlock($user, 'early-bird');
         }
-
-        $this->checkGoodWorkDay($user);
     }
 
     /**
      * Unlocked the first time this fires (a permanent badge on the
      * Achievements page), but the flash notification itself repeats on
-     * every day the user is active — see `trackDailyActivity()`, which only
-     * calls this once per calendar day. The frontend picks a random image
-     * from the "Good day" folder for each toast (see GOOD_DAY_TOAST_VARIANTS).
+     * every login — see the `Illuminate\Auth\Events\Login` listener
+     * registered in `AppServiceProvider::boot()`, which calls this on every
+     * successful login (fresh credentials or a remember-me cookie), not just
+     * once per calendar day. The frontend picks a random image from the
+     * "Good day" folder for each toast (see GOOD_DAY_TOAST_VARIANTS).
      */
     public function checkGoodWorkDay(User $user): void
     {

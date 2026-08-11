@@ -34,7 +34,7 @@ class ClickupController extends Controller
                 'status_mapping' => $settings->status_mapping ?? [],
                 'has_webhook' => ! empty($settings->webhook_id),
             ],
-            'appStatuses' => ['to_do', 'in_progress', 'in_review', 'needs_changes', 'cancelled', 'done'],
+            'appStatuses' => ['triage', 'to_do', 'in_progress', 'blocked', 'in_review', 'needs_changes', 'cancelled', 'done'],
             'queueDiagnostics' => $this->queueDiagnostics(),
         ]);
     }

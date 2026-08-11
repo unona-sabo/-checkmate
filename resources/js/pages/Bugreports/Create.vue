@@ -358,11 +358,17 @@ const submit = () => {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="triage"
+                                                >Triage</SelectItem
+                                            >
                                             <SelectItem value="to_do"
                                                 >To Do</SelectItem
                                             >
                                             <SelectItem value="in_progress"
                                                 >In Progress</SelectItem
+                                            >
+                                            <SelectItem value="blocked"
+                                                >Blocked</SelectItem
                                             >
                                             <SelectItem value="in_review"
                                                 >In Review</SelectItem
@@ -472,7 +478,10 @@ const submit = () => {
                             <!-- Attachments -->
                             <div class="space-y-2">
                                 <Label>Attachments</Label>
-                                <FileDropZone v-model="form.attachments" :errors="attachmentErrors" />
+                                <FileDropZone
+                                    v-model="form.attachments"
+                                    :errors="attachmentErrors"
+                                />
                             </div>
 
                             <div class="flex gap-2">

@@ -65,8 +65,10 @@ interface Bugreport {
     severity: 'critical' | 'major' | 'minor' | 'trivial';
     priority: 'high' | 'medium' | 'low';
     status:
+        | 'triage'
         | 'to_do'
         | 'in_progress'
+        | 'blocked'
         | 'in_review'
         | 'needs_changes'
         | 'cancelled'

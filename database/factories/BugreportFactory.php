@@ -22,7 +22,7 @@ class BugreportFactory extends Factory
             'actual_result' => fake()->optional()->sentence(),
             'severity' => fake()->randomElement(['critical', 'major', 'minor', 'trivial']),
             'priority' => fake()->randomElement(['high', 'medium', 'low']),
-            'status' => fake()->randomElement(['to_do', 'in_progress', 'in_review', 'needs_changes', 'cancelled', 'done']),
+            'status' => fake()->randomElement(['triage', 'to_do', 'in_progress', 'blocked', 'in_review', 'needs_changes', 'cancelled', 'done']),
             'environment' => fake()->optional()->word(),
             'fixed_on' => fake()->optional()->randomElements(['develop', 'staging', 'production'], fake()->numberBetween(1, 3)),
             'assigned_to' => null,

@@ -259,20 +259,26 @@ const roleColors: Record<string, string> = {
                     v-if="canManage"
                     @submit.prevent="addMember"
                     class="flex flex-col gap-3 sm:flex-row sm:items-end"
+                    :class="{ 'mb-5': addMemberForm.errors.email }"
                 >
                     <div class="flex-1 space-y-1">
                         <Label for="member-email">Email</Label>
-                        <Input
-                            id="member-email"
-                            v-model="addMemberForm.email"
-                            type="email"
-                            placeholder="user@example.com"
-                            :class="{
-                                'border-destructive':
-                                    addMemberForm.errors.email,
-                            }"
-                        />
-                        <InputError :message="addMemberForm.errors.email" />
+                        <div class="relative">
+                            <Input
+                                id="member-email"
+                                v-model="addMemberForm.email"
+                                type="email"
+                                placeholder="user@example.com"
+                                :class="{
+                                    'border-destructive':
+                                        addMemberForm.errors.email,
+                                }"
+                            />
+                            <InputError
+                                :message="addMemberForm.errors.email"
+                                class="absolute top-full left-0 mt-1 w-full"
+                            />
+                        </div>
                     </div>
                     <div class="w-full space-y-1 sm:w-32">
                         <Label for="member-role">Role</Label>

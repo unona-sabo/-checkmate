@@ -140,10 +140,14 @@ const getBadgeColor = (type: string, value: string) => {
     }
     if (type === 'bugreports') {
         switch (value) {
+            case 'triage':
+                return 'bg-cyan-100 text-cyan-800 border-cyan-200';
             case 'to_do':
                 return 'bg-blue-100 text-blue-800 border-blue-200';
             case 'in_progress':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'blocked':
+                return 'bg-orange-100 text-orange-800 border-orange-200';
             case 'in_review':
                 return 'bg-purple-100 text-purple-800 border-purple-200';
             case 'needs_changes':
@@ -225,10 +229,14 @@ const getStatusColor = (status: string) => {
 
 const getBugStatusColor = (status: string) => {
     switch (status) {
+        case 'triage':
+            return 'bg-cyan-100 text-cyan-800';
         case 'to_do':
             return 'bg-blue-100 text-blue-800';
         case 'in_progress':
             return 'bg-yellow-100 text-yellow-800';
+        case 'blocked':
+            return 'bg-orange-100 text-orange-800';
         case 'in_review':
             return 'bg-purple-100 text-purple-800';
         case 'needs_changes':

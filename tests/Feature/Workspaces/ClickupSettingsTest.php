@@ -49,8 +49,10 @@ test('clickup status mapping can be saved', function () {
 
     $response = $this->actingAs($user)->put(route('workspaces.clickup.status-mapping'), [
         'status_mapping' => [
+            'triage' => 'triage',
             'to_do' => 'to do',
             'in_progress' => 'in progress',
+            'blocked' => 'blocked',
             'in_review' => 'in review',
             'needs_changes' => 'needs changes',
             'cancelled' => 'cancelled',

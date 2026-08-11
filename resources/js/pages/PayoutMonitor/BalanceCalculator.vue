@@ -35,14 +35,22 @@ const props = defineProps<{
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Projects', href: '/projects' },
     { title: props.project.name, href: `/projects/${props.project.id}` },
-    { title: 'Balance Calculator', href: `/projects/${props.project.id}/balance-calculator` },
+    {
+        title: 'Balance Calculator',
+        href: `/projects/${props.project.id}/balance-calculator`,
+    },
 ];
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type TabKey = 'active' | 'activeXL';
 
 interface PriorityItem {
-    id: 'overspending' | 'commission' | 'debt' | 'advancedUsed' | 'blockedAdvanced';
+    id:
+        | 'overspending'
+        | 'commission'
+        | 'debt'
+        | 'advancedUsed'
+        | 'blockedAdvanced';
     label: string;
     sublabel: string;
     percentage: string;
@@ -70,21 +78,49 @@ interface TabState {
 
 // ── Default priorities ─────────────────────────────────────────────────────
 const defaultPrioritiesBase: PriorityItem[] = [
-    { id: 'commission', label: 'Commission', sublabel: 'Active Funds · Used', percentage: '' },
-    { id: 'overspending', label: 'Overspending', sublabel: 'Active Funds', percentage: '' },
-    { id: 'debt', label: 'Debt Body', sublabel: 'Active Funds · Used', percentage: '' },
-    { id: 'advancedUsed', label: 'Advanced Funds Used', sublabel: 'Advanced Funds', percentage: '' },
+    {
+        id: 'commission',
+        label: 'Commission',
+        sublabel: 'Active Funds · Used',
+        percentage: '',
+    },
+    {
+        id: 'overspending',
+        label: 'Overspending',
+        sublabel: 'Active Funds',
+        percentage: '',
+    },
+    {
+        id: 'debt',
+        label: 'Debt Body',
+        sublabel: 'Active Funds · Used',
+        percentage: '',
+    },
+    {
+        id: 'advancedUsed',
+        label: 'Advanced Funds Used',
+        sublabel: 'Advanced Funds',
+        percentage: '',
+    },
 ];
 
 const defaultPrioritiesXL: PriorityItem[] = [
-    ...defaultPrioritiesBase.filter((p) => p.id !== 'overspending').map((p) => ({ ...p })),
-    { id: 'blockedAdvanced', label: 'Blocked Advanced Funds', sublabel: '% of Advanced Funds Income', percentage: '' },
+    ...defaultPrioritiesBase
+        .filter((p) => p.id !== 'overspending')
+        .map((p) => ({ ...p })),
+    {
+        id: 'blockedAdvanced',
+        label: 'Blocked Advanced Funds',
+        sublabel: '% of Advanced Funds Income',
+        percentage: '',
+    },
 ];
 
 function freshState(tab: TabKey): TabState {
-    const priorities = tab === 'activeXL'
-        ? defaultPrioritiesXL.map((p) => ({ ...p }))
-        : defaultPrioritiesBase.map((p) => ({ ...p }));
+    const priorities =
+        tab === 'activeXL'
+            ? defaultPrioritiesXL.map((p) => ({ ...p }))
+            : defaultPrioritiesBase.map((p) => ({ ...p }));
     return {
         approvedFunds: '',
         bonusFunds: '',
@@ -130,9 +166,13 @@ const tabs = reactive<Record<TabKey, TabState>>(loadTabs());
 
 const s = computed(() => tabs[activeTab.value]);
 
-watch(tabs, (val) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(val));
-}, { deep: true });
+watch(
+    tabs,
+    (val) => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(val));
+    },
+    { deep: true },
+);
 
 function clearAll(): void {
     Object.assign(tabs[activeTab.value], freshState(activeTab.value));
@@ -147,11 +187,17 @@ function parseNum(val: string | number): number {
 }
 
 function fmt(n: number): string {
-    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return n.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 }
 
 function fmtPct(n: number): string {
-    return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    return n.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    });
 }
 
 function balanceClass(n: number): string {
@@ -175,7 +221,10 @@ function deltaLabel(original: number, updated: number): string {
 
 // ── Computed totals (reactive to current tab) ──────────────────────────────
 const advancedTotal = computed(() => {
-    const base = parseNum(s.value.advancedAvailable) - parseNum(s.value.advancedUsed) - parseNum(s.value.activeOverspending);
+    const base =
+        parseNum(s.value.advancedAvailable) -
+        parseNum(s.value.advancedUsed) -
+        parseNum(s.value.activeOverspending);
     if (activeTab.value === 'activeXL') {
         return base - parseNum(s.value.blockedAdvanced);
     }
@@ -202,7 +251,10 @@ function moveDown(index: number): void {
 }
 
 function resetPriorities(): void {
-    const defaults = activeTab.value === 'activeXL' ? defaultPrioritiesXL : defaultPrioritiesBase;
+    const defaults =
+        activeTab.value === 'activeXL'
+            ? defaultPrioritiesXL
+            : defaultPrioritiesBase;
     tabs[activeTab.value].priorities = defaults.map((p) => ({ ...p }));
 }
 
@@ -225,20 +277,37 @@ const results = computed(() => {
 
     // Blocked Advanced: % of advancedIncome, calculated separately (not from remaining)
     const autoRep = autoRepayment.value;
-    const blockedPriorityItem = s.value.priorities.find((p) => p.id === 'blockedAdvanced');
+    const blockedPriorityItem = s.value.priorities.find(
+        (p) => p.id === 'blockedAdvanced',
+    );
     const blockedPct = autoRep
         ? parseNum(s.value.repaymentPercentage)
-        : (blockedPriorityItem ? parseNum(blockedPriorityItem.percentage) : 0);
-    const blockedFromIncome = isXL && blockedPct > 0 ? advancedIncomeVal * (blockedPct / 100) : 0;
+        : blockedPriorityItem
+          ? parseNum(blockedPriorityItem.percentage)
+          : 0;
+    const blockedFromIncome =
+        isXL && blockedPct > 0 ? advancedIncomeVal * (blockedPct / 100) : 0;
     const totalBlocked = parseNum(s.value.blockedAdvanced) + blockedFromIncome;
 
     const incomeVal = parseNum(s.value.income);
-    const priorityDistributionVal = !isXL ? parseNum(s.value.priorityDistribution) : 0;
-    const priorityDistributionPctVal = !isXL ? parseNum(s.value.priorityDistributionPct) : 0;
-    const priorityDistributionFromPct = priorityDistributionPctVal > 0 ? incomeVal * (priorityDistributionPctVal / 100) : 0;
-    const totalPriorityDistribution = priorityDistributionVal + priorityDistributionFromPct;
-    const distributionBase = totalPriorityDistribution > 0 ? totalPriorityDistribution : incomeVal;
-    const directApprovedIncome = totalPriorityDistribution > 0 ? Math.max(0, incomeVal - totalPriorityDistribution) : 0;
+    const priorityDistributionVal = !isXL
+        ? parseNum(s.value.priorityDistribution)
+        : 0;
+    const priorityDistributionPctVal = !isXL
+        ? parseNum(s.value.priorityDistributionPct)
+        : 0;
+    const priorityDistributionFromPct =
+        priorityDistributionPctVal > 0
+            ? incomeVal * (priorityDistributionPctVal / 100)
+            : 0;
+    const totalPriorityDistribution =
+        priorityDistributionVal + priorityDistributionFromPct;
+    const distributionBase =
+        totalPriorityDistribution > 0 ? totalPriorityDistribution : incomeVal;
+    const directApprovedIncome =
+        totalPriorityDistribution > 0
+            ? Math.max(0, incomeVal - totalPriorityDistribution)
+            : 0;
     let remaining = distributionBase;
     let newOverspending = parseNum(s.value.activeOverspending);
     let newCommission = parseNum(s.value.activeCommission);
@@ -246,11 +315,22 @@ const results = computed(() => {
     let newAdvancedUsed = parseNum(s.value.advancedUsed);
 
     // Pre-calculate distribution-based allocations for commission and debt
-    const commissionPriorityItem = s.value.priorities.find((p) => p.id === 'commission');
+    const commissionPriorityItem = s.value.priorities.find(
+        (p) => p.id === 'commission',
+    );
     const debtPriorityItem = s.value.priorities.find((p) => p.id === 'debt');
-    const commissionPct = autoRep ? autoRep.commissionPct : (commissionPriorityItem ? parseNum(commissionPriorityItem.percentage) : 0);
-    const debtPct = autoRep ? autoRep.debtPct : (debtPriorityItem ? parseNum(debtPriorityItem.percentage) : 0);
-    const commissionFromIncome = commissionPct > 0 ? distributionBase * (commissionPct / 100) : 0;
+    const commissionPct = autoRep
+        ? autoRep.commissionPct
+        : commissionPriorityItem
+          ? parseNum(commissionPriorityItem.percentage)
+          : 0;
+    const debtPct = autoRep
+        ? autoRep.debtPct
+        : debtPriorityItem
+          ? parseNum(debtPriorityItem.percentage)
+          : 0;
+    const commissionFromIncome =
+        commissionPct > 0 ? distributionBase * (commissionPct / 100) : 0;
     const debtFromIncome = debtPct > 0 ? distributionBase * (debtPct / 100) : 0;
 
     const payments: Record<string, number> = {
@@ -266,25 +346,40 @@ const results = computed(() => {
         if (p.id === 'blockedAdvanced') continue;
 
         const pct = parseNum(p.percentage);
-        const effectivePct = (autoRep && (p.id === 'commission' || p.id === 'debt'))
-            ? (p.id === 'commission' ? autoRep.commissionPct : autoRep.debtPct)
-            : pct;
+        const effectivePct =
+            autoRep && (p.id === 'commission' || p.id === 'debt')
+                ? p.id === 'commission'
+                    ? autoRep.commissionPct
+                    : autoRep.debtPct
+                : pct;
 
         if (p.id === 'commission') {
-            const budget   = effectivePct > 0 ? Math.min(remaining, distributionBase * (effectivePct / 100)) : remaining;
+            const budget =
+                effectivePct > 0
+                    ? Math.min(
+                          remaining,
+                          distributionBase * (effectivePct / 100),
+                      )
+                    : remaining;
             const commPaid = Math.min(budget, Math.max(0, newCommission));
             payments.commission += commPaid;
             newCommission -= commPaid;
-            remaining     -= commPaid;
+            remaining -= commPaid;
             continue;
         }
 
         if (p.id === 'debt') {
-            const budget   = effectivePct > 0 ? Math.min(remaining, distributionBase * (effectivePct / 100)) : remaining;
+            const budget =
+                effectivePct > 0
+                    ? Math.min(
+                          remaining,
+                          distributionBase * (effectivePct / 100),
+                      )
+                    : remaining;
             const debtPaid = Math.min(budget, Math.max(0, newDebt));
             payments.debt += debtPaid;
-            newDebt       -= debtPaid;
-            remaining     -= debtPaid;
+            newDebt -= debtPaid;
+            remaining -= debtPaid;
             continue;
         }
 
@@ -292,16 +387,17 @@ const results = computed(() => {
         let amount: number;
         switch (p.id) {
             case 'overspending': {
-                const factor = (pct > 0 && pct <= 100) ? pct / 100 : 1;
+                const factor = pct > 0 && pct <= 100 ? pct / 100 : 1;
                 amount = Math.max(0, newOverspending) * factor;
                 break;
             }
             case 'advancedUsed': {
-                const factor = (pct > 0 && pct <= 100) ? pct / 100 : 1;
+                const factor = pct > 0 && pct <= 100 ? pct / 100 : 1;
                 amount = Math.max(0, newAdvancedUsed) * factor;
                 break;
             }
-            default: amount = 0;
+            default:
+                amount = 0;
         }
 
         const paid = Math.min(remaining, amount);
@@ -309,8 +405,12 @@ const results = computed(() => {
         remaining -= paid;
 
         switch (p.id) {
-            case 'overspending': newOverspending -= paid; break;
-            case 'advancedUsed': newAdvancedUsed -= paid; break;
+            case 'overspending':
+                newOverspending -= paid;
+                break;
+            case 'advancedUsed':
+                newAdvancedUsed -= paid;
+                break;
         }
     }
 
@@ -320,8 +420,15 @@ const results = computed(() => {
     const newActiveTotal = newActiveUsed;
     const advancedAvailableVal = parseNum(s.value.advancedAvailable);
     const frozenVal = isXL ? 0 : parseNum(s.value.frozenFunds);
-    const newAdvancedTotal = advancedAvailableVal + advancedIncomeVal - newAdvancedUsed - newOverspending - (isXL ? totalBlocked : 0) - frozenVal;
-    const newApproved = parseNum(s.value.approvedFunds) + remaining + directApprovedIncome;
+    const newAdvancedTotal =
+        advancedAvailableVal +
+        advancedIncomeVal -
+        newAdvancedUsed -
+        newOverspending -
+        (isXL ? totalBlocked : 0) -
+        frozenVal;
+    const newApproved =
+        parseNum(s.value.approvedFunds) + remaining + directApprovedIncome;
 
     return {
         approvedFunds: newApproved,
@@ -340,16 +447,24 @@ const results = computed(() => {
         activeTotal: newActiveTotal,
         remainingIncome: remaining,
         payments,
-        grandTotal: newApproved + newAdvancedTotal + (parseNum(s.value.activeAvailable) - newDebt) + parseNum(s.value.bonusFunds),
+        grandTotal:
+            newApproved +
+            newAdvancedTotal +
+            (parseNum(s.value.activeAvailable) - newDebt) +
+            parseNum(s.value.bonusFunds),
     };
 });
 
 const priorityBadgeColors: Record<string, string> = {
-    overspending: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    commission: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    overspending:
+        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    commission:
+        'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
     debt: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    advancedUsed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    blockedAdvanced: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    advancedUsed:
+        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    blockedAdvanced:
+        'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 };
 
 // ── Accrual History ────────────────────────────────────────────────────────
@@ -376,14 +491,22 @@ function loadHistory(): AccrualRecord[] {
     try {
         const raw = localStorage.getItem(HISTORY_KEY);
         return raw ? (JSON.parse(raw) as AccrualRecord[]) : [];
-    } catch { return []; }
+    } catch {
+        return [];
+    }
 }
 
 const accrualHistory = ref<AccrualRecord[]>(loadHistory());
 const showHistory = ref(false);
 const continuingRecordId = ref<string | null>(null);
-const partnerIds = reactive<Record<TabKey, string>>({ active: '', activeXL: '' });
-const showSaveForm = reactive<Record<TabKey, boolean>>({ active: false, activeXL: false });
+const partnerIds = reactive<Record<TabKey, string>>({
+    active: '',
+    activeXL: '',
+});
+const showSaveForm = reactive<Record<TabKey, boolean>>({
+    active: false,
+    activeXL: false,
+});
 
 function persistHistory(): void {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(accrualHistory.value));
@@ -403,11 +526,16 @@ function saveRecord(): void {
     };
 
     if (continuingRecordId.value) {
-        const idx = accrualHistory.value.findIndex((r) => r.id === continuingRecordId.value);
+        const idx = accrualHistory.value.findIndex(
+            (r) => r.id === continuingRecordId.value,
+        );
         if (idx >= 0) {
             accrualHistory.value[idx] = {
                 ...accrualHistory.value[idx],
-                state: { ...s.value, priorities: s.value.priorities.map((p) => ({ ...p })) },
+                state: {
+                    ...s.value,
+                    priorities: s.value.priorities.map((p) => ({ ...p })),
+                },
                 snapshot: snap,
                 updatedAt: now,
             };
@@ -421,7 +549,10 @@ function saveRecord(): void {
         id: `${tab}-${now}-${Math.random().toString(36).slice(2, 7)}`,
         partnerId,
         tabType: tab,
-        state: { ...s.value, priorities: s.value.priorities.map((p) => ({ ...p })) },
+        state: {
+            ...s.value,
+            priorities: s.value.priorities.map((p) => ({ ...p })),
+        },
         snapshot: snap,
         createdAt: now,
         updatedAt: now,
@@ -454,8 +585,11 @@ function deleteRecord(id: string): void {
 
 function fmtDateTime(iso: string): string {
     return new Date(iso).toLocaleString('uk-UA', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
     });
 }
 
@@ -474,15 +608,16 @@ const groupedHistory = computed(() => {
         <Head title="Balance Calculator" />
 
         <div class="flex flex-1 flex-col gap-6 p-6">
-
             <!-- Header -->
             <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Calculator class="h-5 w-5 text-primary" />
-                </div>
                 <div>
-                    <h1 class="text-xl font-semibold">Balance Calculator</h1>
-                    <p class="text-sm text-muted-foreground">Simulate income accrual and see how balances change</p>
+                    <h1 class="flex items-center gap-2 text-xl font-semibold">
+                        <Calculator class="h-6 w-6 shrink-0 text-primary" />
+                        Balance Calculator
+                    </h1>
+                    <p class="text-sm text-muted-foreground">
+                        Simulate income accrual and see how balances change
+                    </p>
                 </div>
             </div>
 
@@ -492,33 +627,48 @@ const groupedHistory = computed(() => {
             >
                 <div class="flex gap-0 overflow-x-auto">
                     <button
-                        class="relative px-5 py-2.5 text-sm font-medium transition-colors cursor-pointer"
-                        :class="!showHistory && activeTab === 'active'
-                            ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary'
-                            : 'text-muted-foreground hover:text-foreground'"
-                        @click="activeTab = 'active'; showHistory = false"
+                        class="relative cursor-pointer px-5 py-2.5 text-sm font-medium transition-colors"
+                        :class="
+                            !showHistory && activeTab === 'active'
+                                ? 'text-foreground after:absolute after:right-0 after:bottom-0 after:left-0 after:h-0.5 after:bg-primary'
+                                : 'text-muted-foreground hover:text-foreground'
+                        "
+                        @click="
+                            activeTab = 'active';
+                            showHistory = false;
+                        "
                     >
                         Active Funds
                     </button>
                     <button
-                        class="relative px-5 py-2.5 text-sm font-medium transition-colors cursor-pointer"
-                        :class="!showHistory && activeTab === 'activeXL'
-                            ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary'
-                            : 'text-muted-foreground hover:text-foreground'"
-                        @click="activeTab = 'activeXL'; showHistory = false"
+                        class="relative cursor-pointer px-5 py-2.5 text-sm font-medium transition-colors"
+                        :class="
+                            !showHistory && activeTab === 'activeXL'
+                                ? 'text-foreground after:absolute after:right-0 after:bottom-0 after:left-0 after:h-0.5 after:bg-primary'
+                                : 'text-muted-foreground hover:text-foreground'
+                        "
+                        @click="
+                            activeTab = 'activeXL';
+                            showHistory = false;
+                        "
                     >
                         Active Funds XL
                     </button>
                     <button
-                        class="relative px-5 py-2.5 text-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5"
-                        :class="showHistory
-                            ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary'
-                            : 'text-muted-foreground hover:text-foreground'"
+                        class="relative flex cursor-pointer items-center gap-1.5 px-5 py-2.5 text-sm font-medium transition-colors"
+                        :class="
+                            showHistory
+                                ? 'text-foreground after:absolute after:right-0 after:bottom-0 after:left-0 after:h-0.5 after:bg-primary'
+                                : 'text-muted-foreground hover:text-foreground'
+                        "
                         @click="showHistory = true"
                     >
                         <History class="h-3.5 w-3.5" />
                         Accrual History
-                        <span v-if="accrualHistory.length > 0" class="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-primary">
+                        <span
+                            v-if="accrualHistory.length > 0"
+                            class="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-primary"
+                        >
                             {{ accrualHistory.length }}
                         </span>
                     </button>
@@ -530,8 +680,10 @@ const groupedHistory = computed(() => {
                     <Button
                         variant="outline"
                         size="sm"
-                        class="gap-1.5 text-muted-foreground hover:text-primary hover:border-primary cursor-pointer"
-                        @click="showSaveForm[activeTab] = !showSaveForm[activeTab]"
+                        class="cursor-pointer gap-1.5 text-muted-foreground hover:border-primary hover:text-primary"
+                        @click="
+                            showSaveForm[activeTab] = !showSaveForm[activeTab]
+                        "
                     >
                         <Save class="h-3.5 w-3.5" />
                         Save
@@ -539,7 +691,7 @@ const groupedHistory = computed(() => {
                     <Button
                         variant="outline"
                         size="sm"
-                        class="gap-1.5 text-muted-foreground hover:text-destructive hover:border-destructive cursor-pointer"
+                        class="cursor-pointer gap-1.5 text-muted-foreground hover:border-destructive hover:text-destructive"
                         @click="clearAll"
                     >
                         <Trash2 class="h-3.5 w-3.5" />
@@ -549,7 +701,10 @@ const groupedHistory = computed(() => {
             </div>
 
             <!-- Save form -->
-            <div v-if="!showHistory && showSaveForm[activeTab]" class="flex items-center gap-2 rounded-lg border bg-muted/30 px-4 py-3">
+            <div
+                v-if="!showHistory && showSaveForm[activeTab]"
+                class="flex items-center gap-2 rounded-lg border bg-muted/30 px-4 py-3"
+            >
                 <UserCircle class="h-4 w-4 shrink-0 text-muted-foreground" />
                 <Input
                     v-model="partnerIds[activeTab]"
@@ -558,44 +713,83 @@ const groupedHistory = computed(() => {
                     class="h-8 max-w-xs font-mono text-sm"
                     @keydown.enter="saveRecord"
                 />
-                <span v-if="continuingRecordId" class="text-xs text-muted-foreground">
+                <span
+                    v-if="continuingRecordId"
+                    class="text-xs text-muted-foreground"
+                >
                     Updating existing record
                 </span>
-                <Button size="sm" class="gap-1.5 cursor-pointer" :disabled="!partnerIds[activeTab].trim()" @click="saveRecord">
+                <Button
+                    size="sm"
+                    class="cursor-pointer gap-1.5"
+                    :disabled="!partnerIds[activeTab].trim()"
+                    @click="saveRecord"
+                >
                     <Save class="h-3.5 w-3.5" />
                     {{ continuingRecordId ? 'Update' : 'Save' }}
                 </Button>
-                <Button v-if="continuingRecordId" variant="ghost" size="sm" class="gap-1.5 cursor-pointer text-muted-foreground" @click="stopContinuing">
+                <Button
+                    v-if="continuingRecordId"
+                    variant="ghost"
+                    size="sm"
+                    class="cursor-pointer gap-1.5 text-muted-foreground"
+                    @click="stopContinuing"
+                >
                     <RefreshCw class="h-3.5 w-3.5" />
                     New record
                 </Button>
             </div>
 
             <!-- Continuing banner -->
-            <div v-if="!showHistory && continuingRecordId" class="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5">
+            <div
+                v-if="!showHistory && continuingRecordId"
+                class="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5"
+            >
                 <Play class="h-3.5 w-3.5 text-primary" />
                 <span class="text-sm text-primary">
-                    Continuing from partner <strong>{{ partnerIds[activeTab] }}</strong>
+                    Continuing from partner
+                    <strong>{{ partnerIds[activeTab] }}</strong>
                 </span>
-                <button class="ml-auto text-xs text-muted-foreground underline cursor-pointer hover:text-foreground" @click="stopContinuing">
+                <button
+                    class="ml-auto cursor-pointer text-xs text-muted-foreground underline hover:text-foreground"
+                    @click="stopContinuing"
+                >
                     Stop continuing
                 </button>
             </div>
 
             <!-- ── Accrual History tab ──────────────────────────────────────── -->
             <div v-if="showHistory">
-                <div v-if="accrualHistory.length === 0" class="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+                <div
+                    v-if="accrualHistory.length === 0"
+                    class="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center"
+                >
                     <History class="mb-3 h-8 w-8 text-muted-foreground/40" />
-                    <p class="text-sm font-medium text-muted-foreground">No saved records yet</p>
-                    <p class="mt-1 text-xs text-muted-foreground/60">Save calculations from Active Funds or Active Funds XL tabs</p>
+                    <p class="text-sm font-medium text-muted-foreground">
+                        No saved records yet
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground/60">
+                        Save calculations from Active Funds or Active Funds XL
+                        tabs
+                    </p>
                 </div>
                 <div v-else class="space-y-6">
-                    <div v-for="[partnerId, records] in groupedHistory" :key="partnerId" class="space-y-3">
+                    <div
+                        v-for="[partnerId, records] in groupedHistory"
+                        :key="partnerId"
+                        class="space-y-3"
+                    >
                         <!-- Partner header -->
                         <div class="flex items-center gap-2">
                             <UserCircle class="h-4 w-4 text-muted-foreground" />
-                            <span class="text-sm font-semibold">{{ partnerId }}</span>
-                            <span class="text-xs text-muted-foreground">({{ records.length }} record{{ records.length > 1 ? 's' : '' }})</span>
+                            <span class="text-sm font-semibold">{{
+                                partnerId
+                            }}</span>
+                            <span class="text-xs text-muted-foreground"
+                                >({{ records.length }} record{{
+                                    records.length > 1 ? 's' : ''
+                                }})</span
+                            >
                         </div>
                         <!-- Records -->
                         <div class="space-y-2">
@@ -603,23 +797,48 @@ const groupedHistory = computed(() => {
                                 v-for="record in records"
                                 :key="record.id"
                                 class="rounded-lg border bg-card p-4"
-                                :class="continuingRecordId === record.id ? 'border-primary/40 bg-primary/5' : ''"
+                                :class="
+                                    continuingRecordId === record.id
+                                        ? 'border-primary/40 bg-primary/5'
+                                        : ''
+                                "
                             >
-                                <div class="flex items-start justify-between gap-4">
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <span class="rounded-md px-2 py-0.5 text-xs font-medium"
-                                            :class="record.tabType === 'activeXL' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'">
-                                            {{ record.tabType === 'activeXL' ? 'Active Funds XL' : 'Active Funds' }}
+                                <div
+                                    class="flex items-start justify-between gap-4"
+                                >
+                                    <div
+                                        class="flex flex-wrap items-center gap-2"
+                                    >
+                                        <span
+                                            class="rounded-md px-2 py-0.5 text-xs font-medium"
+                                            :class="
+                                                record.tabType === 'activeXL'
+                                                    ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400'
+                                                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                            "
+                                        >
+                                            {{
+                                                record.tabType === 'activeXL'
+                                                    ? 'Active Funds XL'
+                                                    : 'Active Funds'
+                                            }}
                                         </span>
-                                        <span v-if="continuingRecordId === record.id" class="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                                        <span
+                                            v-if="
+                                                continuingRecordId === record.id
+                                            "
+                                            class="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary"
+                                        >
                                             Continuing
                                         </span>
                                     </div>
-                                    <div class="flex shrink-0 items-center gap-1.5">
+                                    <div
+                                        class="flex shrink-0 items-center gap-1.5"
+                                    >
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            class="h-7 gap-1.5 px-2.5 text-xs cursor-pointer"
+                                            class="h-7 cursor-pointer gap-1.5 px-2.5 text-xs"
                                             @click="continueRecord(record)"
                                         >
                                             <Play class="h-3 w-3" />
@@ -628,7 +847,7 @@ const groupedHistory = computed(() => {
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            class="h-7 w-7 p-0 cursor-pointer text-muted-foreground hover:text-destructive"
+                                            class="h-7 w-7 cursor-pointer p-0 text-muted-foreground hover:text-destructive"
                                             @click="deleteRecord(record.id)"
                                         >
                                             <Trash2 class="h-3.5 w-3.5" />
@@ -636,33 +855,116 @@ const groupedHistory = computed(() => {
                                     </div>
                                 </div>
                                 <!-- Key numbers -->
-                                <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <span class="text-xs text-muted-foreground">Approved</span>
-                                        <span class="font-mono text-xs font-medium" :class="balanceClass(record.snapshot?.approvedFunds ?? 0)">{{ fmt(record.snapshot?.approvedFunds ?? 0) }}</span>
+                                <div
+                                    class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4"
+                                >
+                                    <div
+                                        class="flex items-center justify-between gap-2"
+                                    >
+                                        <span
+                                            class="text-xs text-muted-foreground"
+                                            >Approved</span
+                                        >
+                                        <span
+                                            class="font-mono text-xs font-medium"
+                                            :class="
+                                                balanceClass(
+                                                    record.snapshot
+                                                        ?.approvedFunds ?? 0,
+                                                )
+                                            "
+                                            >{{
+                                                fmt(
+                                                    record.snapshot
+                                                        ?.approvedFunds ?? 0,
+                                                )
+                                            }}</span
+                                        >
                                     </div>
-                                    <div class="flex items-center justify-between gap-2">
-                                        <span class="text-xs text-muted-foreground">Advanced Total</span>
-                                        <span class="font-mono text-xs font-medium" :class="balanceClass(record.snapshot?.advancedTotal ?? 0)">{{ fmt(record.snapshot?.advancedTotal ?? 0) }}</span>
+                                    <div
+                                        class="flex items-center justify-between gap-2"
+                                    >
+                                        <span
+                                            class="text-xs text-muted-foreground"
+                                            >Advanced Total</span
+                                        >
+                                        <span
+                                            class="font-mono text-xs font-medium"
+                                            :class="
+                                                balanceClass(
+                                                    record.snapshot
+                                                        ?.advancedTotal ?? 0,
+                                                )
+                                            "
+                                            >{{
+                                                fmt(
+                                                    record.snapshot
+                                                        ?.advancedTotal ?? 0,
+                                                )
+                                            }}</span
+                                        >
                                     </div>
-                                    <div class="flex items-center justify-between gap-2">
-                                        <span class="text-xs text-muted-foreground">Active Total</span>
-                                        <span class="font-mono text-xs font-medium text-red-500 dark:text-red-400">−{{ fmt(record.snapshot?.activeTotal ?? 0) }}</span>
+                                    <div
+                                        class="flex items-center justify-between gap-2"
+                                    >
+                                        <span
+                                            class="text-xs text-muted-foreground"
+                                            >Active Total</span
+                                        >
+                                        <span
+                                            class="font-mono text-xs font-medium text-red-500 dark:text-red-400"
+                                            >−{{
+                                                fmt(
+                                                    record.snapshot
+                                                        ?.activeTotal ?? 0,
+                                                )
+                                            }}</span
+                                        >
                                     </div>
-                                    <div class="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1">
-                                        <span class="text-xs font-medium">Grand Total</span>
-                                        <span class="font-mono text-xs font-bold" :class="balanceClass(record.snapshot?.grandTotal ?? 0)">{{ fmt(record.snapshot?.grandTotal ?? 0) }}</span>
+                                    <div
+                                        class="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1"
+                                    >
+                                        <span class="text-xs font-medium"
+                                            >Grand Total</span
+                                        >
+                                        <span
+                                            class="font-mono text-xs font-bold"
+                                            :class="
+                                                balanceClass(
+                                                    record.snapshot
+                                                        ?.grandTotal ?? 0,
+                                                )
+                                            "
+                                            >{{
+                                                fmt(
+                                                    record.snapshot
+                                                        ?.grandTotal ?? 0,
+                                                )
+                                            }}</span
+                                        >
                                     </div>
                                 </div>
                                 <!-- Timestamps -->
-                                <div class="mt-3 flex flex-wrap items-center gap-3 border-t pt-2.5">
-                                    <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                                <div
+                                    class="mt-3 flex flex-wrap items-center gap-3 border-t pt-2.5"
+                                >
+                                    <div
+                                        class="flex items-center gap-1 text-xs text-muted-foreground"
+                                    >
                                         <Clock class="h-3 w-3" />
-                                        Created: {{ fmtDateTime(record.createdAt) }}
+                                        Created:
+                                        {{ fmtDateTime(record.createdAt) }}
                                     </div>
-                                    <div v-if="record.updatedAt !== record.createdAt" class="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <div
+                                        v-if="
+                                            record.updatedAt !==
+                                            record.createdAt
+                                        "
+                                        class="flex items-center gap-1 text-xs text-muted-foreground"
+                                    >
                                         <RefreshCw class="h-3 w-3" />
-                                        Updated: {{ fmtDateTime(record.updatedAt) }}
+                                        Updated:
+                                        {{ fmtDateTime(record.updatedAt) }}
                                     </div>
                                 </div>
                             </div>
@@ -673,7 +975,6 @@ const groupedHistory = computed(() => {
 
             <!-- Tab content -->
             <div v-if="!showHistory" class="grid gap-6 xl:grid-cols-2">
-
                 <!-- ── Block 1: Current Balances ─────────────────────────────── -->
                 <Card>
                     <CardHeader class="pb-4">
@@ -683,12 +984,15 @@ const groupedHistory = computed(() => {
                         </CardTitle>
                     </CardHeader>
                     <CardContent class="space-y-5">
-
                         <!-- Approved Funds -->
                         <div class="space-y-2">
                             <div class="flex items-center gap-2">
-                                <div class="h-2 w-2 rounded-full bg-emerald-500"></div>
-                                <Label class="text-sm font-medium">Approved Funds</Label>
+                                <div
+                                    class="h-2 w-2 rounded-full bg-emerald-500"
+                                ></div>
+                                <Label class="text-sm font-medium"
+                                    >Approved Funds</Label
+                                >
                             </div>
                             <Input
                                 v-model="s.approvedFunds"
@@ -702,8 +1006,12 @@ const groupedHistory = computed(() => {
                         <!-- Bonus Funds -->
                         <div class="space-y-2">
                             <div class="flex items-center gap-2">
-                                <div class="h-2 w-2 rounded-full bg-amber-400"></div>
-                                <Label class="text-sm font-medium">Bonus Funds</Label>
+                                <div
+                                    class="h-2 w-2 rounded-full bg-amber-400"
+                                ></div>
+                                <Label class="text-sm font-medium"
+                                    >Bonus Funds</Label
+                                >
                             </div>
                             <Input
                                 v-model="s.bonusFunds"
@@ -720,16 +1028,27 @@ const groupedHistory = computed(() => {
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
-                                    <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                                    <Label class="text-sm font-medium">Advanced Funds</Label>
+                                    <div
+                                        class="h-2 w-2 rounded-full bg-blue-500"
+                                    ></div>
+                                    <Label class="text-sm font-medium"
+                                        >Advanced Funds</Label
+                                    >
                                 </div>
-                                <span class="font-mono text-sm font-semibold" :class="balanceClass(advancedTotal)">
+                                <span
+                                    class="font-mono text-sm font-semibold"
+                                    :class="balanceClass(advancedTotal)"
+                                >
                                     {{ fmt(advancedTotal) }}
                                 </span>
                             </div>
-                            <div class="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3">
+                            <div
+                                class="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3"
+                            >
                                 <div class="space-y-1.5">
-                                    <Label class="text-xs text-muted-foreground">Available</Label>
+                                    <Label class="text-xs text-muted-foreground"
+                                        >Available</Label
+                                    >
                                     <Input
                                         v-model="s.advancedAvailable"
                                         type="text"
@@ -739,7 +1058,9 @@ const groupedHistory = computed(() => {
                                     />
                                 </div>
                                 <div class="space-y-1.5">
-                                    <Label class="text-xs text-muted-foreground">Used</Label>
+                                    <Label class="text-xs text-muted-foreground"
+                                        >Used</Label
+                                    >
                                     <Input
                                         v-model="s.advancedUsed"
                                         type="text"
@@ -750,7 +1071,10 @@ const groupedHistory = computed(() => {
                                 </div>
                                 <template v-if="activeTab === 'activeXL'">
                                     <div class="col-span-2 space-y-1.5">
-                                        <Label class="text-xs text-muted-foreground">Overspending</Label>
+                                        <Label
+                                            class="text-xs text-muted-foreground"
+                                            >Overspending</Label
+                                        >
                                         <Input
                                             v-model="s.activeOverspending"
                                             type="text"
@@ -760,7 +1084,10 @@ const groupedHistory = computed(() => {
                                         />
                                     </div>
                                     <div class="col-span-2 space-y-1.5">
-                                        <Label class="text-xs text-muted-foreground">Blocked Advanced Funds</Label>
+                                        <Label
+                                            class="text-xs text-muted-foreground"
+                                            >Blocked Advanced Funds</Label
+                                        >
                                         <Input
                                             v-model="s.blockedAdvanced"
                                             type="text"
@@ -772,7 +1099,10 @@ const groupedHistory = computed(() => {
                                 </template>
                                 <template v-if="activeTab === 'active'">
                                     <div class="col-span-2 space-y-1.5">
-                                        <Label class="text-xs text-muted-foreground">Overspending</Label>
+                                        <Label
+                                            class="text-xs text-muted-foreground"
+                                            >Overspending</Label
+                                        >
                                         <Input
                                             v-model="s.activeOverspending"
                                             type="text"
@@ -782,7 +1112,10 @@ const groupedHistory = computed(() => {
                                         />
                                     </div>
                                     <div class="col-span-2 space-y-1.5">
-                                        <Label class="text-xs text-muted-foreground">Frozen Funds</Label>
+                                        <Label
+                                            class="text-xs text-muted-foreground"
+                                            >Frozen Funds</Label
+                                        >
                                         <Input
                                             v-model="s.frozenFunds"
                                             type="text"
@@ -792,11 +1125,20 @@ const groupedHistory = computed(() => {
                                         />
                                     </div>
                                 </template>
-                                <div class="col-span-2 flex items-center justify-between border-t pt-2">
+                                <div
+                                    class="col-span-2 flex items-center justify-between border-t pt-2"
+                                >
                                     <span class="text-xs text-muted-foreground">
-                                        {{ activeTab === 'activeXL' ? 'Total = Available − Used − Overspending − Blocked' : 'Total = Available − Used − Overspending − Frozen' }}
+                                        {{
+                                            activeTab === 'activeXL'
+                                                ? 'Total = Available − Used − Overspending − Blocked'
+                                                : 'Total = Available − Used − Overspending − Frozen'
+                                        }}
                                     </span>
-                                    <span class="font-mono text-xs font-medium" :class="balanceClass(advancedTotal)">
+                                    <span
+                                        class="font-mono text-xs font-medium"
+                                        :class="balanceClass(advancedTotal)"
+                                    >
                                         {{ fmt(advancedTotal) }}
                                     </span>
                                 </div>
@@ -809,17 +1151,25 @@ const groupedHistory = computed(() => {
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
-                                    <div class="h-2 w-2 rounded-full bg-violet-500"></div>
-                                    <Label class="text-sm font-medium">Active Funds</Label>
+                                    <div
+                                        class="h-2 w-2 rounded-full bg-violet-500"
+                                    ></div>
+                                    <Label class="text-sm font-medium"
+                                        >Active Funds</Label
+                                    >
                                 </div>
-                                <span class="font-mono text-sm font-semibold text-red-500 dark:text-red-400">
+                                <span
+                                    class="font-mono text-sm font-semibold text-red-500 dark:text-red-400"
+                                >
                                     −{{ fmt(activeTotal) }}
                                 </span>
                             </div>
                             <div class="space-y-3 rounded-lg bg-muted/40 p-3">
                                 <!-- Available -->
                                 <div class="space-y-1.5">
-                                    <Label class="text-xs text-muted-foreground">Available</Label>
+                                    <Label class="text-xs text-muted-foreground"
+                                        >Available</Label
+                                    >
                                     <Input
                                         v-model="s.activeAvailable"
                                         type="text"
@@ -830,14 +1180,26 @@ const groupedHistory = computed(() => {
                                 </div>
 
                                 <!-- Used breakdown -->
-                                <div class="space-y-2 rounded-md border bg-background p-2.5">
-                                    <div class="flex items-center justify-between">
-                                        <Label class="text-xs font-medium">Used</Label>
-                                        <span class="font-mono text-xs text-muted-foreground">{{ fmt(activeUsedTotal) }}</span>
+                                <div
+                                    class="space-y-2 rounded-md border bg-background p-2.5"
+                                >
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <Label class="text-xs font-medium"
+                                            >Used</Label
+                                        >
+                                        <span
+                                            class="font-mono text-xs text-muted-foreground"
+                                            >{{ fmt(activeUsedTotal) }}</span
+                                        >
                                     </div>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div class="space-y-1">
-                                            <Label class="text-xs text-muted-foreground">Debt Body</Label>
+                                            <Label
+                                                class="text-xs text-muted-foreground"
+                                                >Debt Body</Label
+                                            >
                                             <Input
                                                 v-model="s.activeDebt"
                                                 type="text"
@@ -847,7 +1209,10 @@ const groupedHistory = computed(() => {
                                             />
                                         </div>
                                         <div class="space-y-1">
-                                            <Label class="text-xs text-muted-foreground">Commission</Label>
+                                            <Label
+                                                class="text-xs text-muted-foreground"
+                                                >Commission</Label
+                                            >
                                             <Input
                                                 v-model="s.activeCommission"
                                                 type="text"
@@ -859,27 +1224,35 @@ const groupedHistory = computed(() => {
                                     </div>
                                 </div>
 
-
-                                <div class="flex items-center justify-between border-t pt-2">
-                                    <span class="text-xs text-muted-foreground">Total Used = Commission + Debt Body</span>
-                                    <span class="font-mono text-xs font-medium text-red-500 dark:text-red-400">
+                                <div
+                                    class="flex items-center justify-between border-t pt-2"
+                                >
+                                    <span class="text-xs text-muted-foreground"
+                                        >Total Used = Commission + Debt
+                                        Body</span
+                                    >
+                                    <span
+                                        class="font-mono text-xs font-medium text-red-500 dark:text-red-400"
+                                    >
                                         −{{ fmt(activeTotal) }}
                                     </span>
                                 </div>
                             </div>
                         </div>
-
                     </CardContent>
                 </Card>
 
                 <!-- Right column: Income + Priority -->
                 <div class="flex flex-col gap-6">
-
                     <!-- ── Block 2: Income Accrual ─────────────────────────────── -->
                     <Card>
                         <CardHeader class="pb-4">
-                            <CardTitle class="flex items-center gap-2 text-base">
-                                <TrendingUp class="h-4 w-4 text-muted-foreground" />
+                            <CardTitle
+                                class="flex items-center gap-2 text-base"
+                            >
+                                <TrendingUp
+                                    class="h-4 w-4 text-muted-foreground"
+                                />
                                 Income Accrual
                             </CardTitle>
                         </CardHeader>
@@ -908,7 +1281,8 @@ const groupedHistory = computed(() => {
                                     />
                                 </div>
                                 <p class="text-xs text-muted-foreground">
-                                    Amount to be distributed across balances per the repayment priority below.
+                                    Amount to be distributed across balances per
+                                    the repayment priority below.
                                 </p>
                             </div>
                         </CardContent>
@@ -918,14 +1292,18 @@ const groupedHistory = computed(() => {
                     <Card>
                         <CardHeader class="pb-4">
                             <div class="flex items-center justify-between">
-                                <CardTitle class="flex items-center gap-2 text-base">
-                                    <Layers class="h-4 w-4 text-muted-foreground" />
+                                <CardTitle
+                                    class="flex items-center gap-2 text-base"
+                                >
+                                    <Layers
+                                        class="h-4 w-4 text-muted-foreground"
+                                    />
                                     Repayment Priority
                                 </CardTitle>
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    class="h-7 gap-1.5 px-2 text-xs text-muted-foreground cursor-pointer"
+                                    class="h-7 cursor-pointer gap-1.5 px-2 text-xs text-muted-foreground"
                                     @click="resetPriorities"
                                 >
                                     <RotateCcw class="h-3 w-3" />
@@ -939,7 +1317,10 @@ const groupedHistory = computed(() => {
                                 <template v-if="activeTab === 'active'">
                                     <div class="grid grid-cols-2 gap-3">
                                         <div class="space-y-1.5">
-                                            <Label class="text-sm">Priority Distribution Amount</Label>
+                                            <Label class="text-sm"
+                                                >Priority Distribution
+                                                Amount</Label
+                                            >
                                             <Input
                                                 v-model="s.priorityDistribution"
                                                 type="text"
@@ -949,26 +1330,39 @@ const groupedHistory = computed(() => {
                                             />
                                         </div>
                                         <div class="space-y-1.5">
-                                            <Label class="text-sm">Priority Distribution %</Label>
+                                            <Label class="text-sm"
+                                                >Priority Distribution %</Label
+                                            >
                                             <div class="relative">
                                                 <Input
-                                                    v-model="s.priorityDistributionPct"
+                                                    v-model="
+                                                        s.priorityDistributionPct
+                                                    "
                                                     type="text"
                                                     inputmode="decimal"
                                                     placeholder="0"
-                                                    class="font-mono pr-7"
+                                                    class="pr-7 font-mono"
                                                 />
-                                                <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                                                <span
+                                                    class="absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-muted-foreground"
+                                                    >%</span
+                                                >
                                             </div>
                                         </div>
                                     </div>
-                                    <p class="text-xs text-muted-foreground">Both are subtracted from income and distributed via priorities. Remainder goes to Approved Funds.</p>
+                                    <p class="text-xs text-muted-foreground">
+                                        Both are subtracted from income and
+                                        distributed via priorities. Remainder
+                                        goes to Approved Funds.
+                                    </p>
                                     <Separator />
                                 </template>
                                 <template v-if="activeTab === 'activeXL'">
                                     <div class="grid grid-cols-2 gap-3">
                                         <div class="space-y-1.5">
-                                            <Label class="text-sm">Factor Rate</Label>
+                                            <Label class="text-sm"
+                                                >Factor Rate</Label
+                                            >
                                             <Input
                                                 v-model="s.factorRate"
                                                 type="text"
@@ -978,79 +1372,146 @@ const groupedHistory = computed(() => {
                                             />
                                         </div>
                                         <div class="space-y-1.5">
-                                            <Label class="text-sm">Repayment Percentage</Label>
+                                            <Label class="text-sm"
+                                                >Repayment Percentage</Label
+                                            >
                                             <div class="relative">
                                                 <Input
-                                                    v-model="s.repaymentPercentage"
+                                                    v-model="
+                                                        s.repaymentPercentage
+                                                    "
                                                     type="text"
                                                     inputmode="decimal"
                                                     placeholder="0"
-                                                    class="font-mono pr-7"
+                                                    class="pr-7 font-mono"
                                                 />
-                                                <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                                                <span
+                                                    class="absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-muted-foreground"
+                                                    >%</span
+                                                >
                                             </div>
                                         </div>
                                     </div>
                                     <Separator />
                                 </template>
                                 <div class="space-y-2">
-                                <div
-                                    v-for="(item, index) in s.priorities"
-                                    :key="item.id"
-                                    class="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors"
-                                >
-                                    <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
-                                        {{ index + 1 }}
-                                    </span>
-                                    <div class="min-w-0 flex-1">
-                                        <p class="text-sm font-medium leading-none">{{ item.label }}</p>
-                                        <p class="mt-0.5 text-xs text-muted-foreground">{{ item.sublabel }}</p>
-                                    </div>
-                                    <!-- Percentage input -->
-                                    <div class="flex shrink-0 items-center gap-1">
-                                        <template v-if="autoRepayment && (item.id === 'commission' || item.id === 'debt' || item.id === 'blockedAdvanced')">
-                                            <span class="flex h-7 w-14 items-center justify-center rounded-md border bg-muted px-2 text-center font-mono text-xs font-medium">
-                                                {{ item.id === 'debt' ? fmtPct(autoRepayment.debtPct) : item.id === 'commission' ? fmtPct(autoRepayment.commissionPct) : fmtPct(parseNum(s.repaymentPercentage)) }}
-                                            </span>
-                                        </template>
-                                        <template v-else>
-                                            <Input
-                                                v-model="item.percentage"
-                                                type="text"
-                                                inputmode="decimal"
-                                                :placeholder="item.id === 'blockedAdvanced' ? '0' : '100'"
-                                                class="h-7 w-14 px-2 text-center font-mono text-xs"
-                                            />
-                                        </template>
-                                        <span class="text-xs text-muted-foreground">%</span>
-                                    </div>
-                                    <span
-                                        class="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium"
-                                        :class="priorityBadgeColors[item.id]"
+                                    <div
+                                        v-for="(item, index) in s.priorities"
+                                        :key="item.id"
+                                        class="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors"
                                     >
-                                        {{ index === 0 ? '1st' : index === 1 ? '2nd' : index === 2 ? '3rd' : `${index + 1}th` }}
-                                    </span>
-                                    <div class="flex shrink-0 flex-col gap-0.5">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            class="h-5 w-5 p-0 cursor-pointer"
-                                            :disabled="index === 0"
-                                            @click="moveUp(index)"
+                                        <span
+                                            class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
                                         >
-                                            <ChevronUp class="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            class="h-5 w-5 p-0 cursor-pointer"
-                                            :disabled="index === s.priorities.length - 1"
-                                            @click="moveDown(index)"
+                                            {{ index + 1 }}
+                                        </span>
+                                        <div class="min-w-0 flex-1">
+                                            <p
+                                                class="text-sm leading-none font-medium"
+                                            >
+                                                {{ item.label }}
+                                            </p>
+                                            <p
+                                                class="mt-0.5 text-xs text-muted-foreground"
+                                            >
+                                                {{ item.sublabel }}
+                                            </p>
+                                        </div>
+                                        <!-- Percentage input -->
+                                        <div
+                                            class="flex shrink-0 items-center gap-1"
                                         >
-                                            <ChevronDown class="h-3 w-3" />
-                                        </Button>
+                                            <template
+                                                v-if="
+                                                    autoRepayment &&
+                                                    (item.id === 'commission' ||
+                                                        item.id === 'debt' ||
+                                                        item.id ===
+                                                            'blockedAdvanced')
+                                                "
+                                            >
+                                                <span
+                                                    class="flex h-7 w-14 items-center justify-center rounded-md border bg-muted px-2 text-center font-mono text-xs font-medium"
+                                                >
+                                                    {{
+                                                        item.id === 'debt'
+                                                            ? fmtPct(
+                                                                  autoRepayment.debtPct,
+                                                              )
+                                                            : item.id ===
+                                                                'commission'
+                                                              ? fmtPct(
+                                                                    autoRepayment.commissionPct,
+                                                                )
+                                                              : fmtPct(
+                                                                    parseNum(
+                                                                        s.repaymentPercentage,
+                                                                    ),
+                                                                )
+                                                    }}
+                                                </span>
+                                            </template>
+                                            <template v-else>
+                                                <Input
+                                                    v-model="item.percentage"
+                                                    type="text"
+                                                    inputmode="decimal"
+                                                    :placeholder="
+                                                        item.id ===
+                                                        'blockedAdvanced'
+                                                            ? '0'
+                                                            : '100'
+                                                    "
+                                                    class="h-7 w-14 px-2 text-center font-mono text-xs"
+                                                />
+                                            </template>
+                                            <span
+                                                class="text-xs text-muted-foreground"
+                                                >%</span
+                                            >
+                                        </div>
+                                        <span
+                                            class="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium"
+                                            :class="
+                                                priorityBadgeColors[item.id]
+                                            "
+                                        >
+                                            {{
+                                                index === 0
+                                                    ? '1st'
+                                                    : index === 1
+                                                      ? '2nd'
+                                                      : index === 2
+                                                        ? '3rd'
+                                                        : `${index + 1}th`
+                                            }}
+                                        </span>
+                                        <div
+                                            class="flex shrink-0 flex-col gap-0.5"
+                                        >
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-5 w-5 cursor-pointer p-0"
+                                                :disabled="index === 0"
+                                                @click="moveUp(index)"
+                                            >
+                                                <ChevronUp class="h-3 w-3" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-5 w-5 cursor-pointer p-0"
+                                                :disabled="
+                                                    index ===
+                                                    s.priorities.length - 1
+                                                "
+                                                @click="moveDown(index)"
+                                            >
+                                                <ChevronDown class="h-3 w-3" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                </div>
                                 </div>
                             </div>
                         </CardContent>
@@ -1068,24 +1529,49 @@ const groupedHistory = computed(() => {
                 </CardHeader>
                 <CardContent>
                     <div class="grid gap-4 sm:grid-cols-3">
-
                         <!-- Approved Funds Result -->
                         <div class="rounded-lg border bg-muted/20 p-4">
                             <div class="mb-3 flex items-center gap-2">
-                                <div class="h-2 w-2 rounded-full bg-emerald-500"></div>
-                                <span class="text-sm font-medium">Approved Funds</span>
+                                <div
+                                    class="h-2 w-2 rounded-full bg-emerald-500"
+                                ></div>
+                                <span class="text-sm font-medium"
+                                    >Approved Funds</span
+                                >
                             </div>
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Balance</span>
-                                    <span class="font-mono text-sm font-semibold" :class="balanceClass(results.approvedFunds)">
+                                    <span class="text-xs text-muted-foreground"
+                                        >Balance</span
+                                    >
+                                    <span
+                                        class="font-mono text-sm font-semibold"
+                                        :class="
+                                            balanceClass(results.approvedFunds)
+                                        "
+                                    >
                                         {{ fmt(results.approvedFunds) }}
                                     </span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Change</span>
-                                    <span class="font-mono text-xs" :class="deltaClass(parseNum(s.approvedFunds), results.approvedFunds)">
-                                        {{ deltaLabel(parseNum(s.approvedFunds), results.approvedFunds) }}
+                                    <span class="text-xs text-muted-foreground"
+                                        >Change</span
+                                    >
+                                    <span
+                                        class="font-mono text-xs"
+                                        :class="
+                                            deltaClass(
+                                                parseNum(s.approvedFunds),
+                                                results.approvedFunds,
+                                            )
+                                        "
+                                    >
+                                        {{
+                                            deltaLabel(
+                                                parseNum(s.approvedFunds),
+                                                results.approvedFunds,
+                                            )
+                                        }}
                                     </span>
                                 </div>
                             </div>
@@ -1094,58 +1580,148 @@ const groupedHistory = computed(() => {
                         <!-- Advanced Funds Result -->
                         <div class="rounded-lg border bg-muted/20 p-4">
                             <div class="mb-3 flex items-center gap-2">
-                                <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                                <span class="text-sm font-medium">Advanced Funds</span>
+                                <div
+                                    class="h-2 w-2 rounded-full bg-blue-500"
+                                ></div>
+                                <span class="text-sm font-medium"
+                                    >Advanced Funds</span
+                                >
                             </div>
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Total</span>
-                                    <span class="font-mono text-sm font-semibold" :class="balanceClass(results.advancedTotal)">
+                                    <span class="text-xs text-muted-foreground"
+                                        >Total</span
+                                    >
+                                    <span
+                                        class="font-mono text-sm font-semibold"
+                                        :class="
+                                            balanceClass(results.advancedTotal)
+                                        "
+                                    >
                                         {{ fmt(results.advancedTotal) }}
                                     </span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Change</span>
-                                    <span class="font-mono text-xs" :class="deltaClass(advancedTotal, results.advancedTotal)">
-                                        {{ deltaLabel(advancedTotal, results.advancedTotal) }}
+                                    <span class="text-xs text-muted-foreground"
+                                        >Change</span
+                                    >
+                                    <span
+                                        class="font-mono text-xs"
+                                        :class="
+                                            deltaClass(
+                                                advancedTotal,
+                                                results.advancedTotal,
+                                            )
+                                        "
+                                    >
+                                        {{
+                                            deltaLabel(
+                                                advancedTotal,
+                                                results.advancedTotal,
+                                            )
+                                        }}
                                     </span>
                                 </div>
                                 <Separator class="my-1" />
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Advanced Funds Income</span>
-                                    <span class="font-mono text-xs">{{ fmt(results.advancedAvailable) }}</span>
+                                    <span class="text-xs text-muted-foreground"
+                                        >Advanced Funds Income</span
+                                    >
+                                    <span class="font-mono text-xs">{{
+                                        fmt(results.advancedAvailable)
+                                    }}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Used</span>
-                                    <span class="font-mono text-xs" :class="balanceClass(-results.advancedUsed)">
+                                    <span class="text-xs text-muted-foreground"
+                                        >Used</span
+                                    >
+                                    <span
+                                        class="font-mono text-xs"
+                                        :class="
+                                            balanceClass(-results.advancedUsed)
+                                        "
+                                    >
                                         {{ fmt(results.advancedUsed) }}
                                     </span>
                                 </div>
-                                <div v-if="results.payments.advancedUsed > 0" class="flex items-center justify-between">
-                                    <span class="text-xs text-emerald-600 dark:text-emerald-400">Repaid</span>
-                                    <span class="font-mono text-xs text-emerald-600 dark:text-emerald-400">
-                                        −{{ fmt(results.payments.advancedUsed) }}
+                                <div
+                                    v-if="results.payments.advancedUsed > 0"
+                                    class="flex items-center justify-between"
+                                >
+                                    <span
+                                        class="text-xs text-emerald-600 dark:text-emerald-400"
+                                        >Repaid</span
+                                    >
+                                    <span
+                                        class="font-mono text-xs text-emerald-600 dark:text-emerald-400"
+                                    >
+                                        −{{
+                                            fmt(results.payments.advancedUsed)
+                                        }}
                                     </span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Overspending</span>
+                                    <span class="text-xs text-muted-foreground"
+                                        >Overspending</span
+                                    >
                                     <div class="flex items-center gap-1.5">
-                                        <span v-if="results.payments.overspending > 0" class="font-mono text-xs text-emerald-600 dark:text-emerald-400">−{{ fmt(results.payments.overspending) }}</span>
-                                        <span class="font-mono text-xs" :class="results.activeOverspending > 0 ? 'text-red-500 dark:text-red-400' : ''">
-                                            {{ fmt(results.activeOverspending) }}
+                                        <span
+                                            v-if="
+                                                results.payments.overspending >
+                                                0
+                                            "
+                                            class="font-mono text-xs text-emerald-600 dark:text-emerald-400"
+                                            >−{{
+                                                fmt(
+                                                    results.payments
+                                                        .overspending,
+                                                )
+                                            }}</span
+                                        >
+                                        <span
+                                            class="font-mono text-xs"
+                                            :class="
+                                                results.activeOverspending > 0
+                                                    ? 'text-red-500 dark:text-red-400'
+                                                    : ''
+                                            "
+                                        >
+                                            {{
+                                                fmt(results.activeOverspending)
+                                            }}
                                         </span>
                                     </div>
                                 </div>
-                                <template v-if="activeTab === 'activeXL' && results.blockedAdvanced > 0">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs text-muted-foreground">Blocked</span>
-                                        <span class="font-mono text-xs text-purple-600 dark:text-purple-400">
+                                <template
+                                    v-if="
+                                        activeTab === 'activeXL' &&
+                                        results.blockedAdvanced > 0
+                                    "
+                                >
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <span
+                                            class="text-xs text-muted-foreground"
+                                            >Blocked</span
+                                        >
+                                        <span
+                                            class="font-mono text-xs text-purple-600 dark:text-purple-400"
+                                        >
                                             −{{ fmt(results.blockedAdvanced) }}
                                         </span>
                                     </div>
-                                    <div v-if="results.blockedFromIncome > 0" class="flex items-center justify-between">
-                                        <span class="text-xs text-muted-foreground pl-2">↳ from income</span>
-                                        <span class="font-mono text-xs text-purple-500 dark:text-purple-300">
+                                    <div
+                                        v-if="results.blockedFromIncome > 0"
+                                        class="flex items-center justify-between"
+                                    >
+                                        <span
+                                            class="pl-2 text-xs text-muted-foreground"
+                                            >↳ from income</span
+                                        >
+                                        <span
+                                            class="font-mono text-xs text-purple-500 dark:text-purple-300"
+                                        >
                                             {{ fmt(results.blockedFromIncome) }}
                                         </span>
                                     </div>
@@ -1156,55 +1732,160 @@ const groupedHistory = computed(() => {
                         <!-- Active Funds Result -->
                         <div class="rounded-lg border bg-muted/20 p-4">
                             <div class="mb-3 flex items-center gap-2">
-                                <div class="h-2 w-2 rounded-full bg-violet-500"></div>
-                                <span class="text-sm font-medium">Active Funds</span>
+                                <div
+                                    class="h-2 w-2 rounded-full bg-violet-500"
+                                ></div>
+                                <span class="text-sm font-medium"
+                                    >Active Funds</span
+                                >
                             </div>
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Total Used</span>
-                                    <span class="font-mono text-sm font-semibold text-red-500 dark:text-red-400">
+                                    <span class="text-xs text-muted-foreground"
+                                        >Total Used</span
+                                    >
+                                    <span
+                                        class="font-mono text-sm font-semibold text-red-500 dark:text-red-400"
+                                    >
                                         −{{ fmt(results.activeTotal) }}
                                     </span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Change</span>
-                                    <span class="font-mono text-xs" :class="deltaClass(-activeTotal, -results.activeTotal)">
-                                        {{ deltaLabel(-activeTotal, -results.activeTotal) }}
+                                    <span class="text-xs text-muted-foreground"
+                                        >Change</span
+                                    >
+                                    <span
+                                        class="font-mono text-xs"
+                                        :class="
+                                            deltaClass(
+                                                -activeTotal,
+                                                -results.activeTotal,
+                                            )
+                                        "
+                                    >
+                                        {{
+                                            deltaLabel(
+                                                -activeTotal,
+                                                -results.activeTotal,
+                                            )
+                                        }}
                                     </span>
                                 </div>
                                 <Separator class="my-1" />
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Debt Body</span>
-                                    <div class="flex flex-col items-end gap-0.5">
-                                        <span class="font-mono text-xs">{{ fmt(results.activeDebt) }}</span>
-                                        <div v-if="results.payments.debt > 0" class="flex items-center gap-1">
-                                            <span class="text-xs text-muted-foreground">repaid:</span>
-                                            <span class="font-mono text-xs text-emerald-600 dark:text-emerald-400">−{{ fmt(results.payments.debt) }}</span>
+                                    <span class="text-xs text-muted-foreground"
+                                        >Debt Body</span
+                                    >
+                                    <div
+                                        class="flex flex-col items-end gap-0.5"
+                                    >
+                                        <span class="font-mono text-xs">{{
+                                            fmt(results.activeDebt)
+                                        }}</span>
+                                        <div
+                                            v-if="results.payments.debt > 0"
+                                            class="flex items-center gap-1"
+                                        >
+                                            <span
+                                                class="text-xs text-muted-foreground"
+                                                >repaid:</span
+                                            >
+                                            <span
+                                                class="font-mono text-xs text-emerald-600 dark:text-emerald-400"
+                                                >−{{
+                                                    fmt(results.payments.debt)
+                                                }}</span
+                                            >
                                         </div>
-                                        <div v-if="results.debtFromIncome > 0" class="flex items-center gap-1">
-                                            <span class="text-xs text-muted-foreground">from income:</span>
-                                            <span class="font-mono text-xs text-blue-600 dark:text-blue-400">{{ fmt(results.debtFromIncome) }}</span>
+                                        <div
+                                            v-if="results.debtFromIncome > 0"
+                                            class="flex items-center gap-1"
+                                        >
+                                            <span
+                                                class="text-xs text-muted-foreground"
+                                                >from income:</span
+                                            >
+                                            <span
+                                                class="font-mono text-xs text-blue-600 dark:text-blue-400"
+                                                >{{
+                                                    fmt(results.debtFromIncome)
+                                                }}</span
+                                            >
                                         </div>
                                     </div>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">Commission</span>
-                                    <div class="flex flex-col items-end gap-0.5">
-                                        <span class="font-mono text-xs">{{ fmt(results.activeCommission) }}</span>
-                                        <div v-if="results.payments.commission > 0" class="flex items-center gap-1">
-                                            <span class="text-xs text-muted-foreground">repaid:</span>
-                                            <span class="font-mono text-xs text-emerald-600 dark:text-emerald-400">−{{ fmt(results.payments.commission) }}</span>
+                                    <span class="text-xs text-muted-foreground"
+                                        >Commission</span
+                                    >
+                                    <div
+                                        class="flex flex-col items-end gap-0.5"
+                                    >
+                                        <span class="font-mono text-xs">{{
+                                            fmt(results.activeCommission)
+                                        }}</span>
+                                        <div
+                                            v-if="
+                                                results.payments.commission > 0
+                                            "
+                                            class="flex items-center gap-1"
+                                        >
+                                            <span
+                                                class="text-xs text-muted-foreground"
+                                                >repaid:</span
+                                            >
+                                            <span
+                                                class="font-mono text-xs text-emerald-600 dark:text-emerald-400"
+                                                >−{{
+                                                    fmt(
+                                                        results.payments
+                                                            .commission,
+                                                    )
+                                                }}</span
+                                            >
                                         </div>
-                                        <div v-if="results.commissionFromIncome > 0" class="flex items-center gap-1">
-                                            <span class="text-xs text-muted-foreground">from income:</span>
-                                            <span class="font-mono text-xs text-blue-600 dark:text-blue-400">{{ fmt(results.commissionFromIncome) }}</span>
+                                        <div
+                                            v-if="
+                                                results.commissionFromIncome > 0
+                                            "
+                                            class="flex items-center gap-1"
+                                        >
+                                            <span
+                                                class="text-xs text-muted-foreground"
+                                                >from income:</span
+                                            >
+                                            <span
+                                                class="font-mono text-xs text-blue-600 dark:text-blue-400"
+                                                >{{
+                                                    fmt(
+                                                        results.commissionFromIncome,
+                                                    )
+                                                }}</span
+                                            >
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex items-center justify-between rounded-md bg-muted/40 px-2 py-1">
-                                    <span class="text-xs text-muted-foreground">New Available</span>
-                                    <span class="font-mono text-xs font-medium" :class="balanceClass(results.activeAvailable - results.activeDebt)">
-                                        {{ fmt(results.activeAvailable - results.activeDebt) }}
+                                <div
+                                    class="flex items-center justify-between rounded-md bg-muted/40 px-2 py-1"
+                                >
+                                    <span class="text-xs text-muted-foreground"
+                                        >New Available</span
+                                    >
+                                    <span
+                                        class="font-mono text-xs font-medium"
+                                        :class="
+                                            balanceClass(
+                                                results.activeAvailable -
+                                                    results.activeDebt,
+                                            )
+                                        "
+                                    >
+                                        {{
+                                            fmt(
+                                                results.activeAvailable -
+                                                    results.activeDebt,
+                                            )
+                                        }}
                                     </span>
                                 </div>
                             </div>
@@ -1214,27 +1895,54 @@ const groupedHistory = computed(() => {
                     <!-- Summary row -->
                     <div class="mt-4 grid gap-3 sm:grid-cols-3">
                         <!-- Repayment breakdown -->
-                        <div class="sm:col-span-2 rounded-lg border border-dashed bg-muted/10 p-3">
-                            <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Repayment Breakdown</p>
+                        <div
+                            class="rounded-lg border border-dashed bg-muted/10 p-3 sm:col-span-2"
+                        >
+                            <p
+                                class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                            >
+                                Repayment Breakdown
+                            </p>
                             <div class="flex flex-wrap gap-2">
                                 <div
                                     v-for="p in s.priorities"
                                     :key="p.id"
                                     class="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5"
                                 >
-                                    <ArrowRight class="h-3 w-3 text-muted-foreground" />
-                                    <span class="text-xs text-muted-foreground">{{ p.label }}:</span>
+                                    <ArrowRight
+                                        class="h-3 w-3 text-muted-foreground"
+                                    />
+                                    <span class="text-xs text-muted-foreground"
+                                        >{{ p.label }}:</span
+                                    >
                                     <span
                                         class="font-mono text-xs font-medium"
-                                        :class="results.payments[p.id] > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'"
+                                        :class="
+                                            results.payments[p.id] > 0
+                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                : 'text-muted-foreground'
+                                        "
                                     >
-                                        {{ results.payments[p.id] > 0 ? fmt(results.payments[p.id]) : '—' }}
+                                        {{
+                                            results.payments[p.id] > 0
+                                                ? fmt(results.payments[p.id])
+                                                : '—'
+                                        }}
                                     </span>
                                 </div>
-                                <div v-if="results.remainingIncome > 0" class="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5">
-                                    <ArrowRight class="h-3 w-3 text-muted-foreground" />
-                                    <span class="text-xs text-muted-foreground">Approved Funds:</span>
-                                    <span class="font-mono text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                <div
+                                    v-if="results.remainingIncome > 0"
+                                    class="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5"
+                                >
+                                    <ArrowRight
+                                        class="h-3 w-3 text-muted-foreground"
+                                    />
+                                    <span class="text-xs text-muted-foreground"
+                                        >Approved Funds:</span
+                                    >
+                                    <span
+                                        class="font-mono text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                                    >
                                         +{{ fmt(results.remainingIncome) }}
                                     </span>
                                 </div>
@@ -1242,20 +1950,31 @@ const groupedHistory = computed(() => {
                         </div>
 
                         <!-- Grand Total -->
-                        <div class="flex flex-col items-center justify-center rounded-lg border bg-primary/5 p-4 text-center">
+                        <div
+                            class="flex flex-col items-center justify-center rounded-lg border bg-primary/5 p-4 text-center"
+                        >
                             <div class="mb-1 flex items-center gap-1.5">
-                                <CircleDollarSign class="h-4 w-4 text-primary" />
-                                <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Grand Total</span>
+                                <CircleDollarSign
+                                    class="h-4 w-4 text-primary"
+                                />
+                                <span
+                                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                                    >Grand Total</span
+                                >
                             </div>
-                            <span class="font-mono text-2xl font-bold" :class="balanceClass(results.grandTotal)">
+                            <span
+                                class="font-mono text-2xl font-bold"
+                                :class="balanceClass(results.grandTotal)"
+                            >
                                 {{ fmt(results.grandTotal) }}
                             </span>
-                            <span class="mt-1 text-xs text-muted-foreground">All funds combined</span>
+                            <span class="mt-1 text-xs text-muted-foreground"
+                                >All funds combined</span
+                            >
                         </div>
                     </div>
                 </CardContent>
             </Card>
-
         </div>
     </AppLayout>
 </template>

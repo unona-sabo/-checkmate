@@ -36,10 +36,14 @@ export const severityVariant = (severity: string): Variant => {
 
 export const bugStatusVariant = (status: string): Variant => {
     switch (status) {
+        case 'triage':
+            return 'cyan';
         case 'to_do':
             return 'blue';
         case 'in_progress':
             return 'amber';
+        case 'blocked':
+            return 'orange';
         case 'in_review':
             return 'purple';
         case 'needs_changes':

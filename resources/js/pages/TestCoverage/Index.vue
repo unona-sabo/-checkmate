@@ -632,7 +632,7 @@ const refreshData = () => {
                     <h1
                         class="flex items-center gap-2 text-2xl font-bold text-foreground"
                     >
-                        <BarChart3 class="h-6 w-6" />
+                        <BarChart3 class="h-6 w-6 shrink-0 text-primary" />
                         Test Coverage Analytics
                     </h1>
                     <p class="mt-1 text-sm text-muted-foreground">
@@ -766,7 +766,10 @@ const refreshData = () => {
             <!-- Tabs -->
             <Card>
                 <div class="border-b">
-                    <nav class="flex flex-wrap gap-0 px-2 sm:px-4" aria-label="Tabs">
+                    <nav
+                        class="flex flex-wrap gap-0 px-2 sm:px-4"
+                        aria-label="Tabs"
+                    >
                         <button
                             v-for="tab in tabs"
                             :key="tab.key"
@@ -800,9 +803,7 @@ const refreshData = () => {
                                 <span
                                     class="ml-2 text-sm text-muted-foreground"
                                 >
-                                    {{
-                                        selectedFeature.test_cases_count ?? 0
-                                    }}
+                                    {{ selectedFeature.test_cases_count ?? 0 }}
                                     test cases<span
                                         v-if="
                                             (selectedFeature.checklists_count ??
@@ -810,9 +811,7 @@ const refreshData = () => {
                                         "
                                     >
                                         ·
-                                        {{
-                                            selectedFeature.checklists_count
-                                        }}
+                                        {{ selectedFeature.checklists_count }}
                                         checklists</span
                                     >
                                 </span>
@@ -873,9 +872,7 @@ const refreshData = () => {
                                     >
                                         <span
                                             >{{ mod.covered_features }} /
-                                            {{
-                                                mod.total_features
-                                            }}
+                                            {{ mod.total_features }}
                                             features</span
                                         >
                                         <span
@@ -884,9 +881,7 @@ const refreshData = () => {
                                                 v-if="mod.checklists_count"
                                             >
                                                 ·
-                                                {{
-                                                    mod.checklists_count
-                                                }}
+                                                {{ mod.checklists_count }}
                                                 checklists</span
                                             ></span
                                         >
@@ -1380,7 +1375,9 @@ const refreshData = () => {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div
+                                    class="grid grid-cols-1 gap-4 md:grid-cols-2"
+                                >
                                     <div
                                         v-for="area in analysisResults.well_covered"
                                         :key="area.feature"

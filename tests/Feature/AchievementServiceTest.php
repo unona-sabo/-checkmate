@@ -496,20 +496,40 @@ test('creating 5 notes unlocks Note Squad', function () {
     expect(unlockedKeys($user))->toContain('first-5-notes');
 });
 
-test('good work day unlocks once but flashes a notification every active day', function () {
+test('good work day unlocks once but flashes a notification on every login', function () {
     $user = User::factory()->create();
 
-    Carbon::setTestNow(Carbon::parse('2026-01-01 10:00:00'));
-    $this->service->trackDailyActivity($user->fresh());
+    $this->service->checkGoodWorkDay($user->fresh());
 
     expect(unlockedKeys($user))->toContain('good-work-day');
     expect(UserAchievement::where('user_id', $user->id)->where('achievement_key', 'good-work-day')->count())->toBe(1);
 
-    Carbon::setTestNow(Carbon::now()->addDay());
-    $this->service->trackDailyActivity($user->fresh());
+    $this->service->checkGoodWorkDay($user->fresh());
 
-    Carbon::setTestNow();
+    // Still only unlocked once permanently, even though the check ran twice.
+    expect(UserAchievement::where('user_id', $user->id)->where('achievement_key', 'good-work-day')->count())->toBe(1);
+});
 
-    // Still only unlocked once permanently, even though the daily check ran twice.
+test('good work day flashes a notification on every real login, same day or not', function () {
+    $user = User::factory()->create();
+
+    $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    expect(session('achievement'))->not->toBeNull();
+    expect(collect(session('achievement'))->pluck('key'))->toContain('good-work-day');
+
+    $this->post(route('logout'));
+
+    $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    // Fires again on the second login the same day — this is not a
+    // once-per-day check.
+    expect(collect(session('achievement'))->pluck('key'))->toContain('good-work-day');
     expect(UserAchievement::where('user_id', $user->id)->where('achievement_key', 'good-work-day')->count())->toBe(1);
 });
