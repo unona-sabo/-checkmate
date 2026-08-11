@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm, usePage, router } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import { ArrowRightLeft, Trash2, UserPlus } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import Heading from '@/components/Heading.vue';
@@ -177,6 +177,56 @@ const roleColors: Record<string, string> = {
                         Save
                     </Button>
                 </form>
+            </div>
+
+            <!-- Integrations -->
+            <div class="space-y-6">
+                <Heading
+                    variant="small"
+                    title="Integrations"
+                    description="Each workspace has its own ClickUp and Grafana connection"
+                />
+
+                <div class="grid gap-3">
+                    <Link
+                        href="/workspaces/settings/clickup"
+                        class="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+                    >
+                        <span class="font-medium">ClickUp</span>
+                        <Badge
+                            :variant="
+                                workspace.clickup_configured
+                                    ? 'success'
+                                    : 'outline'
+                            "
+                        >
+                            {{
+                                workspace.clickup_configured
+                                    ? 'Connected'
+                                    : 'Not connected'
+                            }}
+                        </Badge>
+                    </Link>
+                    <Link
+                        href="/workspaces/settings/grafana"
+                        class="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+                    >
+                        <span class="font-medium">Grafana</span>
+                        <Badge
+                            :variant="
+                                workspace.grafana_configured
+                                    ? 'success'
+                                    : 'outline'
+                            "
+                        >
+                            {{
+                                workspace.grafana_configured
+                                    ? 'Connected'
+                                    : 'Not connected'
+                            }}
+                        </Badge>
+                    </Link>
+                </div>
             </div>
 
             <!-- Members -->

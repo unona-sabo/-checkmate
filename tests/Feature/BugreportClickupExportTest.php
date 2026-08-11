@@ -6,13 +6,27 @@ use App\Models\Bugreport;
 use App\Models\ClickupSetting;
 use App\Models\Project;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 test('export to clickup returns error when not configured', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.export-clickup', [$project, $bugreport])
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+});
+
+test('export to clickup returns error for a project without a workspace', function () {
     $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => null]);
     $bugreport = Bugreport::factory()->create(['project_id' => $project->id]);
 
     $response = $this->actingAs($user)->post(
@@ -26,11 +40,11 @@ test('export to clickup returns error when not configured', function () {
 test('export to clickup dispatches job when configured', function () {
     Queue::fake();
 
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     $bugreport = Bugreport::factory()->create(['project_id' => $project->id]);
 
-    ClickupSetting::current()->update([
+    ClickupSetting::forWorkspace($workspace)->update([
         'api_token' => 'pk_test_token',
         'list_id' => '123456',
     ]);
@@ -50,14 +64,14 @@ test('export to clickup dispatches job when configured', function () {
 test('export to clickup prevents double export', function () {
     Queue::fake();
 
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     $bugreport = Bugreport::factory()->create([
         'project_id' => $project->id,
         'clickup_task_id' => 'existing_task_id',
     ]);
 
-    ClickupSetting::current()->update([
+    ClickupSetting::forWorkspace($workspace)->update([
         'api_token' => 'pk_test_token',
         'list_id' => '123456',
     ]);
@@ -73,8 +87,8 @@ test('export to clickup prevents double export', function () {
 });
 
 test('sync from clickup returns error when not linked', function () {
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     $bugreport = Bugreport::factory()->create([
         'project_id' => $project->id,
         'clickup_task_id' => null,
@@ -96,15 +110,15 @@ test('sync from clickup updates status when changed', function () {
         ]),
     ]);
 
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     $bugreport = Bugreport::factory()->create([
         'project_id' => $project->id,
         'status' => 'to_do',
         'clickup_task_id' => 'abc123',
     ]);
 
-    ClickupSetting::current()->update([
+    ClickupSetting::forWorkspace($workspace)->update([
         'api_token' => 'pk_test_token',
         'list_id' => '123456',
         'status_mapping' => [
@@ -132,15 +146,15 @@ test('sync from clickup returns info when already up to date', function () {
         ]),
     ]);
 
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     $bugreport = Bugreport::factory()->create([
         'project_id' => $project->id,
         'status' => 'to_do',
         'clickup_task_id' => 'abc123',
     ]);
 
-    ClickupSetting::current()->update([
+    ClickupSetting::forWorkspace($workspace)->update([
         'api_token' => 'pk_test_token',
         'list_id' => '123456',
         'status_mapping' => [
@@ -157,11 +171,41 @@ test('sync from clickup returns info when already up to date', function () {
     $response->assertSessionHas('info');
 });
 
+test('sync from clickup shows a friendly message when the task was deleted in clickup', function () {
+    Http::fake([
+        'api.clickup.com/api/v2/task/abc123' => Http::response(
+            ['err' => 'Task not found, deleted', 'ECODE' => 'ITEM_013'],
+            404
+        ),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'status' => 'to_do',
+        'clickup_task_id' => 'abc123',
+    ]);
+
+    ClickupSetting::forWorkspace($workspace)->update([
+        'api_token' => 'pk_test_token',
+        'list_id' => '123456',
+    ]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.sync-clickup', [$project, $bugreport])
+    );
+
+    $response->assertRedirect();
+    expect(session('error'))->toContain('no longer exists')
+        ->and(session('error'))->not->toContain('ITEM_013');
+});
+
 test('sync all from clickup queues a job per linked bug report', function () {
     Queue::fake();
 
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     $linked1 = Bugreport::factory()->create([
         'project_id' => $project->id,
         'clickup_task_id' => 'abc123',
@@ -175,7 +219,7 @@ test('sync all from clickup queues a job per linked bug report', function () {
         'clickup_task_id' => null,
     ]);
 
-    ClickupSetting::current()->update([
+    ClickupSetting::forWorkspace($workspace)->update([
         'api_token' => 'pk_test_token',
         'list_id' => '123456',
     ]);
@@ -195,11 +239,11 @@ test('sync all from clickup queues a job per linked bug report', function () {
 test('sync all from clickup returns info when nothing is linked', function () {
     Queue::fake();
 
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => null]);
 
-    ClickupSetting::current()->update([
+    ClickupSetting::forWorkspace($workspace)->update([
         'api_token' => 'pk_test_token',
         'list_id' => '123456',
     ]);
@@ -215,8 +259,8 @@ test('sync all from clickup returns info when nothing is linked', function () {
 });
 
 test('sync all from clickup returns error when not configured', function () {
-    $user = User::factory()->create();
-    $project = Project::factory()->create(['user_id' => $user->id]);
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => 'abc123']);
 
     $response = $this->actingAs($user)->post(
@@ -235,14 +279,15 @@ test('sync bugreport from clickup job updates status when changed', function () 
         ]),
     ]);
 
-    $project = Project::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $project = Project::factory()->create(['workspace_id' => $workspace->id]);
     $bugreport = Bugreport::factory()->create([
         'project_id' => $project->id,
         'status' => 'to_do',
         'clickup_task_id' => 'abc123',
     ]);
 
-    ClickupSetting::current()->update([
+    ClickupSetting::forWorkspace($workspace)->update([
         'api_token' => 'pk_test_token',
         'list_id' => '123456',
         'status_mapping' => [
@@ -266,7 +311,8 @@ test('export job uploads attachments to clickup task', function () {
         'api.clickup.com/api/v2/task/task_abc/attachment' => Http::response(['id' => 'att_1']),
     ]);
 
-    $project = Project::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $project = Project::factory()->create(['workspace_id' => $workspace->id]);
     $bugreport = Bugreport::factory()->create(['project_id' => $project->id]);
     $bugreport->attachments()->create([
         'original_filename' => 'screenshot.png',
@@ -275,7 +321,7 @@ test('export job uploads attachments to clickup task', function () {
         'size' => 100,
     ]);
 
-    ClickupSetting::current()->update([
+    ClickupSetting::forWorkspace($workspace)->update([
         'api_token' => 'pk_test_token',
         'list_id' => '123456',
     ]);
@@ -286,4 +332,24 @@ test('export job uploads attachments to clickup task', function () {
     expect($bugreport->clickup_task_id)->toBe('task_abc');
 
     Http::assertSent(fn ($request) => str_contains($request->url(), '/task/task_abc/attachment'));
+});
+
+test('two workspaces export bugs to their own clickup list independently', function () {
+    Queue::fake();
+
+    [$userA, $workspaceA] = createUserWithWorkspace();
+    $projectA = Project::factory()->create(['user_id' => $userA->id, 'workspace_id' => $workspaceA->id]);
+    ClickupSetting::forWorkspace($workspaceA)->update(['api_token' => 'token_a', 'list_id' => 'list_a']);
+
+    [$userB, $workspaceB] = createUserWithWorkspace();
+    $projectB = Project::factory()->create(['user_id' => $userB->id, 'workspace_id' => $workspaceB->id]);
+    ClickupSetting::forWorkspace($workspaceB)->update(['api_token' => 'token_b', 'list_id' => 'list_b']);
+
+    $bugA = Bugreport::factory()->create(['project_id' => $projectA->id]);
+    $bugB = Bugreport::factory()->create(['project_id' => $projectB->id]);
+
+    $this->actingAs($userA)->post(route('bugreports.export-clickup', [$projectA, $bugA]));
+    $this->actingAs($userB)->post(route('bugreports.export-clickup', [$projectB, $bugB]));
+
+    Queue::assertPushed(ExportBugreportToClickUp::class, 2);
 });

@@ -5,14 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Bugreport;
 use App\Models\ClickupSetting;
+use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ClickupWebhookController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request, Workspace $workspace): JsonResponse
     {
-        $settings = ClickupSetting::current();
+        $settings = ClickupSetting::forWorkspace($workspace);
 
         if (! $this->verifySignature($request, $settings->webhook_secret ?? '')) {
             return response()->json(['error' => 'Invalid signature'], 401);

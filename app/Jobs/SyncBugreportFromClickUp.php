@@ -25,13 +25,14 @@ class SyncBugreportFromClickUp implements ShouldQueue
             return;
         }
 
-        $settings = ClickupSetting::current();
+        $workspace = $this->bugreport->project->workspace;
+        $settings = $workspace ? ClickupSetting::forWorkspace($workspace) : null;
 
-        if (! $settings->isConfigured()) {
+        if (! $settings?->isConfigured()) {
             return;
         }
 
-        $service = ClickupService::fromSettings();
+        $service = ClickupService::fromSettings($settings);
         $task = $service->getTask($this->bugreport->clickup_task_id);
 
         $clickupStatus = strtolower($task['status']['status'] ?? '');

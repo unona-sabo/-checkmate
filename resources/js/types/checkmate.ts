@@ -502,6 +502,8 @@ export interface Workspace {
     slug: string;
     owner_id: number;
     role?: string;
+    clickup_configured?: boolean;
+    grafana_configured?: boolean;
     created_at?: string;
     updated_at?: string;
 }

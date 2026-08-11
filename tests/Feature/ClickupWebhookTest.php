@@ -3,9 +3,12 @@
 use App\Models\Bugreport;
 use App\Models\ClickupSetting;
 use App\Models\Project;
+use App\Models\Workspace;
 
 test('webhook rejects requests without valid signature', function () {
-    $response = $this->postJson('/api/webhooks/clickup', [
+    $workspace = Workspace::factory()->create();
+
+    $response = $this->postJson("/api/webhooks/clickup/{$workspace->id}", [
         'event' => 'taskStatusUpdated',
     ]);
 
@@ -13,7 +16,8 @@ test('webhook rejects requests without valid signature', function () {
 });
 
 test('webhook updates bugreport status on taskStatusUpdated', function () {
-    $settings = ClickupSetting::current();
+    $workspace = Workspace::factory()->create();
+    $settings = ClickupSetting::forWorkspace($workspace);
     $settings->update([
         'webhook_secret' => 'test-secret',
         'status_mapping' => [
@@ -24,7 +28,7 @@ test('webhook updates bugreport status on taskStatusUpdated', function () {
         ],
     ]);
 
-    $project = Project::factory()->create();
+    $project = Project::factory()->create(['workspace_id' => $workspace->id]);
     $bugreport = Bugreport::factory()->create([
         'project_id' => $project->id,
         'status' => 'to_do',
@@ -41,7 +45,7 @@ test('webhook updates bugreport status on taskStatusUpdated', function () {
 
     $signature = hash_hmac('sha256', $payload, 'test-secret');
 
-    $response = $this->postJson('/api/webhooks/clickup', json_decode($payload, true), [
+    $response = $this->postJson("/api/webhooks/clickup/{$workspace->id}", json_decode($payload, true), [
         'X-Signature' => $signature,
     ]);
 
@@ -52,7 +56,8 @@ test('webhook updates bugreport status on taskStatusUpdated', function () {
 });
 
 test('webhook ignores unknown task ids', function () {
-    $settings = ClickupSetting::current();
+    $workspace = Workspace::factory()->create();
+    $settings = ClickupSetting::forWorkspace($workspace);
     $settings->update([
         'webhook_secret' => 'test-secret',
         'status_mapping' => ['to_do' => 'to do'],
@@ -68,9 +73,34 @@ test('webhook ignores unknown task ids', function () {
 
     $signature = hash_hmac('sha256', $payload, 'test-secret');
 
-    $response = $this->postJson('/api/webhooks/clickup', json_decode($payload, true), [
+    $response = $this->postJson("/api/webhooks/clickup/{$workspace->id}", json_decode($payload, true), [
         'X-Signature' => $signature,
     ]);
 
     $response->assertOk();
+});
+
+test('webhook signature for one workspace is rejected on another workspace URL', function () {
+    $workspaceA = Workspace::factory()->create();
+    ClickupSetting::forWorkspace($workspaceA)->update(['webhook_secret' => 'secret-a']);
+
+    $workspaceB = Workspace::factory()->create();
+    ClickupSetting::forWorkspace($workspaceB)->update(['webhook_secret' => 'secret-b']);
+
+    $payload = json_encode([
+        'event' => 'taskStatusUpdated',
+        'task_id' => 'abc123',
+        'history_items' => [
+            ['after' => ['status' => 'done']],
+        ],
+    ]);
+
+    // Signed with workspace A's secret, but posted to workspace B's URL.
+    $signature = hash_hmac('sha256', $payload, 'secret-a');
+
+    $response = $this->postJson("/api/webhooks/clickup/{$workspaceB->id}", json_decode($payload, true), [
+        'X-Signature' => $signature,
+    ]);
+
+    $response->assertStatus(401);
 });

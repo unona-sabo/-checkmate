@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Workspace extends Model
 {
@@ -47,5 +48,21 @@ class Workspace extends Model
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
+    }
+
+    /**
+     * Get the ClickUp integration settings for the workspace, if any.
+     */
+    public function clickupSetting(): HasOne
+    {
+        return $this->hasOne(ClickupSetting::class);
+    }
+
+    /**
+     * Get the Grafana integration settings for the workspace, if any.
+     */
+    public function grafanaSetting(): HasOne
+    {
+        return $this->hasOne(GrafanaSetting::class);
     }
 }

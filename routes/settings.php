@@ -2,8 +2,6 @@
 
 use App\Http\Controllers\Settings\AchievementController;
 use App\Http\Controllers\Settings\BackupController;
-use App\Http\Controllers\Settings\ClickupController;
-use App\Http\Controllers\Settings\GrafanaController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
@@ -39,16 +37,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('settings/backup/download-snapshot/{filename}', [BackupController::class, 'downloadSnapshot'])->name('backup.download-snapshot');
     Route::delete('settings/backup/snapshot/{filename}', [BackupController::class, 'destroySnapshot'])->name('backup.destroy-snapshot');
     Route::post('settings/backup/restore/{filename}', [BackupController::class, 'restore'])->name('backup.restore');
-
-    Route::get('settings/clickup', [ClickupController::class, 'show'])->name('clickup.show');
-    Route::put('settings/clickup', [ClickupController::class, 'update'])->name('clickup.update');
-    Route::put('settings/clickup/status-mapping', [ClickupController::class, 'updateStatusMapping'])->name('clickup.status-mapping');
-    Route::post('settings/clickup/fetch-statuses', [ClickupController::class, 'fetchStatuses'])->name('clickup.fetch-statuses');
-    Route::post('settings/clickup/register-webhook', [ClickupController::class, 'registerWebhook'])->name('clickup.register-webhook');
-
-    Route::get('settings/grafana', [GrafanaController::class, 'show'])->name('grafana.show');
-    Route::put('settings/grafana', [GrafanaController::class, 'update'])->name('grafana.update');
-    Route::post('settings/grafana/test-connection', [GrafanaController::class, 'testConnection'])->name('grafana.test-connection');
 
     Route::get('settings/achievements', [AchievementController::class, 'show'])->name('achievements.show');
 });

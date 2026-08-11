@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
-import ClickupController from '@/actions/App/Http/Controllers/Settings/ClickupController';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,8 +13,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/AppLayout.vue';
-import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { show } from '@/routes/clickup';
+import type { AppPageProps, Workspace } from '@/types';
 import { type BreadcrumbItem } from '@/types';
 
 interface ClickupStatus {
@@ -25,6 +23,7 @@ interface ClickupStatus {
 }
 
 const props = defineProps<{
+    workspace: Workspace;
     settings: {
         has_token: boolean;
         list_id: string | null;
@@ -38,11 +37,15 @@ const props = defineProps<{
     };
 }>();
 
+const page = usePage<AppPageProps>();
+const canManage = computed(() => {
+    const role = page.props.currentWorkspace?.role;
+    return role === 'owner' || role === 'admin';
+});
+
 const breadcrumbItems: BreadcrumbItem[] = [
-    {
-        title: 'ClickUp settings',
-        href: show().url,
-    },
+    { title: 'Workspace Settings', href: '/workspaces/settings' },
+    { title: 'ClickUp', href: '/workspaces/settings/clickup' },
 ];
 
 const settingsForm = useForm({
@@ -63,7 +66,7 @@ const fetchError = ref('');
 const registeringWebhook = ref(false);
 
 function saveSettings() {
-    settingsForm.put(ClickupController.update().url, {
+    settingsForm.put('/workspaces/settings/clickup', {
         preserveScroll: true,
         onSuccess: () => {
             settingsForm.reset('api_token');
@@ -73,7 +76,7 @@ function saveSettings() {
 }
 
 function saveMappings() {
-    mappingForm.put(ClickupController.updateStatusMapping().url, {
+    mappingForm.put('/workspaces/settings/clickup/status-mapping', {
         preserveScroll: true,
     });
 }
@@ -83,17 +86,20 @@ async function fetchStatuses() {
     fetchError.value = '';
 
     try {
-        const response = await fetch(ClickupController.fetchStatuses().url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN':
-                    document.querySelector<HTMLMetaElement>(
-                        'meta[name="csrf-token"]',
-                    )?.content ?? '',
-                Accept: 'application/json',
+        const response = await fetch(
+            '/workspaces/settings/clickup/fetch-statuses',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN':
+                        document.querySelector<HTMLMetaElement>(
+                            'meta[name="csrf-token"]',
+                        )?.content ?? '',
+                    Accept: 'application/json',
+                },
             },
-        });
+        );
 
         const data = await response.json();
 
@@ -113,7 +119,7 @@ async function fetchStatuses() {
 function registerWebhook() {
     registeringWebhook.value = true;
     router.post(
-        ClickupController.registerWebhook().url,
+        '/workspaces/settings/clickup/register-webhook',
         {},
         {
             preserveScroll: true,
@@ -131,10 +137,20 @@ function formatStatus(status: string): string {
     <AppLayout :breadcrumbs="breadcrumbItems">
         <Head title="ClickUp settings" />
 
-        <h1 class="sr-only">ClickUp Settings</h1>
+        <div class="flex flex-1 flex-col gap-6 p-6">
+            <Heading
+                :title="`ClickUp — ${workspace.name}`"
+                description="Bug reports from projects in this workspace export to this ClickUp list."
+            />
 
-        <SettingsLayout>
-            <div class="space-y-12">
+            <p
+                v-if="!canManage"
+                class="rounded-md border border-amber-400/40 bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+            >
+                Only workspace owners and admins can change these settings.
+            </p>
+
+            <div class="max-w-2xl space-y-12">
                 <!-- API Configuration -->
                 <div class="space-y-6">
                     <Heading
@@ -165,6 +181,7 @@ function formatStatus(status: string): string {
                                 v-model="settingsForm.api_token"
                                 type="password"
                                 autocomplete="new-password"
+                                :disabled="!canManage"
                                 :placeholder="
                                     settings.has_token
                                         ? '••••••••••••••••'
@@ -184,6 +201,7 @@ function formatStatus(status: string): string {
                             <Input
                                 id="list_id"
                                 v-model="settingsForm.list_id"
+                                :disabled="!canManage"
                                 placeholder="e.g. 901234567890"
                             />
                             <p
@@ -195,6 +213,7 @@ function formatStatus(status: string): string {
                         </div>
 
                         <Button
+                            v-if="canManage"
                             type="submit"
                             class="cursor-pointer"
                             :disabled="
@@ -211,7 +230,7 @@ function formatStatus(status: string): string {
                 </div>
 
                 <!-- Status Mapping -->
-                <div class="space-y-6">
+                <div v-if="canManage" class="space-y-6">
                     <Heading
                         variant="small"
                         title="Status Mapping"
@@ -329,7 +348,7 @@ function formatStatus(status: string): string {
                 </div>
 
                 <!-- Webhook -->
-                <div class="space-y-6">
+                <div v-if="canManage" class="space-y-6">
                     <Heading
                         variant="small"
                         title="Webhook"
@@ -417,6 +436,6 @@ function formatStatus(status: string): string {
                     </div>
                 </div>
             </div>
-        </SettingsLayout>
+        </div>
     </AppLayout>
 </template>

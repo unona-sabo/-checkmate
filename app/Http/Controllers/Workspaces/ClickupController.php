@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Settings;
+namespace App\Http\Controllers\Workspaces;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ClickupSettingsRequest;
@@ -10,6 +10,7 @@ use App\Services\AchievementService;
 use App\Services\ClickupService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -18,11 +19,15 @@ use Inertia\Response;
 
 class ClickupController extends Controller
 {
-    public function show(): Response
+    public function show(Request $request): Response
     {
-        $settings = ClickupSetting::current();
+        $workspace = $request->attributes->get('workspace');
+        $this->authorize('update', $workspace);
 
-        return Inertia::render('settings/Clickup', [
+        $settings = ClickupSetting::forWorkspace($workspace);
+
+        return Inertia::render('Workspaces/Clickup', [
+            'workspace' => $workspace,
             'settings' => [
                 'has_token' => ! empty($settings->api_token),
                 'list_id' => $settings->list_id,
@@ -66,7 +71,10 @@ class ClickupController extends Controller
 
     public function update(ClickupSettingsRequest $request, AchievementService $achievements): RedirectResponse
     {
-        $settings = ClickupSetting::current();
+        $workspace = $request->attributes->get('workspace');
+        $this->authorize('update', $workspace);
+
+        $settings = ClickupSetting::forWorkspace($workspace);
 
         $settings->update([
             'api_token' => $request->validated('api_token'),
@@ -82,7 +90,10 @@ class ClickupController extends Controller
 
     public function updateStatusMapping(ClickupStatusMappingRequest $request): RedirectResponse
     {
-        $settings = ClickupSetting::current();
+        $workspace = $request->attributes->get('workspace');
+        $this->authorize('update', $workspace);
+
+        $settings = ClickupSetting::forWorkspace($workspace);
 
         $settings->update([
             'status_mapping' => $request->validated('status_mapping'),
@@ -91,16 +102,19 @@ class ClickupController extends Controller
         return back()->with('success', 'Status mapping saved.');
     }
 
-    public function fetchStatuses(): JsonResponse
+    public function fetchStatuses(Request $request): JsonResponse
     {
-        $settings = ClickupSetting::current();
+        $workspace = $request->attributes->get('workspace');
+        $this->authorize('update', $workspace);
+
+        $settings = ClickupSetting::forWorkspace($workspace);
 
         if (! $settings->isConfigured()) {
             return response()->json(['error' => 'ClickUp is not configured. Save your API token and List ID first.'], 422);
         }
 
         try {
-            $service = ClickupService::fromSettings();
+            $service = ClickupService::fromSettings($settings);
             $statuses = $service->getListStatuses($settings->list_id);
 
             return response()->json(['statuses' => $statuses]);
@@ -109,16 +123,25 @@ class ClickupController extends Controller
         }
     }
 
-    public function registerWebhook(): RedirectResponse
+    public function registerWebhook(Request $request): RedirectResponse
     {
-        $settings = ClickupSetting::current();
+        $workspace = $request->attributes->get('workspace');
+        $this->authorize('update', $workspace);
+
+        $settings = ClickupSetting::forWorkspace($workspace);
 
         if (! $settings->isConfigured()) {
             return back()->with('error', 'Configure your API token and List ID first.');
         }
 
+        $endpoint = preg_replace('#^http://#', 'https://', url("/api/webhooks/clickup/{$workspace->id}"));
+
+        if (! $this->isPubliclyReachableHost($endpoint)) {
+            return back()->with('error', "ClickUp can't call back a local development URL ({$endpoint}). Webhooks need a real, publicly reachable domain — use a tunnel (e.g. ngrok) while developing locally, or register the webhook once this app is deployed.");
+        }
+
         try {
-            $service = ClickupService::fromSettings();
+            $service = ClickupService::fromSettings($settings);
 
             // Delete existing webhook if present
             if ($settings->webhook_id) {
@@ -135,14 +158,11 @@ class ClickupController extends Controller
             }
 
             $secret = Str::random(32);
-            // ClickUp requires an HTTPS endpoint; force the scheme in case
-            // the reverse proxy doesn't forward X-Forwarded-Proto and
-            // Laravel detects the request as plain HTTP.
-            $endpoint = preg_replace('#^http://#', 'https://', url('/api/webhooks/clickup'));
 
             Log::info('Registering ClickUp webhook', [
                 'endpoint' => $endpoint,
                 'teamId' => $teams[0]['id'],
+                'workspaceId' => $workspace->id,
             ]);
 
             $result = $service->registerWebhook($teams[0]['id'], $endpoint, $secret);
@@ -154,9 +174,35 @@ class ClickupController extends Controller
 
             return back()->with('success', 'Webhook registered successfully.');
         } catch (\Exception $e) {
-            $endpoint ??= 'unknown';
+            if (str_contains($e->getMessage(), 'OAUTH_194') || str_contains($e->getMessage(), 'Specified URL not allowed')) {
+                return back()->with('error', "ClickUp rejected the webhook URL ({$endpoint}) as not publicly reachable. Use a tunnel (e.g. ngrok) while developing locally, or register the webhook once this app is deployed to a real domain.");
+            }
 
             return back()->with('error', "Failed to register webhook (endpoint: {$endpoint}): ".$e->getMessage());
         }
+    }
+
+    /**
+     * ClickUp needs to call this URL back over the public internet — reject
+     * obviously local/dev hosts up front instead of round-tripping to
+     * ClickUp's API just to get back a cryptic "OAUTH_194" error.
+     */
+    private function isPubliclyReachableHost(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST) ?? '';
+
+        if ($host === '' || $host === 'localhost' || filter_var($host, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+
+        $localTlds = ['.test', '.local', '.localhost', '.internal', '.invalid', '.example'];
+
+        foreach ($localTlds as $tld) {
+            if (str_ends_with($host, $tld)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

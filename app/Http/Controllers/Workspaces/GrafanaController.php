@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Settings;
+namespace App\Http\Controllers\Workspaces;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\GrafanaSettingsRequest;
@@ -16,11 +16,15 @@ use Inertia\Response;
 
 class GrafanaController extends Controller
 {
-    public function show(): Response
+    public function show(Request $request): Response
     {
-        $settings = GrafanaSetting::current();
+        $workspace = $request->attributes->get('workspace');
+        $this->authorize('update', $workspace);
 
-        return Inertia::render('settings/Grafana', [
+        $settings = GrafanaSetting::forWorkspace($workspace);
+
+        return Inertia::render('Workspaces/Grafana', [
+            'workspace' => $workspace,
             'settings' => [
                 'has_token' => ! empty($settings->api_token),
                 'base_url' => $settings->base_url,
@@ -32,7 +36,10 @@ class GrafanaController extends Controller
 
     public function update(GrafanaSettingsRequest $request, AchievementService $achievements): RedirectResponse
     {
-        $settings = GrafanaSetting::current();
+        $workspace = $request->attributes->get('workspace');
+        $this->authorize('update', $workspace);
+
+        $settings = GrafanaSetting::forWorkspace($workspace);
 
         $data = collect($request->validated())
             ->reject(fn ($value, $key) => $key === 'api_token' && empty($value))
@@ -59,7 +66,10 @@ class GrafanaController extends Controller
      */
     public function testConnection(Request $request): JsonResponse
     {
-        $settings = GrafanaSetting::current();
+        $workspace = $request->attributes->get('workspace');
+        $this->authorize('update', $workspace);
+
+        $settings = GrafanaSetting::forWorkspace($workspace);
 
         if (empty($settings->base_url)) {
             return response()->json(['error' => 'Grafana Base URL is not configured.'], 422);

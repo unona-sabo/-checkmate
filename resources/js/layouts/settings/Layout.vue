@@ -7,7 +7,6 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { show as showBackup } from '@/routes/backup';
-import { show as showClickup } from '@/routes/clickup';
 import { edit as editProfile } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
@@ -33,14 +32,6 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Backup',
         href: showBackup(),
-    },
-    {
-        title: 'ClickUp',
-        href: showClickup(),
-    },
-    {
-        title: 'Grafana',
-        href: '/settings/grafana',
     },
     {
         title: 'Achievements',

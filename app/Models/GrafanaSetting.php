@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GrafanaSetting extends Model
 {
     protected $fillable = [
+        'workspace_id',
         'api_token',
         'base_url',
         'datasource_id',
@@ -24,11 +26,19 @@ class GrafanaSetting extends Model
     }
 
     /**
-     * Get or create the singleton settings record.
+     * Get the workspace that owns these settings.
      */
-    public static function current(): self
+    public function workspace(): BelongsTo
     {
-        return self::firstOrCreate([]);
+        return $this->belongsTo(Workspace::class);
+    }
+
+    /**
+     * Get or create the settings record for the given workspace.
+     */
+    public static function forWorkspace(Workspace $workspace): self
+    {
+        return self::firstOrCreate(['workspace_id' => $workspace->id]);
     }
 
     /**

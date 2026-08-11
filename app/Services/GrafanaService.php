@@ -13,10 +13,8 @@ class GrafanaService
         private string $datasourceId,
     ) {}
 
-    public static function fromSettings(): self
+    public static function fromSettings(GrafanaSetting $settings): self
     {
-        $settings = GrafanaSetting::current();
-
         return new self(
             baseUrl: rtrim($settings->base_url ?? '', '/'),
             apiToken: $settings->api_token ?? '',

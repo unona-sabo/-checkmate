@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\GrafanaSetting;
 use App\Models\Project;
 use App\Models\User;
 
@@ -60,5 +61,34 @@ test('fetch-latest returns error when grafana not configured', function () {
     $this->actingAs($user)
         ->postJson("/projects/{$project->id}/payout-monitor/fetch-latest")
         ->assertUnprocessable()
-        ->assertJsonPath('error', 'Grafana is not configured. Go to Settings > Grafana to set up your API token.');
+        ->assertJsonPath('error', 'Grafana is not configured. Go to Workspace Settings > Grafana to set up your API token.');
+});
+
+test('payout monitor index reflects the project workspace own grafana settings', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+
+    GrafanaSetting::forWorkspace($workspace)->update([
+        'api_token' => 'glsa_test',
+        'base_url' => 'https://workspace-logging.example.io',
+        'datasource_id' => '1',
+        'log_path' => '/logs/payouts-{YYYY-MM-DD}.log',
+    ]);
+
+    $this->actingAs($user)
+        ->get("/projects/{$project->id}/payout-monitor")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('isConfigured', true)
+            ->where('logPath', '/logs/payouts-{YYYY-MM-DD}.log')
+        );
+
+    // A project in a different, unconfigured workspace sees no config.
+    [$otherUser, $otherWorkspace] = createUserWithWorkspace();
+    $otherProject = Project::factory()->create(['user_id' => $otherUser->id, 'workspace_id' => $otherWorkspace->id]);
+
+    $this->actingAs($otherUser)
+        ->get("/projects/{$otherProject->id}/payout-monitor")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('isConfigured', false));
 });

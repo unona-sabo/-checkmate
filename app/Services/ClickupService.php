@@ -19,12 +19,10 @@ class ClickupService
     }
 
     /**
-     * Create a service instance from the stored settings.
+     * Create a service instance from the given workspace's settings.
      */
-    public static function fromSettings(): self
+    public static function fromSettings(ClickupSetting $settings): self
     {
-        $settings = ClickupSetting::current();
-
         return new self($settings->api_token ?? '');
     }
 

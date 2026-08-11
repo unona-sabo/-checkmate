@@ -16,21 +16,21 @@ class PayoutMonitorController extends Controller
 {
     public function index(Project $project): Response
     {
-        $settings = GrafanaSetting::current();
+        $settings = $project->workspace ? GrafanaSetting::forWorkspace($project->workspace) : null;
 
         return Inertia::render('PayoutMonitor/Index', [
             'project' => $project,
-            'isConfigured' => $settings->isConfigured(),
-            'logPath' => $settings->log_path,
+            'isConfigured' => $settings?->isConfigured() ?? false,
+            'logPath' => $settings?->log_path,
         ]);
     }
 
     public function fetchLatest(Project $project, Request $request): JsonResponse
     {
-        $settings = GrafanaSetting::current();
+        $settings = $project->workspace ? GrafanaSetting::forWorkspace($project->workspace) : null;
 
-        if (! $settings->isConfigured()) {
-            return response()->json(['error' => 'Grafana is not configured. Go to Settings > Grafana to set up your API token.'], 422);
+        if (! $settings?->isConfigured()) {
+            return response()->json(['error' => 'Grafana is not configured. Go to Workspace Settings > Grafana to set up your API token.'], 422);
         }
 
         $minutesBack = (int) $request->input('minutes_back', 60);
@@ -38,14 +38,14 @@ class PayoutMonitorController extends Controller
 
         $logPath = $request->input('log_path', $settings->log_path);
         if (empty($logPath)) {
-            return response()->json(['error' => 'Log path is not configured. Go to Settings > Grafana to set the log file path.'], 422);
+            return response()->json(['error' => 'Log path is not configured. Go to Workspace Settings > Grafana to set the log file path.'], 422);
         }
 
         // Replace date placeholder
         $logPath = str_replace('{YYYY-MM-DD}', now()->format('Y-m-d'), $logPath);
 
         try {
-            $service = GrafanaService::fromSettings();
+            $service = GrafanaService::fromSettings($settings);
             $lines = $service->fetchRecentLogs($logPath, 'terrapay', $minutesBack);
 
             $rawLog = implode("\n", $lines);

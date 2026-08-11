@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
-import SettingsLayout from '@/layouts/settings/Layout.vue';
+import type { AppPageProps, Workspace } from '@/types';
 import { type BreadcrumbItem } from '@/types';
 
 interface ConnectionAttempt {
@@ -27,6 +27,7 @@ interface ConnectionTestResult {
 }
 
 const props = defineProps<{
+    workspace: Workspace;
     settings: {
         has_token: boolean;
         base_url: string | null;
@@ -35,8 +36,15 @@ const props = defineProps<{
     };
 }>();
 
+const page = usePage<AppPageProps>();
+const canManage = computed(() => {
+    const role = page.props.currentWorkspace?.role;
+    return role === 'owner' || role === 'admin';
+});
+
 const breadcrumbItems: BreadcrumbItem[] = [
-    { title: 'Grafana settings', href: '/settings/grafana' },
+    { title: 'Workspace Settings', href: '/workspaces/settings' },
+    { title: 'Grafana', href: '/workspaces/settings/grafana' },
 ];
 
 const form = useForm({
@@ -47,7 +55,7 @@ const form = useForm({
 });
 
 function save() {
-    form.put('/settings/grafana', {
+    form.put('/workspaces/settings/grafana', {
         preserveScroll: true,
         onSuccess: () => {
             form.reset('api_token');
@@ -67,18 +75,23 @@ async function testConnection() {
     testResult.value = null;
 
     try {
-        const response = await fetch('/settings/grafana/test-connection', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN':
-                    document.querySelector<HTMLMetaElement>(
-                        'meta[name="csrf-token"]',
-                    )?.content ?? '',
-                Accept: 'application/json',
+        const response = await fetch(
+            '/workspaces/settings/grafana/test-connection',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN':
+                        document.querySelector<HTMLMetaElement>(
+                            'meta[name="csrf-token"]',
+                        )?.content ?? '',
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({
+                    ip: manualIp.value.trim() || undefined,
+                }),
             },
-            body: JSON.stringify({ ip: manualIp.value.trim() || undefined }),
-        });
+        );
 
         const data = await response.json();
 
@@ -98,14 +111,21 @@ async function testConnection() {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Grafana Settings" />
-        <SettingsLayout>
-            <div class="flex flex-col gap-6">
-                <Heading
-                    title="Grafana / Loki"
-                    description="Configure Grafana connection for the Payout Monitor."
-                />
+        <Head title="Grafana settings" />
+        <div class="flex flex-1 flex-col gap-6 p-6">
+            <Heading
+                :title="`Grafana / Loki — ${workspace.name}`"
+                description="Configure the Grafana connection used by this workspace's Payout Monitor."
+            />
 
+            <p
+                v-if="!canManage"
+                class="max-w-2xl rounded-md border border-amber-400/40 bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+            >
+                Only workspace owners and admins can change these settings.
+            </p>
+
+            <div class="max-w-2xl space-y-6">
                 <form class="space-y-6" @submit.prevent="save">
                     <div class="grid gap-4 rounded-lg border p-4">
                         <div class="space-y-2">
@@ -131,6 +151,7 @@ async function testConnection() {
                                 v-model="form.api_token"
                                 type="password"
                                 autocomplete="new-password"
+                                :disabled="!canManage"
                                 :placeholder="
                                     settings.has_token
                                         ? '••••••••••••••••'
@@ -154,6 +175,7 @@ async function testConnection() {
                             <Input
                                 id="base_url"
                                 v-model="form.base_url"
+                                :disabled="!canManage"
                                 placeholder="https://logging.air.io"
                             />
                             <p
@@ -171,6 +193,7 @@ async function testConnection() {
                             <Input
                                 id="datasource_id"
                                 v-model="form.datasource_id"
+                                :disabled="!canManage"
                                 placeholder="1 or Q111_7"
                             />
                             <p
@@ -190,6 +213,7 @@ async function testConnection() {
                             <Input
                                 id="log_path"
                                 v-model="form.log_path"
+                                :disabled="!canManage"
                                 placeholder="/home/accountant/app/storage/logs/payouts-{YYYY-MM-DD}.log"
                             />
                             <p
@@ -205,7 +229,7 @@ async function testConnection() {
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-4">
+                    <div v-if="canManage" class="flex items-center gap-4">
                         <Button
                             type="submit"
                             :disabled="form.processing || !form.isDirty"
@@ -336,6 +360,6 @@ async function testConnection() {
                     </div>
                 </div>
             </div>
-        </SettingsLayout>
+        </div>
     </AppLayout>
 </template>

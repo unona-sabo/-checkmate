@@ -24,6 +24,8 @@ use App\Http\Controllers\TestSuiteController;
 use App\Http\Controllers\TranslationController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
+use App\Http\Controllers\Workspaces\ClickupController as WorkspaceClickupController;
+use App\Http\Controllers\Workspaces\GrafanaController as WorkspaceGrafanaController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -54,6 +56,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('workspaces/members', [WorkspaceMemberController::class, 'store'])->name('workspaces.members.store');
     Route::put('workspaces/members/{member}', [WorkspaceMemberController::class, 'update'])->name('workspaces.members.update');
     Route::delete('workspaces/members/{member}', [WorkspaceMemberController::class, 'destroy'])->name('workspaces.members.destroy');
+
+    Route::get('workspaces/settings/clickup', [WorkspaceClickupController::class, 'show'])->name('workspaces.clickup.show');
+    Route::put('workspaces/settings/clickup', [WorkspaceClickupController::class, 'update'])->name('workspaces.clickup.update');
+    Route::put('workspaces/settings/clickup/status-mapping', [WorkspaceClickupController::class, 'updateStatusMapping'])->name('workspaces.clickup.status-mapping');
+    Route::post('workspaces/settings/clickup/fetch-statuses', [WorkspaceClickupController::class, 'fetchStatuses'])->name('workspaces.clickup.fetch-statuses');
+    Route::post('workspaces/settings/clickup/register-webhook', [WorkspaceClickupController::class, 'registerWebhook'])->name('workspaces.clickup.register-webhook');
+
+    Route::get('workspaces/settings/grafana', [WorkspaceGrafanaController::class, 'show'])->name('workspaces.grafana.show');
+    Route::put('workspaces/settings/grafana', [WorkspaceGrafanaController::class, 'update'])->name('workspaces.grafana.update');
+    Route::post('workspaces/settings/grafana/test-connection', [WorkspaceGrafanaController::class, 'testConnection'])->name('workspaces.grafana.test-connection');
 
     // Projects
     Route::post('projects/reorder', [ProjectController::class, 'reorder'])->name('projects.reorder');

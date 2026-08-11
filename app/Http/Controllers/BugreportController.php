@@ -15,6 +15,7 @@ use App\Models\TestCase;
 use App\Services\AttachmentService;
 use App\Services\ClickupService;
 use App\Services\FeatureLinkingService;
+use Illuminate\Http\Client\RequestException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -170,10 +171,10 @@ class BugreportController extends Controller
     {
         $this->authorize('update', $project);
 
-        $settings = ClickupSetting::current();
+        $settings = $project->workspace ? ClickupSetting::forWorkspace($project->workspace) : null;
 
-        if (! $settings->isConfigured()) {
-            return back()->with('error', 'ClickUp integration is not configured. Go to Settings → ClickUp to set it up.');
+        if (! $settings?->isConfigured()) {
+            return back()->with('error', 'ClickUp integration is not configured. Go to Workspace Settings → ClickUp to set it up.');
         }
 
         if ($bugreport->clickup_task_id) {
@@ -193,14 +194,14 @@ class BugreportController extends Controller
             return back()->with('error', 'This bug report is not linked to ClickUp.');
         }
 
-        $settings = ClickupSetting::current();
+        $settings = $project->workspace ? ClickupSetting::forWorkspace($project->workspace) : null;
 
-        if (! $settings->isConfigured()) {
+        if (! $settings?->isConfigured()) {
             return back()->with('error', 'ClickUp integration is not configured.');
         }
 
         try {
-            $service = ClickupService::fromSettings();
+            $service = ClickupService::fromSettings($settings);
             $task = $service->getTask($bugreport->clickup_task_id);
 
             $clickupStatus = strtolower($task['status']['status'] ?? '');
@@ -215,6 +216,12 @@ class BugreportController extends Controller
             }
 
             return back()->with('info', 'Status is already up to date.');
+        } catch (RequestException $e) {
+            if ($e->response->status() === 404) {
+                return back()->with('error', 'This bug report\'s ClickUp task no longer exists — it was likely deleted in ClickUp. Unlink it and re-export if you need a new one.');
+            }
+
+            return back()->with('error', 'Failed to sync from ClickUp: '.$e->getMessage());
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to sync from ClickUp: '.$e->getMessage());
         }
@@ -224,9 +231,9 @@ class BugreportController extends Controller
     {
         $this->authorize('update', $project);
 
-        $settings = ClickupSetting::current();
+        $settings = $project->workspace ? ClickupSetting::forWorkspace($project->workspace) : null;
 
-        if (! $settings->isConfigured()) {
+        if (! $settings?->isConfigured()) {
             return back()->with('error', 'ClickUp integration is not configured.');
         }
 
