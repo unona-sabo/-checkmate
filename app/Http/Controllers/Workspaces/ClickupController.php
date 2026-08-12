@@ -181,21 +181,24 @@ class ClickupController extends Controller
 
             // ClickUp's create-webhook endpoint does not accept a
             // client-supplied secret — it always generates its own and
-            // returns it in the response. Storing anything other than
-            // $result['secret'] here means every signature we compute is
-            // checked against a secret ClickUp never actually signed with,
-            // so every delivery looks like a permanent, unexplainable
-            // signature mismatch.
+            // returns it nested under `webhook.secret` in the response
+            // (the top-level `id` is a duplicate of `webhook.id`). Storing
+            // anything other than that value means every signature we
+            // compute is checked against a secret ClickUp never actually
+            // signed with, so every delivery looks like a permanent,
+            // unexplainable signature mismatch.
             $result = $service->registerWebhook($teamId, $endpoint);
+            $webhookId = $result['webhook']['id'] ?? $result['id'];
+            $webhookSecret = $result['webhook']['secret'];
 
             $settings->update([
-                'webhook_id' => $result['id'],
-                'webhook_secret' => $result['secret'],
+                'webhook_id' => $webhookId,
+                'webhook_secret' => $webhookSecret,
             ]);
 
             Log::info('ClickUp webhook registered', [
-                'webhookId' => $result['id'],
-                'secretFingerprint' => substr(hash('sha256', $result['secret']), 0, 12),
+                'webhookId' => $webhookId,
+                'secretFingerprint' => substr(hash('sha256', $webhookSecret), 0, 12),
             ]);
 
             return back()->with('success', 'Webhook registered successfully.');

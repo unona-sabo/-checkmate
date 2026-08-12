@@ -103,10 +103,10 @@ class ClickupService
     /**
      * Register a webhook for task status updates. ClickUp does not accept a
      * client-supplied secret — it always generates its own and returns it
-     * in the response as `secret`, which callers must persist and use for
-     * signature verification.
+     * nested under `webhook.secret` in the response, which callers must
+     * persist and use for signature verification.
      *
-     * @return array{id: string, secret: string, webhook: array<string, mixed>}
+     * @return array{id: string, webhook: array{id: string, secret: string, endpoint: string, events: list<string>, health?: array<string, mixed>}}
      */
     public function registerWebhook(string $teamId, string $endpoint): array
     {

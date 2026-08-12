@@ -146,7 +146,7 @@ test('register webhook deletes every existing webhook pointing at our endpoint, 
                 ['id' => 'orphan-1', 'endpoint' => 'https://myapp.io/api/webhooks/clickup/1'],
                 ['id' => 'other-workspace', 'endpoint' => 'https://myapp.io/api/webhooks/clickup/999'],
             ]])
-            ->push(['id' => 'fresh-webhook', 'secret' => 'clickup-generated-secret']),
+            ->push(['id' => 'fresh-webhook', 'webhook' => ['id' => 'fresh-webhook', 'secret' => 'clickup-generated-secret']]),
         'api.clickup.com/api/v2/webhook/orphan-1' => Http::response([], 200),
     ]);
 
