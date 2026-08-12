@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ClickupSetting;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
 
 test('clickup settings page is displayed', function () {
@@ -113,6 +114,66 @@ test('register webhook rejects a local development domain up front', function ()
     expect(session('error'))->toContain("can't call back a local development URL");
 
     URL::forceRootUrl(config('app.url'));
+});
+
+test('webhook health returns an error when no webhook is registered', function () {
+    [$user] = createUserWithWorkspace();
+
+    $response = $this->actingAs($user)->getJson(route('workspaces.clickup.webhook-health'));
+
+    $response->assertStatus(422)->assertJsonPath('error', 'No webhook has been registered for this workspace yet.');
+});
+
+test('webhook health reports the delivery status ClickUp has for the registered webhook', function () {
+    Http::fake([
+        'api.clickup.com/api/v2/team' => Http::response(['teams' => [['id' => '9003144822']]]),
+        'api.clickup.com/api/v2/team/9003144822/webhook' => Http::response([
+            'webhooks' => [
+                [
+                    'id' => 'webhook-1',
+                    'endpoint' => 'https://checkmate.test/api/webhooks/clickup/1',
+                    'events' => ['taskStatusUpdated'],
+                    'health' => ['status' => 'active', 'fail_count' => 0],
+                ],
+            ],
+        ]),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    ClickupSetting::forWorkspace($workspace)->update([
+        'api_token' => 'pk_test_token',
+        'list_id' => '123456',
+        'webhook_id' => 'webhook-1',
+    ]);
+
+    $response = $this->actingAs($user)->getJson(route('workspaces.clickup.webhook-health'));
+
+    $response->assertOk();
+    $response->assertJson([
+        'endpoint' => 'https://checkmate.test/api/webhooks/clickup/1',
+        'events' => ['taskStatusUpdated'],
+        'health' => ['status' => 'active', 'fail_count' => 0],
+        'team_id' => '9003144822',
+    ]);
+});
+
+test('webhook health flags when the webhook no longer exists on ClickUp', function () {
+    Http::fake([
+        'api.clickup.com/api/v2/team' => Http::response(['teams' => [['id' => '9003144822']]]),
+        'api.clickup.com/api/v2/team/9003144822/webhook' => Http::response(['webhooks' => []]),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    ClickupSetting::forWorkspace($workspace)->update([
+        'api_token' => 'pk_test_token',
+        'list_id' => '123456',
+        'webhook_id' => 'webhook-1',
+    ]);
+
+    $response = $this->actingAs($user)->getJson(route('workspaces.clickup.webhook-health'));
+
+    $response->assertStatus(422);
+    expect($response->json('error'))->toContain('no longer has a webhook with ID webhook-1');
 });
 
 test('two workspaces have independent clickup settings', function () {

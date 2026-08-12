@@ -59,6 +59,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('workspaces/settings/clickup/status-mapping', [WorkspaceClickupController::class, 'updateStatusMapping'])->name('workspaces.clickup.status-mapping');
     Route::post('workspaces/settings/clickup/fetch-statuses', [WorkspaceClickupController::class, 'fetchStatuses'])->name('workspaces.clickup.fetch-statuses');
     Route::post('workspaces/settings/clickup/register-webhook', [WorkspaceClickupController::class, 'registerWebhook'])->name('workspaces.clickup.register-webhook');
+    Route::get('workspaces/settings/clickup/webhook-health', [WorkspaceClickupController::class, 'webhookHealth'])->name('workspaces.clickup.webhook-health');
 
     Route::get('workspaces/settings/grafana', [WorkspaceGrafanaController::class, 'show'])->name('workspaces.grafana.show');
     Route::put('workspaces/settings/grafana', [WorkspaceGrafanaController::class, 'update'])->name('workspaces.grafana.update');

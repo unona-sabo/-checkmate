@@ -183,6 +183,49 @@ class ClickupController extends Controller
     }
 
     /**
+     * Ask ClickUp directly whether the registered webhook is healthy — this
+     * environment has no way to inspect ClickUp's own delivery logs
+     * otherwise, and "the webhook object still exists" isn't the same as
+     * "ClickUp is successfully delivering to it."
+     */
+    public function webhookHealth(Request $request): JsonResponse
+    {
+        $workspace = $request->attributes->get('workspace');
+        $this->authorize('update', $workspace);
+
+        $settings = ClickupSetting::forWorkspace($workspace);
+
+        if (! $settings->webhook_id) {
+            return response()->json(['error' => 'No webhook has been registered for this workspace yet.'], 422);
+        }
+
+        try {
+            $service = ClickupService::fromSettings($settings);
+            $teams = $service->getTeams();
+
+            if (empty($teams)) {
+                return response()->json(['error' => 'No ClickUp teams found for this API token.'], 422);
+            }
+
+            $webhooks = $service->listWebhooks($teams[0]['id']);
+            $webhook = collect($webhooks)->firstWhere('id', $settings->webhook_id);
+
+            if (! $webhook) {
+                return response()->json(['error' => "ClickUp no longer has a webhook with ID {$settings->webhook_id} — it may have been deleted or disabled on ClickUp's side. Try registering it again."], 422);
+            }
+
+            return response()->json([
+                'endpoint' => $webhook['endpoint'] ?? null,
+                'events' => $webhook['events'] ?? [],
+                'health' => $webhook['health'] ?? null,
+                'team_id' => $teams[0]['id'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to check webhook health: '.$e->getMessage()], 422);
+        }
+    }
+
+    /**
      * ClickUp needs to call this URL back over the public internet — reject
      * obviously local/dev hosts up front instead of round-tripping to
      * ClickUp's API just to get back a cryptic "OAUTH_194" error.

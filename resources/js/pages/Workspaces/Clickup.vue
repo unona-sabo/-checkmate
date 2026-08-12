@@ -65,6 +65,16 @@ const fetchingStatuses = ref(false);
 const fetchError = ref('');
 const registeringWebhook = ref(false);
 
+interface WebhookHealth {
+    endpoint: string | null;
+    events: string[];
+    health: { status: string; fail_count: number } | null;
+    team_id: string;
+}
+const checkingWebhookHealth = ref(false);
+const webhookHealth = ref<WebhookHealth | null>(null);
+const webhookHealthError = ref('');
+
 function saveSettings() {
     settingsForm.put('/workspaces/settings/clickup', {
         preserveScroll: true,
@@ -126,6 +136,32 @@ function registerWebhook() {
             onFinish: () => (registeringWebhook.value = false),
         },
     );
+}
+
+async function checkWebhookHealth() {
+    checkingWebhookHealth.value = true;
+    webhookHealthError.value = '';
+    webhookHealth.value = null;
+
+    try {
+        const response = await fetch(
+            '/workspaces/settings/clickup/webhook-health',
+            { headers: { Accept: 'application/json' } },
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+            webhookHealthError.value =
+                data.error || 'Failed to check webhook health.';
+            return;
+        }
+
+        webhookHealth.value = data;
+    } catch {
+        webhookHealthError.value = 'Network error checking webhook health.';
+    } finally {
+        checkingWebhookHealth.value = false;
+    }
 }
 
 function formatStatus(status: string): string {
@@ -380,6 +416,66 @@ function formatStatus(status: string): string {
                         <span v-else class="text-sm text-muted-foreground">
                             No webhook registered
                         </span>
+
+                        <Button
+                            v-if="settings.has_webhook"
+                            variant="ghost"
+                            size="sm"
+                            class="cursor-pointer"
+                            :disabled="checkingWebhookHealth"
+                            @click="checkWebhookHealth"
+                        >
+                            {{
+                                checkingWebhookHealth
+                                    ? 'Checking...'
+                                    : 'Check webhook health'
+                            }}
+                        </Button>
+                    </div>
+
+                    <p
+                        v-if="webhookHealthError"
+                        class="text-sm text-destructive"
+                    >
+                        {{ webhookHealthError }}
+                    </p>
+
+                    <div
+                        v-if="webhookHealth"
+                        class="space-y-1 rounded-lg border p-4 text-sm"
+                    >
+                        <p>
+                            <span class="font-medium">Endpoint:</span>
+                            {{ webhookHealth.endpoint }}
+                        </p>
+                        <p>
+                            <span class="font-medium">Events:</span>
+                            {{ webhookHealth.events.join(', ') }}
+                        </p>
+                        <p>
+                            <span class="font-medium"
+                                >ClickUp health status:</span
+                            >
+                            <span
+                                :class="
+                                    webhookHealth.health?.status === 'active'
+                                        ? 'text-green-600'
+                                        : 'text-destructive'
+                                "
+                            >
+                                {{ webhookHealth.health?.status ?? 'unknown' }}
+                            </span>
+                            <span
+                                v-if="
+                                    webhookHealth.health &&
+                                    webhookHealth.health.fail_count > 0
+                                "
+                                class="text-destructive"
+                            >
+                                ({{ webhookHealth.health.fail_count }} failed
+                                delivery attempt(s) recorded by ClickUp)
+                            </span>
+                        </p>
                     </div>
                 </div>
 

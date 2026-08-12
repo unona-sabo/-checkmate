@@ -127,6 +127,21 @@ class ClickupService
     }
 
     /**
+     * List the webhooks registered for a team, including each one's
+     * delivery health as ClickUp sees it.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listWebhooks(string $teamId): array
+    {
+        $response = $this->http->get("/team/{$teamId}/webhook");
+
+        $response->throw();
+
+        return $response->json('webhooks', []);
+    }
+
+    /**
      * Map a ClickUp status name to the app's Bugreport status using the
      * workspace's configured mapping (app_status => clickup_status, stored
      * lowercase). Shared by the webhook handler, the manual sync action,
