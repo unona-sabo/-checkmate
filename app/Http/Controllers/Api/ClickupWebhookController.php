@@ -20,8 +20,10 @@ class ClickupWebhookController extends Controller
 
         $settings = ClickupSetting::forWorkspace($workspace);
 
-        if (! $this->verifySignature($request, $settings->webhook_secret ?? '')) {
-            Log::warning("ClickUp webhook: rejected \"{$event}\" event for workspace {$workspace->id} — invalid or missing signature.");
+        $failureReason = $this->signatureFailureReason($request, $settings->webhook_secret ?? '');
+
+        if ($failureReason) {
+            Log::warning("ClickUp webhook: rejected \"{$event}\" event for workspace {$workspace->id} — {$failureReason}");
 
             return response()->json(['error' => 'Invalid signature'], 401);
         }
@@ -33,17 +35,33 @@ class ClickupWebhookController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    private function verifySignature(Request $request, string $secret): bool
+    /**
+     * Verify the HMAC signature and, when it fails, say exactly why — this
+     * is the only way to tell "ClickUp sent no signature header at all"
+     * apart from "it sent one, but it doesn't match what we computed"
+     * without access to ClickUp's own delivery logs. The computed/received
+     * digests are safe to log: an HMAC digest doesn't reveal the secret it
+     * was produced with.
+     */
+    private function signatureFailureReason(Request $request, string $secret): ?string
     {
+        if (! $secret) {
+            return 'no webhook secret is configured for this workspace.';
+        }
+
         $signature = $request->header('X-Signature');
 
-        if (! $signature || ! $secret) {
-            return false;
+        if (! $signature) {
+            return 'ClickUp sent no X-Signature header.';
         }
 
         $computed = hash_hmac('sha256', $request->getContent(), $secret);
 
-        return hash_equals($computed, $signature);
+        if (! hash_equals($computed, $signature)) {
+            return "signature mismatch (received {$signature}, computed {$computed}).";
+        }
+
+        return null;
     }
 
     /**
