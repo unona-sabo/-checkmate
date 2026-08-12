@@ -101,16 +101,18 @@ class ClickupService
     }
 
     /**
-     * Register a webhook for task status updates.
+     * Register a webhook for task status updates. ClickUp does not accept a
+     * client-supplied secret — it always generates its own and returns it
+     * in the response as `secret`, which callers must persist and use for
+     * signature verification.
      *
-     * @return array{id: string, webhook: array<string, mixed>}
+     * @return array{id: string, secret: string, webhook: array<string, mixed>}
      */
-    public function registerWebhook(string $teamId, string $endpoint, string $secret): array
+    public function registerWebhook(string $teamId, string $endpoint): array
     {
         $response = $this->http->post("/team/{$teamId}/webhook", [
             'endpoint' => $endpoint,
             'events' => ['taskStatusUpdated'],
-            'secret' => $secret,
         ]);
 
         $response->throw();

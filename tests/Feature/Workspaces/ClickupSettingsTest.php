@@ -146,7 +146,7 @@ test('register webhook deletes every existing webhook pointing at our endpoint, 
                 ['id' => 'orphan-1', 'endpoint' => 'https://myapp.io/api/webhooks/clickup/1'],
                 ['id' => 'other-workspace', 'endpoint' => 'https://myapp.io/api/webhooks/clickup/999'],
             ]])
-            ->push(['id' => 'fresh-webhook']),
+            ->push(['id' => 'fresh-webhook', 'secret' => 'clickup-generated-secret']),
         'api.clickup.com/api/v2/webhook/orphan-1' => Http::response([], 200),
     ]);
 
@@ -170,7 +170,10 @@ test('register webhook deletes every existing webhook pointing at our endpoint, 
 
     $settings = ClickupSetting::forWorkspace($workspace);
     expect($settings->webhook_id)->toBe('fresh-webhook');
-    expect($settings->webhook_secret)->not->toBe('old-secret');
+    // Must persist the secret ClickUp actually generated and returned, not
+    // any value we might have proposed — ClickUp's create-webhook endpoint
+    // doesn't accept a client-supplied secret at all.
+    expect($settings->webhook_secret)->toBe('clickup-generated-secret');
 
     URL::forceRootUrl(config('app.url'));
 });
