@@ -172,6 +172,11 @@ class ClickupController extends Controller
                 'endpoint' => $endpoint,
                 'teamId' => $teamId,
                 'workspaceId' => $workspace->id,
+                // Correlates against the "secret fingerprint" logged on a
+                // signature mismatch — same fingerprint proves the webhook
+                // handler is checking against the secret this registration
+                // actually stored, ruling out stale/cached settings.
+                'secretFingerprint' => substr(hash('sha256', $secret), 0, 12),
             ]);
 
             $result = $service->registerWebhook($teamId, $endpoint, $secret);

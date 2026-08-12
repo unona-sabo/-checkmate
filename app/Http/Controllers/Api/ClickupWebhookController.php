@@ -55,10 +55,20 @@ class ClickupWebhookController extends Controller
             return 'ClickUp sent no X-Signature header.';
         }
 
-        $computed = hash_hmac('sha256', $request->getContent(), $secret);
+        $body = $request->getContent();
+        $computed = hash_hmac('sha256', $body, $secret);
 
         if (! hash_equals($computed, $signature)) {
-            return "signature mismatch (received {$signature}, computed {$computed}).";
+            // A secret-hash fingerprint (not the secret itself) lets us
+            // confirm from the logs alone whether this request was checked
+            // against the same secret the last registration stored — if it
+            // matches, the mismatch is in the request body bytes (e.g. a
+            // proxy/WAF altering them in transit), not in secret storage.
+            $secretFingerprint = substr(hash('sha256', $secret), 0, 12);
+
+            return "signature mismatch (received {$signature}, computed {$computed}, ".
+                "secret fingerprint {$secretFingerprint}, body length ".strlen($body).
+                ', body starts with '.json_encode(substr($body, 0, 40)).').';
         }
 
         return null;
