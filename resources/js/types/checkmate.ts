@@ -781,3 +781,58 @@ export interface AIGenerationOptions {
 }
 
 export type AIProvider = 'gemini' | 'claude';
+
+export interface DashboardActivityCounts {
+    checklists: number;
+    checklists_completed: number;
+    bugreports: number;
+    test_runs_completed: number;
+    releases_opened: number;
+    releases_released: number;
+    features_added: number;
+    test_cases_added: number;
+    ai_analyses: number;
+}
+
+export type DashboardEventType =
+    | 'bug'
+    | 'test_run'
+    | 'coverage'
+    | 'checklist_created'
+    | 'checklist'
+    | 'release'
+    | 'feature'
+    | 'test_case';
+
+export interface DashboardEvent {
+    type: DashboardEventType;
+    project_id: number;
+    project_name: string;
+    timestamp: string;
+    title: string;
+    meta: string[];
+    tag: string | null;
+    url: string;
+}
+
+export interface DashboardActivityProject {
+    id: number;
+    name: string;
+    counts: DashboardActivityCounts;
+    total: number;
+    recent: DashboardEvent[];
+}
+
+export interface DashboardRecentAchievement {
+    key: string;
+    unlocked_at: string;
+}
+
+export interface DashboardActivity {
+    last_day: DashboardActivityCounts;
+    last_day_events: DashboardEvent[];
+    week: DashboardActivityCounts;
+    week_previous: DashboardActivityCounts;
+    projects: DashboardActivityProject[];
+    achievements: DashboardRecentAchievement[];
+}

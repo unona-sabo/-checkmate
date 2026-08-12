@@ -28,7 +28,7 @@ import {
     ArrowDown,
     Minus,
 } from 'lucide-vue-next';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -139,7 +139,7 @@ const displayedAnalysis = computed(() =>
         : analysisResults.value,
 );
 
-const viewHistoryEntry = async (entryId: number, date: string) => {
+const viewHistoryEntry = async (entryId: number, date?: string) => {
     loadingHistoryEntryId.value = entryId;
     historyEntryError.value = '';
     try {
@@ -154,7 +154,7 @@ const viewHistoryEntry = async (entryId: number, date: string) => {
             );
         }
         historyAnalysisData.value = data.analysis_data;
-        viewingHistoryDate.value = date;
+        viewingHistoryDate.value = date ?? data.date ?? null;
         activeTab.value = 'ai-analysis';
     } catch (error) {
         historyEntryError.value =
@@ -165,6 +165,17 @@ const viewHistoryEntry = async (entryId: number, date: string) => {
         loadingHistoryEntryId.value = null;
     }
 };
+
+// Deep link from outside the page (e.g. the Dashboard's recent-activity
+// feed): /projects/{project}/test-coverage?history={coverageAnalysisId}
+onMounted(() => {
+    const historyId = new URLSearchParams(window.location.search).get(
+        'history',
+    );
+    if (historyId) {
+        viewHistoryEntry(Number(historyId));
+    }
+});
 
 const backToLatestAnalysis = () => {
     viewingHistoryDate.value = null;
