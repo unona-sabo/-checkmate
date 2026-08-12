@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import { FileText, Upload, X } from 'lucide-vue-next';
+import FeatureSelector from '@/components/FeatureSelector.vue';
 import InputError from '@/components/InputError.vue';
 import RichTextEditor from '@/components/RichTextEditor.vue';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ import {
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
 
 interface ParentOption {
     id: number;
@@ -33,6 +35,7 @@ const props = defineProps<{
     project: Project;
     parentOptions: ParentOption[];
     defaultParentId?: number | null;
+    features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -53,6 +56,7 @@ const form = useForm({
     content: '',
     category: '',
     parent_id: props.defaultParentId ?? (null as number | null),
+    feature_ids: [] as number[],
     attachments: [] as File[],
 });
 useClearErrorsOnInput(form);
@@ -164,6 +168,12 @@ const submit = () => {
                                 />
                                 <InputError :message="form.errors.content" />
                             </div>
+
+                            <FeatureSelector
+                                v-model="form.feature_ids"
+                                :features="features"
+                                :project-id="project.id"
+                            />
 
                             <!-- File Attachments -->
                             <div class="space-y-2">

@@ -1,8 +1,10 @@
 <?php
 
+use App\Models\AiGeneratedTestCase;
 use App\Models\AiSetting;
 use App\Models\Checklist;
 use App\Models\CoverageAnalysis;
+use App\Models\Documentation;
 use App\Models\Project;
 use App\Models\ProjectFeature;
 use App\Models\TestCase;
@@ -293,6 +295,100 @@ test('coverage history requires authentication', function () {
     $this->getJson(route('test-coverage.history', $project))->assertUnauthorized();
 });
 
+test('coverage history includes a diff against the previous run', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $older = CoverageAnalysis::factory()->create([
+        'project_id' => $project->id,
+        'analyzed_at' => now()->subDay(),
+        'overall_coverage' => 50,
+        'total_features' => 10,
+        'gaps_count' => 2,
+        'analysis_data' => [
+            'gaps' => [
+                ['feature' => 'Login'],
+                ['feature' => 'Checkout'],
+            ],
+        ],
+    ]);
+
+    $newer = CoverageAnalysis::factory()->create([
+        'project_id' => $project->id,
+        'analyzed_at' => now(),
+        'overall_coverage' => 65,
+        'total_features' => 12,
+        'gaps_count' => 2,
+        'analysis_data' => [
+            'gaps' => [
+                ['feature' => 'Checkout'],
+                ['feature' => 'Search'],
+            ],
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->getJson(route('test-coverage.history', $project));
+
+    $response->assertOk();
+    $response->assertJson([
+        [
+            'date' => $newer->analyzed_at->format('Y-m-d'),
+            'coverage' => 65,
+            'diff' => [
+                'coverage_delta' => 15,
+                'features_delta' => 2,
+                'gaps_delta' => 0,
+                'gaps_added' => ['Search'],
+                'gaps_resolved' => ['Login'],
+            ],
+        ],
+        [
+            'date' => $older->analyzed_at->format('Y-m-d'),
+            'coverage' => 50,
+            'diff' => null,
+        ],
+    ]);
+});
+
+test('a history entry can be viewed with its full analysis snapshot', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $analysis = CoverageAnalysis::factory()->create([
+        'project_id' => $project->id,
+        'analysis_data' => [
+            'summary' => 'Coverage was decent at this point in time.',
+            'overall_coverage' => 60,
+            'gaps' => [['id' => 'gap_1', 'feature' => 'Login']],
+            'coverage_by_category' => ['functional' => 70],
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->getJson(route('test-coverage.history.show', [$project, $analysis]));
+
+    $response->assertOk();
+    $response->assertJson([
+        'id' => $analysis->id,
+        'analysis_data' => [
+            'summary' => 'Coverage was decent at this point in time.',
+            'overall_coverage' => 60,
+            'gaps' => [['id' => 'gap_1', 'feature' => 'Login']],
+            'coverage_by_category' => ['functional' => 70],
+        ],
+    ]);
+});
+
+test('a history entry from another project cannot be viewed', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $otherProject = Project::factory()->create();
+    $analysis = CoverageAnalysis::factory()->create(['project_id' => $otherProject->id]);
+
+    $this->actingAs($user)
+        ->getJson(route('test-coverage.history.show', [$project, $analysis]))
+        ->assertNotFound();
+});
+
 // ===== AI Analysis =====
 
 test('ai analysis uses the selected provider', function () {
@@ -347,6 +443,45 @@ test('ai analysis includes custom instructions in the prompt', function () {
     Http::assertSent(fn ($request) => str_contains($request->body(), 'Focus only on payment and security flows.'));
 });
 
+test('ai analysis prompt omits test case steps and caps documentation length to stay within context limits', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [[
+                'content' => [
+                    'parts' => [['text' => json_encode(['summary' => 'ok', 'overall_coverage' => 50, 'gaps' => []])]],
+                ],
+            ]],
+        ]),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    TestCase::factory()->create([
+        'test_suite_id' => $suite->id,
+        'title' => 'Login with valid credentials',
+        'steps' => ['This exact step text should not appear verbatim in the prompt'],
+    ]);
+    Documentation::factory()->create([
+        'project_id' => $project->id,
+        'content' => str_repeat('word ', 1000),
+    ]);
+
+    $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
+        'provider' => 'gemini',
+    ])->assertOk();
+
+    Http::assertSent(function ($request) {
+        $body = $request->body();
+
+        return str_contains($body, 'Login with valid credentials')
+            && ! str_contains($body, 'This exact step text should not appear verbatim in the prompt')
+            && ! str_contains($body, str_repeat('word ', 1000));
+    });
+});
+
 test('ai analysis falls back to the workspace default provider when none is given', function () {
     Http::fake([
         'api.anthropic.com/*' => Http::response([
@@ -375,6 +510,36 @@ test('ai analysis validation rejects an unknown provider', function () {
     $response->assertJsonValidationErrors(['provider']);
 });
 
+test('ai analysis returns a friendly error and saves no history when the ai provider call fails', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response(['error' => ['message' => 'The model is overloaded.']], 503),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+
+    $response = $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
+        'provider' => 'gemini',
+    ]);
+
+    $response->assertStatus(502);
+    expect($response->json('message'))->toContain('The model is overloaded.');
+    expect($project->coverageAnalyses()->count())->toBe(0);
+});
+
+test('ai analysis returns a friendly error when no api key is configured', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+
+    $response = $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
+        'provider' => 'gemini',
+    ]);
+
+    $response->assertStatus(502);
+    expect($response->json('message'))->toContain('Gemini API key is not configured');
+});
+
 test('running ai analysis again creates a new coverage analysis record', function () {
     Http::fake([
         'generativelanguage.googleapis.com/*' => Http::response([
@@ -397,6 +562,269 @@ test('running ai analysis again creates a new coverage analysis record', functio
     ])->assertOk();
 
     expect($project->coverageAnalyses()->count())->toBe(2);
+});
+
+// ===== Generate Test Cases =====
+
+test('generate test cases returns a friendly error and saves nothing when the ai provider call fails', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response(['error' => ['message' => 'The model is overloaded.']], 503),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id, 'name' => 'Login']);
+
+    $response = $this->actingAs($user)->postJson(route('test-coverage.generate-test-cases', $project), [
+        'id' => (string) $feature->id,
+        'feature' => 'Login',
+        'priority' => 'high',
+        'provider' => 'gemini',
+    ]);
+
+    $response->assertStatus(502);
+    expect($response->json('message'))->toContain('The model is overloaded.');
+    $this->assertDatabaseCount('ai_generated_test_cases', 0);
+});
+
+test('generate test cases accepts a gap without a description or category', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [[
+                'content' => [
+                    'parts' => [['text' => json_encode([
+                        [
+                            'title' => 'Verify login succeeds with valid credentials',
+                            'test_steps' => ['Open login page', 'Submit valid credentials'],
+                            'expected_result' => 'User is redirected to the dashboard',
+                            'priority' => 'high',
+                            'type' => 'positive',
+                        ],
+                    ])]],
+                ],
+            ]],
+        ]),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id, 'name' => 'Login']);
+
+    // Mirrors the payload sent for a DB-sourced (non-AI) coverage gap, whose
+    // feature description/category can be null and whose module is an array.
+    $response = $this->actingAs($user)->postJson(route('test-coverage.generate-test-cases', $project), [
+        'id' => (string) $feature->id,
+        'feature' => 'Login',
+        'description' => null,
+        'module' => 'Auth',
+        'category' => null,
+        'priority' => 'high',
+        'provider' => 'gemini',
+    ]);
+
+    $response->assertOk();
+    expect($response->json('test_cases.0.title'))->toBe('Verify login succeeds with valid credentials');
+    $this->assertDatabaseHas('ai_generated_test_cases', [
+        'project_id' => $project->id,
+        'feature_id' => $feature->id,
+        'title' => 'Verify login succeeds with valid credentials',
+    ]);
+});
+
+test('generate test cases handles multiple generated cases from the ai response', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [[
+                'content' => [
+                    'parts' => [['text' => json_encode([
+                        [
+                            'title' => 'Login with valid credentials',
+                            'test_steps' => ['Open login page', 'Submit valid credentials'],
+                            'expected_result' => 'User is redirected to the dashboard',
+                            'priority' => 'high',
+                            'type' => 'positive',
+                        ],
+                        [
+                            'title' => 'Login with invalid credentials',
+                            'test_steps' => ['Open login page', 'Submit invalid credentials'],
+                            'expected_result' => 'An error message is shown',
+                            'priority' => 'medium',
+                            'type' => 'negative',
+                        ],
+                    ])]],
+                ],
+            ]],
+        ]),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id, 'name' => 'Login']);
+
+    $response = $this->actingAs($user)->postJson(route('test-coverage.generate-test-cases', $project), [
+        'id' => (string) $feature->id,
+        'feature' => 'Login',
+        'description' => 'Users can log into the app',
+        'module' => 'Auth',
+        'category' => 'functional',
+        'priority' => 'high',
+        'provider' => 'gemini',
+    ]);
+
+    $response->assertOk();
+    expect($response->json('test_cases'))->toHaveCount(2);
+    $this->assertDatabaseCount('ai_generated_test_cases', 2);
+    $this->assertDatabaseHas('ai_generated_test_cases', ['title' => 'Login with valid credentials']);
+    $this->assertDatabaseHas('ai_generated_test_cases', ['title' => 'Login with invalid credentials']);
+});
+
+test('generate test cases prompt includes the feature existing test cases and its linked documentation', function () {
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [[
+                'content' => [
+                    'parts' => [['text' => json_encode([])]],
+                ],
+            ]],
+        ]),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id, 'name' => 'Login']);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $existingTestCase = TestCase::factory()->create([
+        'test_suite_id' => $suite->id,
+        'title' => 'Login with valid credentials',
+        'steps' => ['Open login page', 'Submit valid credentials'],
+    ]);
+    $feature->testCases()->attach($existingTestCase->id);
+
+    $linkedDoc = Documentation::factory()->create([
+        'project_id' => $project->id,
+        'title' => 'Login flow spec',
+        'content' => 'Users authenticate via email and password.',
+    ]);
+    $feature->documentations()->attach($linkedDoc->id);
+
+    // Documentation not linked to this feature must not leak into the prompt.
+    Documentation::factory()->create([
+        'project_id' => $project->id,
+        'title' => 'Unrelated billing spec',
+        'content' => 'Invoices are generated monthly.',
+    ]);
+
+    $this->actingAs($user)->postJson(route('test-coverage.generate-test-cases', $project), [
+        'id' => (string) $feature->id,
+        'feature' => 'Login',
+        'description' => 'Users can log into the app',
+        'module' => 'Auth',
+        'category' => 'functional',
+        'priority' => 'high',
+        'provider' => 'gemini',
+    ])->assertOk();
+
+    Http::assertSent(function ($request) {
+        $prompt = $request->data()['contents'][0]['parts'][0]['text'];
+
+        return str_contains($prompt, 'Login with valid credentials')
+            && str_contains($prompt, 'Login flow spec')
+            && str_contains($prompt, 'Users authenticate via email and password.')
+            && ! str_contains($prompt, 'Unrelated billing spec');
+    });
+});
+
+// ===== Approve Generated Test Cases =====
+
+test('approving generated test cases creates real test cases in a new suite and marks them approved', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id]);
+
+    $case = AiGeneratedTestCase::factory()->create([
+        'project_id' => $project->id,
+        'feature_id' => $feature->id,
+        'title' => 'Login with valid credentials',
+        'test_steps' => ['Open login page', 'Submit valid credentials'],
+        'priority' => 'high',
+    ]);
+
+    $response = $this->actingAs($user)->post(route('test-coverage.approve-test-cases', $project), [
+        'ids' => [$case->id],
+        'test_suite_name' => 'AI Generated Tests',
+    ]);
+
+    $response->assertRedirect();
+
+    $testSuite = TestSuite::where('project_id', $project->id)->where('name', 'AI Generated Tests')->firstOrFail();
+
+    $this->assertDatabaseHas('test_cases', [
+        'test_suite_id' => $testSuite->id,
+        'title' => 'Login with valid credentials',
+        'priority' => 'high',
+    ]);
+
+    $createdTestCase = TestCase::where('test_suite_id', $testSuite->id)->firstOrFail();
+    expect($createdTestCase->steps)->toBe([
+        ['action' => 'Open login page', 'expected' => null],
+        ['action' => 'Submit valid credentials', 'expected' => null],
+    ]);
+    expect($createdTestCase->projectFeatures()->pluck('project_features.id')->all())->toBe([$feature->id]);
+
+    $case->refresh();
+    expect($case->is_approved)->toBeTrue()
+        ->and($case->approved_by)->toBe($user->id)
+        ->and($case->approved_at)->not->toBeNull();
+});
+
+test('approving generated test cases can target an existing test suite', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $case = AiGeneratedTestCase::factory()->create(['project_id' => $project->id]);
+
+    $this->actingAs($user)->post(route('test-coverage.approve-test-cases', $project), [
+        'ids' => [$case->id],
+        'test_suite_id' => $suite->id,
+    ])->assertRedirect(route('test-suites.show', [$project, $suite]));
+
+    $this->assertDatabaseHas('test_cases', ['test_suite_id' => $suite->id, 'title' => $case->title]);
+});
+
+test('approving generated test cases rejects ids belonging to another project', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $otherProject = Project::factory()->create();
+    $foreignCase = AiGeneratedTestCase::factory()->create(['project_id' => $otherProject->id]);
+
+    $this->actingAs($user)->post(route('test-coverage.approve-test-cases', $project), [
+        'ids' => [$foreignCase->id],
+        'test_suite_name' => 'Should not be created',
+    ])->assertNotFound();
+
+    $this->assertDatabaseMissing('test_suites', ['project_id' => $project->id, 'name' => 'Should not be created']);
+});
+
+test('viewer cannot approve generated test cases', function () {
+    $owner = User::factory()->create();
+    $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+    $workspace->members()->attach($owner->id, ['role' => 'owner']);
+    $project = Project::factory()->create(['user_id' => $owner->id, 'workspace_id' => $workspace->id]);
+    $case = AiGeneratedTestCase::factory()->create(['project_id' => $project->id]);
+
+    $viewer = User::factory()->create();
+    $workspace->members()->attach($viewer->id, ['role' => 'viewer']);
+    $viewer->update(['current_workspace_id' => $workspace->id]);
+
+    $this->actingAs($viewer)->post(route('test-coverage.approve-test-cases', $project), [
+        'ids' => [$case->id],
+        'test_suite_name' => 'New Suite',
+    ])->assertForbidden();
 });
 
 // ===== RBAC =====

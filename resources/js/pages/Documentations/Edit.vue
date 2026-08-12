@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm, Link } from '@inertiajs/vue3';
 import { FileText, Upload, X, Trash2, Download } from 'lucide-vue-next';
+import FeatureSelector from '@/components/FeatureSelector.vue';
 import InputError from '@/components/InputError.vue';
 import RichTextEditor from '@/components/RichTextEditor.vue';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ import {
 import { useClearErrorsOnInput } from '@/composables/useClearErrorsOnInput';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
+import { type ProjectFeature } from '@/types/checkmate';
 
 interface ParentOption {
     id: number;
@@ -38,12 +40,14 @@ interface Documentation {
     category: string | null;
     parent_id: number | null;
     attachments?: Attachment[];
+    project_features?: { id: number }[];
 }
 
 const props = defineProps<{
     project: Project;
     documentation: Documentation;
     parentOptions: ParentOption[];
+    features: Pick<ProjectFeature, 'id' | 'name' | 'module' | 'priority'>[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -69,6 +73,9 @@ const form = useForm({
     content: props.documentation.content || '',
     category: props.documentation.category || '',
     parent_id: props.documentation.parent_id,
+    feature_ids: (props.documentation.project_features ?? []).map(
+        (f) => f.id,
+    ),
     attachments: [] as File[],
 });
 useClearErrorsOnInput(form);
@@ -190,6 +197,12 @@ const submit = () => {
                                 />
                                 <InputError :message="form.errors.content" />
                             </div>
+
+                            <FeatureSelector
+                                v-model="form.feature_ids"
+                                :features="features"
+                                :project-id="project.id"
+                            />
 
                             <!-- Existing Attachments -->
                             <div

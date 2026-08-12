@@ -24,6 +24,9 @@ import {
     Unlink,
     FileText,
     ClipboardList,
+    ArrowUp,
+    ArrowDown,
+    Minus,
 } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -86,6 +89,7 @@ const props = defineProps<{
     hasOpenaiKey: boolean;
     allTestCases: TestCaseSummary[];
     allChecklists: Pick<Checklist, 'id' | 'name' | 'module'>[];
+    testSuites: { id: number; name: string }[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -115,14 +119,136 @@ const tabs: { key: TabKey; label: string; icon: typeof BarChart3 }[] = [
 
 // AI Analysis state
 const isAnalyzing = ref(false);
+const analysisError = ref('');
 const analysisResults = ref<AIAnalysisData | null>(
     props.latestAnalysis?.analysis_data as AIAnalysisData | null,
 );
 const generatingForGap = ref<string | null>(null);
-const generatedTestCases = ref<Record<string, unknown>[]>([]);
+const generateError = ref('');
+
+// Browsing a past history entry read-only, without touching the project's
+// current/latest analysis.
+const viewingHistoryDate = ref<string | null>(null);
+const historyAnalysisData = ref<AIAnalysisData | null>(null);
+const loadingHistoryEntryId = ref<number | null>(null);
+const historyEntryError = ref('');
+
+const displayedAnalysis = computed(() =>
+    viewingHistoryDate.value
+        ? historyAnalysisData.value
+        : analysisResults.value,
+);
+
+const viewHistoryEntry = async (entryId: number, date: string) => {
+    loadingHistoryEntryId.value = entryId;
+    historyEntryError.value = '';
+    try {
+        const response = await fetch(
+            `/projects/${props.project.id}/test-coverage/history/${entryId}`,
+        );
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(
+                data.message ||
+                    `Could not load this entry (${response.status})`,
+            );
+        }
+        historyAnalysisData.value = data.analysis_data;
+        viewingHistoryDate.value = date;
+        activeTab.value = 'ai-analysis';
+    } catch (error) {
+        historyEntryError.value =
+            error instanceof Error
+                ? error.message
+                : 'An unexpected error occurred.';
+    } finally {
+        loadingHistoryEntryId.value = null;
+    }
+};
+
+const backToLatestAnalysis = () => {
+    viewingHistoryDate.value = null;
+    historyAnalysisData.value = null;
+};
+
+interface GeneratedTestCase {
+    id: number;
+    title: string;
+    preconditions: string | null;
+    test_steps: string[];
+    expected_result: string;
+    priority: string;
+    type: string;
+}
+const generatedTestCases = ref<GeneratedTestCase[]>([]);
 const showGeneratedModal = ref(false);
 const currentGapName = ref('');
 const customInstructions = ref('');
+
+// Approve generated test cases -> real test cases in a suite
+const selectedGeneratedIds = ref<Set<number>>(new Set());
+const approveTargetMode = ref<'new' | 'existing'>('new');
+const approveSuiteName = ref('');
+const approveSuiteId = ref('');
+const isApprovingCases = ref(false);
+
+const toggleGeneratedSelection = (id: number) => {
+    const next = new Set(selectedGeneratedIds.value);
+    if (next.has(id)) {
+        next.delete(id);
+    } else {
+        next.add(id);
+    }
+    selectedGeneratedIds.value = next;
+};
+
+const allGeneratedSelected = computed(
+    () =>
+        generatedTestCases.value.length > 0 &&
+        generatedTestCases.value.every((tc) =>
+            selectedGeneratedIds.value.has(tc.id),
+        ),
+);
+
+const toggleAllGenerated = () => {
+    selectedGeneratedIds.value = allGeneratedSelected.value
+        ? new Set()
+        : new Set(generatedTestCases.value.map((tc) => tc.id));
+};
+
+const canApproveGeneratedCases = computed(() => {
+    if (isApprovingCases.value) return false;
+    if (selectedGeneratedIds.value.size === 0) return false;
+    if (approveTargetMode.value === 'existing' && !approveSuiteId.value)
+        return false;
+    if (approveTargetMode.value === 'new' && !approveSuiteName.value.trim())
+        return false;
+    return true;
+});
+
+const approveSelectedTestCases = () => {
+    if (!canApproveGeneratedCases.value) return;
+    isApprovingCases.value = true;
+
+    const payload: Record<string, unknown> = {
+        ids: Array.from(selectedGeneratedIds.value),
+    };
+    if (approveTargetMode.value === 'existing') {
+        payload.test_suite_id = approveSuiteId.value;
+    } else {
+        payload.test_suite_name = approveSuiteName.value;
+    }
+
+    router.post(
+        `/projects/${props.project.id}/test-coverage/approve-test-cases`,
+        payload,
+        {
+            onFinish: () => {
+                isApprovingCases.value = false;
+            },
+        },
+    );
+};
 
 const availableAiProviders = computed(() => {
     const options: { value: string; label: string }[] = [];
@@ -263,13 +389,27 @@ const filteredFeatures = computed(() => {
 });
 
 // Coverage history
+interface CoverageHistoryDiff {
+    coverage_delta: number;
+    features_delta: number;
+    gaps_delta: number;
+    gaps_added: string[];
+    gaps_resolved: string[];
+}
 const coverageHistory = ref<
-    { date: string; coverage: number; features: number; gaps: number }[]
+    {
+        id: number;
+        date: string;
+        coverage: number;
+        features: number;
+        gaps: number;
+        diff: CoverageHistoryDiff | null;
+    }[]
 >([]);
 const loadingHistory = ref(false);
 
-const loadHistory = async () => {
-    if (coverageHistory.value.length > 0) return;
+const loadHistory = async (force = false) => {
+    if (!force && coverageHistory.value.length > 0) return;
     loadingHistory.value = true;
     try {
         const response = await fetch(
@@ -300,6 +440,24 @@ const getCoverageBg = (coverage: number): string => {
     return 'bg-red-500';
 };
 
+const deltaColor = (delta: number, invert = false): string => {
+    if (delta === 0) return 'text-muted-foreground';
+    const isPositive = invert ? delta < 0 : delta > 0;
+    return isPositive
+        ? 'text-emerald-600 dark:text-emerald-400'
+        : 'text-red-600 dark:text-red-400';
+};
+
+const deltaIcon = (delta: number) => {
+    if (delta === 0) return Minus;
+    return delta > 0 ? ArrowUp : ArrowDown;
+};
+
+const formatDelta = (delta: number, suffix = ''): string => {
+    if (delta === 0) return '0' + suffix;
+    return (delta > 0 ? '+' : '') + delta + suffix;
+};
+
 const formatDate = (date: string | null): string => {
     if (!date) return 'Never';
     return new Date(date).toLocaleDateString('en-US', {
@@ -312,6 +470,7 @@ const formatDate = (date: string | null): string => {
 // AI Analysis
 const runAnalysis = async () => {
     isAnalyzing.value = true;
+    analysisError.value = '';
     try {
         const response = await fetch(
             `/projects/${props.project.id}/test-coverage/ai-analysis`,
@@ -333,7 +492,12 @@ const runAnalysis = async () => {
                 }),
             },
         );
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(
+                data.message || `Analysis failed (${response.status})`,
+            );
+        }
         analysisResults.value = data.analysis;
         activeTab.value = 'recommendations';
         router.reload({
@@ -345,16 +509,33 @@ const runAnalysis = async () => {
                 'gaps',
             ],
         });
+        loadHistory(true);
     } catch (error) {
-        console.error('Analysis error:', error);
+        analysisError.value =
+            error instanceof Error
+                ? error.message
+                : 'An unexpected error occurred.';
     } finally {
         isAnalyzing.value = false;
     }
 };
 
-const generateTestCases = async (gap: AIGap) => {
-    generatingForGap.value = gap.id;
+const generateTestCases = async (gap: AIGap | CoverageGap) => {
+    const gapId = String(gap.id);
+    generatingForGap.value = gapId;
     currentGapName.value = gap.feature;
+    generateError.value = '';
+    const payload = {
+        id: gapId,
+        feature: gap.feature,
+        description: gap.description ?? '',
+        module: Array.isArray(gap.module)
+            ? gap.module.join(', ')
+            : (gap.module ?? ''),
+        category: gap.category ?? '',
+        priority: gap.priority,
+        provider: aiProvider.value,
+    };
     try {
         const response = await fetch(
             `/projects/${props.project.id}/test-coverage/generate-test-cases`,
@@ -370,14 +551,28 @@ const generateTestCases = async (gap: AIGap) => {
                         )?.content || '',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify({ ...gap, provider: aiProvider.value }),
+                body: JSON.stringify(payload),
             },
         );
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(
+                data.message || `Generation failed (${response.status})`,
+            );
+        }
         generatedTestCases.value = data.test_cases;
+        selectedGeneratedIds.value = new Set(
+            (data.test_cases as GeneratedTestCase[]).map((tc) => tc.id),
+        );
+        approveTargetMode.value = 'new';
+        approveSuiteName.value = `${gap.feature} Tests`;
+        approveSuiteId.value = '';
         showGeneratedModal.value = true;
     } catch (error) {
-        console.error('Generation error:', error);
+        generateError.value =
+            error instanceof Error
+                ? error.message
+                : 'An unexpected error occurred.';
     } finally {
         generatingForGap.value = null;
     }
@@ -1265,8 +1460,59 @@ const refreshData = () => {
 
                 <!-- Tab: AI Analysis -->
                 <div v-if="activeTab === 'ai-analysis'" class="p-6">
+                    <!-- Viewing a past history entry -->
+                    <div
+                        v-if="viewingHistoryDate"
+                        class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4"
+                    >
+                        <div class="flex items-center gap-2 text-sm">
+                            <Eye class="h-4 w-4 text-primary" />
+                            <span class="text-foreground">
+                                Viewing analysis from
+                                <strong>{{ viewingHistoryDate }}</strong> —
+                                read-only snapshot, not the project's current
+                                coverage.
+                            </span>
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            class="cursor-pointer"
+                            @click="backToLatestAnalysis"
+                        >
+                            Back to Latest
+                        </Button>
+                    </div>
+
+                    <!-- History Entry Error -->
+                    <Card
+                        v-if="historyEntryError"
+                        class="mb-6 border-red-200 dark:border-red-900"
+                    >
+                        <CardContent class="py-6">
+                            <div class="flex items-start gap-3">
+                                <AlertTriangle
+                                    class="mt-0.5 h-5 w-5 shrink-0 text-red-500"
+                                />
+                                <div>
+                                    <p
+                                        class="font-medium text-red-800 dark:text-red-400"
+                                    >
+                                        Could Not Load History Entry
+                                    </p>
+                                    <p
+                                        class="mt-1 text-sm text-red-600 dark:text-red-400/80"
+                                    >
+                                        {{ historyEntryError }}
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     <!-- AI Analysis Trigger -->
                     <div
+                        v-if="!viewingHistoryDate"
                         class="mb-8 rounded-lg bg-gradient-to-r from-violet-600 to-blue-600 p-8 text-white"
                     >
                         <div class="flex flex-col gap-6">
@@ -1368,8 +1614,34 @@ const refreshData = () => {
                         </div>
                     </div>
 
+                    <!-- Analysis Error -->
+                    <Card
+                        v-if="analysisError"
+                        class="mb-6 border-red-200 dark:border-red-900"
+                    >
+                        <CardContent class="py-6">
+                            <div class="flex items-start gap-3">
+                                <AlertTriangle
+                                    class="mt-0.5 h-5 w-5 shrink-0 text-red-500"
+                                />
+                                <div>
+                                    <p
+                                        class="font-medium text-red-800 dark:text-red-400"
+                                    >
+                                        Analysis Failed
+                                    </p>
+                                    <p
+                                        class="mt-1 text-sm text-red-600 dark:text-red-400/80"
+                                    >
+                                        {{ analysisError }}
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     <!-- Analysis Results -->
-                    <div v-if="analysisResults" class="space-y-6">
+                    <div v-if="displayedAnalysis" class="space-y-6">
                         <!-- Summary -->
                         <Card>
                             <CardHeader>
@@ -1382,13 +1654,13 @@ const refreshData = () => {
                                 <p
                                     class="leading-relaxed text-muted-foreground"
                                 >
-                                    {{ analysisResults.summary }}
+                                    {{ displayedAnalysis.summary }}
                                 </p>
                             </CardContent>
                         </Card>
 
                         <!-- Coverage by Category -->
-                        <Card v-if="analysisResults.coverage_by_category">
+                        <Card v-if="displayedAnalysis.coverage_by_category">
                             <CardHeader>
                                 <CardTitle>Coverage by Category</CardTitle>
                             </CardHeader>
@@ -1399,7 +1671,7 @@ const refreshData = () => {
                                     <div
                                         v-for="(
                                             percentage, category
-                                        ) in analysisResults.coverage_by_category"
+                                        ) in displayedAnalysis.coverage_by_category"
                                         :key="category"
                                         class="text-center"
                                     >
@@ -1439,14 +1711,14 @@ const refreshData = () => {
                         </Card>
 
                         <!-- Well-Covered Areas -->
-                        <Card v-if="analysisResults.well_covered?.length">
+                        <Card v-if="displayedAnalysis.well_covered?.length">
                             <CardHeader>
                                 <CardTitle class="flex items-center gap-2">
                                     <CheckCircle
                                         class="h-5 w-5 text-emerald-500"
                                     />
                                     Well-Covered Areas ({{
-                                        analysisResults.well_covered.length
+                                        displayedAnalysis.well_covered.length
                                     }})
                                 </CardTitle>
                             </CardHeader>
@@ -1455,7 +1727,7 @@ const refreshData = () => {
                                     class="grid grid-cols-1 gap-4 md:grid-cols-2"
                                 >
                                     <div
-                                        v-for="area in analysisResults.well_covered"
+                                        v-for="area in displayedAnalysis.well_covered"
                                         :key="area.feature"
                                         class="rounded-lg border-l-4 border-emerald-500 bg-emerald-50 p-4 dark:bg-emerald-950/20"
                                     >
@@ -1488,18 +1760,18 @@ const refreshData = () => {
                         </Card>
 
                         <!-- Risks -->
-                        <Card v-if="analysisResults.risks?.length">
+                        <Card v-if="displayedAnalysis.risks?.length">
                             <CardHeader>
                                 <CardTitle class="flex items-center gap-2">
                                     <Shield class="h-5 w-5 text-amber-500" />
                                     Risk Assessment ({{
-                                        analysisResults.risks.length
+                                        displayedAnalysis.risks.length
                                     }})
                                 </CardTitle>
                             </CardHeader>
                             <CardContent class="space-y-3">
                                 <div
-                                    v-for="risk in analysisResults.risks"
+                                    v-for="risk in displayedAnalysis.risks"
                                     :key="risk.id"
                                     class="rounded-lg border bg-amber-50/50 p-4 dark:bg-amber-950/10"
                                 >
@@ -1555,15 +1827,43 @@ const refreshData = () => {
 
                 <!-- Tab: Coverage Gaps -->
                 <div v-if="activeTab === 'gaps'" class="p-6">
-                    <div v-if="analysisResults?.gaps?.length" class="space-y-4">
+                    <Card
+                        v-if="generateError"
+                        class="mb-6 border-red-200 dark:border-red-900"
+                    >
+                        <CardContent class="py-6">
+                            <div class="flex items-start gap-3">
+                                <AlertTriangle
+                                    class="mt-0.5 h-5 w-5 shrink-0 text-red-500"
+                                />
+                                <div>
+                                    <p
+                                        class="font-medium text-red-800 dark:text-red-400"
+                                    >
+                                        Test Case Generation Failed
+                                    </p>
+                                    <p
+                                        class="mt-1 text-sm text-red-600 dark:text-red-400/80"
+                                    >
+                                        {{ generateError }}
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <div
+                        v-if="displayedAnalysis?.gaps?.length"
+                        class="space-y-4"
+                    >
                         <h3
                             class="flex items-center gap-2 text-lg font-semibold text-foreground"
                         >
                             <AlertTriangle class="h-5 w-5 text-amber-500" />
-                            Coverage Gaps ({{ analysisResults.gaps.length }})
+                            Coverage Gaps ({{ displayedAnalysis.gaps.length }})
                         </h3>
                         <div
-                            v-for="gap in analysisResults.gaps"
+                            v-for="gap in displayedAnalysis.gaps"
                             :key="gap.id"
                             class="rounded-r-lg border-l-4 p-5 transition-shadow hover:shadow-md"
                             :class="{
@@ -1623,7 +1923,7 @@ const refreshData = () => {
                                         </p>
                                     </div>
                                 </div>
-                                <RestrictedAction>
+                                <RestrictedAction v-if="!viewingHistoryDate">
                                     <Button
                                         @click="generateTestCases(gap)"
                                         :disabled="generatingForGap === gap.id"
@@ -1646,7 +1946,10 @@ const refreshData = () => {
                     </div>
 
                     <!-- DB-sourced gaps (features without test cases) -->
-                    <div v-else-if="gaps.length" class="space-y-4">
+                    <div
+                        v-else-if="!viewingHistoryDate && gaps.length"
+                        class="space-y-4"
+                    >
                         <h3
                             class="flex items-center gap-2 text-lg font-semibold text-foreground"
                         >
@@ -1689,9 +1992,30 @@ const refreshData = () => {
                                     {{ gap.description }}
                                 </p>
                             </div>
-                            <ChevronRight
-                                class="h-5 w-5 shrink-0 text-muted-foreground"
-                            />
+                            <RestrictedAction>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    @click="generateTestCases(gap)"
+                                    :disabled="
+                                        generatingForGap === String(gap.id)
+                                    "
+                                    class="shrink-0 cursor-pointer whitespace-nowrap"
+                                >
+                                    <Loader2
+                                        v-if="
+                                            generatingForGap === String(gap.id)
+                                        "
+                                        class="mr-1 h-4 w-4 animate-spin"
+                                    />
+                                    <Sparkles v-else class="mr-1 h-4 w-4" />
+                                    {{
+                                        generatingForGap === String(gap.id)
+                                            ? 'Generating...'
+                                            : 'Generate Tests'
+                                    }}
+                                </Button>
+                            </RestrictedAction>
                         </div>
                     </div>
 
@@ -1711,7 +2035,7 @@ const refreshData = () => {
                 <!-- Tab: Recommendations -->
                 <div v-if="activeTab === 'recommendations'" class="p-6">
                     <div
-                        v-if="analysisResults?.recommendations?.length"
+                        v-if="displayedAnalysis?.recommendations?.length"
                         class="space-y-4"
                     >
                         <h3 class="mb-4 text-lg font-semibold text-foreground">
@@ -1720,7 +2044,7 @@ const refreshData = () => {
                         <div
                             v-for="(
                                 rec, index
-                            ) in analysisResults.recommendations"
+                            ) in displayedAnalysis.recommendations"
                             :key="index"
                             class="flex items-start gap-4 rounded-lg border p-5"
                         >
@@ -1796,57 +2120,265 @@ const refreshData = () => {
                                         <th
                                             class="px-4 py-3 text-left font-medium text-muted-foreground"
                                         >
+                                            Change since last run
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 text-left font-medium text-muted-foreground"
+                                        >
                                             Visual
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr
+                                    <template
                                         v-for="entry in coverageHistory"
-                                        :key="entry.date"
-                                        class="border-b"
+                                        :key="entry.id"
                                     >
-                                        <td class="px-4 py-3 text-foreground">
-                                            {{ entry.date }}
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <span
-                                                class="font-medium"
-                                                :class="
-                                                    getCoverageColor(
-                                                        entry.coverage,
-                                                    )
-                                                "
+                                        <tr
+                                            class="cursor-pointer border-b hover:bg-muted/40"
+                                            :class="{
+                                                'bg-primary/5':
+                                                    viewingHistoryDate ===
+                                                    entry.date,
+                                            }"
+                                            @click="
+                                                viewHistoryEntry(
+                                                    entry.id,
+                                                    entry.date,
+                                                )
+                                            "
+                                        >
+                                            <td
+                                                class="px-4 py-3 text-foreground"
                                             >
-                                                {{ entry.coverage }}%
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-3 text-foreground">
-                                            {{ entry.features }}
-                                        </td>
-                                        <td class="px-4 py-3 text-foreground">
-                                            {{ entry.gaps }}
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <div
-                                                class="h-2 w-32 overflow-hidden rounded-full bg-secondary"
-                                            >
-                                                <div
-                                                    class="h-full rounded-full transition-all"
+                                                <span
+                                                    class="inline-flex items-center gap-1.5"
+                                                >
+                                                    <Loader2
+                                                        v-if="
+                                                            loadingHistoryEntryId ===
+                                                            entry.id
+                                                        "
+                                                        class="h-3.5 w-3.5 animate-spin text-muted-foreground"
+                                                    />
+                                                    <Eye
+                                                        v-else
+                                                        class="h-3.5 w-3.5 text-muted-foreground"
+                                                    />
+                                                    {{ entry.date }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <span
+                                                    class="font-medium"
                                                     :class="
-                                                        getCoverageBg(
+                                                        getCoverageColor(
                                                             entry.coverage,
                                                         )
                                                     "
-                                                    :style="{
-                                                        width:
-                                                            entry.coverage +
-                                                            '%',
-                                                    }"
-                                                />
-                                            </div>
-                                        </td>
-                                    </tr>
+                                                >
+                                                    {{ entry.coverage }}%
+                                                </span>
+                                            </td>
+                                            <td
+                                                class="px-4 py-3 text-foreground"
+                                            >
+                                                {{ entry.features }}
+                                            </td>
+                                            <td
+                                                class="px-4 py-3 text-foreground"
+                                            >
+                                                {{ entry.gaps }}
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div
+                                                    v-if="entry.diff"
+                                                    class="flex flex-wrap items-center gap-3 text-xs"
+                                                >
+                                                    <span
+                                                        class="flex items-center gap-1 font-medium"
+                                                        :class="
+                                                            deltaColor(
+                                                                entry.diff
+                                                                    .coverage_delta,
+                                                            )
+                                                        "
+                                                    >
+                                                        <component
+                                                            :is="
+                                                                deltaIcon(
+                                                                    entry.diff
+                                                                        .coverage_delta,
+                                                                )
+                                                            "
+                                                            class="h-3 w-3"
+                                                        />
+                                                        {{
+                                                            formatDelta(
+                                                                entry.diff
+                                                                    .coverage_delta,
+                                                                '%',
+                                                            )
+                                                        }}
+                                                        coverage
+                                                    </span>
+                                                    <span
+                                                        class="flex items-center gap-1 font-medium"
+                                                        :class="
+                                                            deltaColor(
+                                                                entry.diff
+                                                                    .gaps_delta,
+                                                                true,
+                                                            )
+                                                        "
+                                                    >
+                                                        <component
+                                                            :is="
+                                                                deltaIcon(
+                                                                    entry.diff
+                                                                        .gaps_delta,
+                                                                )
+                                                            "
+                                                            class="h-3 w-3"
+                                                        />
+                                                        {{
+                                                            formatDelta(
+                                                                entry.diff
+                                                                    .gaps_delta,
+                                                            )
+                                                        }}
+                                                        gaps
+                                                    </span>
+                                                    <span
+                                                        v-if="
+                                                            entry.diff
+                                                                .features_delta !==
+                                                            0
+                                                        "
+                                                        class="flex items-center gap-1 font-medium"
+                                                        :class="
+                                                            deltaColor(
+                                                                entry.diff
+                                                                    .features_delta,
+                                                            )
+                                                        "
+                                                    >
+                                                        <component
+                                                            :is="
+                                                                deltaIcon(
+                                                                    entry.diff
+                                                                        .features_delta,
+                                                                )
+                                                            "
+                                                            class="h-3 w-3"
+                                                        />
+                                                        {{
+                                                            formatDelta(
+                                                                entry.diff
+                                                                    .features_delta,
+                                                            )
+                                                        }}
+                                                        features
+                                                    </span>
+                                                </div>
+                                                <span
+                                                    v-else
+                                                    class="text-xs text-muted-foreground"
+                                                >
+                                                    Baseline
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div
+                                                    class="h-2 w-32 overflow-hidden rounded-full bg-secondary"
+                                                >
+                                                    <div
+                                                        class="h-full rounded-full transition-all"
+                                                        :class="
+                                                            getCoverageBg(
+                                                                entry.coverage,
+                                                            )
+                                                        "
+                                                        :style="{
+                                                            width:
+                                                                entry.coverage +
+                                                                '%',
+                                                        }"
+                                                    />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr
+                                            v-if="
+                                                entry.diff &&
+                                                (entry.diff.gaps_added.length ||
+                                                    entry.diff.gaps_resolved
+                                                        .length)
+                                            "
+                                            class="border-b bg-muted/30"
+                                        >
+                                            <td
+                                                colspan="5"
+                                                class="px-4 py-2 text-xs"
+                                            >
+                                                <div
+                                                    class="flex flex-wrap gap-4"
+                                                >
+                                                    <div
+                                                        v-if="
+                                                            entry.diff
+                                                                .gaps_resolved
+                                                                .length
+                                                        "
+                                                        class="flex flex-wrap items-center gap-1"
+                                                    >
+                                                        <span
+                                                            class="font-medium text-emerald-600 dark:text-emerald-400"
+                                                            >Resolved:</span
+                                                        >
+                                                        <Badge
+                                                            v-for="gap in entry
+                                                                .diff
+                                                                .gaps_resolved"
+                                                            :key="
+                                                                'resolved-' +
+                                                                gap
+                                                            "
+                                                            variant="outline"
+                                                            class="text-emerald-700 dark:text-emerald-400"
+                                                        >
+                                                            {{ gap }}
+                                                        </Badge>
+                                                    </div>
+                                                    <div
+                                                        v-if="
+                                                            entry.diff
+                                                                .gaps_added
+                                                                .length
+                                                        "
+                                                        class="flex flex-wrap items-center gap-1"
+                                                    >
+                                                        <span
+                                                            class="font-medium text-red-600 dark:text-red-400"
+                                                            >New gaps:</span
+                                                        >
+                                                        <Badge
+                                                            v-for="gap in entry
+                                                                .diff
+                                                                .gaps_added"
+                                                            :key="
+                                                                'added-' + gap
+                                                            "
+                                                            variant="outline"
+                                                            class="text-red-700 dark:text-red-400"
+                                                        >
+                                                            {{ gap }}
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
                                 </tbody>
                             </table>
                         </div>
@@ -2414,74 +2946,167 @@ const refreshData = () => {
                         Generated Test Cases for {{ currentGapName }}
                     </DialogTitle>
                     <DialogDescription>
-                        AI-generated test cases have been saved. Review them
-                        below.
+                        Select the test cases you want to keep, choose a target
+                        test suite, then save them as real test cases.
                     </DialogDescription>
                 </DialogHeader>
-                <div class="max-h-96 space-y-4 overflow-y-auto py-4">
-                    <div
-                        v-for="(tc, idx) in generatedTestCases"
-                        :key="idx"
-                        class="rounded-lg border p-4"
+
+                <label
+                    class="flex cursor-pointer items-center gap-2 border-b pb-2 text-sm"
+                >
+                    <Checkbox
+                        :model-value="allGeneratedSelected"
+                        @update:model-value="toggleAllGenerated"
+                    />
+                    <span class="text-muted-foreground">
+                        {{ selectedGeneratedIds.size }} of
+                        {{ generatedTestCases.length }} selected
+                    </span>
+                </label>
+
+                <div class="max-h-80 space-y-4 overflow-y-auto py-4">
+                    <label
+                        v-for="tc in generatedTestCases"
+                        :key="tc.id"
+                        class="flex cursor-pointer items-start gap-3 rounded-lg border p-4"
+                        :class="{
+                            'opacity-50': !selectedGeneratedIds.has(tc.id),
+                        }"
                     >
-                        <div class="mb-2 flex items-center gap-2">
-                            <h4 class="font-medium text-foreground">
-                                {{ tc.title }}
-                            </h4>
-                            <Badge
-                                :variant="
-                                    priorityVariant(
-                                        String(tc.priority || 'medium'),
-                                    )
-                                "
-                                class="text-xs uppercase"
-                            >
-                                {{ tc.priority }}
-                            </Badge>
-                            <Badge variant="outline" class="text-xs uppercase">
-                                {{ tc.type }}
-                            </Badge>
-                        </div>
-                        <div
-                            v-if="tc.preconditions"
-                            class="mb-2 text-sm text-muted-foreground"
-                        >
-                            <strong>Preconditions:</strong>
-                            {{ tc.preconditions }}
-                        </div>
-                        <div class="mb-2">
-                            <strong class="text-sm text-foreground"
-                                >Steps:</strong
-                            >
-                            <ol
-                                class="mt-1 list-inside list-decimal space-y-1 text-sm text-muted-foreground"
-                            >
-                                <li
-                                    v-for="(
-                                        step, sIdx
-                                    ) in tc.test_steps as string[]"
-                                    :key="sIdx"
+                        <Checkbox
+                            :model-value="selectedGeneratedIds.has(tc.id)"
+                            class="mt-1"
+                            @update:model-value="
+                                toggleGeneratedSelection(tc.id)
+                            "
+                        />
+                        <div class="min-w-0 flex-1">
+                            <div class="mb-2 flex items-center gap-2">
+                                <h4 class="font-medium text-foreground">
+                                    {{ tc.title }}
+                                </h4>
+                                <Badge
+                                    :variant="
+                                        priorityVariant(
+                                            String(tc.priority || 'medium'),
+                                        )
+                                    "
+                                    class="text-xs uppercase"
                                 >
-                                    {{ step }}
-                                </li>
-                            </ol>
-                        </div>
-                        <div class="text-sm">
-                            <strong class="text-foreground"
-                                >Expected Result:</strong
+                                    {{ tc.priority }}
+                                </Badge>
+                                <Badge
+                                    variant="outline"
+                                    class="text-xs uppercase"
+                                >
+                                    {{ tc.type }}
+                                </Badge>
+                            </div>
+                            <div
+                                v-if="tc.preconditions"
+                                class="mb-2 text-sm text-muted-foreground"
                             >
-                            <span class="text-muted-foreground">
-                                {{ tc.expected_result }}</span
-                            >
+                                <strong>Preconditions:</strong>
+                                {{ tc.preconditions }}
+                            </div>
+                            <div class="mb-2">
+                                <strong class="text-sm text-foreground"
+                                    >Steps:</strong
+                                >
+                                <ol
+                                    class="mt-1 list-inside list-decimal space-y-1 text-sm text-muted-foreground"
+                                >
+                                    <li
+                                        v-for="(step, sIdx) in tc.test_steps"
+                                        :key="sIdx"
+                                    >
+                                        {{ step }}
+                                    </li>
+                                </ol>
+                            </div>
+                            <div class="text-sm">
+                                <strong class="text-foreground"
+                                    >Expected Result:</strong
+                                >
+                                <span class="text-muted-foreground">
+                                    {{ tc.expected_result }}</span
+                                >
+                            </div>
                         </div>
-                    </div>
+                    </label>
                 </div>
+
+                <div class="space-y-3 border-t pt-4">
+                    <Label>Target Test Suite</Label>
+                    <div class="flex gap-1 rounded-lg bg-muted p-1">
+                        <button
+                            type="button"
+                            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors"
+                            :class="
+                                approveTargetMode === 'new'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            @click="approveTargetMode = 'new'"
+                        >
+                            New Suite
+                        </button>
+                        <button
+                            type="button"
+                            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors"
+                            :class="
+                                approveTargetMode === 'existing'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            @click="approveTargetMode = 'existing'"
+                        >
+                            Existing Suite
+                        </button>
+                    </div>
+
+                    <Input
+                        v-if="approveTargetMode === 'new'"
+                        v-model="approveSuiteName"
+                        placeholder="e.g. AI Generated Tests"
+                    />
+
+                    <Select v-else v-model="approveSuiteId">
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a test suite..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                v-for="suite in testSuites"
+                                :key="suite.id"
+                                :value="suite.id.toString()"
+                            >
+                                {{ suite.name }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
                 <DialogFooter>
                     <Button
+                        variant="outline"
                         @click="showGeneratedModal = false"
                         class="cursor-pointer"
-                        >Close</Button
+                        >Cancel</Button
                     >
+                    <RestrictedAction>
+                        <Button
+                            @click="approveSelectedTestCases"
+                            :disabled="!canApproveGeneratedCases"
+                            class="cursor-pointer"
+                        >
+                            <Loader2
+                                v-if="isApprovingCases"
+                                class="mr-1 h-4 w-4 animate-spin"
+                            />
+                            Save {{ selectedGeneratedIds.size }} Selected
+                        </Button>
+                    </RestrictedAction>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

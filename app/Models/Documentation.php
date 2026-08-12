@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -48,5 +49,14 @@ class Documentation extends Model
     public function attachments(): MorphMany
     {
         return $this->morphMany(Attachment::class, 'attachable');
+    }
+
+    /**
+     * Get the project features linked to this documentation page.
+     */
+    public function projectFeatures(): BelongsToMany
+    {
+        return $this->belongsToMany(ProjectFeature::class, 'feature_documentation', 'documentation_id', 'feature_id')
+            ->withTimestamps();
     }
 }

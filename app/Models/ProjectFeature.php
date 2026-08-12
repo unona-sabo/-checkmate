@@ -75,4 +75,13 @@ class ProjectFeature extends Model
         return $this->belongsToMany(TestSuite::class, 'feature_test_suite', 'feature_id', 'test_suite_id')
             ->withTimestamps();
     }
+
+    /**
+     * Get the documentation pages linked to this feature.
+     */
+    public function documentations(): BelongsToMany
+    {
+        return $this->belongsToMany(Documentation::class, 'feature_documentation', 'feature_id', 'documentation_id')
+            ->withTimestamps();
+    }
 }

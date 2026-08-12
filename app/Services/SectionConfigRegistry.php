@@ -395,6 +395,7 @@ class SectionConfigRegistry
                     'Export documentation as JSON with recursive children',
                     'Import documentation from JSON file as subcategories',
                     'Drag-and-drop reparenting to move pages between hierarchy levels',
+                    'Link documentation pages to one or more project features at creation or edit time',
                 ],
                 'model' => Documentation::class,
             ],

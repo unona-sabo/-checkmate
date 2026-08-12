@@ -2,6 +2,7 @@
 
 use App\Models\Documentation;
 use App\Models\Project;
+use App\Models\ProjectFeature;
 use App\Models\User;
 use App\Models\Workspace;
 
@@ -38,6 +39,65 @@ test('store creates documentation with valid data', function () {
         'content' => 'This is the API documentation content.',
         'category' => 'API',
     ]);
+});
+
+test('store links documentation to the given features', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->post(route('documentations.store', $project), [
+        'title' => 'API Documentation',
+        'content' => 'This is the API documentation content.',
+        'feature_ids' => [$feature->id],
+    ]);
+
+    $response->assertRedirect();
+
+    $documentation = Documentation::where('title', 'API Documentation')->firstOrFail();
+    expect($documentation->projectFeatures()->pluck('project_features.id')->all())->toBe([$feature->id]);
+});
+
+test('update syncs documentation feature links, including removing them', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $documentation = Documentation::factory()->create(['project_id' => $project->id]);
+    $featureOne = ProjectFeature::factory()->create(['project_id' => $project->id]);
+    $featureTwo = ProjectFeature::factory()->create(['project_id' => $project->id]);
+
+    $documentation->projectFeatures()->attach($featureOne->id);
+
+    $this->actingAs($user)->put(route('documentations.update', [$project, $documentation]), [
+        'title' => $documentation->title,
+        'content' => $documentation->content,
+        'feature_ids' => [$featureTwo->id],
+    ])->assertRedirect();
+
+    expect($documentation->projectFeatures()->pluck('project_features.id')->all())->toBe([$featureTwo->id]);
+
+    $this->actingAs($user)->put(route('documentations.update', [$project, $documentation]), [
+        'title' => $documentation->title,
+        'content' => $documentation->content,
+    ])->assertRedirect();
+
+    expect($documentation->projectFeatures()->count())->toBe(0);
+});
+
+test('show page exposes the documentation linked features', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $documentation = Documentation::factory()->create(['project_id' => $project->id]);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id, 'name' => 'Payout']);
+    $documentation->projectFeatures()->attach($feature->id);
+
+    $response = $this->actingAs($user)->get(route('documentations.show', [$project, $documentation]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Documentations/Show')
+        ->where('documentation.project_features.0.id', $feature->id)
+        ->where('documentation.project_features.0.name', 'Payout')
+    );
 });
 
 test('update modifies existing documentation', function () {

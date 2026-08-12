@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TestCoverage\ApproveGeneratedTestCasesRequest;
 use App\Http\Requests\TestCoverage\AttachChecklistRequest;
 use App\Http\Requests\TestCoverage\AttachTestCaseRequest;
 use App\Http\Requests\TestCoverage\RunCoverageAnalysisRequest;
@@ -10,13 +11,17 @@ use App\Http\Requests\TestCoverage\StoreCoverageGapRequest;
 use App\Http\Requests\TestCoverage\UpdateCoverageFeatureRequest;
 use App\Models\AiGeneratedTestCase;
 use App\Models\AiSetting;
+use App\Models\CoverageAnalysis;
 use App\Models\Project;
 use App\Models\ProjectFeature;
+use App\Models\TestCase;
 use App\Services\AchievementService;
 use App\Services\CoverageAnalysisService;
 use App\Services\CoverageCalculator;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -75,6 +80,10 @@ class TestCoverageController extends Controller
             ->orderBy('name')
             ->get();
 
+        $testSuites = $project->testSuites()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         $aiSettings = $project->workspace ? AiSetting::forWorkspace($project->workspace) : null;
 
         return Inertia::render('TestCoverage/Index', [
@@ -90,6 +99,7 @@ class TestCoverageController extends Controller
             'hasOpenaiKey' => $aiSettings?->apiKeyFor('openai') !== null,
             'allTestCases' => $allTestCases,
             'allChecklists' => $allChecklists,
+            'testSuites' => $testSuites,
         ]);
     }
 
@@ -99,6 +109,9 @@ class TestCoverageController extends Controller
 
         $validated = $request->validated();
 
+        // Only title/suite/priority are needed to judge whether a feature is
+        // covered — omitting full step text keeps the prompt well under the
+        // AI provider's context window on projects with hundreds of cases.
         $testCases = $project->testSuites()
             ->with('testCases')
             ->get()
@@ -106,7 +119,6 @@ class TestCoverageController extends Controller
                 'title' => $testCase->title,
                 'suite' => $suite->name,
                 'priority' => $testCase->priority,
-                'steps' => $testCase->steps ?? [],
             ]))
             ->toArray();
 
@@ -128,12 +140,16 @@ class TestCoverageController extends Controller
             ->get()
             ->map(fn ($doc) => [
                 'title' => $doc->title,
-                'content' => strip_tags($doc->content ?? ''),
+                'content' => Str::limit(strip_tags($doc->content ?? ''), 2000),
             ])
             ->toArray();
 
-        $analysis = $this->coverageServiceFor($project, $validated['provider'] ?? null)
-            ->analyzeCoverage($testCases, $features, $documentation, $validated['custom_instructions'] ?? null);
+        try {
+            $analysis = $this->coverageServiceFor($project, $validated['provider'] ?? null)
+                ->analyzeCoverage($testCases, $features, $documentation, $validated['custom_instructions'] ?? null);
+        } catch (\RuntimeException|ConnectionException $e) {
+            return response()->json(['message' => $e->getMessage()], 502);
+        }
 
         $coverageAnalysis = $project->coverageAnalyses()->create([
             'analysis_data' => $analysis,
@@ -159,45 +175,186 @@ class TestCoverageController extends Controller
 
         $gap = $request->validated();
 
-        $generatedCases = $this->coverageServiceFor($project, $gap['provider'] ?? null)->generateTestCases($gap);
-
         $feature = $project->features()->where('name', $gap['feature'])->first();
 
-        foreach ($generatedCases as $testCase) {
-            AiGeneratedTestCase::query()->create([
-                'project_id' => $project->id,
-                'feature_id' => $feature?->id,
-                'title' => $testCase['title'],
-                'preconditions' => $testCase['preconditions'] ?? null,
-                'test_steps' => $testCase['test_steps'],
-                'expected_result' => $testCase['expected_result'],
-                'priority' => $testCase['priority'] ?? 'medium',
-                'type' => $testCase['type'] ?? 'positive',
+        $existingTestCases = $feature
+            ? $feature->testCases()->get()->map(fn ($testCase) => [
+                'title' => $testCase->title,
+                'steps' => $testCase->steps ?? [],
+            ])->toArray()
+            : [];
+
+        $documentation = $feature
+            ? $feature->documentations()->get()->map(fn ($doc) => [
+                'title' => $doc->title,
+                'content' => Str::limit(strip_tags($doc->content ?? ''), 2000),
+            ])->toArray()
+            : [];
+
+        try {
+            $generatedCases = $this->coverageServiceFor($project, $gap['provider'] ?? null)
+                ->generateTestCases($gap, $existingTestCases, $documentation);
+        } catch (\RuntimeException|ConnectionException $e) {
+            return response()->json(['message' => $e->getMessage()], 502);
+        }
+
+        $createdCases = collect($generatedCases)->map(fn ($testCase) => AiGeneratedTestCase::query()->create([
+            'project_id' => $project->id,
+            'feature_id' => $feature?->id,
+            'title' => $testCase['title'],
+            'preconditions' => $testCase['preconditions'] ?? null,
+            'test_steps' => $testCase['test_steps'],
+            'expected_result' => $testCase['expected_result'],
+            'priority' => $testCase['priority'] ?? 'medium',
+            'type' => $testCase['type'] ?? 'positive',
+        ]));
+
+        return response()->json([
+            'test_cases' => $createdCases,
+            'gap' => $gap,
+        ]);
+    }
+
+    /**
+     * Convert selected AI-generated test cases into real test cases inside
+     * a (new or existing) test suite, and mark the source rows approved.
+     */
+    public function approveGeneratedTestCases(ApproveGeneratedTestCasesRequest $request, Project $project): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
+
+        $cases = AiGeneratedTestCase::query()
+            ->whereIn('id', $validated['ids'])
+            ->where('project_id', $project->id)
+            ->get();
+
+        abort_if($cases->isEmpty(), 404);
+
+        if (! empty($validated['test_suite_id'])) {
+            $testSuite = $project->testSuites()->findOrFail($validated['test_suite_id']);
+        } else {
+            $testSuite = $project->testSuites()->create([
+                'name' => $validated['test_suite_name'],
+                'type' => 'functional',
             ]);
         }
 
-        return response()->json([
-            'test_cases' => $generatedCases,
-            'gap' => $gap,
-        ]);
+        $maxOrder = TestCase::query()->where('test_suite_id', $testSuite->id)->max('order') ?? -1;
+
+        foreach ($cases as $index => $case) {
+            $testCase = TestCase::query()->create([
+                'test_suite_id' => $testSuite->id,
+                'title' => $case->title,
+                'preconditions' => $case->preconditions,
+                'steps' => collect($case->test_steps ?? [])
+                    ->map(fn ($step) => ['action' => $step, 'expected' => null])
+                    ->all(),
+                'expected_result' => $case->expected_result,
+                'priority' => in_array($case->priority, ['low', 'medium', 'high', 'critical'], true) ? $case->priority : 'medium',
+                'severity' => 'major',
+                'type' => 'functional',
+                'automation_status' => 'not_automated',
+                'order' => $maxOrder + $index + 1,
+                'created_by' => $request->user()->id,
+            ]);
+
+            if ($case->feature_id) {
+                $testCase->projectFeatures()->syncWithoutDetaching([$case->feature_id]);
+            }
+
+            $case->update([
+                'is_approved' => true,
+                'approved_by' => $request->user()->id,
+                'approved_at' => now(),
+            ]);
+        }
+
+        return redirect()->route('test-suites.show', [$project, $testSuite])
+            ->with('success', $cases->count().' test case(s) approved and added to '.$testSuite->name.'.');
     }
 
     public function coverageHistory(Project $project): JsonResponse
     {
         $this->authorize('view', $project);
 
-        $history = $project->coverageAnalyses()
+        // Fetch one extra (oldest) analysis beyond the 30 we display, purely
+        // to serve as the diff baseline for the oldest displayed entry.
+        $analyses = $project->coverageAnalyses()
             ->orderBy('analyzed_at', 'desc')
-            ->limit(30)
+            ->limit(31)
             ->get()
-            ->map(fn ($analysis) => [
-                'date' => $analysis->analyzed_at?->format('Y-m-d'),
-                'coverage' => $analysis->overall_coverage,
-                'features' => $analysis->total_features,
-                'gaps' => $analysis->gaps_count,
-            ]);
+            ->reverse()
+            ->values();
 
-        return response()->json($history);
+        $baselineIncluded = $analyses->count() > 30;
+
+        $history = $analyses
+            ->values()
+            ->map(function ($analysis, int $index) use ($analyses) {
+                $previous = $index > 0 ? $analyses->get($index - 1) : null;
+
+                return [
+                    'id' => $analysis->id,
+                    'date' => $analysis->analyzed_at?->format('Y-m-d'),
+                    'coverage' => $analysis->overall_coverage,
+                    'features' => $analysis->total_features,
+                    'gaps' => $analysis->gaps_count,
+                    'diff' => $this->diffAnalyses($analysis, $previous),
+                ];
+            });
+
+        if ($baselineIncluded) {
+            $history = $history->slice(1)->values();
+        }
+
+        return response()->json($history->reverse()->values());
+    }
+
+    /**
+     * The full AI response snapshot for one past analysis run, so a history
+     * entry can be browsed read-only without affecting the project's
+     * current/latest analysis.
+     */
+    public function showHistoryEntry(Project $project, CoverageAnalysis $coverageAnalysis): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        abort_unless($coverageAnalysis->project_id === $project->id, 404);
+
+        return response()->json([
+            'id' => $coverageAnalysis->id,
+            'date' => $coverageAnalysis->analyzed_at?->format('Y-m-d'),
+            'analysis_data' => $coverageAnalysis->analysis_data,
+        ]);
+    }
+
+    /**
+     * @return array{
+     *     coverage_delta: int|float|null,
+     *     features_delta: int|null,
+     *     gaps_delta: int|null,
+     *     gaps_added: list<string>,
+     *     gaps_resolved: list<string>,
+     * }|null
+     */
+    private function diffAnalyses(CoverageAnalysis $current, ?CoverageAnalysis $previous): ?array
+    {
+        if (! $previous) {
+            return null;
+        }
+
+        $currentGaps = collect($current->analysis_data['gaps'] ?? [])->pluck('feature')->filter()->unique();
+        $previousGaps = collect($previous->analysis_data['gaps'] ?? [])->pluck('feature')->filter()->unique();
+
+        return [
+            'coverage_delta' => $current->overall_coverage - $previous->overall_coverage,
+            'features_delta' => $current->total_features - $previous->total_features,
+            'gaps_delta' => $current->gaps_count - $previous->gaps_count,
+            'gaps_added' => $currentGaps->diff($previousGaps)->values()->all(),
+            'gaps_resolved' => $previousGaps->diff($currentGaps)->values()->all(),
+        ];
     }
 
     public function storeFeature(StoreCoverageFeatureRequest $request, Project $project): RedirectResponse

@@ -43,13 +43,15 @@ class CoverageAnalysisService
 
     /**
      * @param  array<string, mixed>  $gap
+     * @param  list<array<string, mixed>>  $existingTestCases
+     * @param  list<array<string, mixed>>  $documentation
      * @return list<array<string, mixed>>
      *
      * @throws ConnectionException
      */
-    public function generateTestCases(array $gap): array
+    public function generateTestCases(array $gap, array $existingTestCases = [], array $documentation = []): array
     {
-        $prompt = $this->buildTestCaseGenerationPrompt($gap);
+        $prompt = $this->buildTestCaseGenerationPrompt($gap, $existingTestCases, $documentation);
 
         return match ($this->provider) {
             'gemini' => $this->geminiComplete($prompt),
@@ -72,13 +74,13 @@ class CoverageAnalysisService
         return 'You are a QA expert analyzing test coverage for a software project.
 
 PROJECT FEATURES (what needs to be tested):
-'.json_encode($features, JSON_PRETTY_PRINT).'
+'.json_encode($features).'
 
 EXISTING TEST CASES (what\'s already covered):
-'.json_encode($testCases, JSON_PRETTY_PRINT).'
+'.json_encode($testCases).'
 
 DOCUMENTATION:
-'.json_encode($documentation, JSON_PRETTY_PRINT).'
+'.json_encode($documentation).'
 
 Analyze the test coverage and provide a comprehensive assessment.'.$customInstructionsBlock.'
 
@@ -139,14 +141,24 @@ Return JSON with this exact structure:
 
     /**
      * @param  array<string, mixed>  $gap
+     * @param  list<array<string, mixed>>  $existingTestCases
+     * @param  list<array<string, mixed>>  $documentation
      */
-    private function buildTestCaseGenerationPrompt(array $gap): string
+    private function buildTestCaseGenerationPrompt(array $gap, array $existingTestCases = [], array $documentation = []): string
     {
         $feature = $gap['feature'] ?? '';
         $description = $gap['description'] ?? '';
         $module = $gap['module'] ?? '';
         $category = $gap['category'] ?? '';
         $priority = $gap['priority'] ?? '';
+
+        $existingTestCasesBlock = $existingTestCases !== []
+            ? "\n\nEXISTING TEST CASES ALREADY LINKED TO THIS FEATURE (do not duplicate these scenarios):\n".json_encode($existingTestCases, JSON_PRETTY_PRINT)
+            : '';
+
+        $documentationBlock = $documentation !== []
+            ? "\n\nPROJECT DOCUMENTATION (use for context on expected behavior):\n".json_encode($documentation, JSON_PRETTY_PRINT)
+            : '';
 
         return "You are a QA expert. Generate detailed test cases for the following coverage gap.
 
@@ -155,9 +167,9 @@ Feature: {$feature}
 Description: {$description}
 Module: {$module}
 Category: {$category}
-Priority: {$priority}
+Priority: {$priority}{$existingTestCasesBlock}{$documentationBlock}
 
-Generate 3-7 comprehensive test cases that cover different scenarios (positive, negative, edge cases).
+Generate 3-7 comprehensive test cases that cover different scenarios (positive, negative, edge cases) not already covered by the existing test cases above.
 
 IMPORTANT: Return ONLY valid JSON, no additional text.
 
@@ -290,13 +302,22 @@ Return JSON array with this structure:
      */
     private function extractJson(string $content): array
     {
-        if (preg_match('/\{.*\}/s', $content, $matches)) {
-            $jsonContent = $matches[0];
-        } elseif (preg_match('/\[.*\]/s', $content, $matches)) {
-            $jsonContent = $matches[0];
+        $objectPos = strpos($content, '{');
+        $arrayPos = strpos($content, '[');
+
+        // Whichever bracket opens first tells us whether the payload is a
+        // top-level object or array — checking object before array
+        // unconditionally would truncate a JSON array of objects down to
+        // just its first element, since `{.*}` greedily matches from the
+        // first `{` to the last `}` regardless of the outer `[`/`]`.
+        $matches = [];
+        if ($arrayPos !== false && ($objectPos === false || $arrayPos < $objectPos)) {
+            preg_match('/\[.*\]/s', $content, $matches);
         } else {
-            $jsonContent = $content;
+            preg_match('/\{.*\}/s', $content, $matches);
         }
+
+        $jsonContent = $matches[0] ?? $content;
 
         return json_decode($jsonContent, true) ?? [];
     }

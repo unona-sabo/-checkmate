@@ -11,7 +11,7 @@ class StoreCoverageGapRequest extends FormRequest
         return [
             'id' => 'required|string',
             'feature' => 'required|string',
-            'description' => 'required|string',
+            'description' => 'nullable|string',
             'module' => 'nullable|string',
             'category' => 'nullable|string',
             'priority' => 'required|string',

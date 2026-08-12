@@ -228,7 +228,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('test-coverage', [TestCoverageController::class, 'index'])->name('index');
         Route::post('test-coverage/ai-analysis', [TestCoverageController::class, 'runAIAnalysis'])->name('ai-analysis');
         Route::post('test-coverage/generate-test-cases', [TestCoverageController::class, 'generateTestCases'])->name('generate-test-cases');
+        Route::post('test-coverage/approve-test-cases', [TestCoverageController::class, 'approveGeneratedTestCases'])->name('approve-test-cases');
         Route::get('test-coverage/history', [TestCoverageController::class, 'coverageHistory'])->name('history');
+        Route::get('test-coverage/history/{coverageAnalysis}', [TestCoverageController::class, 'showHistoryEntry'])->name('history.show');
         Route::post('test-coverage/features', [TestCoverageController::class, 'storeFeature'])->name('features.store');
         Route::put('test-coverage/features/{feature}', [TestCoverageController::class, 'updateFeature'])->name('features.update');
         Route::delete('test-coverage/features/{feature}', [TestCoverageController::class, 'destroyFeature'])->name('features.destroy');

@@ -13,6 +13,8 @@ class UpdateDocumentationRequest extends FormRequest
             'content' => 'nullable|string',
             'category' => 'nullable|string|max:255',
             'parent_id' => 'nullable|exists:documentations,id',
+            'feature_ids' => 'nullable|array',
+            'feature_ids.*' => 'exists:project_features,id',
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
         ];

@@ -12,6 +12,7 @@ use App\Models\Project;
 use App\Services\AchievementService;
 use App\Services\AttachmentService;
 use App\Services\DocumentParserService;
+use App\Services\FeatureLinkingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,7 +22,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentationController extends Controller
 {
-    public function __construct(private readonly AttachmentService $attachmentService) {}
+    public function __construct(
+        private readonly AttachmentService $attachmentService,
+        private readonly FeatureLinkingService $featureLinkingService,
+    ) {}
 
     public function index(Project $project): Response
     {
@@ -56,10 +60,15 @@ class DocumentationController extends Controller
 
         $parentOptions = $query->get(['id', 'title', 'parent_id']);
 
+        $features = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module', 'priority']);
+
         return Inertia::render('Documentations/Create', [
             'project' => $project,
             'parentOptions' => $parentOptions,
             'defaultParentId' => $defaultParentId,
+            'features' => $features,
         ]);
     }
 
@@ -76,8 +85,12 @@ class DocumentationController extends Controller
         $validated['order'] = $maxOrder + 1;
 
         $documentation = $project->documentations()->create(
-            collect($validated)->except('attachments')->toArray()
+            collect($validated)->except(['attachments', 'feature_ids'])->toArray()
         );
+
+        if (! empty($validated['feature_ids'])) {
+            $this->featureLinkingService->sync($documentation, $validated['feature_ids']);
+        }
 
         $this->attachmentService->storeFromRequest($documentation, $request, 'attachments/documentations');
         $achievements->checkFirstDocument($request->user());
@@ -91,7 +104,7 @@ class DocumentationController extends Controller
     {
         $this->authorize('view', $project);
 
-        $documentation->load(['parent', 'children.children.children', 'attachments']);
+        $documentation->load(['parent', 'children.children.children', 'attachments', 'projectFeatures:id,name,module']);
 
         $allDocs = $project->documentations()
             ->whereNull('parent_id')
@@ -110,7 +123,7 @@ class DocumentationController extends Controller
     {
         $this->authorize('update', $project);
 
-        $documentation->load('attachments');
+        $documentation->load(['attachments', 'projectFeatures:id']);
 
         $parentOptions = $project->documentations()
             ->where('id', '!=', $documentation->id)
@@ -118,10 +131,15 @@ class DocumentationController extends Controller
             ->orderBy('order')
             ->get(['id', 'title', 'parent_id']);
 
+        $features = $project->features()->where('is_active', true)
+            ->orderBy('module')->orderBy('name')
+            ->get(['id', 'name', 'module', 'priority']);
+
         return Inertia::render('Documentations/Edit', [
             'project' => $project,
             'documentation' => $documentation,
             'parentOptions' => $parentOptions,
+            'features' => $features,
         ]);
     }
 
@@ -132,8 +150,10 @@ class DocumentationController extends Controller
         $validated = $request->validated();
 
         $documentation->update(
-            collect($validated)->except('attachments')->toArray()
+            collect($validated)->except(['attachments', 'feature_ids'])->toArray()
         );
+
+        $this->featureLinkingService->sync($documentation, $validated['feature_ids'] ?? []);
 
         $this->attachmentService->storeFromRequest($documentation, $request, 'attachments/documentations');
 

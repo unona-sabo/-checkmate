@@ -19,6 +19,7 @@ import {
     GripVertical,
 } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
+import FeatureBadges from '@/components/FeatureBadges.vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +54,7 @@ interface Documentation {
     parent?: Documentation;
     children?: Documentation[];
     attachments?: Attachment[];
+    project_features?: { id: number; name: string; module?: string[] | null }[];
     created_at: string;
     updated_at: string;
 }
@@ -805,7 +807,20 @@ const saveChildReorder = () => {
                     <Card>
                         <CardHeader>
                             <div class="flex items-center justify-between">
-                                <CardTitle>{{ documentation.title }}</CardTitle>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <CardTitle>{{
+                                        documentation.title
+                                    }}</CardTitle>
+                                    <FeatureBadges
+                                        v-if="
+                                            documentation.project_features
+                                                ?.length
+                                        "
+                                        :features="
+                                            documentation.project_features
+                                        "
+                                    />
+                                </div>
                                 <span
                                     v-if="documentation.category"
                                     class="rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800"
