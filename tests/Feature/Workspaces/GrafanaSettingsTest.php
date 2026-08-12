@@ -22,6 +22,22 @@ test('grafana settings page requires authentication', function () {
         ->assertRedirect('/login');
 });
 
+test('member cannot view grafana settings page', function () {
+    [$user] = createUserWithWorkspace('member');
+
+    $this->actingAs($user)
+        ->get('/workspaces/settings/grafana')
+        ->assertForbidden();
+});
+
+test('viewer cannot view grafana settings page', function () {
+    [$user] = createUserWithWorkspace('viewer');
+
+    $this->actingAs($user)
+        ->get('/workspaces/settings/grafana')
+        ->assertForbidden();
+});
+
 test('grafana settings can be saved', function () {
     [$user, $workspace] = createUserWithWorkspace();
 

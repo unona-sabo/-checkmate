@@ -18,6 +18,22 @@ test('clickup settings page requires authentication', function () {
     $response->assertRedirect(route('login'));
 });
 
+test('member cannot view clickup settings page', function () {
+    [$user] = createUserWithWorkspace('member');
+
+    $response = $this->actingAs($user)->get(route('workspaces.clickup.show'));
+
+    $response->assertForbidden();
+});
+
+test('viewer cannot view clickup settings page', function () {
+    [$user] = createUserWithWorkspace('viewer');
+
+    $response = $this->actingAs($user)->get(route('workspaces.clickup.show'));
+
+    $response->assertForbidden();
+});
+
 test('clickup settings can be saved', function () {
     [$user, $workspace] = createUserWithWorkspace();
 

@@ -19,6 +19,22 @@ test('ai settings page requires authentication', function () {
     $response->assertRedirect(route('login'));
 });
 
+test('member cannot view ai settings page', function () {
+    [$user] = createUserWithWorkspace('member');
+
+    $response = $this->actingAs($user)->get(route('workspaces.ai.show'));
+
+    $response->assertForbidden();
+});
+
+test('viewer cannot view ai settings page', function () {
+    [$user] = createUserWithWorkspace('viewer');
+
+    $response = $this->actingAs($user)->get(route('workspaces.ai.show'));
+
+    $response->assertForbidden();
+});
+
 test('ai settings can be saved', function () {
     [$user, $workspace] = createUserWithWorkspace();
 

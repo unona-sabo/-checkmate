@@ -255,10 +255,21 @@ const roleColors: Record<string, string> = {
                     description="Each workspace has its own ClickUp, Grafana, and AI provider connection"
                 />
 
+                <p v-if="!canManage" class="text-sm text-muted-foreground">
+                    Only workspace owners and admins can view and manage
+                    integrations.
+                </p>
+
                 <div class="grid gap-3">
-                    <Link
+                    <component
+                        :is="canManage ? Link : 'div'"
                         href="/workspaces/settings/clickup"
-                        class="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+                        class="flex items-center justify-between rounded-lg border p-4"
+                        :class="
+                            canManage
+                                ? 'hover:bg-muted/50'
+                                : 'cursor-not-allowed opacity-50'
+                        "
                     >
                         <span class="font-medium">ClickUp</span>
                         <Badge
@@ -274,10 +285,16 @@ const roleColors: Record<string, string> = {
                                     : 'Not connected'
                             }}
                         </Badge>
-                    </Link>
-                    <Link
+                    </component>
+                    <component
+                        :is="canManage ? Link : 'div'"
                         href="/workspaces/settings/grafana"
-                        class="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+                        class="flex items-center justify-between rounded-lg border p-4"
+                        :class="
+                            canManage
+                                ? 'hover:bg-muted/50'
+                                : 'cursor-not-allowed opacity-50'
+                        "
                     >
                         <span class="font-medium">Grafana</span>
                         <Badge
@@ -293,10 +310,16 @@ const roleColors: Record<string, string> = {
                                     : 'Not connected'
                             }}
                         </Badge>
-                    </Link>
-                    <Link
+                    </component>
+                    <component
+                        :is="canManage ? Link : 'div'"
                         href="/workspaces/settings/ai"
-                        class="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+                        class="flex items-center justify-between rounded-lg border p-4"
+                        :class="
+                            canManage
+                                ? 'hover:bg-muted/50'
+                                : 'cursor-not-allowed opacity-50'
+                        "
                     >
                         <span class="font-medium">AI Providers</span>
                         <Badge
@@ -310,7 +333,7 @@ const roleColors: Record<string, string> = {
                                     : 'Not connected'
                             }}
                         </Badge>
-                    </Link>
+                    </component>
                 </div>
             </div>
 
