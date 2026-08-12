@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import {
     Activity,
     RefreshCw,
@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type Project } from '@/types';
+import { type AppPageProps, type BreadcrumbItem, type Project } from '@/types';
 
 interface PayoutEvent {
     timestamp: string | null;
@@ -166,6 +166,12 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: `/projects/${props.project.id}/payout-monitor`,
     },
 ];
+
+const page = usePage<AppPageProps>();
+const canManage = computed(() => {
+    const role = page.props.currentWorkspace?.role;
+    return role === 'owner' || role === 'admin';
+});
 
 // localStorage key scoped to project
 const storageKey = `payout-monitor-${props.project.id}`;
@@ -702,7 +708,7 @@ const flattenPayload = (
                         Analyze TerraPay payout logs from Grafana/Loki
                     </p>
                 </div>
-                <a href="/settings/grafana">
+                <a v-if="canManage" href="/workspaces/settings/grafana">
                     <Button
                         variant="outline"
                         size="sm"
@@ -726,15 +732,23 @@ const flattenPayload = (
                             Grafana not configured
                         </p>
                         <p class="text-xs text-muted-foreground">
-                            Go to
-                            <a
-                                href="/settings/grafana"
-                                class="underline hover:text-foreground"
-                                >Settings &gt; Grafana</a
-                            >
-                            to set up your API token for the "Fetch Latest"
-                            feature. You can still use "Paste Log" without
-                            configuration.
+                            <template v-if="canManage">
+                                Go to
+                                <a
+                                    href="/workspaces/settings/grafana"
+                                    class="underline hover:text-foreground"
+                                    >Settings &gt; Grafana</a
+                                >
+                                to set up your API token for the "Fetch Latest"
+                                feature. You can still use "Paste Log" without
+                                configuration.
+                            </template>
+                            <template v-else>
+                                Ask a workspace owner or admin to set up the
+                                Grafana API token for the "Fetch Latest"
+                                feature. You can still use "Paste Log" without
+                                configuration.
+                            </template>
                         </p>
                     </div>
                 </CardContent>
