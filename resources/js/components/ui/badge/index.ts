@@ -17,27 +17,27 @@ export const badgeVariants = cva(
         outline:
           "text-foreground [a&]:hover:bg-gradient-to-r [a&]:hover:from-accent/20 [a&]:hover:to-accent/10 [a&]:hover:text-accent-foreground",
         success:
-          "border-transparent bg-gradient-to-r from-emerald-500 to-green-500 text-white",
+          "border-transparent bg-gradient-to-r from-[var(--badge-success-from)] to-[var(--badge-success-to)] text-white",
         warning:
           "border-transparent bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-900",
         info:
           "border-transparent bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
         red:
-          "border-transparent bg-red-500/15 text-red-600 dark:text-red-400",
+          "border-transparent bg-[var(--badge-red-bg)] text-[var(--badge-red-text)]",
         orange:
-          "border-transparent bg-orange-500/15 text-orange-600 dark:text-orange-400",
+          "border-transparent bg-[var(--badge-orange-bg)] text-[var(--badge-orange-text)]",
         amber:
-          "border-transparent bg-amber-500/15 text-amber-600 dark:text-amber-400",
+          "border-transparent bg-[var(--badge-amber-bg)] text-[var(--badge-amber-text)]",
         emerald:
-          "border-transparent bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+          "border-transparent bg-[var(--badge-emerald-bg)] text-[var(--badge-emerald-text)]",
         blue:
-          "border-transparent bg-blue-500/15 text-blue-600 dark:text-blue-400",
+          "border-transparent bg-[var(--badge-blue-bg)] text-[var(--badge-blue-text)]",
         purple:
-          "border-transparent bg-purple-500/15 text-purple-600 dark:text-purple-400",
+          "border-transparent bg-[var(--badge-purple-bg)] text-[var(--badge-purple-text)]",
         gray:
-          "border-transparent bg-gray-500/15 text-gray-600 dark:text-gray-400",
+          "border-transparent bg-[var(--badge-gray-bg)] text-[var(--badge-gray-text)]",
         cyan:
-          "border-transparent bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
+          "border-transparent bg-[var(--badge-cyan-bg)] text-[var(--badge-cyan-text)]",
         rose:
           "border-transparent bg-rose-500/15 text-rose-600 dark:text-rose-400",
         pink:

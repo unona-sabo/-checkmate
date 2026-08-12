@@ -441,7 +441,7 @@ const formatDate = (date: string | null): string => {
                                 <div class="flex items-center gap-3">
                                     <Badge
                                         variant="outline"
-                                        class="font-mono text-xs"
+                                        class="h-4 shrink-0 px-1.5 font-mono text-[10px]"
                                     >
                                         v{{ release.version }}
                                     </Badge>
@@ -454,7 +454,7 @@ const formatDate = (date: string | null): string => {
                                         :variant="
                                             releaseStatusVariant(release.status)
                                         "
-                                        class="text-xs"
+                                        class="h-4 shrink-0 px-1.5 text-[10px]"
                                     >
                                         {{ getStatusLabel(release.status) }}
                                     </Badge>
@@ -475,7 +475,7 @@ const formatDate = (date: string | null): string => {
                                                 release.decision,
                                             )
                                         "
-                                        class="text-xs"
+                                        class="h-4 shrink-0 px-1.5 text-[10px]"
                                     >
                                         {{ getDecisionLabel(release.decision) }}
                                     </Badge>

@@ -164,6 +164,28 @@
     --status-skipped: hsl(262 83% 58%);
     --status-retest: hsl(199 89% 48%);
     --status-untested: hsl(0 0% 45%);
+
+    /* Badge colors — same hues as the rest of the app, muted toward
+       muted-foreground so status/priority badges read calm rather than
+       bright, with purple/cyan/emerald pulled back the furthest. */
+    --badge-red-bg: rgba(220, 38, 38, 0.1);
+    --badge-red-text: color-mix(in srgb, #dc2626 65%, var(--muted-foreground) 35%);
+    --badge-orange-bg: rgba(234, 88, 12, 0.1);
+    --badge-orange-text: color-mix(in srgb, #ea580c 65%, var(--muted-foreground) 35%);
+    --badge-amber-bg: rgba(217, 119, 6, 0.1);
+    --badge-amber-text: color-mix(in srgb, #d97706 65%, var(--muted-foreground) 35%);
+    --badge-emerald-bg: rgba(5, 150, 105, 0.075);
+    --badge-emerald-text: color-mix(in srgb, #059669 48%, var(--muted-foreground) 52%);
+    --badge-blue-bg: rgba(37, 99, 235, 0.1);
+    --badge-blue-text: color-mix(in srgb, #2563eb 65%, var(--muted-foreground) 35%);
+    --badge-purple-bg: rgba(147, 51, 234, 0.07);
+    --badge-purple-text: color-mix(in srgb, #9333ea 45%, var(--muted-foreground) 55%);
+    --badge-gray-bg: rgba(100, 116, 139, 0.1);
+    --badge-gray-text: var(--muted-foreground);
+    --badge-cyan-bg: rgba(8, 145, 178, 0.07);
+    --badge-cyan-text: color-mix(in srgb, #0891b2 45%, var(--muted-foreground) 55%);
+    --badge-success-from: color-mix(in srgb, #10b981 75%, var(--muted-foreground) 25%);
+    --badge-success-to: color-mix(in srgb, #22c55e 75%, var(--muted-foreground) 25%);
 }
 
 .dark {
@@ -219,6 +241,28 @@
     --status-skipped: hsl(262 83% 58%);
     --status-retest: hsl(199 89% 48%);
     --status-untested: hsl(0 0% 45%);
+
+    /* Badge colors — lighter base shades than light mode for legibility on
+       dark surfaces, still pulled back toward muted-foreground, with
+       purple/cyan/emerald muted the furthest. */
+    --badge-red-bg: rgba(220, 38, 38, 0.16);
+    --badge-red-text: color-mix(in srgb, #f2596a 72%, var(--muted-foreground) 28%);
+    --badge-orange-bg: rgba(234, 88, 12, 0.16);
+    --badge-orange-text: color-mix(in srgb, #fb923c 72%, var(--muted-foreground) 28%);
+    --badge-amber-bg: rgba(217, 119, 6, 0.16);
+    --badge-amber-text: color-mix(in srgb, #f0a53d 72%, var(--muted-foreground) 28%);
+    --badge-emerald-bg: rgba(5, 150, 105, 0.12);
+    --badge-emerald-text: color-mix(in srgb, #34d399 52%, var(--muted-foreground) 48%);
+    --badge-blue-bg: rgba(37, 99, 235, 0.16);
+    --badge-blue-text: color-mix(in srgb, #6f97f5 72%, var(--muted-foreground) 28%);
+    --badge-purple-bg: rgba(147, 51, 234, 0.11);
+    --badge-purple-text: color-mix(in srgb, #c084fc 50%, var(--muted-foreground) 50%);
+    --badge-gray-bg: rgba(100, 116, 139, 0.16);
+    --badge-gray-text: var(--muted-foreground);
+    --badge-cyan-bg: rgba(8, 145, 178, 0.11);
+    --badge-cyan-text: color-mix(in srgb, #22d3ee 50%, var(--muted-foreground) 50%);
+    --badge-success-from: color-mix(in srgb, #10b981 75%, var(--muted-foreground) 25%);
+    --badge-success-to: color-mix(in srgb, #22c55e 75%, var(--muted-foreground) 25%);
 }
 
 @layer base {

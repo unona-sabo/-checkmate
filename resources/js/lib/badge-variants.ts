@@ -128,13 +128,13 @@ export const automationVariant = (status: string): Variant => {
 export const releaseStatusVariant = (status: string): Variant => {
     switch (status) {
         case 'released':
-            return 'default';
+            return 'emerald';
         case 'ready':
             return 'emerald';
         case 'cancelled':
             return 'destructive';
         case 'completed':
-            return 'default';
+            return 'emerald';
         default:
             return 'secondary';
     }
