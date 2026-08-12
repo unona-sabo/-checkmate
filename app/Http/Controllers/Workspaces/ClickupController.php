@@ -156,12 +156,19 @@ class ClickupController extends Controller
             // can leave an orphaned duplicate that ClickUp keeps delivering
             // to, signed with a secret we no longer know — which looks like
             // a permanent, unexplainable signature mismatch on our end.
-            foreach ($service->listWebhooks($teamId) as $webhook) {
-                if (($webhook['endpoint'] ?? null) === $endpoint) {
+            $existingWebhooks = $service->listWebhooks($teamId);
+            Log::info('ClickUp webhook cleanup: found existing webhooks for team', [
+                'teamId' => $teamId,
+                'ourEndpoint' => $endpoint,
+                'existing' => array_map(fn ($w) => ['id' => $w['id'] ?? null, 'endpoint' => $w['endpoint'] ?? null], $existingWebhooks),
+            ]);
+            foreach ($existingWebhooks as $webhook) {
+                if (rtrim((string) ($webhook['endpoint'] ?? ''), '/') === rtrim($endpoint, '/')) {
                     try {
                         $service->deleteWebhook($webhook['id']);
-                    } catch (\Exception) {
-                        // Best effort — ClickUp may have already removed it.
+                        Log::info("ClickUp webhook cleanup: deleted matching webhook {$webhook['id']}.");
+                    } catch (\Exception $e) {
+                        Log::warning("ClickUp webhook cleanup: failed to delete webhook {$webhook['id']}: {$e->getMessage()}");
                     }
                 }
             }

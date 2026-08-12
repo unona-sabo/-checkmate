@@ -20,6 +20,11 @@ class ClickupWebhookController extends Controller
 
         $settings = ClickupSetting::forWorkspace($workspace);
 
+        $incomingWebhookId = $request->input('webhook_id');
+        if ($incomingWebhookId && $incomingWebhookId !== $settings->webhook_id) {
+            Log::warning("ClickUp webhook: event delivered by webhook {$incomingWebhookId}, but this workspace has {$settings->webhook_id} on file — this delivery is from a stale/orphaned webhook subscription that was never actually removed on ClickUp's side.");
+        }
+
         $failureReason = $this->signatureFailureReason($request, $settings->webhook_secret ?? '');
 
         if ($failureReason) {
