@@ -392,4 +392,10 @@ export const GOOD_DAY_TOAST_VARIANTS: string[] = [
     asset('Good%20day/good_work_day_productivity_unlocked.png'),
     asset('Good%20day/good_work_day_sunrise_unlocked.png'),
     asset('Good%20day/good_work_day_workspace_unlocked.png'),
+    asset('Good%20day/01_additional_rocket_unlocked_80.png'),
+    asset('Good%20day/02_additional_trophy_unlocked_80.png'),
+    asset('Good%20day/03_additional_bug_hunter_unlocked_80.png'),
+    asset('Good%20day/04_additional_puzzle_unlocked_80.png'),
+    asset('Good%20day/05_additional_security_unlocked_80.png'),
+    asset('Good%20day/06_additional_ai_unlocked_80.png'),
 ];
