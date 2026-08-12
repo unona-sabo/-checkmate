@@ -204,10 +204,8 @@ class BugreportController extends Controller
             $service = ClickupService::fromSettings($settings);
             $task = $service->getTask($bugreport->clickup_task_id);
 
-            $clickupStatus = strtolower($task['status']['status'] ?? '');
-            $statusMapping = $settings->status_mapping ?? [];
-            $reverseMapping = array_flip($statusMapping);
-            $appStatus = $reverseMapping[$clickupStatus] ?? null;
+            $clickupStatus = $task['status']['status'] ?? '';
+            $appStatus = ClickupService::resolveAppStatus($settings->status_mapping ?? [], $clickupStatus);
 
             if ($appStatus && $appStatus !== $bugreport->status) {
                 $bugreport->update(['status' => $appStatus]);

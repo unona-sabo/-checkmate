@@ -125,4 +125,19 @@ class ClickupService
     {
         $this->http->delete("/webhook/{$webhookId}")->throw();
     }
+
+    /**
+     * Map a ClickUp status name to the app's Bugreport status using the
+     * workspace's configured mapping (app_status => clickup_status, stored
+     * lowercase). Shared by the webhook handler, the manual sync action,
+     * and the sync job so they can never disagree on the lookup.
+     *
+     * @param  array<string, string>  $statusMapping
+     */
+    public static function resolveAppStatus(array $statusMapping, string $clickupStatus): ?string
+    {
+        $reverseMapping = array_flip($statusMapping);
+
+        return $reverseMapping[strtolower($clickupStatus)] ?? null;
+    }
 }

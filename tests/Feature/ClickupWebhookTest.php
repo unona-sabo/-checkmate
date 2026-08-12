@@ -4,6 +4,7 @@ use App\Models\Bugreport;
 use App\Models\ClickupSetting;
 use App\Models\Project;
 use App\Models\Workspace;
+use Illuminate\Support\Facades\Http;
 
 test('webhook rejects requests without valid signature', function () {
     $workspace = Workspace::factory()->create();
@@ -16,9 +17,18 @@ test('webhook rejects requests without valid signature', function () {
 });
 
 test('webhook updates bugreport status on taskStatusUpdated', function () {
+    Http::fake([
+        'api.clickup.com/api/v2/task/abc123' => Http::response([
+            'id' => 'abc123',
+            'status' => ['status' => 'done'],
+        ]),
+    ]);
+
     $workspace = Workspace::factory()->create();
     $settings = ClickupSetting::forWorkspace($workspace);
     $settings->update([
+        'api_token' => 'test-token',
+        'list_id' => 'list-1',
         'webhook_secret' => 'test-secret',
         'status_mapping' => [
             'to_do' => 'to do',
@@ -35,11 +45,15 @@ test('webhook updates bugreport status on taskStatusUpdated', function () {
         'clickup_task_id' => 'abc123',
     ]);
 
+    // The webhook payload's `history_items` is intentionally NOT trusted for
+    // the new status — ClickUp can batch unrelated field changes into the
+    // same call, so the handler fetches the task's authoritative status
+    // directly from the API instead of parsing the diff.
     $payload = json_encode([
         'event' => 'taskStatusUpdated',
         'task_id' => 'abc123',
         'history_items' => [
-            ['after' => ['status' => 'done']],
+            ['after' => ['status' => 'in review']],
         ],
     ]);
 
@@ -53,6 +67,83 @@ test('webhook updates bugreport status on taskStatusUpdated', function () {
 
     $bugreport->refresh();
     expect($bugreport->status)->toBe('done');
+});
+
+test('webhook resolves the correct status even when it is not the first history item', function () {
+    Http::fake([
+        'api.clickup.com/api/v2/task/abc123' => Http::response([
+            'id' => 'abc123',
+            'status' => ['status' => 'in review'],
+        ]),
+    ]);
+
+    $workspace = Workspace::factory()->create();
+    $settings = ClickupSetting::forWorkspace($workspace);
+    $settings->update([
+        'api_token' => 'test-token',
+        'list_id' => 'list-1',
+        'webhook_secret' => 'test-secret',
+        'status_mapping' => [
+            'to_do' => 'to do',
+            'in_review' => 'in review',
+        ],
+    ]);
+
+    $project = Project::factory()->create(['workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'status' => 'to_do',
+        'clickup_task_id' => 'abc123',
+    ]);
+
+    // ClickUp batched an assignee change ahead of the status change — a
+    // naive `history_items.0` read would have missed the status entirely.
+    $payload = json_encode([
+        'event' => 'taskStatusUpdated',
+        'task_id' => 'abc123',
+        'history_items' => [
+            ['field' => 'assignee_add', 'after' => ['id' => 42]],
+            ['field' => 'status', 'after' => ['status' => 'in review']],
+        ],
+    ]);
+
+    $signature = hash_hmac('sha256', $payload, 'test-secret');
+
+    $this->postJson("/api/webhooks/clickup/{$workspace->id}", json_decode($payload, true), [
+        'X-Signature' => $signature,
+    ])->assertOk();
+
+    expect($bugreport->refresh()->status)->toBe('in_review');
+});
+
+test('webhook does nothing when the integration is not configured', function () {
+    $workspace = Workspace::factory()->create();
+    $settings = ClickupSetting::forWorkspace($workspace);
+    $settings->update([
+        'webhook_secret' => 'test-secret',
+        'status_mapping' => ['done' => 'done'],
+    ]);
+
+    $project = Project::factory()->create(['workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'status' => 'to_do',
+        'clickup_task_id' => 'abc123',
+    ]);
+
+    $payload = json_encode([
+        'event' => 'taskStatusUpdated',
+        'task_id' => 'abc123',
+        'history_items' => [['after' => ['status' => 'done']]],
+    ]);
+
+    $signature = hash_hmac('sha256', $payload, 'test-secret');
+
+    $this->postJson("/api/webhooks/clickup/{$workspace->id}", json_decode($payload, true), [
+        'X-Signature' => $signature,
+    ])->assertOk();
+
+    expect($bugreport->refresh()->status)->toBe('to_do');
 });
 
 test('webhook ignores unknown task ids', function () {
