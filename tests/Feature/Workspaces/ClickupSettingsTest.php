@@ -132,6 +132,49 @@ test('register webhook rejects a local development domain up front', function ()
     URL::forceRootUrl(config('app.url'));
 });
 
+test('register webhook deletes every existing webhook pointing at our endpoint, not just the tracked one', function () {
+    URL::forceRootUrl('https://myapp.io');
+
+    Http::fake([
+        'api.clickup.com/api/v2/team' => Http::response(['teams' => [['id' => '9003144822']]]),
+        // Same URL is hit twice for different purposes — GET to list existing
+        // webhooks (listWebhooks), then POST to create the new one
+        // (registerWebhook) — Http::fake matches by URL only, so a sequence
+        // is required to answer each call correctly in order.
+        'api.clickup.com/api/v2/team/9003144822/webhook' => Http::sequence()
+            ->push(['webhooks' => [
+                ['id' => 'orphan-1', 'endpoint' => 'https://myapp.io/api/webhooks/clickup/1'],
+                ['id' => 'other-workspace', 'endpoint' => 'https://myapp.io/api/webhooks/clickup/999'],
+            ]])
+            ->push(['id' => 'fresh-webhook']),
+        'api.clickup.com/api/v2/webhook/orphan-1' => Http::response([], 200),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    ClickupSetting::forWorkspace($workspace)->update([
+        'api_token' => 'pk_test_token',
+        'list_id' => '123456',
+        'webhook_id' => 'stale-tracked-id',
+        'webhook_secret' => 'old-secret',
+    ]);
+
+    $response = $this->actingAs($user)->post(route('workspaces.clickup.register-webhook'));
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    Http::assertSent(fn ($request) => $request->method() === 'DELETE'
+        && str_contains($request->url(), '/webhook/orphan-1'));
+    Http::assertNotSent(fn ($request) => $request->method() === 'DELETE'
+        && str_contains($request->url(), '/webhook/other-workspace'));
+
+    $settings = ClickupSetting::forWorkspace($workspace);
+    expect($settings->webhook_id)->toBe('fresh-webhook');
+    expect($settings->webhook_secret)->not->toBe('old-secret');
+
+    URL::forceRootUrl(config('app.url'));
+});
+
 test('webhook health returns an error when no webhook is registered', function () {
     [$user] = createUserWithWorkspace();
 

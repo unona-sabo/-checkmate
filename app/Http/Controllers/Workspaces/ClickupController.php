@@ -143,29 +143,38 @@ class ClickupController extends Controller
         try {
             $service = ClickupService::fromSettings($settings);
 
-            // Delete existing webhook if present
-            if ($settings->webhook_id) {
-                try {
-                    $service->deleteWebhook($settings->webhook_id);
-                } catch (\Exception) {
-                    // Webhook may already be deleted
-                }
-            }
-
             $teams = $service->getTeams();
             if (empty($teams)) {
                 return back()->with('error', 'No ClickUp teams found.');
+            }
+            $teamId = $teams[0]['id'];
+
+            // Delete every webhook already pointing at our endpoint for this
+            // team — not just the one we happen to have tracked in
+            // $settings->webhook_id. A registration that never made it to
+            // the settings update (or two people re-registering at once)
+            // can leave an orphaned duplicate that ClickUp keeps delivering
+            // to, signed with a secret we no longer know — which looks like
+            // a permanent, unexplainable signature mismatch on our end.
+            foreach ($service->listWebhooks($teamId) as $webhook) {
+                if (($webhook['endpoint'] ?? null) === $endpoint) {
+                    try {
+                        $service->deleteWebhook($webhook['id']);
+                    } catch (\Exception) {
+                        // Best effort — ClickUp may have already removed it.
+                    }
+                }
             }
 
             $secret = Str::random(32);
 
             Log::info('Registering ClickUp webhook', [
                 'endpoint' => $endpoint,
-                'teamId' => $teams[0]['id'],
+                'teamId' => $teamId,
                 'workspaceId' => $workspace->id,
             ]);
 
-            $result = $service->registerWebhook($teams[0]['id'], $endpoint, $secret);
+            $result = $service->registerWebhook($teamId, $endpoint, $secret);
 
             $settings->update([
                 'webhook_id' => $result['id'],
