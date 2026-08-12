@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SyncBugreportFromClickUp;
 use App\Models\Bugreport;
 use App\Models\ClickupSetting;
 use App\Models\Workspace;
-use App\Services\ClickupService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -93,12 +93,15 @@ class ClickupWebhookController extends Controller
     }
 
     /**
-     * Fetch the task's current status directly from the ClickUp API rather
-     * than trusting `history_items` off the webhook payload — ClickUp
-     * batches multiple field changes into one webhook call, and the status
-     * change isn't guaranteed to be at a fixed index, so reading it out of
-     * the diff is unreliable. This mirrors the manual "sync" action, which
-     * always resolves correctly because it does the same live lookup.
+     * Dispatch the status sync to the queue rather than calling ClickUp's
+     * API inline — the webhook response shouldn't wait on an external HTTP
+     * round trip to ClickUp, especially since ClickUp itself will count a
+     * slow response toward the delivery's health. Reuses the same job the
+     * manual "Sync from ClickUp" action already dispatches, which fetches
+     * the task's current status directly from the API rather than trusting
+     * `history_items` off the webhook payload (ClickUp batches multiple
+     * field changes into one call, so the status change isn't guaranteed
+     * to be at a fixed index in that array).
      */
     private function handleStatusUpdate(Request $request, ClickupSetting $settings): void
     {
@@ -124,25 +127,6 @@ class ClickupWebhookController extends Controller
             return;
         }
 
-        try {
-            $task = ClickupService::fromSettings($settings)->getTask($taskId);
-        } catch (\Throwable $e) {
-            Log::error("ClickUp webhook: failed to fetch task {$taskId} from the ClickUp API: {$e->getMessage()}");
-
-            return;
-        }
-
-        $clickupStatus = $task['status']['status'] ?? '';
-        $appStatus = ClickupService::resolveAppStatus($settings->status_mapping ?? [], $clickupStatus);
-
-        if (! $appStatus) {
-            Log::info("ClickUp webhook: no status mapping configured for ClickUp status \"{$clickupStatus}\" (task {$taskId}).");
-
-            return;
-        }
-
-        if ($appStatus !== $bugreport->status) {
-            $bugreport->update(['status' => $appStatus]);
-        }
+        SyncBugreportFromClickUp::dispatch($bugreport);
     }
 }

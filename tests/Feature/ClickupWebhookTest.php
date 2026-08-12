@@ -1,9 +1,11 @@
 <?php
 
+use App\Jobs\SyncBugreportFromClickUp;
 use App\Models\Bugreport;
 use App\Models\ClickupSetting;
 use App\Models\Project;
 use App\Models\Workspace;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
 
 test('webhook rejects requests without valid signature', function () {
@@ -144,6 +146,48 @@ test('webhook does nothing when the integration is not configured', function () 
     ])->assertOk();
 
     expect($bugreport->refresh()->status)->toBe('to_do');
+});
+
+test('webhook dispatches a queued job to sync status instead of calling clickup inline', function () {
+    Bus::fake();
+    Http::fake();
+
+    $workspace = Workspace::factory()->create();
+    $settings = ClickupSetting::forWorkspace($workspace);
+    $settings->update([
+        'api_token' => 'test-token',
+        'list_id' => 'list-1',
+        'webhook_secret' => 'test-secret',
+        'status_mapping' => ['done' => 'done'],
+    ]);
+
+    $project = Project::factory()->create(['workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create([
+        'project_id' => $project->id,
+        'status' => 'to_do',
+        'clickup_task_id' => 'abc123',
+    ]);
+
+    $payload = json_encode([
+        'event' => 'taskStatusUpdated',
+        'task_id' => 'abc123',
+        'webhook_id' => $settings->webhook_id,
+        'history_items' => [['after' => ['status' => 'done']]],
+    ]);
+    $signature = hash_hmac('sha256', $payload, 'test-secret');
+
+    $this->postJson("/api/webhooks/clickup/{$workspace->id}", json_decode($payload, true), [
+        'X-Signature' => $signature,
+    ])->assertOk();
+
+    Bus::assertDispatched(
+        SyncBugreportFromClickUp::class,
+        fn ($job) => $job->bugreport->is($bugreport),
+    );
+
+    // No inline HTTP call to ClickUp's API should happen from the webhook
+    // request itself — that's the whole point of queuing it.
+    Http::assertNothingSent();
 });
 
 test('webhook ignores unknown task ids', function () {
