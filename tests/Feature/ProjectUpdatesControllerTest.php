@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 
 beforeEach(function () {
-    Cache::store('file')->forget('home_sections');
+    Cache::store('file')->forget('project_updates_sections');
 });
 
 test('home page returns sections data for authenticated users', function () {
@@ -15,11 +15,11 @@ test('home page returns sections data for authenticated users', function () {
     $project = Project::factory()->create(['user_id' => $user->id]);
     Checklist::factory()->create(['project_id' => $project->id]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('project-updates.index'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->component('Dashboard')
+        ->component('settings/ProjectUpdates')
         ->has('sections', 14)
         ->has('sections.0', fn ($section) => $section
             ->where('key', 'checklists')
@@ -37,11 +37,11 @@ test('home page returns sections data for authenticated users', function () {
 test('home page sections include all six modules', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('project-updates.index'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->component('Dashboard')
+        ->component('settings/ProjectUpdates')
         ->has('sections', 14)
         ->where('sections.0.key', 'checklists')
         ->where('sections.1.key', 'test-suites')
@@ -63,11 +63,11 @@ test('home page sections include all six modules', function () {
 test('show page returns section data and synced features', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get(route('home.show', 'checklists'));
+    $response = $this->actingAs($user)->get(route('project-updates.show', 'checklists'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->component('Dashboard/Show')
+        ->component('settings/ProjectUpdates/Show')
         ->has('section', fn ($section) => $section
             ->where('key', 'checklists')
             ->where('title', 'Checklists')
@@ -105,7 +105,7 @@ test('section author reflects user who last updated a feature description', func
         'updated_by' => $user->id,
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('project-updates.index'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -123,7 +123,7 @@ test('section author falls back to creator when no updater', function () {
         'updated_by' => null,
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('project-updates.index'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -135,7 +135,7 @@ test('section author falls back to creator when no updater', function () {
 test('section author defaults to CheckMate Team when no feature descriptions', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('project-updates.index'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -154,7 +154,7 @@ test('section dates come from feature descriptions', function () {
         'updated_at' => '2099-12-31 23:59:59',
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('project-updates.index'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -172,7 +172,7 @@ test('update feature sets updated_by to current user', function () {
         'updated_by' => null,
     ]);
 
-    $this->actingAs($user)->put(route('home.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), [
+    $this->actingAs($user)->put(route('project-updates.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), [
         'title' => 'Updated',
         'description' => 'Desc',
     ]);
@@ -192,12 +192,12 @@ test('section author updates when non-custom feature is edited', function () {
         'updated_by' => null,
     ]);
 
-    $this->actingAs($user)->put(route('home.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), [
+    $this->actingAs($user)->put(route('project-updates.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), [
         'title' => 'Edited system feature',
         'description' => 'New desc',
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('project-updates.index'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -216,7 +216,7 @@ test('home page shows edited feature titles from database', function () {
         'updated_by' => $user->id,
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('project-updates.index'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -242,7 +242,7 @@ test('home page excludes deleted features', function () {
         'deleted_at' => now(),
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('project-updates.index'));
 
     $response->assertOk();
 
@@ -254,7 +254,7 @@ test('home page excludes deleted features', function () {
 test('home page syncs and displays config features on first load', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('project-updates.index'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -268,7 +268,7 @@ test('home page auto-syncs features for all sections on first load', function ()
 
     $this->assertDatabaseCount('feature_descriptions', 0);
 
-    $this->actingAs($user)->get(route('home'));
+    $this->actingAs($user)->get(route('project-updates.index'));
 
     expect(FeatureDescription::count())->toBeGreaterThan(0);
 
@@ -280,7 +280,7 @@ test('home page auto-syncs features for all sections on first load', function ()
 test('show page returns 404 for invalid section', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get(route('home.show', 'invalid-section'));
+    $response = $this->actingAs($user)->get(route('project-updates.show', 'invalid-section'));
 
     $response->assertNotFound();
 });
@@ -290,7 +290,7 @@ test('show page syncs config features to database on first visit', function () {
 
     $this->assertDatabaseCount('feature_descriptions', 0);
 
-    $this->actingAs($user)->get(route('home.show', 'checklists'));
+    $this->actingAs($user)->get(route('project-updates.show', 'checklists'));
 
     $this->assertDatabaseCount('feature_descriptions', 43);
     $this->assertDatabaseHas('feature_descriptions', [
@@ -303,8 +303,8 @@ test('show page syncs config features to database on first visit', function () {
 test('show page does not duplicate features on repeat visits', function () {
     $user = User::factory()->create();
 
-    $this->actingAs($user)->get(route('home.show', 'checklists'));
-    $this->actingAs($user)->get(route('home.show', 'checklists'));
+    $this->actingAs($user)->get(route('project-updates.show', 'checklists'));
+    $this->actingAs($user)->get(route('project-updates.show', 'checklists'));
 
     $this->assertDatabaseCount('feature_descriptions', 43);
 });
@@ -320,7 +320,7 @@ test('sync preserves existing features when config changes', function () {
         'is_custom' => false,
     ]);
 
-    $this->actingAs($user)->get(route('home.show', 'checklists'));
+    $this->actingAs($user)->get(route('project-updates.show', 'checklists'));
 
     // Old feature is preserved (43 config + 1 old)
     $this->assertDatabaseCount('feature_descriptions', 44);
@@ -333,7 +333,7 @@ test('sync preserves existing features when config changes', function () {
 test('custom feature can be created', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->post(route('home.store-feature', 'checklists'), [
+    $response = $this->actingAs($user)->post(route('project-updates.store-feature', 'checklists'), [
         'title' => 'My custom feature',
         'description' => 'Custom description',
     ]);
@@ -352,7 +352,7 @@ test('custom feature can be created', function () {
 test('store returns 404 for invalid section', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->post(route('home.store-feature', 'invalid'), [
+    $response = $this->actingAs($user)->post(route('project-updates.store-feature', 'invalid'), [
         'title' => 'Test',
     ]);
 
@@ -362,7 +362,7 @@ test('store returns 404 for invalid section', function () {
 test('store validates title is required', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->post(route('home.store-feature', 'checklists'), [
+    $response = $this->actingAs($user)->post(route('project-updates.store-feature', 'checklists'), [
         'title' => '',
     ]);
 
@@ -377,7 +377,7 @@ test('feature can be updated', function () {
         'description' => null,
     ]);
 
-    $response = $this->actingAs($user)->put(route('home.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), [
+    $response = $this->actingAs($user)->put(route('project-updates.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), [
         'title' => 'Updated title',
         'description' => 'Added description',
     ]);
@@ -398,7 +398,7 @@ test('update returns 404 for wrong section', function () {
         'title' => 'Test',
     ]);
 
-    $response = $this->actingAs($user)->put(route('home.update-feature', ['section' => 'notes', 'featureDescription' => $feature->id]), [
+    $response = $this->actingAs($user)->put(route('project-updates.update-feature', ['section' => 'notes', 'featureDescription' => $feature->id]), [
         'title' => 'Updated',
     ]);
 
@@ -412,7 +412,7 @@ test('feature can be deleted', function () {
         'title' => 'To be deleted',
     ]);
 
-    $response = $this->actingAs($user)->delete(route('home.destroy-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]));
+    $response = $this->actingAs($user)->delete(route('project-updates.destroy-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]));
 
     $response->assertRedirect();
 
@@ -425,15 +425,15 @@ test('deleted system features are not re-created by sync', function () {
     $user = User::factory()->create();
 
     // First visit syncs features
-    $this->actingAs($user)->get(route('home.show', 'checklists'));
+    $this->actingAs($user)->get(route('project-updates.show', 'checklists'));
     $this->assertDatabaseCount('feature_descriptions', 43);
 
     // Delete a system feature
     $feature = FeatureDescription::where('section_key', 'checklists')->first();
-    $this->actingAs($user)->delete(route('home.destroy-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]));
+    $this->actingAs($user)->delete(route('project-updates.destroy-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]));
 
     // Second visit should not re-create the deleted feature
-    $this->actingAs($user)->get(route('home.show', 'checklists'));
+    $this->actingAs($user)->get(route('project-updates.show', 'checklists'));
 
     // Still 43 total in DB (42 active + 1 soft-deleted)
     $this->assertDatabaseCount('feature_descriptions', 43);
@@ -447,7 +447,7 @@ test('delete returns 404 for wrong section', function () {
         'title' => 'Test',
     ]);
 
-    $response = $this->actingAs($user)->delete(route('home.destroy-feature', ['section' => 'notes', 'featureDescription' => $feature->id]));
+    $response = $this->actingAs($user)->delete(route('project-updates.destroy-feature', ['section' => 'notes', 'featureDescription' => $feature->id]));
 
     $response->assertNotFound();
 });
@@ -458,17 +458,17 @@ test('show, store, update and delete require authentication', function () {
         'title' => 'Test',
     ]);
 
-    $this->get(route('home.show', 'checklists'))->assertRedirect(route('login'));
-    $this->post(route('home.store-feature', 'checklists'), ['title' => 'Test'])->assertRedirect(route('login'));
-    $this->put(route('home.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), ['title' => 'Test'])->assertRedirect(route('login'));
-    $this->delete(route('home.destroy-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]))->assertRedirect(route('login'));
+    $this->get(route('project-updates.show', 'checklists'))->assertRedirect(route('login'));
+    $this->post(route('project-updates.store-feature', 'checklists'), ['title' => 'Test'])->assertRedirect(route('login'));
+    $this->put(route('project-updates.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), ['title' => 'Test'])->assertRedirect(route('login'));
+    $this->delete(route('project-updates.destroy-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]))->assertRedirect(route('login'));
 });
 
 test('sync does not overwrite user-edited non-custom features', function () {
     $user = User::factory()->create();
 
     // First visit syncs features
-    $this->actingAs($user)->get(route('home.show', 'checklists'));
+    $this->actingAs($user)->get(route('project-updates.show', 'checklists'));
     $this->assertDatabaseCount('feature_descriptions', 43);
 
     // User edits a synced feature
@@ -477,13 +477,13 @@ test('sync does not overwrite user-edited non-custom features', function () {
         ->first();
     $originalTitle = $feature->title;
 
-    $this->actingAs($user)->put(route('home.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), [
+    $this->actingAs($user)->put(route('project-updates.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), [
         'title' => 'User edited title',
         'description' => 'User description',
     ]);
 
     // Second visit triggers sync again — should NOT revert the edit
-    $this->actingAs($user)->get(route('home.show', 'checklists'));
+    $this->actingAs($user)->get(route('project-updates.show', 'checklists'));
 
     $this->assertDatabaseHas('feature_descriptions', [
         'id' => $feature->id,
@@ -496,11 +496,11 @@ test('sync does not overwrite user-edited non-custom features', function () {
 test('all six section keys return valid show pages', function (string $sectionKey) {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get(route('home.show', $sectionKey));
+    $response = $this->actingAs($user)->get(route('project-updates.show', $sectionKey));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->component('Dashboard/Show')
+        ->component('settings/ProjectUpdates/Show')
         ->where('section.key', $sectionKey)
         ->has('features')
     );

@@ -4,6 +4,7 @@ use App\Http\Controllers\Settings\AchievementController;
 use App\Http\Controllers\Settings\BackupController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\Settings\ProjectUpdatesController;
 use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -39,4 +40,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('settings/backup/restore/{filename}', [BackupController::class, 'restore'])->name('backup.restore');
 
     Route::get('settings/achievements', [AchievementController::class, 'show'])->name('achievements.show');
+
+    Route::get('settings/project-updates', [ProjectUpdatesController::class, 'index'])->name('project-updates.index');
+    Route::get('settings/project-updates/{section}', [ProjectUpdatesController::class, 'show'])->name('project-updates.show');
+    Route::post('settings/project-updates/{section}/features', [ProjectUpdatesController::class, 'storeFeature'])->name('project-updates.store-feature');
+    Route::put('settings/project-updates/{section}/features/{featureDescription}', [ProjectUpdatesController::class, 'updateFeature'])->name('project-updates.update-feature');
+    Route::delete('settings/project-updates/{section}/features/{featureDescription}', [ProjectUpdatesController::class, 'destroyFeature'])->name('project-updates.destroy-feature');
 });

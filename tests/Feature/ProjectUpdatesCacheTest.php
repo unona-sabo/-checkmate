@@ -6,26 +6,26 @@ use Illuminate\Support\Facades\Cache;
 
 test('home page populates cache on visit', function () {
     $user = User::factory()->create();
-    Cache::store('file')->forget('home_sections');
+    Cache::store('file')->forget('project_updates_sections');
 
-    $this->actingAs($user)->get(route('home'))->assertOk();
+    $this->actingAs($user)->get(route('project-updates.index'))->assertOk();
 
-    expect(Cache::store('file')->has('home_sections'))->toBeTrue();
+    expect(Cache::store('file')->has('project_updates_sections'))->toBeTrue();
 });
 
 test('store feature invalidates home cache', function () {
     $user = User::factory()->create();
-    Cache::store('file')->put('home_sections', ['stale_cached_value'], 300);
+    Cache::store('file')->put('project_updates_sections', ['stale_cached_value'], 300);
 
     $response = $this->actingAs($user)
-        ->from(route('home.show', 'checklists'))
-        ->post(route('home.store-feature', 'checklists'), [
+        ->from(route('project-updates.show', 'checklists'))
+        ->post(route('project-updates.store-feature', 'checklists'), [
             'title' => 'New custom feature',
         ]);
 
     $response->assertRedirect();
 
-    expect(Cache::store('file')->has('home_sections'))->toBeFalse();
+    expect(Cache::store('file')->has('project_updates_sections'))->toBeFalse();
 });
 
 test('update feature invalidates home cache', function () {
@@ -36,13 +36,13 @@ test('update feature invalidates home cache', function () {
         'title' => 'Original',
         'is_custom' => true,
     ]);
-    Cache::store('file')->put('home_sections', ['cached'], 300);
+    Cache::store('file')->put('project_updates_sections', ['cached'], 300);
 
-    $this->actingAs($user)->put(route('home.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), [
+    $this->actingAs($user)->put(route('project-updates.update-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]), [
         'title' => 'Updated',
     ]);
 
-    expect(Cache::store('file')->has('home_sections'))->toBeFalse();
+    expect(Cache::store('file')->has('project_updates_sections'))->toBeFalse();
 });
 
 test('delete feature invalidates home cache', function () {
@@ -53,9 +53,9 @@ test('delete feature invalidates home cache', function () {
         'title' => 'To delete',
         'is_custom' => true,
     ]);
-    Cache::store('file')->put('home_sections', ['cached'], 300);
+    Cache::store('file')->put('project_updates_sections', ['cached'], 300);
 
-    $this->actingAs($user)->delete(route('home.destroy-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]));
+    $this->actingAs($user)->delete(route('project-updates.destroy-feature', ['section' => 'checklists', 'featureDescription' => $feature->id]));
 
-    expect(Cache::store('file')->has('home_sections'))->toBeFalse();
+    expect(Cache::store('file')->has('project_updates_sections'))->toBeFalse();
 });

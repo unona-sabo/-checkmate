@@ -34,10 +34,6 @@ Route::get('/', fn () => redirect()->route('login'))->name('welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('home', [HomeController::class, 'index'])->name('home');
-    Route::get('home/{section}', [HomeController::class, 'show'])->name('home.show');
-    Route::post('home/{section}/features', [HomeController::class, 'storeFeature'])->name('home.store-feature');
-    Route::put('home/{section}/features/{featureDescription}', [HomeController::class, 'updateFeature'])->name('home.update-feature');
-    Route::delete('home/{section}/features/{featureDescription}', [HomeController::class, 'destroyFeature'])->name('home.destroy-feature');
 
     Route::get('achievements-demo', fn () => Inertia::render('AchievementsDemo'))->name('achievements-demo');
     Route::post('focus-sessions/ping', [FocusSessionController::class, 'ping'])->name('focus-sessions.ping');

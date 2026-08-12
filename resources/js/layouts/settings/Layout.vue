@@ -37,9 +37,17 @@ const sidebarNavItems: NavItem[] = [
         title: 'Achievements',
         href: '/settings/achievements',
     },
+    {
+        title: 'Project Updates',
+        href: '/settings/project-updates',
+    },
 ];
 
-const { isCurrentUrl } = useCurrentUrl();
+const { isCurrentUrl, isCurrentUrlPrefix } = useCurrentUrl();
+
+const props = withDefaults(defineProps<{ wide?: boolean }>(), {
+    wide: false,
+});
 </script>
 
 <template>
@@ -61,7 +69,12 @@ const { isCurrentUrl } = useCurrentUrl();
                         variant="ghost"
                         :class="[
                             'w-full justify-start',
-                            { 'bg-muted': isCurrentUrl(item.href) },
+                            {
+                                'bg-muted':
+                                    item.title === 'Project Updates'
+                                        ? isCurrentUrlPrefix(item.href)
+                                        : isCurrentUrl(item.href),
+                            },
                         ]"
                         as-child
                     >
@@ -75,8 +88,10 @@ const { isCurrentUrl } = useCurrentUrl();
 
             <Separator class="my-6 lg:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <div :class="['flex-1', props.wide ? '' : 'md:max-w-2xl']">
+                <section
+                    :class="[props.wide ? 'w-full' : 'max-w-xl', 'space-y-12']"
+                >
                     <slot />
                 </section>
             </div>

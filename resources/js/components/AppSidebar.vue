@@ -53,7 +53,7 @@ const hiddenSidebarCategories = computed(
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Home',
+        title: 'Dashboard',
         href: home(),
         icon: LayoutGrid,
     },
