@@ -144,6 +144,16 @@ class TestCoverageController extends Controller
             ])
             ->toArray();
 
+        // Coverage is measured against features — with none defined, there's
+        // nothing to send the AI, and asking it to analyze an empty project
+        // anyway just invites it to invent plausible-sounding fake findings
+        // instead of reporting that honestly.
+        if ($features === []) {
+            return response()->json([
+                'message' => 'This project has no active features yet. Add features first so there\'s something to measure test coverage against.',
+            ], 422);
+        }
+
         try {
             $analysis = $this->coverageServiceFor($project, $validated['provider'] ?? null)
                 ->analyzeCoverage($testCases, $features, $documentation, $validated['custom_instructions'] ?? null);

@@ -84,6 +84,8 @@ DOCUMENTATION:
 
 Analyze the test coverage and provide a comprehensive assessment.'.$customInstructionsBlock.'
 
+IMPORTANT: Base your analysis strictly on the features, test cases, and documentation listed above — do not invent features, modules, or test cases that are not present in that data. If a section above is empty, say so plainly (e.g. "no test cases exist yet") rather than inventing example content to fill out the response.
+
 IMPORTANT: Return ONLY valid JSON, no additional text before or after.
 
 Return JSON with this exact structure:

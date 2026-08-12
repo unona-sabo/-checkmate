@@ -391,6 +391,39 @@ test('a history entry from another project cannot be viewed', function () {
 
 // ===== AI Analysis =====
 
+test('ai analysis refuses to run on a project with no active features, without calling the ai provider', function () {
+    Http::fake();
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+
+    $response = $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
+        'provider' => 'gemini',
+    ]);
+
+    $response->assertStatus(422);
+    expect($response->json('message'))->toContain('no active features');
+    Http::assertNothingSent();
+    expect($project->coverageAnalyses()->count())->toBe(0);
+});
+
+test('ai analysis refuses to run when the project only has inactive features', function () {
+    Http::fake();
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+    ProjectFeature::factory()->create(['project_id' => $project->id, 'is_active' => false]);
+
+    $response = $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
+        'provider' => 'gemini',
+    ]);
+
+    $response->assertStatus(422);
+    Http::assertNothingSent();
+});
+
 test('ai analysis uses the selected provider', function () {
     Http::fake([
         'api.openai.com/*' => Http::response([
@@ -409,6 +442,7 @@ test('ai analysis uses the selected provider', function () {
     [$user, $workspace] = createUserWithWorkspace();
     $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     AiSetting::forWorkspace($workspace)->update(['openai_api_key' => 'test-key']);
+    ProjectFeature::factory()->create(['project_id' => $project->id]);
 
     $response = $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
         'provider' => 'openai',
@@ -434,6 +468,7 @@ test('ai analysis includes custom instructions in the prompt', function () {
     [$user, $workspace] = createUserWithWorkspace();
     $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+    ProjectFeature::factory()->create(['project_id' => $project->id]);
 
     $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
         'provider' => 'gemini',
@@ -457,6 +492,7 @@ test('ai analysis prompt omits test case steps and caps documentation length to 
     [$user, $workspace] = createUserWithWorkspace();
     $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+    ProjectFeature::factory()->create(['project_id' => $project->id]);
 
     $suite = TestSuite::factory()->create(['project_id' => $project->id]);
     TestCase::factory()->create([
@@ -492,6 +528,7 @@ test('ai analysis falls back to the workspace default provider when none is give
     [$user, $workspace] = createUserWithWorkspace();
     $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     AiSetting::forWorkspace($workspace)->update(['anthropic_api_key' => 'test-key', 'default_provider' => 'claude']);
+    ProjectFeature::factory()->create(['project_id' => $project->id]);
 
     $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project))->assertOk();
 
@@ -518,6 +555,7 @@ test('ai analysis returns a friendly error and saves no history when the ai prov
     [$user, $workspace] = createUserWithWorkspace();
     $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+    ProjectFeature::factory()->create(['project_id' => $project->id]);
 
     $response = $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
         'provider' => 'gemini',
@@ -531,6 +569,7 @@ test('ai analysis returns a friendly error and saves no history when the ai prov
 test('ai analysis returns a friendly error when no api key is configured', function () {
     [$user, $workspace] = createUserWithWorkspace();
     $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    ProjectFeature::factory()->create(['project_id' => $project->id]);
 
     $response = $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
         'provider' => 'gemini',
@@ -554,6 +593,7 @@ test('running ai analysis again creates a new coverage analysis record', functio
     [$user, $workspace] = createUserWithWorkspace();
     $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
     AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'test-key']);
+    ProjectFeature::factory()->create(['project_id' => $project->id]);
 
     $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), ['provider' => 'gemini'])->assertOk();
     $this->actingAs($user)->postJson(route('test-coverage.ai-analysis', $project), [
