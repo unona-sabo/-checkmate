@@ -15,13 +15,16 @@ class ClickupWebhookController extends Controller
 {
     public function __invoke(Request $request, Workspace $workspace): JsonResponse
     {
+        $event = $request->input('event', 'unknown');
+        Log::info("ClickUp webhook: received \"{$event}\" event for workspace {$workspace->id}.");
+
         $settings = ClickupSetting::forWorkspace($workspace);
 
         if (! $this->verifySignature($request, $settings->webhook_secret ?? '')) {
+            Log::warning("ClickUp webhook: rejected \"{$event}\" event for workspace {$workspace->id} — invalid or missing signature.");
+
             return response()->json(['error' => 'Invalid signature'], 401);
         }
-
-        $event = $request->input('event');
 
         if ($event === 'taskStatusUpdated') {
             $this->handleStatusUpdate($request, $settings);
