@@ -3,7 +3,6 @@ import { Head, usePage } from '@inertiajs/vue3';
 import {
     Bug,
     CheckCircle2,
-    ClipboardCheck,
     ClipboardList,
     FileText,
     Flame,
@@ -83,12 +82,6 @@ const METRICS: MetricConfig[] = [
         label: 'New Checklists',
         icon: ClipboardList,
         color: 'blue',
-    },
-    {
-        key: 'checklists_completed',
-        label: 'Checklists Completed',
-        icon: ClipboardCheck,
-        color: 'emerald',
     },
     { key: 'bugreports', label: 'New Bug Reports', icon: Bug, color: 'red' },
     {
