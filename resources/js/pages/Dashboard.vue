@@ -165,6 +165,13 @@ function formatDate(iso: string): string {
     });
 }
 
+const projectGridClass = computed(() => {
+    const count = props.activity?.projects.length ?? 0;
+    if (count <= 1) return 'grid-cols-1';
+    if (count === 2) return 'grid-cols-1 sm:grid-cols-2';
+    return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+});
+
 const PROJECT_PREVIEW_COUNT = 3;
 const LAST_DAY_PREVIEW_COUNT = 6;
 
@@ -382,9 +389,7 @@ const isProjectDialogOpen = computed({
                         <Flame class="h-4 w-4 text-amber-500/80" />
                         Active Projects (Last 7 Days)
                     </h2>
-                    <div
-                        class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
-                    >
+                    <div class="grid gap-3" :class="projectGridClass">
                         <Card
                             v-for="project in activity.projects"
                             :key="project.id"
