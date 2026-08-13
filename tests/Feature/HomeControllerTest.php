@@ -34,20 +34,20 @@ function setUpWorkspaceUser(): array
 test('dashboard page renders for authenticated users', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page->component('Dashboard'));
 });
 
 test('dashboard page requires authentication', function () {
-    $this->get(route('home'))->assertRedirect(route('login'));
+    $this->get(route('dashboard'))->assertRedirect(route('login'));
 });
 
 test('dashboard has no activity when user has no workspace', function () {
     $user = User::factory()->create(['current_workspace_id' => null]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -63,7 +63,7 @@ test('dashboard counts checklists created in the last 24 hours and in the last 7
     Checklist::factory()->create(['project_id' => $project->id, 'created_at' => now()->subDays(3)]);
     Checklist::factory()->create(['project_id' => $project->id, 'created_at' => now()->subDays(30)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -84,7 +84,7 @@ test('dashboard counts bugreports, completed test runs, releases and features', 
         ->update(['updated_at' => now()->subHours(2)]);
     ReleaseFeature::factory()->create(['release_id' => $release->id, 'created_at' => now()->subHours(2)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -103,7 +103,7 @@ test('dashboard only counts activity from projects in the current workspace', fu
     Checklist::factory()->create(['project_id' => $project->id, 'created_at' => now()->subHours(2)]);
     Checklist::factory()->create(['project_id' => $otherProject->id, 'created_at' => now()->subHours(2)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -116,7 +116,7 @@ test('dashboard breaks down last 7 days activity by project', function () {
 
     Checklist::factory()->count(2)->create(['project_id' => $project->id, 'created_at' => now()->subDays(2)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -130,7 +130,7 @@ test('dashboard breaks down last 7 days activity by project', function () {
 test('dashboard excludes projects with no recent activity', function () {
     [$user, , $project] = setUpWorkspaceUser();
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page->has('activity.projects', 0));
@@ -147,7 +147,7 @@ test('dashboard last day events include a bug report with severity and source', 
         'created_at' => now()->subHours(2),
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -170,7 +170,7 @@ test('dashboard last day events include a completed test run with failure count'
         'completed_at' => now()->subHours(2),
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -195,7 +195,7 @@ test('dashboard last day events include a completed checklist', function () {
         array_fill(0, 18, ['checklist_id' => $checklist->id, 'created_at' => now(), 'updated_at' => now()])
     );
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -221,7 +221,7 @@ test('dashboard last day events include a release opening with blockers', functi
         'status' => 'pending',
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -244,7 +244,7 @@ test('dashboard last day events include a release being shipped', function () {
     ]);
     DB::table('releases')->where('id', $release->id)->update(['updated_at' => now()->subHours(2)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -272,7 +272,7 @@ test('dashboard release event count matches releases_opened plus releases_releas
     ]);
     DB::table('releases')->where('id', $untouched->id)->update(['updated_at' => now()->subHours(1)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -298,7 +298,7 @@ test('dashboard last day events include an AI coverage analysis with delta since
         'analyzed_at' => now()->subHours(2),
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $latest = CoverageAnalysis::query()->latest('analyzed_at')->first();
 
@@ -323,7 +323,7 @@ test('dashboard last day events include a feature added to a release', function 
         'created_at' => now()->subHours(2),
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -344,7 +344,7 @@ test('dashboard last day events include a test case added to a suite', function 
         'created_at' => now()->subHours(2),
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -360,7 +360,7 @@ test('dashboard active projects recent list is not capped at three events', func
 
     Bugreport::factory()->count(4)->create(['project_id' => $project->id, 'created_at' => now()->subHours(2)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page->has('activity.projects.0.recent', 4));
@@ -371,7 +371,7 @@ test('dashboard active projects include recent events with links', function () {
 
     $bug = Bugreport::factory()->create(['project_id' => $project->id, 'title' => 'Test bug', 'created_at' => now()->subHours(2)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -386,7 +386,7 @@ test('dashboard event links point to the underlying record', function () {
 
     $bug = Bugreport::factory()->create(['project_id' => $project->id, 'created_at' => now()->subHours(2)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -403,7 +403,7 @@ test('dashboard counts new test cases and AI analyses over the last 7 days with 
 
     CoverageAnalysis::factory()->create(['project_id' => $project->id, 'analyzed_at' => now()->subDays(2)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -436,7 +436,7 @@ test('dashboard project total always matches the number of events in its recent 
     ProjectTestCase::factory()->create(['test_suite_id' => $suite->id, 'created_at' => now()->subDays(2)]);
     CoverageAnalysis::factory()->create(['project_id' => $project->id, 'analyzed_at' => now()->subDays(2)]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -459,7 +459,7 @@ test('dashboard shows achievements unlocked in the last 7 days', function () {
         'unlocked_at' => now()->subDays(30),
     ]);
 
-    $response = $this->actingAs($user)->get(route('home'));
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page

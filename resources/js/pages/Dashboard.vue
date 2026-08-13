@@ -29,7 +29,7 @@ import {
     GOOD_DAY_TOAST_VARIANTS,
     type BadgeId,
 } from '@/lib/achievement-badges';
-import { home } from '@/routes';
+import { dashboard } from '@/routes';
 import { type AppPageProps, type BreadcrumbItem } from '@/types';
 import {
     type DashboardActivity,
@@ -46,7 +46,7 @@ const page = usePage<AppPageProps>();
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
-        href: home().url,
+        href: dashboard().url,
     },
 ];
 

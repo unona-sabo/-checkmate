@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/sidebar';
 import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
-import { home } from '@/routes';
+import { dashboard } from '@/routes';
 import { type AppPageProps, type NavItem, type Project } from '@/types';
 import AppLogo from './AppLogo.vue';
 
@@ -54,7 +54,7 @@ const hiddenSidebarCategories = computed(
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: home(),
+        href: dashboard(),
         icon: LayoutGrid,
     },
     {
@@ -162,7 +162,7 @@ const projectSubItems = computed(() => {
     <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
             <Link
-                :href="home()"
+                :href="dashboard()"
                 class="flex w-full items-center justify-center px-0 py-4"
             >
                 <AppLogo />

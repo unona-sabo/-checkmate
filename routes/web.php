@@ -33,7 +33,7 @@ use Inertia\Inertia;
 Route::get('/', fn () => redirect()->route('login'))->name('welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('home', [HomeController::class, 'index'])->name('home');
+    Route::get('dashboard', [HomeController::class, 'index'])->name('dashboard');
 
     Route::get('achievements-demo', fn () => Inertia::render('AchievementsDemo'))->name('achievements-demo');
     Route::post('focus-sessions/ping', [FocusSessionController::class, 'ping'])->name('focus-sessions.ping');
