@@ -2775,7 +2775,7 @@ onUnmounted(() => {
                             </DialogTrigger>
                         </RestrictedAction>
                         <DialogContent
-                            class="flex max-h-[75vh] max-w-2xl flex-col border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 dark:border-amber-800/40 dark:from-amber-950/20 dark:to-yellow-950/20"
+                            class="flex max-h-[75vh] max-w-2xl flex-col border-amber-300 bg-gradient-to-br from-amber-100 to-yellow-100 dark:border-amber-700/50 dark:from-amber-900/35 dark:to-yellow-900/35"
                             style="
                                 overflow: hidden !important;
                                 max-width: min(
@@ -2840,7 +2840,7 @@ onUnmounted(() => {
 
                                 <div
                                     v-if="parsedNotes.length > 0"
-                                    class="space-y-4 rounded-lg border bg-muted/30 p-4"
+                                    class="space-y-4 rounded-lg border border-amber-300 bg-amber-100/70 p-4 dark:border-amber-700/50 dark:bg-amber-900/25"
                                 >
                                     <div class="space-y-2">
                                         <Label>Import to Checklist</Label>
