@@ -194,7 +194,7 @@ const projectSubItems = computed(() => {
                                 class="font-semibold"
                             >
                                 <FolderOpen class="h-4 w-4" />
-                                <span class="truncate">{{
+                                <span class="truncate uppercase">{{
                                     currentProject.name
                                 }}</span>
                             </Link>
