@@ -1385,6 +1385,32 @@ const testCaseTargetChildId = ref<number | null>(null);
 const isCreatingNewSuiteForTestCase = ref(false);
 const newSuiteNameForTestCase = ref('');
 const creatingSuiteForTestCase = ref(false);
+const testCaseColumnKey = ref('');
+
+const textColumnsForTestCase = computed(() =>
+    columns.value.filter(
+        (col) =>
+            col.type === 'text' &&
+            !col.key.toLowerCase().includes('tag') &&
+            !col.label.toLowerCase().includes('tag'),
+    ),
+);
+
+const findDescriptionColumn = (): string => {
+    const text = textColumnsForTestCase.value;
+    const match =
+        text.find(
+            (col) =>
+                col.key.toLowerCase() === 'description' ||
+                col.label.toLowerCase() === 'description',
+        ) ??
+        text.find(
+            (col) =>
+                col.key.toLowerCase().includes('description') ||
+                col.label.toLowerCase().includes('description'),
+        );
+    return match?.key ?? text[0]?.key ?? '';
+};
 
 const selectedParentSuiteChildren = computed(() => {
     if (!testCaseTargetSuiteId.value) return [];
@@ -1408,6 +1434,7 @@ const openTestCaseDialog = () => {
     newSuiteNameForTestCase.value = '';
     testCaseTargetSuiteId.value = props.testSuites[0]?.id ?? null;
     testCaseTargetChildId.value = null;
+    testCaseColumnKey.value = findDescriptionColumn();
     showTestCaseDialog.value = true;
 };
 
@@ -1437,22 +1464,13 @@ const createTestCaseFromSelected = async () => {
 const createTestCaseFromSelectedForSuite = () => {
     if (!effectiveTestSuiteId.value) return;
 
-    const textColumns = columns.value.filter(
-        (col) =>
-            col.type === 'text' &&
-            !col.key.toLowerCase().includes('tag') &&
-            !col.label.toLowerCase().includes('tag'),
-    );
     const steps = selectedRows.value
         .map((row) => {
-            const parts: string[] = [];
-            textColumns.forEach((col) => {
-                const val = row.data[col.key];
-                if (typeof val === 'string' && val.trim()) {
-                    parts.push(val.trim());
-                }
-            });
-            return { action: parts.join(' — '), expected: '' };
+            const val = testCaseColumnKey.value
+                ? row.data[testCaseColumnKey.value]
+                : null;
+            const action = typeof val === 'string' ? val.trim() : '';
+            return { action, expected: '' };
         })
         .filter((s) => s.action);
 
@@ -4846,6 +4864,34 @@ onUnmounted(() => {
                                     <X class="h-4 w-4" />
                                 </Button>
                             </div>
+                        </div>
+                        <div
+                            v-if="textColumnsForTestCase.length > 0"
+                            class="space-y-2"
+                        >
+                            <Label for="test-case-source-column"
+                                >Source Column</Label
+                            >
+                            <Select v-model="testCaseColumnKey">
+                                <SelectTrigger id="test-case-source-column">
+                                    <SelectValue
+                                        placeholder="Select column..."
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="col in textColumnsForTestCase"
+                                        :key="col.key"
+                                        :value="col.key"
+                                    >
+                                        {{ col.label }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p class="text-xs text-muted-foreground">
+                                Only this column's value will be saved into the
+                                test case's steps.
+                            </p>
                         </div>
                     </div>
                     <DialogFooter class="flex gap-2 sm:justify-end">
