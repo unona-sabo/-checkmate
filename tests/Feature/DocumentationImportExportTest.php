@@ -308,7 +308,9 @@ test('store note creates a new top-level documentation', function () {
     $documentation = Documentation::where('project_id', $project->id)->where('title', 'Quick Note')->first();
     expect($documentation)->not->toBeNull();
     expect($documentation->parent_id)->toBeNull();
-    expect($documentation->content)->toBe("<p>Line one</p>\r\n\r\n<p>Line two</p>");
+    // The exact whitespace HTMLPurifier inserts between paragraphs varies by
+    // platform (CRLF vs LF), so normalize before comparing.
+    expect(str_replace("\r\n", "\n", $documentation->content))->toBe("<p>Line one</p>\n\n<p>Line two</p>");
 
     $response->assertRedirect(route('documentations.show', [$project, $documentation]));
     $response->assertSessionHas('success');

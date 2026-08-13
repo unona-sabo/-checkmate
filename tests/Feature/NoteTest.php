@@ -115,10 +115,10 @@ test('publish appends note content to documentation', function () {
     $response = $this->actingAs($user)->post(route('projects.notes.publish', [$project, $note]));
 
     $response->assertRedirect();
-    $this->assertDatabaseHas('documentations', [
-        'id' => $doc->id,
-        'content' => "<p>Existing content</p>\r\n\r\n<p>Note content</p>",
-    ]);
+    // The exact whitespace HTMLPurifier inserts between paragraphs varies by
+    // platform (CRLF vs LF), so normalize before comparing.
+    $normalizedContent = str_replace("\r\n", "\n", Documentation::find($doc->id)->content);
+    expect($normalizedContent)->toBe("<p>Existing content</p>\n\n<p>Note content</p>");
     $this->assertDatabaseHas('notes', [
         'id' => $note->id,
         'is_draft' => false,
