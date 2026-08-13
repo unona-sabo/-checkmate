@@ -170,7 +170,7 @@ export const ACHIEVEMENT_BADGES: Record<BadgeId, AchievementBadgeConfig> = {
         description: 'Added your first design link',
         unlockedAsset: asset('first_design_unlocked.png'),
         lockedAsset: asset('first_design_locked.png'),
-        animation: 'scan',
+        animation: 'sparkles',
         duration: 3,
     },
     'first-test-data': {
