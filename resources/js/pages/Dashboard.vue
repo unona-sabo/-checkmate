@@ -94,7 +94,7 @@ const METRICS: MetricConfig[] = [
         key: 'releases_opened',
         label: 'Releases Opened',
         icon: Rocket,
-        color: 'purple',
+        color: 'blue',
     },
     {
         key: 'releases_released',

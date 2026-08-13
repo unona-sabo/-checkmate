@@ -49,8 +49,8 @@ const EVENT_STYLES: Record<
     },
     release: {
         icon: Rocket,
-        wrap: 'bg-purple-500/10',
-        iconClass: 'text-purple-500/80',
+        wrap: 'bg-blue-500/10',
+        iconClass: 'text-blue-500/80',
     },
     feature: {
         icon: Target,
