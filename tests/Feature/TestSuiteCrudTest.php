@@ -87,6 +87,24 @@ test('store creates test suite with valid data', function () {
     ]);
 });
 
+test('store returns the created test suite as JSON when the client wants JSON', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('test-suites.store', $project), [
+            'name' => 'Quick Suite',
+        ]);
+
+    $response->assertOk();
+    $response->assertJsonFragment(['name' => 'Quick Suite']);
+
+    $this->assertDatabaseHas('test_suites', [
+        'project_id' => $project->id,
+        'name' => 'Quick Suite',
+    ]);
+});
+
 test('update modifies existing test suite', function () {
     $user = User::factory()->create();
     $project = Project::factory()->create(['user_id' => $user->id]);

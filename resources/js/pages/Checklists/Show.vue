@@ -1377,6 +1377,9 @@ const createBugreportFromSelected = () => {
 const showTestCaseDialog = ref(false);
 const testCaseTargetSuiteId = ref<number | null>(null);
 const testCaseTargetChildId = ref<number | null>(null);
+const isCreatingNewSuiteForTestCase = ref(false);
+const newSuiteNameForTestCase = ref('');
+const creatingSuiteForTestCase = ref(false);
 
 const selectedParentSuiteChildren = computed(() => {
     if (!testCaseTargetSuiteId.value) return [];
@@ -1396,13 +1399,37 @@ const effectiveTestSuiteId = computed(
 );
 
 const openTestCaseDialog = () => {
-    if (props.testSuites.length === 0) return;
-    testCaseTargetSuiteId.value = props.testSuites[0].id;
+    isCreatingNewSuiteForTestCase.value = props.testSuites.length === 0;
+    newSuiteNameForTestCase.value = '';
+    testCaseTargetSuiteId.value = props.testSuites[0]?.id ?? null;
     testCaseTargetChildId.value = null;
     showTestCaseDialog.value = true;
 };
 
-const createTestCaseFromSelected = () => {
+const createTestCaseFromSelected = async () => {
+    if (isCreatingNewSuiteForTestCase.value) {
+        if (!newSuiteNameForTestCase.value.trim()) return;
+
+        creatingSuiteForTestCase.value = true;
+        try {
+            const response = await axios.post(
+                `/projects/${props.project.id}/test-suites`,
+                { name: newSuiteNameForTestCase.value.trim() },
+                { headers: { Accept: 'application/json' } },
+            );
+            testCaseTargetSuiteId.value = response.data.id;
+            testCaseTargetChildId.value = null;
+        } catch {
+            creatingSuiteForTestCase.value = false;
+            return;
+        }
+        creatingSuiteForTestCase.value = false;
+    }
+
+    createTestCaseFromSelectedForSuite();
+};
+
+const createTestCaseFromSelectedForSuite = () => {
     if (!effectiveTestSuiteId.value) return;
 
     const textColumns = columns.value.filter((col) => col.type === 'text');
@@ -2602,10 +2629,7 @@ onUnmounted(() => {
                                     <Copy class="mr-2 h-4 w-4" />
                                     Copy to Checklist
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    @click="openTestCaseDialog"
-                                    :disabled="testSuites.length === 0"
-                                >
+                                <DropdownMenuItem @click="openTestCaseDialog">
                                     <Layers class="mr-2 h-4 w-4" />
                                     Create Test Case
                                 </DropdownMenuItem>
@@ -4723,15 +4747,39 @@ onUnmounted(() => {
                             Create a test case from
                             {{ selectedRows.length }} selected row{{
                                 selectedRows.length !== 1 ? 's' : ''
-                            }}. Select the target test suite.
+                            }}. Select the target test suite, or create a new
+                            one.
                         </DialogDescription>
                     </DialogHeader>
                     <div class="space-y-4 py-4">
                         <div class="space-y-2">
-                            <Label for="test-case-target-suite"
-                                >Test Suite</Label
-                            >
-                            <Select v-model="testCaseTargetSuiteId">
+                            <div class="flex items-center justify-between">
+                                <Label for="test-case-target-suite"
+                                    >Test Suite</Label
+                                >
+                                <button
+                                    v-if="testSuites.length > 0"
+                                    type="button"
+                                    class="cursor-pointer text-xs font-medium text-primary hover:text-primary/80"
+                                    @click="
+                                        isCreatingNewSuiteForTestCase =
+                                            !isCreatingNewSuiteForTestCase
+                                    "
+                                >
+                                    {{
+                                        isCreatingNewSuiteForTestCase
+                                            ? 'Choose existing suite'
+                                            : '+ New suite'
+                                    }}
+                                </button>
+                            </div>
+                            <Input
+                                v-if="isCreatingNewSuiteForTestCase"
+                                id="test-case-target-suite"
+                                v-model="newSuiteNameForTestCase"
+                                placeholder="New test suite name..."
+                            />
+                            <Select v-else v-model="testCaseTargetSuiteId">
                                 <SelectTrigger id="test-case-target-suite">
                                     <SelectValue
                                         placeholder="Select test suite..."
@@ -4749,7 +4797,10 @@ onUnmounted(() => {
                             </Select>
                         </div>
                         <div
-                            v-if="selectedParentSuiteChildren.length > 0"
+                            v-if="
+                                !isCreatingNewSuiteForTestCase &&
+                                selectedParentSuiteChildren.length > 0
+                            "
                             class="space-y-2"
                         >
                             <Label for="test-case-target-child"
@@ -4796,11 +4847,20 @@ onUnmounted(() => {
                         </Button>
                         <Button
                             @click="createTestCaseFromSelected"
-                            :disabled="!testCaseTargetSuiteId"
+                            :disabled="
+                                creatingSuiteForTestCase ||
+                                (isCreatingNewSuiteForTestCase
+                                    ? !newSuiteNameForTestCase.trim()
+                                    : !testCaseTargetSuiteId)
+                            "
                             class="gap-2"
                         >
                             <Layers class="h-4 w-4" />
-                            Create Test Case
+                            {{
+                                creatingSuiteForTestCase
+                                    ? 'Creating suite...'
+                                    : 'Create Test Case'
+                            }}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
