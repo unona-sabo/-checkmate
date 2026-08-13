@@ -110,6 +110,37 @@ function formatDateTime(dateString: string | null): string {
         <Head title="Project Updates" />
         <SettingsLayout wide>
             <div class="flex flex-col gap-6">
+                <!-- Header: Logo + Description -->
+                <div
+                    class="flex flex-col items-center gap-4 rounded-xl border border-border bg-card p-6 text-center sm:flex-row sm:items-center sm:gap-6 sm:text-left"
+                >
+                    <div class="shrink-0 text-center">
+                        <img
+                            src="/images/logo2.png"
+                            alt="CheckMate"
+                            class="h-20 w-auto rounded-2xl sm:h-32"
+                        />
+                        <p
+                            class="mt-2 text-xs font-light tracking-widest text-muted-foreground/80 uppercase"
+                        >
+                            Checkmate your bugs
+                        </p>
+                    </div>
+                    <div class="min-w-0">
+                        <h1 class="text-xl font-bold">CheckMate</h1>
+                        <p
+                            class="mt-2 text-sm leading-relaxed text-muted-foreground"
+                        >
+                            An all-in-one QA management platform for teams of
+                            any size. Organize checklists, build and execute
+                            test suites, track bug reports, maintain living
+                            documentation, and capture notes — all in a single
+                            workspace. Designed to streamline your quality
+                            assurance workflow from planning through release.
+                        </p>
+                    </div>
+                </div>
+
                 <Heading
                     title="Project Updates"
                     description="What's shipped in each module of CheckMate."
