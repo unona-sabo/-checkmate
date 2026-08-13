@@ -44,7 +44,7 @@ test('backup page requires authentication', function () {
 });
 
 test('backup page shows for authenticated user', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     $this->actingAs($user)
         ->get(route('backup.show'))
@@ -53,7 +53,7 @@ test('backup page shows for authenticated user', function () {
 });
 
 test('download returns sqlite file', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     $response = $this->actingAs($user)
         ->post(route('backup.download'));
@@ -63,7 +63,7 @@ test('download returns sqlite file', function () {
 });
 
 test('snapshot creates file in storage', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     $this->actingAs($user)
         ->post(route('backup.snapshot'))
@@ -74,7 +74,7 @@ test('snapshot creates file in storage', function () {
 });
 
 test('snapshot list shows on page', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     // Create a snapshot file manually
     $filename = 'checkmate_2026-01-15_120000.sqlite';
@@ -90,7 +90,7 @@ test('snapshot list shows on page', function () {
 });
 
 test('download snapshot works', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     $filename = 'checkmate_2026-01-15_120000.sqlite';
     copy(database_path('database.sqlite'), $this->backupDir.'/'.$filename);
@@ -103,7 +103,7 @@ test('download snapshot works', function () {
 });
 
 test('delete snapshot removes file', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     $filename = 'checkmate_2026-01-15_120000.sqlite';
     copy(database_path('database.sqlite'), $this->backupDir.'/'.$filename);
@@ -116,7 +116,7 @@ test('delete snapshot removes file', function () {
 });
 
 test('restore copies snapshot over database', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     $filename = 'checkmate_2026-01-15_120000.sqlite';
     copy(database_path('database.sqlite'), $this->backupDir.'/'.$filename);
@@ -135,7 +135,7 @@ test('snapshot requires authentication', function () {
 });
 
 test('filenames without proper prefix are rejected', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     $this->actingAs($user)
         ->post(route('backup.download-snapshot', ['filename' => 'not_a_valid_backup.sqlite']))
@@ -143,7 +143,7 @@ test('filenames without proper prefix are rejected', function () {
 });
 
 test('filenames with wrong extension are rejected', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     $this->actingAs($user)
         ->delete(route('backup.destroy-snapshot', ['filename' => 'checkmate_2026-01-15_120000.php']))
@@ -151,7 +151,7 @@ test('filenames with wrong extension are rejected', function () {
 });
 
 test('filenames with extra characters are rejected', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     $this->actingAs($user)
         ->post(route('backup.restore', ['filename' => 'checkmate_2026-01-15_120000.sqlite.bak']))
@@ -159,9 +159,44 @@ test('filenames with extra characters are rejected', function () {
 });
 
 test('invalid filename format is rejected', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'ysabiekiia@air.io']);
 
     $this->actingAs($user)
         ->post(route('backup.download-snapshot', ['filename' => 'malicious.php']))
         ->assertStatus(400);
+});
+
+test('other users cannot view the backup page', function () {
+    $user = User::factory()->create(['email' => 'someone-else@example.com']);
+
+    $this->actingAs($user)
+        ->get(route('backup.show'))
+        ->assertForbidden();
+});
+
+test('other users cannot download the database', function () {
+    $user = User::factory()->create(['email' => 'someone-else@example.com']);
+
+    $this->actingAs($user)
+        ->post(route('backup.download'))
+        ->assertForbidden();
+});
+
+test('other users cannot create a snapshot', function () {
+    $user = User::factory()->create(['email' => 'someone-else@example.com']);
+
+    $this->actingAs($user)
+        ->post(route('backup.snapshot'))
+        ->assertForbidden();
+});
+
+test('other users cannot restore a snapshot', function () {
+    $user = User::factory()->create(['email' => 'someone-else@example.com']);
+
+    $filename = 'checkmate_2026-01-15_120000.sqlite';
+    copy(database_path('database.sqlite'), $this->backupDir.'/'.$filename);
+
+    $this->actingAs($user)
+        ->post(route('backup.restore', ['filename' => $filename]))
+        ->assertForbidden();
 });

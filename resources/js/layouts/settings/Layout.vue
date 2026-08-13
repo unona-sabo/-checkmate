@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -10,38 +11,54 @@ import { show as showBackup } from '@/routes/backup';
 import { edit as editProfile } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
-import { type NavItem } from '@/types';
+import { type AppPageProps, type NavItem } from '@/types';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: editProfile(),
-    },
-    {
-        title: 'Password',
-        href: editPassword(),
-    },
-    {
-        title: 'Two-Factor Auth',
-        href: show(),
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-    },
-    {
-        title: 'Backup',
-        href: showBackup(),
-    },
-    {
-        title: 'Achievements',
-        href: '/settings/achievements',
-    },
-    {
-        title: 'Project Updates',
-        href: '/settings/project-updates',
-    },
-];
+// Backup/restore is being reworked into a workspace-scoped export, so the
+// tab is hidden for everyone except this account in the meantime.
+const BACKUP_ALLOWED_EMAIL = 'ysabiekiia@air.io';
+
+const page = usePage<AppPageProps>();
+
+const sidebarNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [
+        {
+            title: 'Profile',
+            href: editProfile(),
+        },
+        {
+            title: 'Password',
+            href: editPassword(),
+        },
+        {
+            title: 'Two-Factor Auth',
+            href: show(),
+        },
+        {
+            title: 'Appearance',
+            href: editAppearance(),
+        },
+    ];
+
+    if (page.props.auth.user.email === BACKUP_ALLOWED_EMAIL) {
+        items.push({
+            title: 'Backup',
+            href: showBackup(),
+        });
+    }
+
+    items.push(
+        {
+            title: 'Achievements',
+            href: '/settings/achievements',
+        },
+        {
+            title: 'Project Updates',
+            href: '/settings/project-updates',
+        },
+    );
+
+    return items;
+});
 
 const { isCurrentUrl, isCurrentUrlPrefix } = useCurrentUrl();
 

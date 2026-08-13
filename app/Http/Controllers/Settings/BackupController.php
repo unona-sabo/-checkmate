@@ -12,10 +12,24 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class BackupController extends Controller
 {
     /**
+     * Temporary: full-database backup/restore is being reworked into a
+     * workspace-scoped export, so access is locked down to this one account
+     * in the meantime rather than exposed to every user.
+     */
+    private const ALLOWED_EMAIL = 'ysabiekiia@air.io';
+
+    private function ensureAllowed(): void
+    {
+        abort_unless(auth()->user()?->email === self::ALLOWED_EMAIL, 403);
+    }
+
+    /**
      * Show the backup settings page with list of existing snapshots.
      */
     public function show(): Response
     {
+        $this->ensureAllowed();
+
         return Inertia::render('settings/Backup', [
             'snapshots' => $this->getSnapshots(),
         ]);
@@ -26,6 +40,8 @@ class BackupController extends Controller
      */
     public function download(): StreamedResponse
     {
+        $this->ensureAllowed();
+
         $dbPath = $this->getDatabasePath();
 
         abort_unless($dbPath && file_exists($dbPath), 500, 'Database file not found.');
@@ -42,6 +58,8 @@ class BackupController extends Controller
      */
     public function snapshot(): RedirectResponse
     {
+        $this->ensureAllowed();
+
         $this->ensureBackupDirectory();
 
         $dbPath = $this->getDatabasePath();
@@ -60,6 +78,7 @@ class BackupController extends Controller
      */
     public function downloadSnapshot(string $filename): StreamedResponse
     {
+        $this->ensureAllowed();
         $this->validateFilename($filename);
 
         $path = storage_path('app/private/backups/'.$filename);
@@ -78,6 +97,7 @@ class BackupController extends Controller
      */
     public function destroySnapshot(string $filename): RedirectResponse
     {
+        $this->ensureAllowed();
         $this->validateFilename($filename);
 
         $path = 'backups/'.$filename;
@@ -94,6 +114,7 @@ class BackupController extends Controller
      */
     public function restore(string $filename): RedirectResponse
     {
+        $this->ensureAllowed();
         $this->validateFilename($filename);
 
         $snapshotPath = storage_path('app/private/backups/'.$filename);
