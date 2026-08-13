@@ -2326,7 +2326,7 @@ const submitEmptyImport = () => {
                                                 >
                                                     <Label>Preview</Label>
                                                     <div
-                                                        class="max-h-40 overflow-auto rounded border bg-background p-2 text-sm"
+                                                        class="max-h-40 overflow-auto rounded border border-amber-200 bg-amber-50 p-2 text-sm dark:border-amber-800/40 dark:bg-amber-950/20"
                                                         style="
                                                             word-wrap: break-word;
                                                             overflow-wrap: break-word;
