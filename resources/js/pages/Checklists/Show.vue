@@ -1326,7 +1326,12 @@ const pasteRows = () => {
 
 // Create bugreport from selected rows
 const createBugreportFromSelected = () => {
-    const textColumns = columns.value.filter((col) => col.type === 'text');
+    const textColumns = columns.value.filter(
+        (col) =>
+            col.type === 'text' &&
+            !col.key.toLowerCase().includes('tag') &&
+            !col.label.toLowerCase().includes('tag'),
+    );
     const lines: string[] = [];
 
     selectedRows.value.forEach((row, idx) => {
@@ -1432,7 +1437,12 @@ const createTestCaseFromSelected = async () => {
 const createTestCaseFromSelectedForSuite = () => {
     if (!effectiveTestSuiteId.value) return;
 
-    const textColumns = columns.value.filter((col) => col.type === 'text');
+    const textColumns = columns.value.filter(
+        (col) =>
+            col.type === 'text' &&
+            !col.key.toLowerCase().includes('tag') &&
+            !col.label.toLowerCase().includes('tag'),
+    );
     const steps = selectedRows.value
         .map((row) => {
             const parts: string[] = [];
