@@ -131,6 +131,7 @@ class TestSuiteController extends Controller
     public function show(Project $project, TestSuite $testSuite): Response
     {
         $this->authorize('view', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
 
         $testSuite->load([
             'children.testCases' => fn ($q) => $q->with(['creator:id,name', 'projectFeatures:id,name,module'])->orderBy('order'),
@@ -171,6 +172,7 @@ class TestSuiteController extends Controller
     public function edit(Project $project, TestSuite $testSuite): Response
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
 
         $testSuite->load('projectFeatures:id');
 
@@ -195,6 +197,7 @@ class TestSuiteController extends Controller
     public function update(UpdateTestSuiteRequest $request, Project $project, TestSuite $testSuite)
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -211,6 +214,7 @@ class TestSuiteController extends Controller
     public function destroy(Project $project, TestSuite $testSuite)
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
 
         $testSuite->delete();
 
@@ -253,7 +257,17 @@ class TestSuiteController extends Controller
 
         $validated = $request->validated();
 
+        $projectSuiteIds = $project->testSuites()->pluck('id');
+
         foreach ($validated['suites'] as $suiteData) {
+            if (! $projectSuiteIds->contains($suiteData['id'])) {
+                continue;
+            }
+
+            if ($suiteData['parent_id'] !== null && ! $projectSuiteIds->contains($suiteData['parent_id'])) {
+                continue;
+            }
+
             TestSuite::where('id', $suiteData['id'])->update([
                 'order' => $suiteData['order'],
                 'parent_id' => $suiteData['parent_id'],

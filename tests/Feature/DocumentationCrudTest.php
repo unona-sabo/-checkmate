@@ -36,7 +36,7 @@ test('store creates documentation with valid data', function () {
     $this->assertDatabaseHas('documentations', [
         'project_id' => $project->id,
         'title' => 'API Documentation',
-        'content' => 'This is the API documentation content.',
+        'content' => '<p>This is the API documentation content.</p>',
         'category' => 'API',
     ]);
 });
@@ -116,7 +116,7 @@ test('update modifies existing documentation', function () {
     $this->assertDatabaseHas('documentations', [
         'id' => $documentation->id,
         'title' => 'Updated Documentation Title',
-        'content' => 'Updated documentation content.',
+        'content' => '<p>Updated documentation content.</p>',
         'category' => 'Frontend',
     ]);
 });

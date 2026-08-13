@@ -106,6 +106,7 @@ class BugreportController extends Controller
     public function show(Project $project, Bugreport $bugreport): Response
     {
         $this->authorize('view', $project);
+        abort_unless($bugreport->project_id === $project->id, 404);
 
         $bugreport->load(['reporter', 'assignee', 'attachments']);
 
@@ -125,6 +126,7 @@ class BugreportController extends Controller
     public function edit(Project $project, Bugreport $bugreport): Response
     {
         $this->authorize('update', $project);
+        abort_unless($bugreport->project_id === $project->id, 404);
 
         $users = $project->users()->get(['users.id', 'users.name']);
         $bugreport->load(['attachments', 'projectFeatures:id']);
@@ -144,6 +146,7 @@ class BugreportController extends Controller
     public function update(UpdateBugreportRequest $request, Project $project, Bugreport $bugreport)
     {
         $this->authorize('update', $project);
+        abort_unless($bugreport->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -159,6 +162,7 @@ class BugreportController extends Controller
     public function destroy(Project $project, Bugreport $bugreport)
     {
         $this->authorize('update', $project);
+        abort_unless($bugreport->project_id === $project->id, 404);
 
         $this->attachmentService->deleteAll($bugreport);
         $bugreport->delete();
@@ -170,6 +174,7 @@ class BugreportController extends Controller
     public function exportToClickUp(Project $project, Bugreport $bugreport)
     {
         $this->authorize('update', $project);
+        abort_unless($bugreport->project_id === $project->id, 404);
 
         $settings = $project->workspace ? ClickupSetting::forWorkspace($project->workspace) : null;
 
@@ -189,6 +194,7 @@ class BugreportController extends Controller
     public function syncFromClickUp(Project $project, Bugreport $bugreport)
     {
         $this->authorize('update', $project);
+        abort_unless($bugreport->project_id === $project->id, 404);
 
         if (! $bugreport->clickup_task_id) {
             return back()->with('error', 'This bug report is not linked to ClickUp.');
@@ -256,6 +262,11 @@ class BugreportController extends Controller
     public function destroyAttachment(Project $project, Bugreport $bugreport, Attachment $attachment)
     {
         $this->authorize('update', $project);
+        abort_unless($bugreport->project_id === $project->id, 404);
+        abort_unless(
+            $attachment->attachable_type === Bugreport::class && $attachment->attachable_id === $bugreport->id,
+            404
+        );
 
         $this->attachmentService->deleteOne($attachment);
 

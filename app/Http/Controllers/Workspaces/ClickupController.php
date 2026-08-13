@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Workspaces;
 
+use App\Http\Controllers\Concerns\RequiresWorkspaceManager;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ClickupSettingsRequest;
 use App\Http\Requests\Settings\ClickupStatusMappingRequest;
@@ -19,10 +20,14 @@ use Inertia\Response;
 
 class ClickupController extends Controller
 {
-    public function show(Request $request): Response
+    use RequiresWorkspaceManager;
+
+    public function show(Request $request): Response|RedirectResponse
     {
         $workspace = $request->attributes->get('workspace');
-        $this->authorize('update', $workspace);
+        if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
+            return $redirect;
+        }
 
         $settings = ClickupSetting::forWorkspace($workspace);
 
@@ -72,7 +77,9 @@ class ClickupController extends Controller
     public function update(ClickupSettingsRequest $request, AchievementService $achievements): RedirectResponse
     {
         $workspace = $request->attributes->get('workspace');
-        $this->authorize('update', $workspace);
+        if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
+            return $redirect;
+        }
 
         $settings = ClickupSetting::forWorkspace($workspace);
 
@@ -91,7 +98,9 @@ class ClickupController extends Controller
     public function updateStatusMapping(ClickupStatusMappingRequest $request): RedirectResponse
     {
         $workspace = $request->attributes->get('workspace');
-        $this->authorize('update', $workspace);
+        if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
+            return $redirect;
+        }
 
         $settings = ClickupSetting::forWorkspace($workspace);
 
@@ -105,7 +114,9 @@ class ClickupController extends Controller
     public function fetchStatuses(Request $request): JsonResponse
     {
         $workspace = $request->attributes->get('workspace');
-        $this->authorize('update', $workspace);
+        if ($response = $this->ensureCanManageWorkspaceJson($request, $workspace)) {
+            return $response;
+        }
 
         $settings = ClickupSetting::forWorkspace($workspace);
 
@@ -126,7 +137,9 @@ class ClickupController extends Controller
     public function registerWebhook(Request $request): RedirectResponse
     {
         $workspace = $request->attributes->get('workspace');
-        $this->authorize('update', $workspace);
+        if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
+            return $redirect;
+        }
 
         $settings = ClickupSetting::forWorkspace($workspace);
 
@@ -220,7 +233,9 @@ class ClickupController extends Controller
     public function webhookHealth(Request $request): JsonResponse
     {
         $workspace = $request->attributes->get('workspace');
-        $this->authorize('update', $workspace);
+        if ($response = $this->ensureCanManageWorkspaceJson($request, $workspace)) {
+            return $response;
+        }
 
         $settings = ClickupSetting::forWorkspace($workspace);
 

@@ -11,6 +11,7 @@ use App\Models\TestRun;
 use App\Models\TestRunCase;
 use App\Models\User;
 use App\Services\AchievementService;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -134,6 +135,7 @@ class TestRunController extends Controller
     public function show(Project $project, TestRun $testRun): Response
     {
         $this->authorize('view', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         $testRun->load([
             'testRunCases.testCase.testSuite',
@@ -167,6 +169,7 @@ class TestRunController extends Controller
     public function edit(Project $project, TestRun $testRun): Response
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         return Inertia::render('TestRuns/Edit', [
             'project' => $project,
@@ -177,6 +180,7 @@ class TestRunController extends Controller
     public function update(UpdateTestRunRequest $request, Project $project, TestRun $testRun, AchievementService $achievements)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -195,6 +199,7 @@ class TestRunController extends Controller
     public function destroy(Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         $testRun->delete();
 
@@ -205,21 +210,28 @@ class TestRunController extends Controller
     public function complete(Project $project, TestRun $testRun, AchievementService $achievements)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
-        $wasAlreadyCompleted = $testRun->status === 'completed';
+        $wasAlreadyCompleted = DB::transaction(function () use ($testRun) {
+            $locked = TestRun::whereKey($testRun->id)->lockForUpdate()->firstOrFail();
 
-        $data = [
-            'status' => 'completed',
-            'completed_at' => now(),
-            'completed_by' => auth()->id(),
-        ];
+            $wasAlreadyCompleted = $locked->status === 'completed';
 
-        if ($testRun->isPaused()) {
-            $data['total_paused_seconds'] = $testRun->total_paused_seconds + (int) $testRun->paused_at->diffInSeconds(now());
-            $data['paused_at'] = null;
-        }
+            $data = [
+                'status' => 'completed',
+                'completed_at' => now(),
+                'completed_by' => auth()->id(),
+            ];
 
-        $testRun->update($data);
+            if ($locked->isPaused()) {
+                $data['total_paused_seconds'] = $locked->total_paused_seconds + (int) $locked->paused_at->diffInSeconds(now());
+                $data['paused_at'] = null;
+            }
+
+            $locked->update($data);
+
+            return $wasAlreadyCompleted;
+        });
 
         if (! $wasAlreadyCompleted) {
             $achievements->checkFirstCompletedTestRun(auth()->user());
@@ -231,15 +243,20 @@ class TestRunController extends Controller
     public function archive(Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
-        $data = ['status' => 'archived'];
+        DB::transaction(function () use ($testRun) {
+            $locked = TestRun::whereKey($testRun->id)->lockForUpdate()->firstOrFail();
 
-        if ($testRun->isPaused()) {
-            $data['total_paused_seconds'] = $testRun->total_paused_seconds + (int) $testRun->paused_at->diffInSeconds(now());
-            $data['paused_at'] = null;
-        }
+            $data = ['status' => 'archived'];
 
-        $testRun->update($data);
+            if ($locked->isPaused()) {
+                $data['total_paused_seconds'] = $locked->total_paused_seconds + (int) $locked->paused_at->diffInSeconds(now());
+                $data['paused_at'] = null;
+            }
+
+            $locked->update($data);
+        });
 
         return back()->with('success', 'Test run archived.');
     }
@@ -247,6 +264,7 @@ class TestRunController extends Controller
     public function pause(Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         if ($testRun->status !== 'active' || $testRun->isPaused()) {
             return back()->with('error', 'Cannot pause this test run.');
@@ -260,6 +278,7 @@ class TestRunController extends Controller
     public function addCases(AddCasesRequest $request, Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         if ($testRun->status !== 'active') {
             return back()->with('error', 'Can only add cases to active test runs.');
@@ -309,6 +328,7 @@ class TestRunController extends Controller
     public function adjustTime(Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         $validated = request()->validate([
             'hours' => ['nullable', 'numeric', 'min:0'],
@@ -333,6 +353,7 @@ class TestRunController extends Controller
     public function setTime(Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         $validated = request()->validate([
             'hours' => ['nullable', 'numeric', 'min:0'],
@@ -354,6 +375,7 @@ class TestRunController extends Controller
     public function clone(Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         $newRun = $project->testRuns()->create([
             'name' => 'Copy of '.$testRun->name,
@@ -385,6 +407,7 @@ class TestRunController extends Controller
     public function resume(Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         if (! $testRun->isPaused()) {
             return back()->with('error', 'Test run is not paused.');

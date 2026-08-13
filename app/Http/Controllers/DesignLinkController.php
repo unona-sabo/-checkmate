@@ -46,6 +46,7 @@ class DesignLinkController extends Controller
     public function update(UpsertDesignLinkRequest $request, Project $project, DesignLink $designLink): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($designLink->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -57,6 +58,7 @@ class DesignLinkController extends Controller
     public function destroy(Project $project, DesignLink $designLink): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($designLink->project_id === $project->id, 404);
 
         $designLink->delete();
 

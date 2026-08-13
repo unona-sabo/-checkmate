@@ -79,6 +79,7 @@ class TestDataController extends Controller
     public function updateUser(UpsertTestUserRequest $request, Project $project, TestUser $testUser): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($testUser->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -90,6 +91,7 @@ class TestDataController extends Controller
     public function destroyUser(Project $project, TestUser $testUser): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($testUser->project_id === $project->id, 404);
 
         $testUser->delete();
 
@@ -129,6 +131,7 @@ class TestDataController extends Controller
     public function updatePayment(UpsertPaymentMethodRequest $request, Project $project, TestPaymentMethod $testPaymentMethod): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($testPaymentMethod->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -140,6 +143,7 @@ class TestDataController extends Controller
     public function destroyPayment(Project $project, TestPaymentMethod $testPaymentMethod): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($testPaymentMethod->project_id === $project->id, 404);
 
         $testPaymentMethod->delete();
 
@@ -179,6 +183,7 @@ class TestDataController extends Controller
     public function updateCommand(UpsertTestCommandRequest $request, Project $project, TestCommand $testCommand): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($testCommand->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -190,6 +195,7 @@ class TestDataController extends Controller
     public function destroyCommand(Project $project, TestCommand $testCommand): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($testCommand->project_id === $project->id, 404);
 
         $testCommand->delete();
 
@@ -229,6 +235,7 @@ class TestDataController extends Controller
     public function updateLink(UpsertTestLinkRequest $request, Project $project, TestLink $testLink): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($testLink->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -240,6 +247,7 @@ class TestDataController extends Controller
     public function destroyLink(Project $project, TestLink $testLink): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($testLink->project_id === $project->id, 404);
 
         $testLink->delete();
 

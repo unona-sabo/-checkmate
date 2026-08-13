@@ -117,7 +117,7 @@ test('publish appends note content to documentation', function () {
     $response->assertRedirect();
     $this->assertDatabaseHas('documentations', [
         'id' => $doc->id,
-        'content' => "Existing content\n\nNote content",
+        'content' => "<p>Existing content</p>\r\n\r\n<p>Note content</p>",
     ]);
     $this->assertDatabaseHas('notes', [
         'id' => $note->id,

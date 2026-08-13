@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Workspaces;
 
+use App\Http\Controllers\Concerns\RequiresWorkspaceManager;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\GrafanaSettingsRequest;
 use App\Models\GrafanaSetting;
@@ -16,10 +17,14 @@ use Inertia\Response;
 
 class GrafanaController extends Controller
 {
-    public function show(Request $request): Response
+    use RequiresWorkspaceManager;
+
+    public function show(Request $request): Response|RedirectResponse
     {
         $workspace = $request->attributes->get('workspace');
-        $this->authorize('update', $workspace);
+        if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
+            return $redirect;
+        }
 
         $settings = GrafanaSetting::forWorkspace($workspace);
 
@@ -37,7 +42,9 @@ class GrafanaController extends Controller
     public function update(GrafanaSettingsRequest $request, AchievementService $achievements): RedirectResponse
     {
         $workspace = $request->attributes->get('workspace');
-        $this->authorize('update', $workspace);
+        if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
+            return $redirect;
+        }
 
         $settings = GrafanaSetting::forWorkspace($workspace);
 
@@ -67,7 +74,9 @@ class GrafanaController extends Controller
     public function testConnection(Request $request): JsonResponse
     {
         $workspace = $request->attributes->get('workspace');
-        $this->authorize('update', $workspace);
+        if ($response = $this->ensureCanManageWorkspaceJson($request, $workspace)) {
+            return $response;
+        }
 
         $settings = GrafanaSetting::forWorkspace($workspace);
 

@@ -69,6 +69,7 @@ class NoteController extends Controller
     public function show(Project $project, Note $note)
     {
         $this->authorize('view', $project);
+        abort_unless($note->project_id === $project->id, 404);
 
         $note->load('documentation');
 
@@ -89,6 +90,7 @@ class NoteController extends Controller
     public function update(UpsertNoteRequest $request, Project $project, Note $note)
     {
         $this->authorize('update', $project);
+        abort_unless($note->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -104,6 +106,7 @@ class NoteController extends Controller
     public function destroy(Project $project, Note $note)
     {
         $this->authorize('update', $project);
+        abort_unless($note->project_id === $project->id, 404);
 
         $note->delete();
 
@@ -117,13 +120,19 @@ class NoteController extends Controller
     public function publish(Project $project, Note $note)
     {
         $this->authorize('update', $project);
+        abort_unless($note->project_id === $project->id, 404);
 
         if (! $note->documentation_id) {
             return redirect()->back()
                 ->with('error', 'Please select a documentation to publish to.');
         }
 
-        $documentation = Documentation::find($note->documentation_id);
+        $documentation = Documentation::where('project_id', $project->id)->find($note->documentation_id);
+
+        if (! $documentation) {
+            return redirect()->back()
+                ->with('error', 'The linked documentation no longer exists in this project.');
+        }
 
         // Append note content to documentation
         $newContent = $documentation->content

@@ -86,9 +86,17 @@ function saveSettings() {
 }
 
 function saveMappings() {
-    mappingForm.put('/workspaces/settings/clickup/status-mapping', {
-        preserveScroll: true,
-    });
+    mappingForm
+        .transform((data) => ({
+            status_mapping: Object.fromEntries(
+                Object.entries(data.status_mapping).filter(
+                    ([, value]) => value !== '__none__',
+                ),
+            ),
+        }))
+        .put('/workspaces/settings/clickup/status-mapping', {
+            preserveScroll: true,
+        });
 }
 
 async function fetchStatuses() {
@@ -338,6 +346,12 @@ function formatStatus(status: string): string {
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem
+                                                            value="__none__"
+                                                            class="cursor-pointer text-muted-foreground"
+                                                        >
+                                                            — None —
+                                                        </SelectItem>
+                                                        <SelectItem
                                                             v-for="cs in clickupStatuses"
                                                             :key="cs.status"
                                                             :value="cs.status"
@@ -359,6 +373,13 @@ function formatStatus(status: string): string {
                                     </tbody>
                                 </table>
                             </div>
+
+                            <p
+                                v-if="mappingForm.errors.status_mapping"
+                                class="text-sm text-destructive"
+                            >
+                                {{ mappingForm.errors.status_mapping }}
+                            </p>
 
                             <Button
                                 class="cursor-pointer"

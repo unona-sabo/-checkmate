@@ -237,8 +237,8 @@ Return JSON array with this structure:
         }
 
         try {
-            $response = Http::timeout(120)->post(
-                "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}",
+            $response = Http::withHeaders(['x-goog-api-key' => $this->apiKey])->timeout(120)->post(
+                "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent",
                 [
                     'contents' => [['parts' => [['text' => $prompt]]]],
                     'generationConfig' => [
@@ -258,8 +258,8 @@ Return JSON array with this structure:
 
             return $this->extractJson($content);
         } catch (ConnectionException $e) {
-            Log::error('Gemini API connection error: '.$e->getMessage());
-            throw $e;
+            Log::error('Gemini API connection error', ['exception' => $e->getMessage()]);
+            throw new ConnectionException('Unable to reach the Gemini API. Please try again.', previous: $e);
         }
     }
 

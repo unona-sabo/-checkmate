@@ -124,6 +124,7 @@ class TestCoverageController extends Controller
 
         $features = $project->features()
             ->where('is_active', true)
+            ->withCount('testCases')
             ->get()
             ->map(fn ($feature) => [
                 'id' => $feature->id,
@@ -132,7 +133,7 @@ class TestCoverageController extends Controller
                 'module' => $feature->module,
                 'category' => $feature->category,
                 'priority' => $feature->priority,
-                'test_cases_count' => $feature->testCases()->count(),
+                'test_cases_count' => $feature->test_cases_count,
             ])
             ->toArray();
 
@@ -375,7 +376,7 @@ class TestCoverageController extends Controller
 
         $feature = $project->features()->create($validated);
 
-        $this->autoLinkFeature($project, $feature);
+        $this->autoLinkFeature($feature, $this->projectTestCases($project));
 
         return back();
     }
@@ -466,9 +467,10 @@ class TestCoverageController extends Controller
         $this->authorize('update', $project);
 
         $features = $project->features()->where('is_active', true)->get();
+        $testCases = $this->projectTestCases($project);
 
         foreach ($features as $feature) {
-            $this->autoLinkFeature($project, $feature);
+            $this->autoLinkFeature($feature, $testCases);
         }
 
         return back();
@@ -480,7 +482,7 @@ class TestCoverageController extends Controller
 
         abort_unless($feature->project_id === $project->id, 404);
 
-        $this->autoLinkFeature($project, $feature);
+        $this->autoLinkFeature($feature, $this->projectTestCases($project));
 
         return back();
     }
@@ -502,13 +504,22 @@ class TestCoverageController extends Controller
         return response()->json($testCases);
     }
 
-    private function autoLinkFeature(Project $project, ProjectFeature $feature): void
+    /**
+     * @return \Illuminate\Support\Collection<int, TestCase>
+     */
+    private function projectTestCases(Project $project): \Illuminate\Support\Collection
     {
-        $testCases = $project->testSuites()
+        return $project->testSuites()
             ->with('testCases')
             ->get()
             ->flatMap(fn ($suite) => $suite->testCases);
+    }
 
+    /**
+     * @param  \Illuminate\Support\Collection<int, TestCase>  $testCases
+     */
+    private function autoLinkFeature(ProjectFeature $feature, \Illuminate\Support\Collection $testCases): void
+    {
         $matchingIds = $testCases
             ->filter(fn ($tc) => str_contains(mb_strtolower($tc->title), mb_strtolower($feature->name)))
             ->pluck('id')

@@ -142,7 +142,8 @@ class AutomationController extends Controller
 
         $validated = $request->validated();
 
-        $testCase = \App\Models\TestCase::findOrFail($validated['test_case_id']);
+        $testCase = \App\Models\TestCase::whereIn('test_suite_id', $project->testSuites()->pluck('id'))
+            ->findOrFail($validated['test_case_id']);
         $testCase->update([
             'playwright_file' => $validated['playwright_file'],
             'playwright_test_name' => $validated['playwright_test_name'],
@@ -158,7 +159,8 @@ class AutomationController extends Controller
 
         $validated = $request->validated();
 
-        $testCase = \App\Models\TestCase::findOrFail($validated['test_case_id']);
+        $testCase = \App\Models\TestCase::whereIn('test_suite_id', $project->testSuites()->pluck('id'))
+            ->findOrFail($validated['test_case_id']);
         $testCase->update([
             'playwright_file' => null,
             'playwright_test_name' => null,

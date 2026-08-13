@@ -23,7 +23,8 @@ test('member cannot view clickup settings page', function () {
 
     $response = $this->actingAs($user)->get(route('workspaces.clickup.show'));
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('workspaces.show'));
+    $response->assertSessionHas('error');
 });
 
 test('viewer cannot view clickup settings page', function () {
@@ -31,7 +32,8 @@ test('viewer cannot view clickup settings page', function () {
 
     $response = $this->actingAs($user)->get(route('workspaces.clickup.show'));
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('workspaces.show'));
+    $response->assertSessionHas('error');
 });
 
 test('clickup settings can be saved', function () {
@@ -100,7 +102,8 @@ test('member cannot update clickup settings', function () {
         'list_id' => '901234567890',
     ]);
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('workspaces.show'));
+    $response->assertSessionHas('error');
 });
 
 test('viewer cannot update clickup settings', function () {
@@ -111,7 +114,8 @@ test('viewer cannot update clickup settings', function () {
         'list_id' => '901234567890',
     ]);
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('workspaces.show'));
+    $response->assertSessionHas('error');
 });
 
 test('register webhook rejects a local development domain up front', function () {

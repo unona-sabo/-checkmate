@@ -27,7 +27,8 @@ test('member cannot view grafana settings page', function () {
 
     $this->actingAs($user)
         ->get('/workspaces/settings/grafana')
-        ->assertForbidden();
+        ->assertRedirect(route('workspaces.show'))
+        ->assertSessionHas('error');
 });
 
 test('viewer cannot view grafana settings page', function () {
@@ -35,7 +36,8 @@ test('viewer cannot view grafana settings page', function () {
 
     $this->actingAs($user)
         ->get('/workspaces/settings/grafana')
-        ->assertForbidden();
+        ->assertRedirect(route('workspaces.show'))
+        ->assertSessionHas('error');
 });
 
 test('grafana settings can be saved', function () {
@@ -130,7 +132,8 @@ test('member cannot update grafana settings', function () {
             'base_url' => 'https://logging.example.io',
             'datasource_id' => '1',
         ])
-        ->assertForbidden();
+        ->assertRedirect(route('workspaces.show'))
+        ->assertSessionHas('error');
 });
 
 test('two workspaces have independent grafana settings', function () {

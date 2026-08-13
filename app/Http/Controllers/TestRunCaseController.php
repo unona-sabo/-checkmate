@@ -14,6 +14,8 @@ class TestRunCaseController extends Controller
     public function update(UpdateTestRunCaseRequest $request, Project $project, TestRun $testRun, TestRunCase $testRunCase)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
+        abort_unless($testRunCase->test_run_id === $testRun->id, 404);
 
         $validated = $request->validated();
 
@@ -36,6 +38,7 @@ class TestRunCaseController extends Controller
     public function bulkUpdate(BulkUpdateTestRunCasesRequest $request, Project $project, TestRun $testRun)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -71,6 +74,8 @@ class TestRunCaseController extends Controller
     public function assignToMe(Request $request, Project $project, TestRun $testRun, TestRunCase $testRunCase)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
+        abort_unless($testRunCase->test_run_id === $testRun->id, 404);
 
         $testRunCase->update(['assigned_to' => auth()->id()]);
 
@@ -80,6 +85,8 @@ class TestRunCaseController extends Controller
     public function destroy(Project $project, TestRun $testRun, TestRunCase $testRunCase)
     {
         $this->authorize('update', $project);
+        abort_unless($testRun->project_id === $project->id, 404);
+        abort_unless($testRunCase->test_run_id === $testRun->id, 404);
 
         if ($testRun->status !== 'active') {
             return back()->with('error', 'Can only remove cases from active test runs.');

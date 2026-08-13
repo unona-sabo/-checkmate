@@ -103,6 +103,7 @@ class DocumentationController extends Controller
     public function show(Project $project, Documentation $documentation): Response
     {
         $this->authorize('view', $project);
+        abort_unless($documentation->project_id === $project->id, 404);
 
         $documentation->load(['parent', 'children.children.children', 'attachments', 'projectFeatures:id,name,module']);
 
@@ -122,6 +123,7 @@ class DocumentationController extends Controller
     public function edit(Project $project, Documentation $documentation): Response
     {
         $this->authorize('update', $project);
+        abort_unless($documentation->project_id === $project->id, 404);
 
         $documentation->load(['attachments', 'projectFeatures:id']);
 
@@ -146,6 +148,7 @@ class DocumentationController extends Controller
     public function update(UpdateDocumentationRequest $request, Project $project, Documentation $documentation)
     {
         $this->authorize('update', $project);
+        abort_unless($documentation->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -164,6 +167,7 @@ class DocumentationController extends Controller
     public function destroy(Project $project, Documentation $documentation)
     {
         $this->authorize('update', $project);
+        abort_unless($documentation->project_id === $project->id, 404);
 
         $this->attachmentService->deleteAll($documentation);
         $documentation->delete();
@@ -175,6 +179,11 @@ class DocumentationController extends Controller
     public function destroyAttachment(Project $project, Documentation $documentation, Attachment $attachment)
     {
         $this->authorize('update', $project);
+        abort_unless($documentation->project_id === $project->id, 404);
+        abort_unless(
+            $attachment->attachable_type === Documentation::class && $attachment->attachable_id === $documentation->id,
+            404
+        );
 
         $this->attachmentService->deleteOne($attachment);
 
@@ -184,6 +193,7 @@ class DocumentationController extends Controller
     public function uploadImage(StoreDocImageRequest $request, Project $project, Documentation $documentation)
     {
         $this->authorize('update', $project);
+        abort_unless($documentation->project_id === $project->id, 404);
 
         $request->validated();
 
@@ -214,6 +224,7 @@ class DocumentationController extends Controller
     public function export(Project $project, Documentation $documentation): StreamedResponse
     {
         $this->authorize('view', $project);
+        abort_unless($documentation->project_id === $project->id, 404);
 
         $documentation->load(['children.children.children', 'attachments']);
 
@@ -231,6 +242,7 @@ class DocumentationController extends Controller
     public function import(Request $request, Project $project, Documentation $documentation): RedirectResponse
     {
         $this->authorize('update', $project);
+        abort_unless($documentation->project_id === $project->id, 404);
 
         return $this->handleImport($request, $project, $documentation->id);
     }
@@ -249,7 +261,7 @@ class DocumentationController extends Controller
     private function handleImport(Request $request, Project $project, ?int $parentId): RedirectResponse
     {
         $request->validate([
-            'file' => 'required|file|max:5120',
+            'file' => 'required|file|max:5120|mimes:pdf,doc,docx,xls,xlsx,csv,txt,json',
         ]);
 
         $file = $request->file('file');

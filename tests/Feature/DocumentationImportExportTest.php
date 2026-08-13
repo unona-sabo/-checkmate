@@ -308,7 +308,7 @@ test('store note creates a new top-level documentation', function () {
     $documentation = Documentation::where('project_id', $project->id)->where('title', 'Quick Note')->first();
     expect($documentation)->not->toBeNull();
     expect($documentation->parent_id)->toBeNull();
-    expect($documentation->content)->toBe('<p>Line one</p><p>Line two</p>');
+    expect($documentation->content)->toBe("<p>Line one</p>\r\n\r\n<p>Line two</p>");
 
     $response->assertRedirect(route('documentations.show', [$project, $documentation]));
     $response->assertSessionHas('success');

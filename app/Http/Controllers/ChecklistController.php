@@ -143,6 +143,7 @@ class ChecklistController extends Controller
     public function show(Project $project, Checklist $checklist): Response
     {
         $this->authorize('view', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $checklist->load(['note', 'projectFeatures:id,name,module']);
 
@@ -168,6 +169,7 @@ class ChecklistController extends Controller
     public function edit(Project $project, Checklist $checklist): Response
     {
         $this->authorize('update', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $checklist->load('projectFeatures:id');
 
@@ -185,6 +187,7 @@ class ChecklistController extends Controller
     public function update(UpdateChecklistRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -198,6 +201,7 @@ class ChecklistController extends Controller
     public function destroy(Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $checklist->delete();
 
@@ -226,6 +230,7 @@ class ChecklistController extends Controller
     public function updateRows(UpdateChecklistRowsRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -278,6 +283,7 @@ class ChecklistController extends Controller
     public function patchRows(PatchChecklistRowsRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -326,6 +332,7 @@ class ChecklistController extends Controller
     public function updateNote(StoreChecklistNoteRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -340,6 +347,7 @@ class ChecklistController extends Controller
     public function importFromNotes(BulkCreateRowsRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -481,6 +489,7 @@ class ChecklistController extends Controller
     public function export(Project $project, Checklist $checklist): StreamedResponse
     {
         $this->authorize('view', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $columns = $checklist->columns_config ?? [
             ['key' => 'item', 'label' => 'Item', 'type' => 'text'],
@@ -550,6 +559,7 @@ class ChecklistController extends Controller
     public function import(Request $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $validator = Validator::make($request->all(), [
             'file' => 'required|file|mimes:csv,txt|max:5120', // 5MB max
@@ -822,6 +832,7 @@ class ChecklistController extends Controller
     public function copyRows(CopyRowsRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
+        abort_unless($checklist->project_id === $project->id, 404);
 
         $validated = $request->validated();
 

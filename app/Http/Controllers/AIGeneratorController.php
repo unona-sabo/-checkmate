@@ -13,6 +13,7 @@ use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Services\AchievementService;
 use App\Services\AITestGeneratorService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -83,15 +84,20 @@ class AIGeneratorController extends Controller
             'language' => $language,
         ], fn ($v) => $v !== null);
 
-        $testCases = match ($validated['input_type']) {
-            'text' => $service->generateFromText($validated['text'], $options),
-            'file' => $service->generateFromFile($request->file('file')->getRealPath(), $options),
-            'image' => $service->generateFromImage($request->file('image')->getRealPath(), $options),
-            'documentation' => $service->generateFromText(
-                $this->documentationPlainText($project, (int) $validated['documentation_id']),
-                $options
-            ),
-        };
+        $documentationText = $validated['input_type'] === 'documentation'
+            ? $this->documentationPlainText($project, (int) $validated['documentation_id'])
+            : null;
+
+        try {
+            $testCases = match ($validated['input_type']) {
+                'text' => $service->generateFromText($validated['text'], $options),
+                'file' => $service->generateFromFile($request->file('file')->getRealPath(), $options),
+                'image' => $service->generateFromImage($request->file('image')->getRealPath(), $options),
+                'documentation' => $service->generateFromText($documentationText, $options),
+            };
+        } catch (\RuntimeException|ConnectionException $e) {
+            return response()->json(['message' => $e->getMessage()], 502);
+        }
 
         $generation = AiGeneration::query()->create([
             'project_id' => $project->id,
@@ -122,7 +128,11 @@ class AIGeneratorController extends Controller
 
         $service = new AITestGeneratorService($provider, $settings?->apiKeyFor($provider), $settings?->modelFor($provider));
 
-        $testCases = $service->parseFromText($validated['text']);
+        try {
+            $testCases = $service->parseFromText($validated['text']);
+        } catch (\RuntimeException|ConnectionException $e) {
+            return response()->json(['message' => $e->getMessage()], 502);
+        }
 
         $generation = AiGeneration::query()->create([
             'project_id' => $project->id,

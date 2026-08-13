@@ -39,6 +39,7 @@ class TestCaseController extends Controller
     public function create(Project $project, TestSuite $testSuite): Response
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
 
         $features = $project->features()->where('is_active', true)
             ->orderBy('module')->orderBy('name')
@@ -64,6 +65,7 @@ class TestCaseController extends Controller
     public function store(StoreTestCaseRequest $request, Project $project, TestSuite $testSuite)
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
 
         $validated = $request->validated();
 
@@ -96,6 +98,8 @@ class TestCaseController extends Controller
     public function show(Project $project, TestSuite $testSuite, TestCase $testCase): Response
     {
         $this->authorize('view', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
+        abort_unless($testCase->test_suite_id === $testSuite->id, 404);
 
         $testCase->load(['note', 'attachments', 'projectFeatures:id,name,module']);
 
@@ -109,6 +113,8 @@ class TestCaseController extends Controller
     public function edit(Project $project, TestSuite $testSuite, TestCase $testCase): Response
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
+        abort_unless($testCase->test_suite_id === $testSuite->id, 404);
 
         $testCase->load(['attachments', 'projectFeatures:id']);
 
@@ -135,6 +141,8 @@ class TestCaseController extends Controller
     public function update(UpdateTestCaseRequest $request, Project $project, TestSuite $testSuite, TestCase $testCase)
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
+        abort_unless($testCase->test_suite_id === $testSuite->id, 404);
 
         $validated = $request->validated();
 
@@ -150,6 +158,8 @@ class TestCaseController extends Controller
     public function destroy(Project $project, TestSuite $testSuite, TestCase $testCase)
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
+        abort_unless($testCase->test_suite_id === $testSuite->id, 404);
 
         $this->attachmentService->deleteAll($testCase);
         $testCase->delete();
@@ -161,6 +171,12 @@ class TestCaseController extends Controller
     public function destroyAttachment(Project $project, TestSuite $testSuite, TestCase $testCase, Attachment $attachment)
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
+        abort_unless($testCase->test_suite_id === $testSuite->id, 404);
+        abort_unless(
+            $attachment->attachable_type === TestCase::class && $attachment->attachable_id === $testCase->id,
+            404
+        );
 
         $this->attachmentService->deleteOne($attachment);
         $testCase->touch();
@@ -171,6 +187,8 @@ class TestCaseController extends Controller
     public function updateNote(StoreTestCaseNoteRequest $request, Project $project, TestSuite $testSuite, TestCase $testCase)
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
+        abort_unless($testCase->test_suite_id === $testSuite->id, 404);
 
         $validated = $request->validated();
 
@@ -189,6 +207,7 @@ class TestCaseController extends Controller
     public function reorder(ReorderTestCasesRequest $request, Project $project, TestSuite $testSuite)
     {
         $this->authorize('update', $project);
+        abort_unless($testSuite->project_id === $project->id, 404);
 
         $validated = $request->validated();
 

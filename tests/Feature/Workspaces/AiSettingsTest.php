@@ -24,7 +24,8 @@ test('member cannot view ai settings page', function () {
 
     $response = $this->actingAs($user)->get(route('workspaces.ai.show'));
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('workspaces.show'));
+    $response->assertSessionHas('error');
 });
 
 test('viewer cannot view ai settings page', function () {
@@ -32,7 +33,8 @@ test('viewer cannot view ai settings page', function () {
 
     $response = $this->actingAs($user)->get(route('workspaces.ai.show'));
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('workspaces.show'));
+    $response->assertSessionHas('error');
 });
 
 test('ai settings can be saved', function () {
@@ -91,7 +93,8 @@ test('member cannot update ai settings', function () {
         'default_provider' => 'gemini',
     ]);
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('workspaces.show'));
+    $response->assertSessionHas('error');
 });
 
 test('viewer cannot update ai settings', function () {
@@ -102,7 +105,8 @@ test('viewer cannot update ai settings', function () {
         'default_provider' => 'gemini',
     ]);
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('workspaces.show'));
+    $response->assertSessionHas('error');
 });
 
 test('two workspaces have independent ai settings', function () {

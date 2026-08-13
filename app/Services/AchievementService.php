@@ -9,6 +9,7 @@ use App\Models\TestCase;
 use App\Models\TestCaseNote;
 use App\Models\User;
 use App\Models\UserAchievement;
+use Illuminate\Support\Facades\DB;
 
 class AchievementService
 {
@@ -232,21 +233,32 @@ class AchievementService
             return;
         }
 
-        $previousDate = $user->last_active_date;
-        $wasYesterday = $previousDate && $previousDate->toDateString() === now()->subDay()->toDateString();
+        DB::transaction(function () use ($user, $today) {
+            $locked = User::whereKey($user->id)->lockForUpdate()->first();
 
-        $user->current_streak_days = $wasYesterday ? $user->current_streak_days + 1 : 1;
+            if ($locked->last_active_date?->toDateString() !== $today) {
+                $previousDate = $locked->last_active_date;
+                $wasYesterday = $previousDate && $previousDate->toDateString() === now()->subDay()->toDateString();
 
-        $hour = (int) now()->format('G');
+                $locked->current_streak_days = $wasYesterday ? $locked->current_streak_days + 1 : 1;
 
-        if ($hour >= 0 && $hour < 5) {
-            $user->night_owl_days++;
-        } elseif ($hour >= 5 && $hour < 7) {
-            $user->early_bird_days++;
-        }
+                $hour = (int) now()->format('G');
 
-        $user->last_active_date = $today;
-        $user->save();
+                if ($hour >= 0 && $hour < 5) {
+                    $locked->night_owl_days++;
+                } elseif ($hour >= 5 && $hour < 7) {
+                    $locked->early_bird_days++;
+                }
+
+                $locked->last_active_date = $today;
+                $locked->save();
+            }
+
+            $user->current_streak_days = $locked->current_streak_days;
+            $user->night_owl_days = $locked->night_owl_days;
+            $user->early_bird_days = $locked->early_bird_days;
+            $user->last_active_date = $locked->last_active_date;
+        });
 
         if ($user->current_streak_days >= 7) {
             $this->unlock($user, 'streak-master');

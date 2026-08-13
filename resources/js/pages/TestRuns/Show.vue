@@ -397,8 +397,7 @@ const createBugReportUrl = (trc: TestRunCase): string => {
     return `/projects/${props.project.id}/bugreports/create?${params.toString()}`;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const { searchQuery, highlight: _highlight, highlightRich } = useSearch();
+const { searchQuery, highlight } = useSearch();
 
 const filteredGroupedCases = computed(() => {
     if (!searchQuery.value.trim()) return groupedCases.value;
@@ -678,7 +677,9 @@ const addCasesCount = computed(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-6">
             <!-- Header -->
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div
+                class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
+            >
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight break-words">
                         <Play
@@ -865,7 +866,9 @@ const addCasesCount = computed(() => {
             <!-- Progress Stats -->
             <Card>
                 <CardContent class="p-6">
-                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
+                    <div
+                        class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8"
+                    >
                         <div class="flex-1">
                             <div class="mb-2 flex items-center justify-between">
                                 <span class="text-sm font-medium"
@@ -1021,7 +1024,7 @@ const addCasesCount = computed(() => {
                                                 <p
                                                     class="truncate text-sm font-medium"
                                                     v-html="
-                                                        highlightRich(
+                                                        highlight(
                                                             trc.test_case
                                                                 ?.title ??
                                                                 trc.title ??
