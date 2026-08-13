@@ -215,7 +215,7 @@ const projectSubItems = computed(() => {
                                 class="pl-4 group-data-[collapsible=icon]:pl-0"
                             >
                                 <component :is="item.icon" class="h-4 w-4" />
-                                <span>{{ item.title }}</span>
+                                <span class="uppercase">{{ item.title }}</span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
