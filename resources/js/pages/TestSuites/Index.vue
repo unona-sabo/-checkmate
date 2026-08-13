@@ -2152,7 +2152,7 @@ const submitEmptyImport = () => {
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent
-                                        class="flex max-h-[75vh] max-w-2xl flex-col"
+                                        class="flex max-h-[75vh] max-w-2xl flex-col border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 dark:border-amber-800/40 dark:from-amber-950/20 dark:to-yellow-950/20"
                                         style="
                                             overflow: hidden !important;
                                             max-width: min(
@@ -4263,7 +4263,7 @@ const submitEmptyImport = () => {
         <!-- Empty State: Create a Note (new suite + test case) -->
         <Dialog v-model:open="showEmptyNoteDialog">
             <DialogContent
-                class="flex max-h-[75vh] max-w-2xl flex-col"
+                class="flex max-h-[75vh] max-w-2xl flex-col border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 dark:border-amber-800/40 dark:from-amber-950/20 dark:to-yellow-950/20"
                 style="
                     overflow: hidden !important;
                     max-width: min(42rem, calc(100vw - 2rem)) !important;

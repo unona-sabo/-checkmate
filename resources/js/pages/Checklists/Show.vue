@@ -83,9 +83,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useCanEdit } from '@/composables/useCanEdit';
-import {
-    useChecklistClipboard,
-} from '@/composables/useChecklistClipboard';
+import { useChecklistClipboard } from '@/composables/useChecklistClipboard';
 import { useChecklistDragDrop } from '@/composables/useChecklistDragDrop';
 import { useChecklistFilters } from '@/composables/useChecklistFilters';
 import { useChecklistHistory } from '@/composables/useChecklistHistory';
@@ -264,7 +262,10 @@ const visibleColumns = computed(() =>
 );
 const hasHiddenColumns = computed(() => hiddenColumns.value.length > 0);
 
-const COLUMN_TYPE_OPTIONS: { value: ExtendedColumnConfig['type']; label: string }[] = [
+const COLUMN_TYPE_OPTIONS: {
+    value: ExtendedColumnConfig['type'];
+    label: string;
+}[] = [
     { value: 'text', label: 'Text' },
     { value: 'checkbox', label: 'Checkbox' },
     { value: 'select', label: 'Select' },
@@ -2017,7 +2018,8 @@ const pasteColumnFromMemory = (column: ExtendedColumnConfig) => {
     const copied = lastCopiedColumn.value;
     if (!copied) return;
 
-    let resolveValue = (label: string): unknown => parsePastedValue(column, label);
+    let resolveValue = (label: string): unknown =>
+        parsePastedValue(column, label);
 
     if (copied.sourceType === 'select' && copied.sourceOptions?.length) {
         if (column.type !== 'select') {
@@ -2029,18 +2031,25 @@ const pasteColumnFromMemory = (column: ExtendedColumnConfig) => {
         const options = column.options;
 
         const labelToValue = new Map<string, string>();
-        options.forEach((opt) => labelToValue.set(opt.label.toLowerCase(), opt.value));
+        options.forEach((opt) =>
+            labelToValue.set(opt.label.toLowerCase(), opt.value),
+        );
 
         copied.sourceOptions.forEach((opt, idx) => {
             const key = opt.label.toLowerCase();
             if (!labelToValue.has(key)) {
                 const newValue = `option_${Date.now()}_${idx}`;
-                options.push({ value: newValue, label: opt.label, color: opt.color });
+                options.push({
+                    value: newValue,
+                    label: opt.label,
+                    color: opt.color,
+                });
                 labelToValue.set(key, newValue);
             }
         });
 
-        resolveValue = (label: string) => labelToValue.get(label.toLowerCase()) ?? '';
+        resolveValue = (label: string) =>
+            labelToValue.get(label.toLowerCase()) ?? '';
     }
 
     copied.rowIds.forEach((rowId, i) => {
@@ -2109,9 +2118,7 @@ const parsePastedValue = (
 ): unknown => {
     const trimmed = text.trim();
     if (column.type === 'checkbox') {
-        return ['true', '1', 'yes', 'x', '✓'].includes(
-            trimmed.toLowerCase(),
-        );
+        return ['true', '1', 'yes', 'x', '✓'].includes(trimmed.toLowerCase());
     }
     if (column.type === 'select') {
         const match = column.options?.find(
@@ -2429,7 +2436,10 @@ onUnmounted(() => {
                         </Button>
                     </RestrictedAction>
                     <!-- Keyboard shortcuts hint, shown while rows are selected -->
-                    <TooltipProvider v-if="hasSelectedRows" :delay-duration="150">
+                    <TooltipProvider
+                        v-if="hasSelectedRows"
+                        :delay-duration="150"
+                    >
                         <Tooltip>
                             <TooltipTrigger as-child>
                                 <Button
@@ -2446,29 +2456,59 @@ onUnmounted(() => {
                                     Keyboard shortcuts
                                 </p>
                                 <div class="space-y-1">
-                                    <div class="flex items-center justify-between gap-2">
+                                    <div
+                                        class="flex items-center justify-between gap-2"
+                                    >
                                         <span>Select range</span>
-                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">Shift+Click</kbd>
+                                        <kbd
+                                            class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono"
+                                            >Shift+Click</kbd
+                                        >
                                     </div>
-                                    <div class="flex items-center justify-between gap-2">
+                                    <div
+                                        class="flex items-center justify-between gap-2"
+                                    >
                                         <span>Select all rows</span>
-                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">Ctrl/Cmd+A</kbd>
+                                        <kbd
+                                            class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono"
+                                            >Ctrl/Cmd+A</kbd
+                                        >
                                     </div>
-                                    <div class="flex items-center justify-between gap-2">
+                                    <div
+                                        class="flex items-center justify-between gap-2"
+                                    >
                                         <span>Clear selection</span>
-                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">Esc</kbd>
+                                        <kbd
+                                            class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono"
+                                            >Esc</kbd
+                                        >
                                     </div>
-                                    <div class="flex items-center justify-between gap-2">
+                                    <div
+                                        class="flex items-center justify-between gap-2"
+                                    >
                                         <span>Copy selected rows</span>
-                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">Ctrl/Cmd+C</kbd>
+                                        <kbd
+                                            class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono"
+                                            >Ctrl/Cmd+C</kbd
+                                        >
                                     </div>
-                                    <div class="flex items-center justify-between gap-2">
+                                    <div
+                                        class="flex items-center justify-between gap-2"
+                                    >
                                         <span>Paste rows</span>
-                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">Ctrl/Cmd+V</kbd>
+                                        <kbd
+                                            class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono"
+                                            >Ctrl/Cmd+V</kbd
+                                        >
                                     </div>
-                                    <div class="flex items-center justify-between gap-2">
+                                    <div
+                                        class="flex items-center justify-between gap-2"
+                                    >
                                         <span>Move between cells</span>
-                                        <kbd class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono">↑ ↓ Tab</kbd>
+                                        <kbd
+                                            class="rounded border border-background/30 bg-background/10 px-1.5 py-0.5 font-mono"
+                                            >↑ ↓ Tab</kbd
+                                        >
                                     </div>
                                 </div>
                             </TooltipContent>
@@ -2688,9 +2728,7 @@ onUnmounted(() => {
                                 @select.prevent="
                                     toggleColumnVisibility(column.key)
                                 "
-                                @dragover="
-                                    onColsDragOver(colsIndex, $event)
-                                "
+                                @dragover="onColsDragOver(colsIndex, $event)"
                                 @dragleave="onColsDragLeave"
                                 @drop="onColsDrop(colsIndex, $event)"
                             >
@@ -2737,7 +2775,7 @@ onUnmounted(() => {
                             </DialogTrigger>
                         </RestrictedAction>
                         <DialogContent
-                            class="flex max-h-[75vh] max-w-2xl flex-col"
+                            class="flex max-h-[75vh] max-w-2xl flex-col border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 dark:border-amber-800/40 dark:from-amber-950/20 dark:to-yellow-950/20"
                             style="
                                 overflow: hidden !important;
                                 max-width: min(
@@ -2814,7 +2852,9 @@ onUnmounted(() => {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem
-                                                    :value="NEW_CHECKLIST_OPTION"
+                                                    :value="
+                                                        NEW_CHECKLIST_OPTION
+                                                    "
                                                     class="font-medium text-primary"
                                                 >
                                                     <span
@@ -3361,14 +3401,15 @@ onUnmounted(() => {
                                                     class="mr-1 h-4 w-4 cursor-pointer rounded border-gray-300"
                                                 />
                                             </template>
-                                            <span class="min-w-0 flex-1 truncate">{{
-                                                column.label
-                                            }}</span>
+                                            <span
+                                                class="min-w-0 flex-1 truncate"
+                                                >{{ column.label }}</span
+                                            >
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger as-child>
                                                     <button
                                                         type="button"
-                                                        class="ml-auto shrink-0 cursor-pointer rounded p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100"
+                                                        class="ml-auto shrink-0 cursor-pointer rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted"
                                                         title="Column options"
                                                         @click.stop
                                                     >
