@@ -253,7 +253,7 @@ const isProjectDialogOpen = computed({
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="flex flex-wrap gap-4">
+                        <div class="flex flex-wrap gap-4 pt-1.5">
                             <div
                                 v-for="achievement in activity.achievements"
                                 :key="achievement.key"
