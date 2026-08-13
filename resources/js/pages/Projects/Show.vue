@@ -24,18 +24,28 @@ import {
 } from 'lucide-vue-next';
 import { ref, watch, computed } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
-import { Badge } from '@/components/ui/badge';
+import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { escapeHtml, escapeRegExp } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { releaseStatusVariant } from '@/lib/badge-variants';
+import {
+    automationResultVariant,
+    bugStatusVariant,
+    priorityVariant,
+    releaseStatusVariant,
+    severityVariant,
+    testRunStatusVariant,
+    testTypeVariant,
+} from '@/lib/badge-variants';
 import {
     type BreadcrumbItem,
     type Project,
     type ProjectSearchResponse,
 } from '@/types';
+
+type BadgeVariant = NonNullable<BadgeVariants['variant']>;
 
 const props = defineProps<{
     project: Project;
@@ -127,103 +137,35 @@ const getTypeIcon = (type: string) => {
     }
 };
 
-const getBadgeColor = (type: string, value: string) => {
-    if (type === 'test_runs') {
-        switch (value) {
-            case 'active':
-                return 'bg-green-500/10 text-green-600 border-green-500/20';
-            case 'completed':
-                return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-            case 'archived':
-                return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-        }
-    }
-    if (type === 'bugreports') {
-        switch (value) {
-            case 'triage':
-                return 'bg-cyan-100 text-cyan-800 border-cyan-200';
-            case 'to_do':
-                return 'bg-blue-100 text-blue-800 border-blue-200';
-            case 'in_progress':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'blocked':
-                return 'bg-orange-100 text-orange-800 border-orange-200';
-            case 'in_review':
-                return 'bg-purple-100 text-purple-800 border-purple-200';
-            case 'needs_changes':
-                return 'bg-red-100 text-red-800 border-red-200';
-            case 'cancelled':
-                return 'bg-gray-100 text-gray-800 border-gray-200';
-            case 'done':
-                return 'bg-green-100 text-green-800 border-green-200';
-            case 'blocker':
-            case 'critical':
-                return 'bg-red-100 text-red-800 border-red-200';
-            case 'major':
-                return 'bg-orange-100 text-orange-800 border-orange-200';
-            case 'minor':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'trivial':
-                return 'bg-gray-100 text-gray-600 border-gray-200';
-        }
-    }
-    if (type === 'test_cases' || type === 'project_features') {
-        switch (value) {
-            case 'critical':
-                return 'bg-red-100 text-red-800 border-red-200';
-            case 'high':
-                return 'bg-orange-100 text-orange-800 border-orange-200';
-            case 'medium':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'low':
-                return 'bg-gray-100 text-gray-600 border-gray-200';
-        }
-    }
-    if (type === 'releases') {
-        switch (value) {
-            case 'planned':
-                return 'bg-blue-100 text-blue-800 border-blue-200';
-            case 'in_progress':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'released':
-                return 'bg-green-100 text-green-800 border-green-200';
-            case 'cancelled':
-                return 'bg-red-100 text-red-800 border-red-200';
-        }
-    }
-    if (type === 'notes') {
-        switch (value) {
-            case 'draft':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'published':
-                return 'bg-green-100 text-green-800 border-green-200';
-        }
-    }
-    if (type === 'automation_results') {
-        switch (value) {
-            case 'passed':
-                return 'bg-green-100 text-green-800 border-green-200';
-            case 'failed':
-                return 'bg-red-100 text-red-800 border-red-200';
-            case 'skipped':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'error':
-                return 'bg-orange-100 text-orange-800 border-orange-200';
-        }
-    }
-    return 'bg-muted text-muted-foreground border-border';
-};
-
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'active':
-            return 'bg-green-500/10 text-green-500 border-green-500/20';
-        case 'completed':
-            return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-        case 'archived':
-            return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+/**
+ * Maps a search result's badge value to the same shared Badge variant used
+ * everywhere else in the app for that field, so colors stay consistent
+ * across pages instead of this page inventing its own palette.
+ */
+const getBadgeVariant = (
+    type: string,
+    value: string,
+    isExtra = false,
+): BadgeVariant => {
+    switch (type) {
+        case 'test_suites':
+            return testTypeVariant(value);
+        case 'test_cases':
+            return isExtra ? testTypeVariant(value) : priorityVariant(value);
+        case 'test_runs':
+            return testRunStatusVariant(value);
+        case 'bugreports':
+            return isExtra ? severityVariant(value) : bugStatusVariant(value);
+        case 'releases':
+            return releaseStatusVariant(value);
+        case 'notes':
+            return value === 'draft' ? 'secondary' : 'default';
+        case 'project_features':
+            return priorityVariant(value);
+        case 'automation_results':
+            return automationResultVariant(value);
         default:
-            return '';
+            return 'secondary';
     }
 };
 
@@ -411,9 +353,8 @@ const getBugStatusColor = (status: string) => {
                                     >
                                         <Badge
                                             v-if="item.badge"
-                                            variant="outline"
-                                            :class="
-                                                getBadgeColor(
+                                            :variant="
+                                                getBadgeVariant(
                                                     group.type,
                                                     item.badge,
                                                 )
@@ -424,11 +365,11 @@ const getBugStatusColor = (status: string) => {
                                         </Badge>
                                         <Badge
                                             v-if="item.extra_badge"
-                                            variant="secondary"
-                                            :class="
-                                                getBadgeColor(
+                                            :variant="
+                                                getBadgeVariant(
                                                     group.type,
                                                     item.extra_badge,
+                                                    true,
                                                 )
                                             "
                                             class="h-4 px-1.5 text-[10px] font-normal"
@@ -661,8 +602,9 @@ const getBugStatusColor = (status: string) => {
                                         >{{ run.progress }}%</span
                                     >
                                     <Badge
-                                        :class="getStatusColor(run.status)"
-                                        variant="outline"
+                                        :variant="
+                                            testRunStatusVariant(run.status)
+                                        "
                                         class="h-5 px-1.5 py-0 text-xs"
                                     >
                                         {{ run.status }}
