@@ -1337,9 +1337,9 @@ const createBugreportFromSelected = () => {
     selectedRows.value.forEach((row, idx) => {
         const parts: string[] = [];
         textColumns.forEach((col) => {
-            const val = row.data[col.key];
-            if (typeof val === 'string' && val.trim()) {
-                parts.push(val.trim());
+            const val = getCellPlainText(row, col);
+            if (val) {
+                parts.push(val);
             }
         });
         if (parts.length > 0) {
@@ -1464,12 +1464,15 @@ const createTestCaseFromSelected = async () => {
 const createTestCaseFromSelectedForSuite = () => {
     if (!effectiveTestSuiteId.value) return;
 
+    const sourceColumn = columns.value.find(
+        (col) => col.key === testCaseColumnKey.value,
+    );
+
     const steps = selectedRows.value
         .map((row) => {
-            const val = testCaseColumnKey.value
-                ? row.data[testCaseColumnKey.value]
-                : null;
-            const action = typeof val === 'string' ? val.trim() : '';
+            const action = sourceColumn
+                ? getCellPlainText(row, sourceColumn)
+                : '';
             return { action, expected: '' };
         })
         .filter((s) => s.action);
@@ -1559,11 +1562,12 @@ const openTestRunDialog = () => {
 const createTestRunFromSelected = () => {
     if (isCreatingTestRun.value || !testRunColumnKey.value) return;
 
+    const sourceColumn = columns.value.find(
+        (col) => col.key === testRunColumnKey.value,
+    );
+
     const titles = selectedRows.value
-        .map((row) => {
-            const val = row.data[testRunColumnKey.value];
-            return typeof val === 'string' ? val.trim() : '';
-        })
+        .map((row) => (sourceColumn ? getCellPlainText(row, sourceColumn) : ''))
         .filter((t) => t.length > 0);
 
     if (titles.length === 0) return;
