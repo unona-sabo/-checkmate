@@ -2698,8 +2698,8 @@ const formatCredentialsValues = (
                                                     <Badge
                                                         :variant="
                                                             user.is_valid
-                                                                ? 'default'
-                                                                : 'destructive'
+                                                                ? 'emerald'
+                                                                : 'red'
                                                         "
                                                     >
                                                         {{
@@ -3263,8 +3263,8 @@ const formatCredentialsValues = (
                                                     <Badge
                                                         :variant="
                                                             payment.is_valid
-                                                                ? 'default'
-                                                                : 'destructive'
+                                                                ? 'emerald'
+                                                                : 'red'
                                                         "
                                                     >
                                                         {{
