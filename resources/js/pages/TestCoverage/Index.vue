@@ -1368,7 +1368,14 @@ const refreshData = () => {
                                                         class="h-3.5 w-3.5 text-muted-foreground"
                                                     />
                                                 </div>
+                                                <a
+                                                    v-if="tc.test_suite"
+                                                    :href="`/projects/${project.id}/test-suites/${tc.test_suite.id}/test-cases/${tc.id}`"
+                                                    class="text-sm text-foreground hover:underline"
+                                                    >{{ tc.title }}</a
+                                                >
                                                 <span
+                                                    v-else
                                                     class="text-sm text-foreground"
                                                     >{{ tc.title }}</span
                                                 >
