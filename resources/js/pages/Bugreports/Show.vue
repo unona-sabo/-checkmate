@@ -40,6 +40,8 @@ import {
     severityVariant,
     bugStatusVariant,
     priorityVariant,
+    environmentVariant,
+    environmentLabel,
 } from '@/lib/badge-variants';
 import { type BreadcrumbItem, type Project, type Attachment } from '@/types';
 
@@ -521,13 +523,10 @@ const syncFromClickUp = () => {
                                     <Badge
                                         v-for="env in bugreport.fixed_on"
                                         :key="env"
-                                        variant="emerald"
+                                        :variant="environmentVariant(env)"
                                         class="text-xs"
                                     >
-                                        {{
-                                            env.charAt(0).toUpperCase() +
-                                            env.slice(1)
-                                        }}
+                                        {{ environmentLabel(env) }}
                                     </Badge>
                                 </div>
                             </div>

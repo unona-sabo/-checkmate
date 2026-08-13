@@ -57,6 +57,32 @@ export const bugStatusVariant = (status: string): Variant => {
     }
 };
 
+export const environmentVariant = (environment: string): Variant => {
+    switch (environment) {
+        case 'develop':
+            return 'orange';
+        case 'staging':
+            return 'amber';
+        case 'production':
+            return 'emerald';
+        default:
+            return 'gray';
+    }
+};
+
+export const environmentLabel = (environment: string): string => {
+    switch (environment) {
+        case 'develop':
+            return 'Dev';
+        case 'staging':
+            return 'Stage';
+        case 'production':
+            return 'Prod';
+        default:
+            return environment.charAt(0).toUpperCase() + environment.slice(1);
+    }
+};
+
 export const testResultVariant = (status: string): Variant => {
     switch (status) {
         case 'passed':

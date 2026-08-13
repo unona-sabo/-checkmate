@@ -18,7 +18,12 @@ import {
 } from '@/components/ui/select';
 import { useSearch } from '@/composables/useSearch';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { severityVariant, bugStatusVariant } from '@/lib/badge-variants';
+import {
+    severityVariant,
+    bugStatusVariant,
+    environmentVariant,
+    environmentLabel,
+} from '@/lib/badge-variants';
 import { type BreadcrumbItem, type Project } from '@/types';
 
 interface Bugreport {
@@ -741,24 +746,29 @@ const filteredBugreports = computed(() => {
                                         />
                                     </div>
                                     <div
-                                        class="mt-2 flex items-center gap-3 text-xs text-muted-foreground"
+                                        class="mt-2 flex min-w-0 items-center gap-3 text-xs text-muted-foreground"
                                     >
-                                        <span v-if="bug.reporter">{{
-                                            bug.reporter.name
-                                        }}</span>
+                                        <span
+                                            v-if="bug.reporter"
+                                            class="max-w-[6rem] shrink-0 truncate"
+                                            >{{ bug.reporter.name }}</span
+                                        >
                                         <span
                                             v-if="bug.assignee"
-                                            class="flex items-center gap-1"
+                                            class="flex shrink-0 items-center gap-1"
                                         >
                                             <span
-                                                class="text-muted-foreground/50"
+                                                class="shrink-0 text-muted-foreground/50"
                                                 >→</span
                                             >
-                                            {{ bug.assignee.name }}
+                                            <span
+                                                class="max-w-[6rem] truncate"
+                                                >{{ bug.assignee.name }}</span
+                                            >
                                         </span>
                                         <span
                                             v-if="bug.description"
-                                            class="max-w-xs truncate text-muted-foreground/70"
+                                            class="max-w-[12rem] min-w-0 flex-1 truncate text-muted-foreground/70 sm:max-w-[17rem]"
                                             v-html="highlight(bug.description)"
                                         />
                                         <span
@@ -768,15 +778,12 @@ const filteredBugreports = computed(() => {
                                             <Badge
                                                 v-for="env in bug.fixed_on"
                                                 :key="env"
-                                                variant="emerald"
-                                                class="h-4 px-1.5 text-[10px]"
+                                                :variant="
+                                                    environmentVariant(env)
+                                                "
+                                                class="h-5 shrink-0 px-1.5 text-[10px] font-semibold"
                                             >
-                                                {{
-                                                    env
-                                                        .charAt(0)
-                                                        .toUpperCase() +
-                                                    env.slice(1)
-                                                }}
+                                                {{ environmentLabel(env) }}
                                             </Badge>
                                         </span>
                                     </div>
