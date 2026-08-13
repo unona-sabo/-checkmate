@@ -29,6 +29,7 @@ import {
     GOOD_DAY_TOAST_VARIANTS,
     type BadgeId,
 } from '@/lib/achievement-badges';
+import { QA_PREDICTION_CATEGORIES } from '@/lib/qa-predictions';
 import { dashboard } from '@/routes';
 import { type AppPageProps, type BreadcrumbItem } from '@/types';
 import {
@@ -57,6 +58,16 @@ const greeting = 'Good day';
 const goodDayImage =
     GOOD_DAY_TOAST_VARIANTS[
         Math.floor(Math.random() * GOOD_DAY_TOAST_VARIANTS.length)
+    ];
+
+const qaPredictionCategory =
+    QA_PREDICTION_CATEGORIES[
+        Math.floor(Math.random() * QA_PREDICTION_CATEGORIES.length)
+    ];
+
+const qaPrediction =
+    qaPredictionCategory.phrases[
+        Math.floor(Math.random() * qaPredictionCategory.phrases.length)
     ];
 
 interface MetricConfig {
@@ -183,30 +194,51 @@ const isProjectDialogOpen = computed({
         <div class="w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-6">
             <!-- Greeting hero -->
             <div
-                class="dashboard-greeting relative flex items-center gap-5 overflow-hidden rounded-xl border border-amber-300/60 p-5 shadow-lg shadow-amber-900/10 sm:p-6"
+                class="dashboard-greeting relative flex flex-col gap-4 overflow-hidden rounded-xl border border-amber-300/60 p-5 shadow-lg shadow-amber-900/10 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-6"
             >
-                <AchievementBadge
-                    id="good-work-day"
-                    :unlocked="true"
-                    :size="72"
-                    :src-override="goodDayImage"
-                    class="relative z-10 shrink-0"
-                />
-                <div class="relative z-10 min-w-0">
+                <div class="flex items-center gap-5">
+                    <AchievementBadge
+                        id="good-work-day"
+                        :unlocked="true"
+                        :size="72"
+                        :src-override="goodDayImage"
+                        class="relative z-10 shrink-0"
+                    />
+                    <div class="relative z-10 min-w-0">
+                        <p
+                            class="text-xs font-medium tracking-wide text-amber-700/80 uppercase dark:text-amber-300/80"
+                        >
+                            {{ greeting }}, {{ userName }}
+                        </p>
+                        <p
+                            class="mt-1 text-lg font-semibold text-amber-950 dark:text-amber-100"
+                        >
+                            Wishing you a good work day!
+                        </p>
+                        <p
+                            class="mt-1 text-sm text-amber-900/70 dark:text-amber-200/70"
+                        >
+                            Here's what's been happening across your workspace.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- QA fortune: a random category + phrase on every load -->
+                <div
+                    class="dashboard-prediction relative z-10 w-full shrink-0 rounded-lg border border-amber-300/50 bg-white/40 p-3 sm:w-auto sm:max-w-[240px] dark:border-amber-700/40 dark:bg-black/10"
+                >
                     <p
-                        class="text-xs font-medium tracking-wide text-amber-700/80 uppercase dark:text-amber-300/80"
+                        class="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-amber-700/80 uppercase dark:text-amber-300/80"
                     >
-                        {{ greeting }}, {{ userName }}
+                        <span aria-hidden="true">{{
+                            qaPredictionCategory.emoji
+                        }}</span>
+                        {{ qaPredictionCategory.label }}
                     </p>
                     <p
-                        class="mt-1 text-lg font-semibold text-amber-950 dark:text-amber-100"
+                        class="mt-1 text-sm font-medium text-amber-950 dark:text-amber-100"
                     >
-                        Wishing you a good work day!
-                    </p>
-                    <p
-                        class="mt-1 text-sm text-amber-900/70 dark:text-amber-200/70"
-                    >
-                        Here's what's been happening across your workspace.
+                        {{ qaPrediction }}
                     </p>
                 </div>
             </div>
@@ -507,9 +539,25 @@ const isProjectDialogOpen = computed({
     }
 }
 
+.dashboard-prediction {
+    animation: dashboard-prediction-fade-in 0.5s ease-out both;
+}
+
+@keyframes dashboard-prediction-fade-in {
+    0% {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .dashboard-greeting,
-    .dashboard-greeting::before {
+    .dashboard-greeting::before,
+    .dashboard-prediction {
         animation: none;
     }
 }
