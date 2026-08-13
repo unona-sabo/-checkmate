@@ -290,8 +290,8 @@ const isProjectDialogOpen = computed({
                         >
                             {{
                                 showAllLastDayEvents
-                                    ? 'Show less'
-                                    : `Show all (${activity.last_day_events.length})`
+                                    ? 'View less'
+                                    : `View all (${activity.last_day_events.length})`
                             }}
                         </button>
                     </CardContent>
@@ -427,7 +427,7 @@ const isProjectDialogOpen = computed({
         </div>
 
         <Dialog v-model:open="isProjectDialogOpen">
-            <DialogContent class="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+            <DialogContent class="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>{{ selectedProject?.name }}</DialogTitle>
                     <DialogDescription>
