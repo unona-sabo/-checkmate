@@ -225,7 +225,7 @@ const isProjectDialogOpen = computed({
 
                 <!-- QA fortune: a random category + phrase on every load -->
                 <div
-                    class="dashboard-prediction relative z-10 w-full shrink-0 rounded-lg border border-amber-300/50 bg-white/40 p-3 sm:w-auto sm:max-w-[240px] dark:border-amber-700/40 dark:bg-black/10"
+                    class="dashboard-prediction relative z-10 w-full shrink-0 rounded-lg border border-amber-300/50 bg-white/40 p-3 sm:w-auto sm:max-w-[320px] dark:border-amber-700/40 dark:bg-black/10"
                 >
                     <p
                         class="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-amber-700/80 uppercase dark:text-amber-300/80"
