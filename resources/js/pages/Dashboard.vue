@@ -6,7 +6,7 @@ import {
     ClipboardCheck,
     ClipboardList,
     FileText,
-    FolderOpen,
+    Flame,
     Play,
     Rocket,
     Sparkles,
@@ -354,7 +354,7 @@ const isProjectDialogOpen = computed({
                     <h2
                         class="mb-3 flex items-center gap-2 text-sm font-semibold"
                     >
-                        <FolderOpen class="h-4 w-4 text-primary/80" />
+                        <Flame class="h-4 w-4 text-amber-500/80" />
                         Active Projects (Last 7 Days)
                     </h2>
                     <div
