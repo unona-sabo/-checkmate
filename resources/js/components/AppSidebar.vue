@@ -175,7 +175,7 @@ const projectSubItems = computed(() => {
 
             <!-- Current Project Navigation -->
             <SidebarGroup v-if="currentProject" class="px-2 py-0">
-                <SidebarGroupLabel class="text-sidebar-foreground/70"
+                <SidebarGroupLabel class="text-sidebar-foreground/70 uppercase"
                     >Current Project</SidebarGroupLabel
                 >
                 <SidebarMenu>

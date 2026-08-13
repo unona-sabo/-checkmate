@@ -68,7 +68,7 @@ function createWorkspace() {
                 class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-sidebar-accent"
             >
                 <Building2 class="h-4 w-4 shrink-0" />
-                <span class="truncate font-medium">{{
+                <span class="truncate font-medium uppercase">{{
                     currentWorkspace?.name ?? 'No Workspace'
                 }}</span>
                 <ChevronsUpDown class="ml-auto h-4 w-4 shrink-0 opacity-50" />
@@ -91,7 +91,7 @@ function createWorkspace() {
                             : 'opacity-0'
                     "
                 />
-                <span class="truncate">{{ ws.name }}</span>
+                <span class="truncate uppercase">{{ ws.name }}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
