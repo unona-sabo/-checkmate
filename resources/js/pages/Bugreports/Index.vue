@@ -768,7 +768,7 @@ const filteredBugreports = computed(() => {
                                             <Badge
                                                 v-for="env in bug.fixed_on"
                                                 :key="env"
-                                                variant="success"
+                                                variant="emerald"
                                                 class="h-4 px-1.5 text-[10px]"
                                             >
                                                 {{

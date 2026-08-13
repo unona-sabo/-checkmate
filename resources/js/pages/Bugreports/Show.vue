@@ -521,7 +521,7 @@ const syncFromClickUp = () => {
                                     <Badge
                                         v-for="env in bugreport.fixed_on"
                                         :key="env"
-                                        variant="success"
+                                        variant="emerald"
                                         class="text-xs"
                                     >
                                         {{
