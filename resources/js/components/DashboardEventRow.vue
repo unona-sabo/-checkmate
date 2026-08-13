@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import type { Bug } from 'lucide-vue-next';
 import {
+    Bug,
     CheckCircle2,
     ClipboardCheck,
     ClipboardList,
     FileText,
-    Flag,
     Gauge,
     Rocket,
     Target,
@@ -27,41 +26,41 @@ const EVENT_STYLES: Record<
     DashboardEventType,
     { icon: typeof Bug; wrap: string; iconClass: string }
 > = {
-    bug: { icon: Flag, wrap: 'bg-red-500/10', iconClass: 'text-red-500' },
+    bug: { icon: Bug, wrap: 'bg-red-500/10', iconClass: 'text-red-500/80' },
     test_run: {
         icon: CheckCircle2,
         wrap: 'bg-emerald-500/10',
-        iconClass: 'text-emerald-500',
+        iconClass: 'text-emerald-500/80',
     },
     coverage: {
         icon: Gauge,
         wrap: 'bg-purple-500/10',
-        iconClass: 'text-purple-500',
+        iconClass: 'text-purple-500/80',
     },
     checklist_created: {
         icon: ClipboardList,
         wrap: 'bg-blue-500/10',
-        iconClass: 'text-blue-500',
+        iconClass: 'text-blue-500/80',
     },
     checklist: {
         icon: ClipboardCheck,
         wrap: 'bg-emerald-500/10',
-        iconClass: 'text-emerald-500',
+        iconClass: 'text-emerald-500/80',
     },
     release: {
         icon: Rocket,
-        wrap: 'bg-amber-500/10',
-        iconClass: 'text-amber-500',
+        wrap: 'bg-purple-500/10',
+        iconClass: 'text-purple-500/80',
     },
     feature: {
         icon: Target,
         wrap: 'bg-amber-500/10',
-        iconClass: 'text-amber-500',
+        iconClass: 'text-amber-500/80',
     },
     test_case: {
         icon: FileText,
         wrap: 'bg-cyan-500/10',
-        iconClass: 'text-cyan-500',
+        iconClass: 'text-cyan-500/80',
     },
 };
 

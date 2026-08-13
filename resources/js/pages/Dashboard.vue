@@ -122,12 +122,12 @@ const METRIC_STYLES: Record<
     MetricConfig['color'],
     { wrap: string; icon: string }
 > = {
-    blue: { wrap: 'bg-blue-500/10', icon: 'text-blue-500' },
-    red: { wrap: 'bg-red-500/10', icon: 'text-red-500' },
-    emerald: { wrap: 'bg-emerald-500/10', icon: 'text-emerald-500' },
-    purple: { wrap: 'bg-purple-500/10', icon: 'text-purple-500' },
-    amber: { wrap: 'bg-amber-500/10', icon: 'text-amber-500' },
-    cyan: { wrap: 'bg-cyan-500/10', icon: 'text-cyan-500' },
+    blue: { wrap: 'bg-blue-500/10', icon: 'text-blue-500/80' },
+    red: { wrap: 'bg-red-500/10', icon: 'text-red-500/80' },
+    emerald: { wrap: 'bg-emerald-500/10', icon: 'text-emerald-500/80' },
+    purple: { wrap: 'bg-purple-500/10', icon: 'text-purple-500/80' },
+    amber: { wrap: 'bg-amber-500/10', icon: 'text-amber-500/80' },
+    cyan: { wrap: 'bg-cyan-500/10', icon: 'text-cyan-500/80' },
 };
 
 const hasAnyTotals = (counts: DashboardActivityCounts): boolean =>
@@ -162,6 +162,9 @@ function formatDate(iso: string): string {
 }
 
 const PROJECT_PREVIEW_COUNT = 3;
+const LAST_DAY_PREVIEW_COUNT = 6;
+
+const showAllLastDayEvents = ref(false);
 
 const selectedProject = ref<DashboardActivityProject | null>(null);
 
@@ -213,7 +216,7 @@ const isProjectDialogOpen = computed({
                 <Card v-if="activity.achievements.length">
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2 text-base">
-                            <Sparkles class="h-4 w-4 text-amber-500" />
+                            <Sparkles class="h-4 w-4 text-amber-500/80" />
                             Recent Achievements
                         </CardTitle>
                     </CardHeader>
@@ -257,9 +260,12 @@ const isProjectDialogOpen = computed({
                             class="divide-y divide-border"
                         >
                             <DashboardEventRow
-                                v-for="(
-                                    event, index
-                                ) in activity.last_day_events"
+                                v-for="(event, index) in showAllLastDayEvents
+                                    ? activity.last_day_events
+                                    : activity.last_day_events.slice(
+                                          0,
+                                          LAST_DAY_PREVIEW_COUNT,
+                                      )"
                                 :key="index"
                                 :event="event"
                                 show-project
@@ -271,6 +277,23 @@ const isProjectDialogOpen = computed({
                         >
                             No activity in the last 24 hours.
                         </p>
+                        <button
+                            v-if="
+                                activity.last_day_events.length >
+                                LAST_DAY_PREVIEW_COUNT
+                            "
+                            type="button"
+                            class="mt-2 cursor-pointer text-xs font-medium text-primary hover:text-primary/80"
+                            @click="
+                                showAllLastDayEvents = !showAllLastDayEvents
+                            "
+                        >
+                            {{
+                                showAllLastDayEvents
+                                    ? 'Show less'
+                                    : `Show all (${activity.last_day_events.length})`
+                            }}
+                        </button>
                     </CardContent>
                 </Card>
 
@@ -331,7 +354,7 @@ const isProjectDialogOpen = computed({
                     <h2
                         class="mb-3 flex items-center gap-2 text-sm font-semibold"
                     >
-                        <FolderOpen class="h-4 w-4 text-primary" />
+                        <FolderOpen class="h-4 w-4 text-primary/80" />
                         Active Projects (Last 7 Days)
                     </h2>
                     <div
@@ -340,6 +363,7 @@ const isProjectDialogOpen = computed({
                         <Card
                             v-for="project in activity.projects"
                             :key="project.id"
+                            class="flex flex-col"
                         >
                             <CardHeader class="pb-0">
                                 <div
@@ -358,7 +382,7 @@ const isProjectDialogOpen = computed({
                                     </span>
                                 </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent class="flex flex-1 flex-col">
                                 <div class="divide-y divide-border">
                                     <DashboardEventRow
                                         v-for="(
@@ -377,7 +401,7 @@ const isProjectDialogOpen = computed({
                                         PROJECT_PREVIEW_COUNT
                                     "
                                     type="button"
-                                    class="mt-2 cursor-pointer text-xs font-medium text-primary hover:text-primary/80"
+                                    class="mt-auto cursor-pointer pt-2 text-xs font-medium text-primary hover:text-primary/80"
                                     @click="selectedProject = project"
                                 >
                                     View all ({{ project.recent.length }})

@@ -42,7 +42,7 @@ class DashboardActivityService
 
         return [
             'last_day' => $this->totalsFor($projectIds, $lastDayStart, $now),
-            'last_day_events' => $lastDayEvents->take(20)->map(fn (array $event) => $this->serializeEvent($event))->all(),
+            'last_day_events' => $lastDayEvents->map(fn (array $event) => $this->serializeEvent($event))->all(),
             'week' => $this->totalsFor($projectIds, $weekStart, $now),
             'week_previous' => $this->totalsFor($projectIds, $previousWeekStart, $weekStart),
             'projects' => $this->projectBreakdown($projects, $projectIds, $weekStart, $now, $events),
