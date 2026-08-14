@@ -41,11 +41,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 return back()->with('error', 'Your session took a little too long. Please try again.');
             }
 
-            // 404 always gets our illustrated page, since it's harmless to
-            // show in every environment. 403/500/503 keep Laravel's default
-            // (Ignition, etc.) locally so debugging isn't hidden.
-            $shouldRenderErrorPage = $status === 404
-                || (! app()->environment(['local', 'testing']) && in_array($status, [403, 500, 503], true));
+            // 404 and 403 always get our illustrated page — a denied-access
+            // page is meant for real users, not just debugging. 500/503 keep
+            // Laravel's default (Ignition, etc.) locally so debugging isn't
+            // hidden.
+            $shouldRenderErrorPage = in_array($status, [403, 404], true)
+                || (! app()->environment(['local', 'testing']) && in_array($status, [500, 503], true));
 
             if ($shouldRenderErrorPage) {
                 return Inertia::render('Error', ['status' => $status])
