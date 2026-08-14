@@ -139,6 +139,9 @@ class ProjectUpdatesController extends Controller
             ->pluck('title')
             ->toArray();
 
+        $now = now();
+        $toCreate = [];
+
         foreach ($configFeatures as $index => $title) {
             $feature = $existing->get($index);
 
@@ -147,13 +150,19 @@ class ProjectUpdatesController extends Controller
                     $feature->update(['title' => $title]);
                 }
             } elseif (! in_array($title, $deletedTitles, true)) {
-                FeatureDescription::query()->create([
+                $toCreate[] = [
                     'section_key' => $sectionKey,
                     'feature_index' => $index,
                     'title' => $title,
                     'is_custom' => false,
-                ]);
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
             }
+        }
+
+        if ($toCreate !== []) {
+            FeatureDescription::query()->insert($toCreate);
         }
     }
 
@@ -164,17 +173,36 @@ class ProjectUpdatesController extends Controller
      */
     private function buildSection(string $key, string $title, string $description, array $configFeatures, ?string $modelClass = null): array
     {
-        $featureQuery = FeatureDescription::query()->where('section_key', $key);
+        $allFeatures = FeatureDescription::query()
+            ->where('section_key', $key)
+            ->with('creator:id,name', 'updater:id,name')
+            ->get();
 
-        $dbFeatures = (clone $featureQuery)->orderBy('feature_index')->orderBy('created_at')->pluck('title')->all();
+        $dbFeatures = $allFeatures
+            ->sortBy([['feature_index', 'asc'], ['created_at', 'asc']])
+            ->pluck('title')
+            ->all();
 
         $features = $dbFeatures !== [] ? $dbFeatures : $configFeatures;
 
-        $latestFeature = (clone $featureQuery)->latest('updated_at')->with('updater:id,name', 'creator:id,name')->first();
-        $oldestFeature = (clone $featureQuery)->oldest('created_at')->first();
+        // `id` breaks ties between rows with the same second-precision
+        // timestamp (e.g. a batch of features synced in the same request).
+        $latestFeature = $allFeatures->sortBy([['updated_at', 'desc'], ['id', 'desc']])->first();
+        $oldestFeature = $allFeatures->sortBy([['created_at', 'asc'], ['id', 'asc']])->first();
 
-        $author = $latestFeature?->updater?->name
-            ?? $latestFeature?->creator?->name
+        // The author is deliberately picked from human-edited rows only, so
+        // an anonymous feature synced from config in this same request never
+        // outranks someone's actual edit just because it landed a moment
+        // later.
+        $lastUpdatedByUser = $allFeatures->whereNotNull('updated_by')
+            ->sortBy([['updated_at', 'desc'], ['id', 'desc']])
+            ->first();
+        $lastCreatedByUser = $allFeatures->whereNotNull('created_by')
+            ->sortBy([['created_at', 'desc'], ['id', 'desc']])
+            ->first();
+
+        $author = $lastUpdatedByUser?->updater?->name
+            ?? $lastCreatedByUser?->creator?->name
             ?? 'CheckMate Team';
 
         return [
