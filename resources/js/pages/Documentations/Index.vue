@@ -437,6 +437,7 @@ const submitNote = () => {
 
 // Empty state — Import (creates new top-level documentation(s) from a file)
 const showImportDialog = ref(false);
+const importTitle = ref('');
 const importFileInput = ref<HTMLInputElement | null>(null);
 const importFile = ref<File | null>(null);
 const importError = ref<string | null>(null);
@@ -481,6 +482,7 @@ const handleImportFileSelect = (event: Event) => {
 
 const closeImportDialog = () => {
     showImportDialog.value = false;
+    importTitle.value = '';
     importFile.value = null;
     importError.value = null;
 };
@@ -493,6 +495,9 @@ const submitImport = () => {
 
     const formData = new FormData();
     formData.append('file', importFile.value);
+    if (importTitle.value.trim()) {
+        formData.append('title', importTitle.value.trim());
+    }
 
     router.post(
         `/projects/${props.project.id}/documentations/import-new`,
@@ -659,10 +664,19 @@ onMounted(() => {
                             <RestrictedAction>
                                 <DropdownMenuItem
                                     class="cursor-pointer"
+                                    @click="showImportDialog = true"
+                                >
+                                    <Plus class="mr-2 h-4 w-4" />
+                                    Import as New Document
+                                </DropdownMenuItem>
+                            </RestrictedAction>
+                            <RestrictedAction>
+                                <DropdownMenuItem
+                                    class="cursor-pointer"
                                     @click="showFileImportDialog = true"
                                 >
                                     <Download class="mr-2 h-4 w-4" />
-                                    Import
+                                    Import into Document
                                 </DropdownMenuItem>
                             </RestrictedAction>
                             <DropdownMenuItem
@@ -1126,6 +1140,15 @@ onMounted(() => {
                     </DialogHeader>
 
                     <div class="space-y-4 py-4">
+                        <div class="space-y-2">
+                            <Label for="import-title">Document Title</Label>
+                            <Input
+                                id="import-title"
+                                v-model="importTitle"
+                                placeholder="Leave blank to use the file's title"
+                            />
+                        </div>
+
                         <div class="space-y-2">
                             <Label>File</Label>
                             <input

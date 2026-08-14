@@ -102,3 +102,30 @@ test('workspace settings page loads for owner', function () {
             ->has('roles')
         );
 });
+
+test('workspace settings page loads for admin', function () {
+    [$user] = createUserWithWorkspace('admin');
+
+    $this->actingAs($user)
+        ->get('/workspaces/settings')
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->component('Workspaces/Show'));
+});
+
+test('member cannot view workspace settings page', function () {
+    [$user] = createUserWithWorkspace('member');
+
+    $this->actingAs($user)
+        ->get('/workspaces/settings')
+        ->assertRedirect(route('projects.index'))
+        ->assertSessionHas('error');
+});
+
+test('viewer cannot view workspace settings page', function () {
+    [$user] = createUserWithWorkspace('viewer');
+
+    $this->actingAs($user)
+        ->get('/workspaces/settings')
+        ->assertRedirect(route('projects.index'))
+        ->assertSessionHas('error');
+});

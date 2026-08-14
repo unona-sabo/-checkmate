@@ -9,6 +9,7 @@ use App\Http\Requests\Workspace\SwitchWorkspaceRequest;
 use App\Http\Requests\Workspace\TransferOwnershipRequest;
 use App\Http\Requests\Workspace\UpdateSidebarCategoriesRequest;
 use App\Models\Workspace;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -16,11 +17,14 @@ use Inertia\Response;
 
 class WorkspaceController extends Controller
 {
-    public function show(Request $request): Response
+    public function show(Request $request): Response|RedirectResponse
     {
         $workspace = $request->attributes->get('workspace');
 
-        $this->authorize('view', $workspace);
+        if (! $request->user()->can('update', $workspace)) {
+            return redirect()->route('projects.index')
+                ->with('error', 'You need to be an owner or admin of this workspace to view its settings.');
+        }
 
         $members = $workspace->members()->get()->map(fn ($user) => [
             'id' => $user->id,

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { Building2, LogOut, Settings } from 'lucide-vue-next';
+import { computed } from 'vue';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -10,7 +11,7 @@ import {
 import UserInfo from '@/components/UserInfo.vue';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
-import type { User } from '@/types';
+import type { AppPageProps, User } from '@/types';
 
 type Props = {
     user: User;
@@ -21,6 +22,12 @@ const handleLogout = () => {
 };
 
 defineProps<Props>();
+
+const page = usePage<AppPageProps>();
+const canManageWorkspace = computed(() => {
+    const role = page.props.currentWorkspace?.role;
+    return role === 'owner' || role === 'admin';
+});
 </script>
 
 <template>
@@ -37,7 +44,7 @@ defineProps<Props>();
                 Settings
             </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem :as-child="true">
+        <DropdownMenuItem v-if="canManageWorkspace" :as-child="true">
             <Link
                 class="block w-full cursor-pointer"
                 href="/workspaces/settings"

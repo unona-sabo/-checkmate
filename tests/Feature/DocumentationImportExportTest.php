@@ -269,6 +269,44 @@ test('import into new top-level documentation parses non-JSON file', function ()
     expect($imported->parent_id)->toBeNull();
 });
 
+test('import into new top-level documentation accepts a custom title override for JSON', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $json = json_encode([
+        'title' => 'Original Title',
+        'content' => '<p>root content</p>',
+    ]);
+    $file = UploadedFile::fake()->createWithContent('doc.json', $json);
+
+    $response = $this->actingAs($user)->post(
+        route('documentations.import-new', $project),
+        ['file' => $file, 'title' => 'Custom Title']
+    );
+
+    $response->assertRedirect();
+
+    $doc = Documentation::where('project_id', $project->id)->first();
+    expect($doc->title)->toBe('Custom Title');
+});
+
+test('import into new top-level documentation accepts a custom title override for parsed files', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $file = UploadedFile::fake()->createWithContent('notes.txt', 'Some content.');
+
+    $response = $this->actingAs($user)->post(
+        route('documentations.import-new', $project),
+        ['file' => $file, 'title' => 'Custom Title']
+    );
+
+    $response->assertRedirect();
+
+    $doc = Documentation::where('project_id', $project->id)->first();
+    expect($doc->title)->toBe('Custom Title');
+});
+
 test('viewer cannot import into new top-level documentation', function () {
     $owner = User::factory()->create();
     $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);

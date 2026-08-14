@@ -1143,13 +1143,15 @@ const addCasesCount = computed(() => {
                                         >
                                             <ExternalLink class="h-4 w-4" />
                                         </a>
-                                        <Link
-                                            :href="createBugReportUrl(trc)"
-                                            class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive"
-                                            title="Create Bug Report"
-                                        >
-                                            <Bug class="h-4 w-4" />
-                                        </Link>
+                                        <RestrictedAction>
+                                            <Link
+                                                :href="createBugReportUrl(trc)"
+                                                class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive"
+                                                title="Create Bug Report"
+                                            >
+                                                <Bug class="h-4 w-4" />
+                                            </Link>
+                                        </RestrictedAction>
                                         <RestrictedAction>
                                             <Button
                                                 v-if="

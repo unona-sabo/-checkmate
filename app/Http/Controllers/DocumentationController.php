@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Documentation\ImportDocumentationRequest;
 use App\Http\Requests\Documentation\ReorderDocumentationsRequest;
 use App\Http\Requests\Documentation\StoreDocImageRequest;
+use App\Http\Requests\Documentation\StoreDocumentationNoteRequest;
 use App\Http\Requests\Documentation\StoreDocumentationRequest;
 use App\Http\Requests\Documentation\UpdateDocumentationRequest;
 use App\Models\Attachment;
@@ -239,7 +241,7 @@ class DocumentationController extends Controller
         ]);
     }
 
-    public function import(Request $request, Project $project, Documentation $documentation): RedirectResponse
+    public function import(ImportDocumentationRequest $request, Project $project, Documentation $documentation): RedirectResponse
     {
         $this->authorize('update', $project);
         abort_unless($documentation->project_id === $project->id, 404);
@@ -251,22 +253,19 @@ class DocumentationController extends Controller
      * Import a file as a new top-level documentation page (or tree), for
      * projects that have no documentation to import into yet.
      */
-    public function importToNew(Request $request, Project $project): RedirectResponse
+    public function importToNew(ImportDocumentationRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
         return $this->handleImport($request, $project, null);
     }
 
-    private function handleImport(Request $request, Project $project, ?int $parentId): RedirectResponse
+    private function handleImport(ImportDocumentationRequest $request, Project $project, ?int $parentId): RedirectResponse
     {
-        $request->validate([
-            'file' => 'required|file|max:5120|mimes:pdf,doc,docx,xls,xlsx,csv,txt,json',
-        ]);
-
         $file = $request->file('file');
         $originalName = $file->getClientOriginalName();
         $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $titleOverride = $request->validated('title');
 
         $maxOrder = $project->documentations()
             ->where('parent_id', $parentId)
@@ -286,6 +285,10 @@ class DocumentationController extends Controller
                 return back()->withErrors(['file' => 'Invalid documentation JSON format.']);
             }
 
+            if ($titleOverride) {
+                $data['title'] = $titleOverride;
+            }
+
             $count = $this->importDocumentation($data, $project, $parentId, $maxOrder + 1);
 
             return back()->with('success', "{$count} document(s) imported successfully.");
@@ -295,15 +298,16 @@ class DocumentationController extends Controller
         try {
             $parser = new DocumentParserService;
             $parsed = $parser->parse($file->getRealPath(), $originalName);
+            $title = $titleOverride ?: $parsed['title'];
 
             $project->documentations()->create([
-                'title' => $parsed['title'],
+                'title' => $title,
                 'content' => $parsed['content'],
                 'parent_id' => $parentId,
                 'order' => $maxOrder + 1,
             ]);
 
-            return back()->with('success', "Document \"{$parsed['title']}\" imported successfully.");
+            return back()->with('success', "Document \"{$title}\" imported successfully.");
         } catch (\RuntimeException $e) {
             return back()->withErrors(['file' => $e->getMessage()]);
         } catch (\Throwable $e) {
@@ -317,14 +321,11 @@ class DocumentationController extends Controller
      * Create a new top-level documentation page from a quick note (plain
      * title + content), for projects that have no documentation yet.
      */
-    public function storeNote(Request $request, Project $project): RedirectResponse
+    public function storeNote(StoreDocumentationNoteRequest $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
         $maxOrder = $project->documentations()->whereNull('parent_id')->max('order') ?? -1;
 

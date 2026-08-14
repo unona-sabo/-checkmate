@@ -18,7 +18,7 @@ import {
     StickyNote,
     Database,
     BarChart3,
-    Drama,
+    Target,
     Terminal,
     Link2,
 } from 'lucide-vue-next';
@@ -129,7 +129,7 @@ const getTypeIcon = (type: string) => {
         case 'test_data_links':
             return Link2;
         case 'project_features':
-            return Drama;
+            return Target;
         case 'automation_results':
             return BarChart3;
         default:

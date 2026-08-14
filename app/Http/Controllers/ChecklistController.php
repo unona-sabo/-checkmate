@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Checklist\BulkCreateRowsRequest;
 use App\Http\Requests\Checklist\CopyRowsRequest;
+use App\Http\Requests\Checklist\ImportChecklistCsvRequest;
+use App\Http\Requests\Checklist\ImportChecklistCsvToNewChecklistRequest;
 use App\Http\Requests\Checklist\PatchChecklistRowsRequest;
 use App\Http\Requests\Checklist\ReorderChecklistsRequest;
 use App\Http\Requests\Checklist\StoreChecklistFromNotesRequest;
@@ -16,8 +18,6 @@ use App\Models\Project;
 use App\Models\User;
 use App\Services\AchievementService;
 use App\Services\FeatureLinkingService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -556,22 +556,10 @@ class ChecklistController extends Controller
     /**
      * Import data from CSV file to checklist.
      */
-    public function import(Request $request, Project $project, Checklist $checklist)
+    public function import(ImportChecklistCsvRequest $request, Project $project, Checklist $checklist)
     {
         $this->authorize('update', $project);
         abort_unless($checklist->project_id === $project->id, 404);
-
-        $validator = Validator::make($request->all(), [
-            'file' => 'required|file|mimes:csv,txt|max:5120', // 5MB max
-        ], [
-            'file.required' => 'Please select a file to import.',
-            'file.mimes' => 'The file must be a CSV file.',
-            'file.max' => 'The file size must not exceed 5MB.',
-        ]);
-
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
 
         $file = $request->file('file');
         $content = file_get_contents($file->getRealPath());
@@ -723,25 +711,11 @@ class ChecklistController extends Controller
     /**
      * Create a new checklist from a CSV file, using its header row as columns.
      */
-    public function importCsvToNewChecklist(Request $request, Project $project)
+    public function importCsvToNewChecklist(ImportChecklistCsvToNewChecklistRequest $request, Project $project)
     {
         $this->authorize('update', $project);
 
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'file' => 'required|file|mimes:csv,txt|max:5120', // 5MB max
-        ], [
-            'name.required' => 'Please enter a name for the checklist.',
-            'file.required' => 'Please select a file to import.',
-            'file.mimes' => 'The file must be a CSV file.',
-            'file.max' => 'The file size must not exceed 5MB.',
-        ]);
-
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
-
-        $validated = $validator->validated();
+        $validated = $request->validated();
 
         $file = $request->file('file');
         $content = file_get_contents($file->getRealPath());
