@@ -6,15 +6,14 @@ use App\Enums\WorkspaceRole;
 use App\Http\Requests\WorkspaceMember\StoreWorkspaceMemberRequest;
 use App\Http\Requests\WorkspaceMember\UpdateWorkspaceMemberRequest;
 use App\Models\User;
+use App\Models\Workspace;
 use App\Services\AchievementService;
 use Illuminate\Http\Request;
 
 class WorkspaceMemberController extends Controller
 {
-    public function store(StoreWorkspaceMemberRequest $request, AchievementService $achievements)
+    public function store(StoreWorkspaceMemberRequest $request, Workspace $workspace, AchievementService $achievements)
     {
-        $workspace = $request->attributes->get('workspace');
-
         $this->authorize('manageMembers', $workspace);
 
         $validated = $request->validated();
@@ -32,10 +31,8 @@ class WorkspaceMemberController extends Controller
         return back()->with('success', "{$user->name} has been added to the workspace.");
     }
 
-    public function update(UpdateWorkspaceMemberRequest $request, int $memberId)
+    public function update(UpdateWorkspaceMemberRequest $request, Workspace $workspace, int $memberId)
     {
-        $workspace = $request->attributes->get('workspace');
-
         $this->authorize('manageMembers', $workspace);
 
         $validated = $request->validated();
@@ -55,10 +52,8 @@ class WorkspaceMemberController extends Controller
         return back()->with('success', 'Member role updated successfully.');
     }
 
-    public function destroy(Request $request, int $memberId)
+    public function destroy(Request $request, Workspace $workspace, int $memberId)
     {
-        $workspace = $request->attributes->get('workspace');
-
         $this->authorize('manageMembers', $workspace);
 
         $member = $workspace->members()->where('users.id', $memberId)->first();

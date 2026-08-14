@@ -50,7 +50,10 @@ const canManage = computed(
 const isOwner = computed(() => currentRole.value === 'owner');
 
 const breadcrumbs = [
-    { title: 'Workspace Settings', href: '/workspaces/settings' },
+    {
+        title: 'Workspace Settings',
+        href: `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings`,
+    },
 ];
 
 // Rename form
@@ -58,9 +61,12 @@ const renameForm = useForm({ name: props.workspace.name });
 useClearErrorsOnInput(renameForm);
 
 function updateWorkspace() {
-    renameForm.put('/workspaces/settings', {
-        preserveScroll: true,
-    });
+    renameForm.put(
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings`,
+        {
+            preserveScroll: true,
+        },
+    );
 }
 
 // Sidebar category visibility
@@ -80,7 +86,7 @@ function toggleCategory(value: string, visible: boolean) {
 
     sidebarCategoriesSaving.value = true;
     router.put(
-        '/workspaces/settings/sidebar',
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/sidebar`,
         { hidden_categories: hiddenCategories.value },
         {
             preserveScroll: true,
@@ -99,18 +105,21 @@ const addMemberForm = useForm({
 useClearErrorsOnInput(addMemberForm);
 
 function addMember() {
-    addMemberForm.post('/workspaces/members', {
-        preserveScroll: true,
-        onSuccess: () => {
-            addMemberForm.reset();
+    addMemberForm.post(
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/members`,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                addMemberForm.reset();
+            },
         },
-    });
+    );
 }
 
 // Role update
 function updateRole(memberId: number, role: string) {
     router.put(
-        `/workspaces/members/${memberId}`,
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/members/${memberId}`,
         { role },
         {
             preserveScroll: true,
@@ -127,12 +136,15 @@ function confirmRemoveMember(memberId: number) {
 
 function removeMember() {
     if (removingMemberId.value === null) return;
-    router.delete(`/workspaces/members/${removingMemberId.value}`, {
-        preserveScroll: true,
-        onSuccess: () => {
-            removingMemberId.value = null;
+    router.delete(
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/members/${removingMemberId.value}`,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                removingMemberId.value = null;
+            },
         },
-    });
+    );
 }
 
 // Transfer ownership
@@ -150,7 +162,7 @@ function confirmTransfer() {
 function transferOwnership() {
     if (!transferOwnerId.value) return;
     router.put(
-        '/workspaces/transfer',
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/transfer`,
         { new_owner_id: transferOwnerId.value },
         {
             preserveScroll: true,
@@ -166,11 +178,14 @@ function transferOwnership() {
 const showDeleteDialog = ref(false);
 
 function deleteWorkspace() {
-    router.delete('/workspaces/settings', {
-        onSuccess: () => {
-            showDeleteDialog.value = false;
+    router.delete(
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings`,
+        {
+            onSuccess: () => {
+                showDeleteDialog.value = false;
+            },
         },
-    });
+    );
 }
 
 const roleColors: Record<string, string> = {
@@ -263,7 +278,7 @@ const roleColors: Record<string, string> = {
                 <div class="grid gap-3">
                     <component
                         :is="canManage ? Link : 'div'"
-                        href="/workspaces/settings/clickup"
+                        :href="`/workspaces/${workspace.id}-${workspace.slug}/settings/clickup`"
                         class="flex items-center justify-between rounded-lg border p-4"
                         :class="
                             canManage
@@ -288,7 +303,7 @@ const roleColors: Record<string, string> = {
                     </component>
                     <component
                         :is="canManage ? Link : 'div'"
-                        href="/workspaces/settings/grafana"
+                        :href="`/workspaces/${workspace.id}-${workspace.slug}/settings/grafana`"
                         class="flex items-center justify-between rounded-lg border p-4"
                         :class="
                             canManage
@@ -313,7 +328,7 @@ const roleColors: Record<string, string> = {
                     </component>
                     <component
                         :is="canManage ? Link : 'div'"
-                        href="/workspaces/settings/ai"
+                        :href="`/workspaces/${workspace.id}-${workspace.slug}/settings/ai`"
                         class="flex items-center justify-between rounded-lg border p-4"
                         :class="
                             canManage

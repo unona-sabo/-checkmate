@@ -44,8 +44,14 @@ const canManage = computed(() => {
 });
 
 const breadcrumbItems: BreadcrumbItem[] = [
-    { title: 'Workspace Settings', href: '/workspaces/settings' },
-    { title: 'ClickUp', href: '/workspaces/settings/clickup' },
+    {
+        title: 'Workspace Settings',
+        href: `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings`,
+    },
+    {
+        title: 'ClickUp',
+        href: `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/clickup`,
+    },
 ];
 
 const settingsForm = useForm({
@@ -76,13 +82,16 @@ const webhookHealth = ref<WebhookHealth | null>(null);
 const webhookHealthError = ref('');
 
 function saveSettings() {
-    settingsForm.put('/workspaces/settings/clickup', {
-        preserveScroll: true,
-        onSuccess: () => {
-            settingsForm.reset('api_token');
-            settingsForm.defaults();
+    settingsForm.put(
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/clickup`,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                settingsForm.reset('api_token');
+                settingsForm.defaults();
+            },
         },
-    });
+    );
 }
 
 function saveMappings() {
@@ -94,9 +103,12 @@ function saveMappings() {
                 ),
             ),
         }))
-        .put('/workspaces/settings/clickup/status-mapping', {
-            preserveScroll: true,
-        });
+        .put(
+            `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/clickup/status-mapping`,
+            {
+                preserveScroll: true,
+            },
+        );
 }
 
 async function fetchStatuses() {
@@ -105,7 +117,7 @@ async function fetchStatuses() {
 
     try {
         const response = await fetch(
-            '/workspaces/settings/clickup/fetch-statuses',
+            `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/clickup/fetch-statuses`,
             {
                 method: 'POST',
                 headers: {
@@ -137,7 +149,7 @@ async function fetchStatuses() {
 function registerWebhook() {
     registeringWebhook.value = true;
     router.post(
-        '/workspaces/settings/clickup/register-webhook',
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/clickup/register-webhook`,
         {},
         {
             preserveScroll: true,
@@ -153,7 +165,7 @@ async function checkWebhookHealth() {
 
     try {
         const response = await fetch(
-            '/workspaces/settings/clickup/webhook-health',
+            `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/clickup/webhook-health`,
             { headers: { Accept: 'application/json' } },
         );
         const data = await response.json();

@@ -14,7 +14,7 @@ test('owner can transfer ownership to a member', function () {
     $member->update(['current_workspace_id' => $workspace->id]);
 
     $this->actingAs($owner)
-        ->put('/workspaces/transfer', ['new_owner_id' => $member->id])
+        ->put("/workspaces/{$workspace->getRouteKey()}/transfer", ['new_owner_id' => $member->id])
         ->assertRedirect();
 
     $workspace->refresh();
@@ -40,7 +40,7 @@ test('non-owner cannot transfer ownership', function () {
     $workspace->members()->attach($member->id, ['role' => 'member']);
 
     $this->actingAs($admin)
-        ->put('/workspaces/transfer', ['new_owner_id' => $member->id])
+        ->put("/workspaces/{$workspace->getRouteKey()}/transfer", ['new_owner_id' => $member->id])
         ->assertForbidden();
 });
 
@@ -53,7 +53,7 @@ test('cannot transfer ownership to a non-member', function () {
     $nonMember = User::factory()->create();
 
     $this->actingAs($owner)
-        ->put('/workspaces/transfer', ['new_owner_id' => $nonMember->id])
+        ->put("/workspaces/{$workspace->getRouteKey()}/transfer", ['new_owner_id' => $nonMember->id])
         ->assertSessionHasErrors('new_owner_id');
 });
 
@@ -64,6 +64,6 @@ test('cannot transfer ownership to a nonexistent user', function () {
     $owner->update(['current_workspace_id' => $workspace->id]);
 
     $this->actingAs($owner)
-        ->put('/workspaces/transfer', ['new_owner_id' => 99999])
+        ->put("/workspaces/{$workspace->getRouteKey()}/transfer", ['new_owner_id' => 99999])
         ->assertSessionHasErrors('new_owner_id');
 });

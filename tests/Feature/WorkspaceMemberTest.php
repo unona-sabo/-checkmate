@@ -9,7 +9,7 @@ test('owner can add a member to workspace', function () {
     $newUser = User::factory()->create();
 
     $this->actingAs($owner)
-        ->post('/workspaces/members', [
+        ->post("/workspaces/{$workspace->getRouteKey()}/members", [
             'email' => $newUser->email,
             'role' => 'member',
         ])
@@ -30,7 +30,7 @@ test('member cannot add members to workspace', function () {
     $newUser = User::factory()->create();
 
     $this->actingAs($member)
-        ->post('/workspaces/members', [
+        ->post("/workspaces/{$workspace->getRouteKey()}/members", [
             'email' => $newUser->email,
             'role' => 'viewer',
         ])
@@ -41,7 +41,7 @@ test('cannot add a nonexistent email as member', function () {
     [$owner, $workspace] = createUserWithWorkspace();
 
     $this->actingAs($owner)
-        ->post('/workspaces/members', [
+        ->post("/workspaces/{$workspace->getRouteKey()}/members", [
             'email' => 'nonexistent@example.com',
             'role' => 'member',
         ])
@@ -56,7 +56,7 @@ test('owner can remove a member from workspace', function () {
     $member->update(['current_workspace_id' => $workspace->id]);
 
     $this->actingAs($owner)
-        ->delete("/workspaces/members/{$member->id}")
+        ->delete("/workspaces/{$workspace->getRouteKey()}/members/{$member->id}")
         ->assertRedirect();
 
     expect($workspace->members()->where('users.id', $member->id)->exists())->toBeFalse();
@@ -71,7 +71,7 @@ test('cannot remove the workspace owner', function () {
     $admin->update(['current_workspace_id' => $workspace->id]);
 
     $this->actingAs($admin)
-        ->delete("/workspaces/members/{$owner->id}")
+        ->delete("/workspaces/{$workspace->getRouteKey()}/members/{$owner->id}")
         ->assertSessionHasErrors('member');
 });
 
@@ -82,7 +82,7 @@ test('owner can update a member role', function () {
     $workspace->members()->attach($member->id, ['role' => 'member']);
 
     $this->actingAs($owner)
-        ->put("/workspaces/members/{$member->id}", ['role' => 'admin'])
+        ->put("/workspaces/{$workspace->getRouteKey()}/members/{$member->id}", ['role' => 'admin'])
         ->assertRedirect();
 
     $updatedRole = $workspace->members()->where('users.id', $member->id)->first()->pivot->role;
@@ -93,7 +93,7 @@ test('workspace settings page loads for owner', function () {
     [$owner, $workspace] = createUserWithWorkspace();
 
     $this->actingAs($owner)
-        ->get('/workspaces/settings')
+        ->get("/workspaces/{$workspace->getRouteKey()}/settings")
         ->assertSuccessful()
         ->assertInertia(fn ($page) => $page
             ->component('Workspaces/Show')
@@ -104,28 +104,28 @@ test('workspace settings page loads for owner', function () {
 });
 
 test('workspace settings page loads for admin', function () {
-    [$user] = createUserWithWorkspace('admin');
+    [$user, $workspace] = createUserWithWorkspace('admin');
 
     $this->actingAs($user)
-        ->get('/workspaces/settings')
+        ->get("/workspaces/{$workspace->getRouteKey()}/settings")
         ->assertSuccessful()
         ->assertInertia(fn ($page) => $page->component('Workspaces/Show'));
 });
 
 test('member cannot view workspace settings page', function () {
-    [$user] = createUserWithWorkspace('member');
+    [$user, $workspace] = createUserWithWorkspace('member');
 
     $this->actingAs($user)
-        ->get('/workspaces/settings')
+        ->get("/workspaces/{$workspace->getRouteKey()}/settings")
         ->assertRedirect(route('projects.index'))
         ->assertSessionHas('error');
 });
 
 test('viewer cannot view workspace settings page', function () {
-    [$user] = createUserWithWorkspace('viewer');
+    [$user, $workspace] = createUserWithWorkspace('viewer');
 
     $this->actingAs($user)
-        ->get('/workspaces/settings')
+        ->get("/workspaces/{$workspace->getRouteKey()}/settings")
         ->assertRedirect(route('projects.index'))
         ->assertSessionHas('error');
 });

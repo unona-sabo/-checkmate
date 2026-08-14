@@ -1,46 +1,49 @@
 <?php
 
 use App\Models\AiSetting;
+use App\Models\Workspace;
 use App\Services\AITestGeneratorService;
 use App\Services\CoverageAnalysisService;
 use Illuminate\Support\Facades\Http;
 
 test('ai settings page is displayed', function () {
-    [$user] = createUserWithWorkspace();
+    [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->get(route('workspaces.ai.show'));
+    $response = $this->actingAs($user)->get(route('workspaces.ai.show', $workspace));
 
     $response->assertOk();
 });
 
 test('ai settings page requires authentication', function () {
-    $response = $this->get(route('workspaces.ai.show'));
+    $workspace = Workspace::factory()->create();
+
+    $response = $this->get(route('workspaces.ai.show', $workspace));
 
     $response->assertRedirect(route('login'));
 });
 
 test('member cannot view ai settings page', function () {
-    [$user] = createUserWithWorkspace('member');
+    [$user, $workspace] = createUserWithWorkspace('member');
 
-    $response = $this->actingAs($user)->get(route('workspaces.ai.show'));
+    $response = $this->actingAs($user)->get(route('workspaces.ai.show', $workspace));
 
-    $response->assertRedirect(route('workspaces.show'));
+    $response->assertRedirect(route('projects.index'));
     $response->assertSessionHas('error');
 });
 
 test('viewer cannot view ai settings page', function () {
-    [$user] = createUserWithWorkspace('viewer');
+    [$user, $workspace] = createUserWithWorkspace('viewer');
 
-    $response = $this->actingAs($user)->get(route('workspaces.ai.show'));
+    $response = $this->actingAs($user)->get(route('workspaces.ai.show', $workspace));
 
-    $response->assertRedirect(route('workspaces.show'));
+    $response->assertRedirect(route('projects.index'));
     $response->assertSessionHas('error');
 });
 
 test('ai settings can be saved', function () {
     [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->put(route('workspaces.ai.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.ai.update', $workspace), [
         'gemini_api_key' => 'gemini-test-key',
         'gemini_model' => 'gemini-2.0-flash',
         'anthropic_api_key' => 'anthropic-test-key',
@@ -65,7 +68,7 @@ test('blank api key inputs keep the existing saved key', function () {
     [$user, $workspace] = createUserWithWorkspace();
     AiSetting::forWorkspace($workspace)->update(['gemini_api_key' => 'existing-key']);
 
-    $response = $this->actingAs($user)->put(route('workspaces.ai.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.ai.update', $workspace), [
         'gemini_api_key' => '',
         'default_provider' => 'gemini',
     ]);
@@ -76,9 +79,9 @@ test('blank api key inputs keep the existing saved key', function () {
 });
 
 test('ai settings validation requires a valid default provider', function () {
-    [$user] = createUserWithWorkspace();
+    [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->put(route('workspaces.ai.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.ai.update', $workspace), [
         'default_provider' => 'invalid',
     ]);
 
@@ -86,26 +89,26 @@ test('ai settings validation requires a valid default provider', function () {
 });
 
 test('member cannot update ai settings', function () {
-    [$user] = createUserWithWorkspace('member');
+    [$user, $workspace] = createUserWithWorkspace('member');
 
-    $response = $this->actingAs($user)->put(route('workspaces.ai.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.ai.update', $workspace), [
         'gemini_api_key' => 'gemini-test-key',
         'default_provider' => 'gemini',
     ]);
 
-    $response->assertRedirect(route('workspaces.show'));
+    $response->assertRedirect(route('projects.index'));
     $response->assertSessionHas('error');
 });
 
 test('viewer cannot update ai settings', function () {
-    [$user] = createUserWithWorkspace('viewer');
+    [$user, $workspace] = createUserWithWorkspace('viewer');
 
-    $response = $this->actingAs($user)->put(route('workspaces.ai.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.ai.update', $workspace), [
         'gemini_api_key' => 'gemini-test-key',
         'default_provider' => 'gemini',
     ]);
 
-    $response->assertRedirect(route('workspaces.show'));
+    $response->assertRedirect(route('projects.index'));
     $response->assertSessionHas('error');
 });
 
@@ -113,12 +116,12 @@ test('two workspaces have independent ai settings', function () {
     [$userA, $workspaceA] = createUserWithWorkspace();
     [$userB, $workspaceB] = createUserWithWorkspace();
 
-    $this->actingAs($userA)->put(route('workspaces.ai.update'), [
+    $this->actingAs($userA)->put(route('workspaces.ai.update', $workspaceA), [
         'gemini_api_key' => 'workspace-a-key',
         'default_provider' => 'gemini',
     ]);
 
-    $this->actingAs($userB)->put(route('workspaces.ai.update'), [
+    $this->actingAs($userB)->put(route('workspaces.ai.update', $workspaceB), [
         'gemini_api_key' => 'workspace-b-key',
         'default_provider' => 'gemini',
     ]);

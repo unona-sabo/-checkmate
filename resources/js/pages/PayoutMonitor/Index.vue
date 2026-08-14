@@ -708,7 +708,10 @@ const flattenPayload = (
                         Analyze TerraPay payout logs from Grafana/Loki
                     </p>
                 </div>
-                <a v-if="canManage" href="/workspaces/settings/grafana">
+                <a
+                    v-if="canManage"
+                    :href="`/workspaces/${page.props.currentWorkspace?.id}-${page.props.currentWorkspace?.slug}/settings/grafana`"
+                >
                     <Button
                         variant="outline"
                         size="sm"
@@ -735,7 +738,7 @@ const flattenPayload = (
                             <template v-if="canManage">
                                 Go to
                                 <a
-                                    href="/workspaces/settings/grafana"
+                                    :href="`/workspaces/${page.props.currentWorkspace?.id}-${page.props.currentWorkspace?.slug}/settings/grafana`"
                                     class="underline hover:text-foreground"
                                     >Settings &gt; Grafana</a
                                 >

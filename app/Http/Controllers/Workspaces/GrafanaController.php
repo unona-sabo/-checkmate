@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\RequiresWorkspaceManager;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\GrafanaSettingsRequest;
 use App\Models\GrafanaSetting;
+use App\Models\Workspace;
 use App\Services\AchievementService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
@@ -19,9 +20,8 @@ class GrafanaController extends Controller
 {
     use RequiresWorkspaceManager;
 
-    public function show(Request $request): Response|RedirectResponse
+    public function show(Request $request, Workspace $workspace): Response|RedirectResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
             return $redirect;
         }
@@ -39,9 +39,8 @@ class GrafanaController extends Controller
         ]);
     }
 
-    public function update(GrafanaSettingsRequest $request, AchievementService $achievements): RedirectResponse
+    public function update(GrafanaSettingsRequest $request, Workspace $workspace, AchievementService $achievements): RedirectResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
             return $redirect;
         }
@@ -71,9 +70,8 @@ class GrafanaController extends Controller
      * DNS entirely (via cURL's resolve override) — this tells apart "DNS
      * doesn't know this host" from "no network route to this host at all".
      */
-    public function testConnection(Request $request): JsonResponse
+    public function testConnection(Request $request, Workspace $workspace): JsonResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($response = $this->ensureCanManageWorkspaceJson($request, $workspace)) {
             return $response;
         }

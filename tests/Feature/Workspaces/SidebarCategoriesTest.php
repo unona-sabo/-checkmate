@@ -3,7 +3,7 @@
 test('sidebar categories are all visible by default', function () {
     [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->get(route('workspaces.show'));
+    $response = $this->actingAs($user)->get(route('workspaces.show', $workspace));
 
     $response->assertOk();
     expect($workspace->fresh()->hidden_sidebar_categories)->toBeNull();
@@ -12,7 +12,7 @@ test('sidebar categories are all visible by default', function () {
 test('sidebar categories can be hidden', function () {
     [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->put(route('workspaces.sidebar.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.sidebar.update', $workspace), [
         'hidden_categories' => ['bugreports', 'automation'],
     ]);
 
@@ -22,9 +22,9 @@ test('sidebar categories can be hidden', function () {
 });
 
 test('sidebar categories validation rejects an unknown category', function () {
-    [$user] = createUserWithWorkspace();
+    [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->put(route('workspaces.sidebar.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.sidebar.update', $workspace), [
         'hidden_categories' => ['not-a-real-category'],
     ]);
 
@@ -32,9 +32,9 @@ test('sidebar categories validation rejects an unknown category', function () {
 });
 
 test('member cannot update sidebar categories', function () {
-    [$user] = createUserWithWorkspace('member');
+    [$user, $workspace] = createUserWithWorkspace('member');
 
-    $response = $this->actingAs($user)->put(route('workspaces.sidebar.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.sidebar.update', $workspace), [
         'hidden_categories' => ['bugreports'],
     ]);
 
@@ -42,9 +42,9 @@ test('member cannot update sidebar categories', function () {
 });
 
 test('viewer cannot update sidebar categories', function () {
-    [$user] = createUserWithWorkspace('viewer');
+    [$user, $workspace] = createUserWithWorkspace('viewer');
 
-    $response = $this->actingAs($user)->put(route('workspaces.sidebar.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.sidebar.update', $workspace), [
         'hidden_categories' => ['bugreports'],
     ]);
 
@@ -55,11 +55,11 @@ test('two workspaces have independent sidebar category settings', function () {
     [$userA, $workspaceA] = createUserWithWorkspace();
     [$userB, $workspaceB] = createUserWithWorkspace();
 
-    $this->actingAs($userA)->put(route('workspaces.sidebar.update'), [
+    $this->actingAs($userA)->put(route('workspaces.sidebar.update', $workspaceA), [
         'hidden_categories' => ['bugreports'],
     ]);
 
-    $this->actingAs($userB)->put(route('workspaces.sidebar.update'), [
+    $this->actingAs($userB)->put(route('workspaces.sidebar.update', $workspaceB), [
         'hidden_categories' => ['notes', 'design'],
     ]);
 

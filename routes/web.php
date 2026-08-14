@@ -41,28 +41,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Workspaces
     Route::post('workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
     Route::post('workspaces/switch', [WorkspaceController::class, 'switchWorkspace'])->name('workspaces.switch');
-    Route::get('workspaces/settings', [WorkspaceController::class, 'show'])->name('workspaces.show');
-    Route::put('workspaces/settings', [WorkspaceController::class, 'update'])->name('workspaces.update');
-    Route::put('workspaces/transfer', [WorkspaceController::class, 'transferOwnership'])->name('workspaces.transfer');
-    Route::put('workspaces/settings/sidebar', [WorkspaceController::class, 'updateSidebarCategories'])->name('workspaces.sidebar.update');
-    Route::delete('workspaces/settings', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
-    Route::post('workspaces/members', [WorkspaceMemberController::class, 'store'])->name('workspaces.members.store');
-    Route::put('workspaces/members/{member}', [WorkspaceMemberController::class, 'update'])->name('workspaces.members.update');
-    Route::delete('workspaces/members/{member}', [WorkspaceMemberController::class, 'destroy'])->name('workspaces.members.destroy');
+    Route::get('workspaces/{workspace}/settings', [WorkspaceController::class, 'show'])->name('workspaces.show');
+    Route::put('workspaces/{workspace}/settings', [WorkspaceController::class, 'update'])->name('workspaces.update');
+    Route::put('workspaces/{workspace}/transfer', [WorkspaceController::class, 'transferOwnership'])->name('workspaces.transfer');
+    Route::put('workspaces/{workspace}/settings/sidebar', [WorkspaceController::class, 'updateSidebarCategories'])->name('workspaces.sidebar.update');
+    Route::delete('workspaces/{workspace}/settings', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
+    Route::post('workspaces/{workspace}/members', [WorkspaceMemberController::class, 'store'])->name('workspaces.members.store');
+    Route::put('workspaces/{workspace}/members/{member}', [WorkspaceMemberController::class, 'update'])->name('workspaces.members.update');
+    Route::delete('workspaces/{workspace}/members/{member}', [WorkspaceMemberController::class, 'destroy'])->name('workspaces.members.destroy');
 
-    Route::get('workspaces/settings/clickup', [WorkspaceClickupController::class, 'show'])->name('workspaces.clickup.show');
-    Route::put('workspaces/settings/clickup', [WorkspaceClickupController::class, 'update'])->name('workspaces.clickup.update');
-    Route::put('workspaces/settings/clickup/status-mapping', [WorkspaceClickupController::class, 'updateStatusMapping'])->name('workspaces.clickup.status-mapping');
-    Route::post('workspaces/settings/clickup/fetch-statuses', [WorkspaceClickupController::class, 'fetchStatuses'])->name('workspaces.clickup.fetch-statuses');
-    Route::post('workspaces/settings/clickup/register-webhook', [WorkspaceClickupController::class, 'registerWebhook'])->name('workspaces.clickup.register-webhook');
-    Route::get('workspaces/settings/clickup/webhook-health', [WorkspaceClickupController::class, 'webhookHealth'])->name('workspaces.clickup.webhook-health');
+    Route::get('workspaces/{workspace}/settings/clickup', [WorkspaceClickupController::class, 'show'])->name('workspaces.clickup.show');
+    Route::put('workspaces/{workspace}/settings/clickup', [WorkspaceClickupController::class, 'update'])->name('workspaces.clickup.update');
+    Route::put('workspaces/{workspace}/settings/clickup/status-mapping', [WorkspaceClickupController::class, 'updateStatusMapping'])->name('workspaces.clickup.status-mapping');
+    Route::post('workspaces/{workspace}/settings/clickup/fetch-statuses', [WorkspaceClickupController::class, 'fetchStatuses'])->name('workspaces.clickup.fetch-statuses');
+    Route::post('workspaces/{workspace}/settings/clickup/register-webhook', [WorkspaceClickupController::class, 'registerWebhook'])->name('workspaces.clickup.register-webhook');
+    Route::get('workspaces/{workspace}/settings/clickup/webhook-health', [WorkspaceClickupController::class, 'webhookHealth'])->name('workspaces.clickup.webhook-health');
 
-    Route::get('workspaces/settings/grafana', [WorkspaceGrafanaController::class, 'show'])->name('workspaces.grafana.show');
-    Route::put('workspaces/settings/grafana', [WorkspaceGrafanaController::class, 'update'])->name('workspaces.grafana.update');
-    Route::post('workspaces/settings/grafana/test-connection', [WorkspaceGrafanaController::class, 'testConnection'])->name('workspaces.grafana.test-connection');
+    Route::get('workspaces/{workspace}/settings/grafana', [WorkspaceGrafanaController::class, 'show'])->name('workspaces.grafana.show');
+    Route::put('workspaces/{workspace}/settings/grafana', [WorkspaceGrafanaController::class, 'update'])->name('workspaces.grafana.update');
+    Route::post('workspaces/{workspace}/settings/grafana/test-connection', [WorkspaceGrafanaController::class, 'testConnection'])->name('workspaces.grafana.test-connection');
 
-    Route::get('workspaces/settings/ai', [WorkspaceAiController::class, 'show'])->name('workspaces.ai.show');
-    Route::put('workspaces/settings/ai', [WorkspaceAiController::class, 'update'])->name('workspaces.ai.update');
+    Route::get('workspaces/{workspace}/settings/ai', [WorkspaceAiController::class, 'show'])->name('workspaces.ai.show');
+    Route::put('workspaces/{workspace}/settings/ai', [WorkspaceAiController::class, 'update'])->name('workspaces.ai.update');
 
     // Projects
     Route::post('projects/reorder', [ProjectController::class, 'reorder'])->name('projects.reorder');

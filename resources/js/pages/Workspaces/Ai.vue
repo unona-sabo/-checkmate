@@ -35,8 +35,14 @@ const canManage = computed(() => {
 });
 
 const breadcrumbItems: BreadcrumbItem[] = [
-    { title: 'Workspace Settings', href: '/workspaces/settings' },
-    { title: 'AI Providers', href: '/workspaces/settings/ai' },
+    {
+        title: 'Workspace Settings',
+        href: `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings`,
+    },
+    {
+        title: 'AI Providers',
+        href: `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/ai`,
+    },
 ];
 
 const form = useForm({
@@ -49,13 +55,20 @@ const form = useForm({
 });
 
 function save() {
-    form.put('/workspaces/settings/ai', {
-        preserveScroll: true,
-        onSuccess: () => {
-            form.reset('gemini_api_key', 'anthropic_api_key', 'openai_api_key');
-            form.defaults();
+    form.put(
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/ai`,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset(
+                    'gemini_api_key',
+                    'anthropic_api_key',
+                    'openai_api_key',
+                );
+                form.defaults();
+            },
         },
-    });
+    );
 }
 </script>
 

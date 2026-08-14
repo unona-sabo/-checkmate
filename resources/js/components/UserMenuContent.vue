@@ -47,7 +47,7 @@ const canManageWorkspace = computed(() => {
         <DropdownMenuItem v-if="canManageWorkspace" :as-child="true">
             <Link
                 class="block w-full cursor-pointer"
-                href="/workspaces/settings"
+                :href="`/workspaces/${page.props.currentWorkspace?.id}-${page.props.currentWorkspace?.slug}/settings`"
             >
                 <Building2 class="mr-2 h-4 w-4" />
                 Workspace Settings

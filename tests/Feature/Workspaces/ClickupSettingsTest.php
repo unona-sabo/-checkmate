@@ -1,45 +1,48 @@
 <?php
 
 use App\Models\ClickupSetting;
+use App\Models\Workspace;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
 
 test('clickup settings page is displayed', function () {
-    [$user] = createUserWithWorkspace();
+    [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->get(route('workspaces.clickup.show'));
+    $response = $this->actingAs($user)->get(route('workspaces.clickup.show', $workspace));
 
     $response->assertOk();
 });
 
 test('clickup settings page requires authentication', function () {
-    $response = $this->get(route('workspaces.clickup.show'));
+    $workspace = Workspace::factory()->create();
+
+    $response = $this->get(route('workspaces.clickup.show', $workspace));
 
     $response->assertRedirect(route('login'));
 });
 
 test('member cannot view clickup settings page', function () {
-    [$user] = createUserWithWorkspace('member');
+    [$user, $workspace] = createUserWithWorkspace('member');
 
-    $response = $this->actingAs($user)->get(route('workspaces.clickup.show'));
+    $response = $this->actingAs($user)->get(route('workspaces.clickup.show', $workspace));
 
-    $response->assertRedirect(route('workspaces.show'));
+    $response->assertRedirect(route('projects.index'));
     $response->assertSessionHas('error');
 });
 
 test('viewer cannot view clickup settings page', function () {
-    [$user] = createUserWithWorkspace('viewer');
+    [$user, $workspace] = createUserWithWorkspace('viewer');
 
-    $response = $this->actingAs($user)->get(route('workspaces.clickup.show'));
+    $response = $this->actingAs($user)->get(route('workspaces.clickup.show', $workspace));
 
-    $response->assertRedirect(route('workspaces.show'));
+    $response->assertRedirect(route('projects.index'));
     $response->assertSessionHas('error');
 });
 
 test('clickup settings can be saved', function () {
     [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->put(route('workspaces.clickup.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.clickup.update', $workspace), [
         'api_token' => 'pk_test_token_123',
         'list_id' => '901234567890',
     ]);
@@ -53,9 +56,9 @@ test('clickup settings can be saved', function () {
 });
 
 test('clickup settings validation requires api token and list id', function () {
-    [$user] = createUserWithWorkspace();
+    [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->put(route('workspaces.clickup.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.clickup.update', $workspace), [
         'api_token' => '',
         'list_id' => '',
     ]);
@@ -66,7 +69,7 @@ test('clickup settings validation requires api token and list id', function () {
 test('clickup status mapping can be saved', function () {
     [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->put(route('workspaces.clickup.status-mapping'), [
+    $response = $this->actingAs($user)->put(route('workspaces.clickup.status-mapping', $workspace), [
         'status_mapping' => [
             'triage' => 'triage',
             'to_do' => 'to do',
@@ -87,9 +90,9 @@ test('clickup status mapping can be saved', function () {
 });
 
 test('fetch statuses returns error when not configured', function () {
-    [$user] = createUserWithWorkspace();
+    [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->postJson(route('workspaces.clickup.fetch-statuses'));
+    $response = $this->actingAs($user)->postJson(route('workspaces.clickup.fetch-statuses', $workspace));
 
     $response->assertStatus(422)->assertJsonPath('error', 'ClickUp is not configured. Save your API token and List ID first.');
 });
@@ -97,24 +100,24 @@ test('fetch statuses returns error when not configured', function () {
 test('member cannot update clickup settings', function () {
     [$user, $workspace] = createUserWithWorkspace('member');
 
-    $response = $this->actingAs($user)->put(route('workspaces.clickup.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.clickup.update', $workspace), [
         'api_token' => 'pk_test_token_123',
         'list_id' => '901234567890',
     ]);
 
-    $response->assertRedirect(route('workspaces.show'));
+    $response->assertRedirect(route('projects.index'));
     $response->assertSessionHas('error');
 });
 
 test('viewer cannot update clickup settings', function () {
     [$user, $workspace] = createUserWithWorkspace('viewer');
 
-    $response = $this->actingAs($user)->put(route('workspaces.clickup.update'), [
+    $response = $this->actingAs($user)->put(route('workspaces.clickup.update', $workspace), [
         'api_token' => 'pk_test_token_123',
         'list_id' => '901234567890',
     ]);
 
-    $response->assertRedirect(route('workspaces.show'));
+    $response->assertRedirect(route('projects.index'));
     $response->assertSessionHas('error');
 });
 
@@ -127,7 +130,7 @@ test('register webhook rejects a local development domain up front', function ()
         'list_id' => '123456',
     ]);
 
-    $response = $this->actingAs($user)->post(route('workspaces.clickup.register-webhook'));
+    $response = $this->actingAs($user)->post(route('workspaces.clickup.register-webhook', $workspace));
 
     $response->assertRedirect();
     $response->assertSessionHas('error');
@@ -162,7 +165,7 @@ test('register webhook deletes every existing webhook pointing at our endpoint, 
         'webhook_secret' => 'old-secret',
     ]);
 
-    $response = $this->actingAs($user)->post(route('workspaces.clickup.register-webhook'));
+    $response = $this->actingAs($user)->post(route('workspaces.clickup.register-webhook', $workspace));
 
     $response->assertRedirect();
     $response->assertSessionHas('success');
@@ -183,9 +186,9 @@ test('register webhook deletes every existing webhook pointing at our endpoint, 
 });
 
 test('webhook health returns an error when no webhook is registered', function () {
-    [$user] = createUserWithWorkspace();
+    [$user, $workspace] = createUserWithWorkspace();
 
-    $response = $this->actingAs($user)->getJson(route('workspaces.clickup.webhook-health'));
+    $response = $this->actingAs($user)->getJson(route('workspaces.clickup.webhook-health', $workspace));
 
     $response->assertStatus(422)->assertJsonPath('error', 'No webhook has been registered for this workspace yet.');
 });
@@ -212,7 +215,7 @@ test('webhook health reports the delivery status ClickUp has for the registered 
         'webhook_id' => 'webhook-1',
     ]);
 
-    $response = $this->actingAs($user)->getJson(route('workspaces.clickup.webhook-health'));
+    $response = $this->actingAs($user)->getJson(route('workspaces.clickup.webhook-health', $workspace));
 
     $response->assertOk();
     $response->assertJson([
@@ -236,7 +239,7 @@ test('webhook health flags when the webhook no longer exists on ClickUp', functi
         'webhook_id' => 'webhook-1',
     ]);
 
-    $response = $this->actingAs($user)->getJson(route('workspaces.clickup.webhook-health'));
+    $response = $this->actingAs($user)->getJson(route('workspaces.clickup.webhook-health', $workspace));
 
     $response->assertStatus(422);
     expect($response->json('error'))->toContain('no longer has a webhook with ID webhook-1');
@@ -246,12 +249,12 @@ test('two workspaces have independent clickup settings', function () {
     [$userA, $workspaceA] = createUserWithWorkspace();
     [$userB, $workspaceB] = createUserWithWorkspace();
 
-    $this->actingAs($userA)->put(route('workspaces.clickup.update'), [
+    $this->actingAs($userA)->put(route('workspaces.clickup.update', $workspaceA), [
         'api_token' => 'pk_workspace_a',
         'list_id' => 'list_a',
     ]);
 
-    $this->actingAs($userB)->put(route('workspaces.clickup.update'), [
+    $this->actingAs($userB)->put(route('workspaces.clickup.update', $workspaceB), [
         'api_token' => 'pk_workspace_b',
         'list_id' => 'list_b',
     ]);

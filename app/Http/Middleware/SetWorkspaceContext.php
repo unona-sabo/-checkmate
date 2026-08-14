@@ -43,6 +43,24 @@ class SetWorkspaceContext
             }
         }
 
+        // If a workspace is named directly in the route (e.g. the settings
+        // pages), keep the header/sidebar in sync with it too — same reason
+        // as the project case above.
+        $routeWorkspace = $request->route('workspace');
+        if ($routeWorkspace instanceof \App\Models\Workspace) {
+            $isMember = $user->workspaces()
+                ->where('workspaces.id', $routeWorkspace->id)
+                ->exists();
+
+            if ($isMember) {
+                $workspace = $routeWorkspace;
+                if ($user->current_workspace_id !== $workspace->id) {
+                    $user->update(['current_workspace_id' => $workspace->id]);
+                    $user->setRelation('currentWorkspace', $workspace);
+                }
+            }
+        }
+
         $request->attributes->set('workspace', $workspace);
 
         return $next($request);

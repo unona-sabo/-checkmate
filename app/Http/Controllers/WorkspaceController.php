@@ -17,10 +17,8 @@ use Inertia\Response;
 
 class WorkspaceController extends Controller
 {
-    public function show(Request $request): Response|RedirectResponse
+    public function show(Request $request, Workspace $workspace): Response|RedirectResponse
     {
-        $workspace = $request->attributes->get('workspace');
-
         if (! $request->user()->can('update', $workspace)) {
             return redirect()->route('projects.index')
                 ->with('error', 'You need to be an owner or admin of this workspace to view its settings.');
@@ -53,17 +51,9 @@ class WorkspaceController extends Controller
     {
         $validated = $request->validated();
 
-        $slug = Str::slug($validated['name']);
-        $baseSlug = $slug;
-        $counter = 1;
-        while (Workspace::where('slug', $slug)->exists()) {
-            $slug = $baseSlug.'-'.$counter;
-            $counter++;
-        }
-
         $workspace = Workspace::create([
             'name' => $validated['name'],
-            'slug' => $slug,
+            'slug' => $this->generateUniqueSlug($validated['name']),
             'owner_id' => auth()->id(),
         ]);
 
@@ -75,23 +65,40 @@ class WorkspaceController extends Controller
             ->with('success', 'Workspace created successfully.');
     }
 
-    public function update(StoreWorkspaceRequest $request)
+    public function update(StoreWorkspaceRequest $request, Workspace $workspace)
     {
-        $workspace = $request->attributes->get('workspace');
-
         $this->authorize('update', $workspace);
 
         $validated = $request->validated();
 
+        if ($validated['name'] !== $workspace->name) {
+            $validated['slug'] = $this->generateUniqueSlug($validated['name'], $workspace->id);
+        }
+
         $workspace->update($validated);
 
-        return back()->with('success', 'Workspace updated successfully.');
+        return redirect()->route('workspaces.show', $workspace)
+            ->with('success', 'Workspace updated successfully.');
     }
 
-    public function updateSidebarCategories(UpdateSidebarCategoriesRequest $request)
+    private function generateUniqueSlug(string $name, ?int $ignoreWorkspaceId = null): string
     {
-        $workspace = $request->attributes->get('workspace');
+        $baseSlug = Str::slug($name);
+        $slug = $baseSlug;
+        $counter = 1;
 
+        while (Workspace::where('slug', $slug)
+            ->when($ignoreWorkspaceId, fn ($query) => $query->where('id', '!=', $ignoreWorkspaceId))
+            ->exists()) {
+            $slug = $baseSlug.'-'.$counter;
+            $counter++;
+        }
+
+        return $slug;
+    }
+
+    public function updateSidebarCategories(UpdateSidebarCategoriesRequest $request, Workspace $workspace)
+    {
         $this->authorize('update', $workspace);
 
         $validated = $request->validated();
@@ -101,10 +108,8 @@ class WorkspaceController extends Controller
         return back()->with('success', 'Sidebar categories updated successfully.');
     }
 
-    public function destroy(Request $request)
+    public function destroy(Request $request, Workspace $workspace)
     {
-        $workspace = $request->attributes->get('workspace');
-
         $this->authorize('delete', $workspace);
 
         $affectedMembers = \App\Models\User::whereIn('id', $workspace->members()->pluck('users.id'))
@@ -124,10 +129,8 @@ class WorkspaceController extends Controller
             ->with('success', 'Workspace deleted successfully.');
     }
 
-    public function transferOwnership(TransferOwnershipRequest $request)
+    public function transferOwnership(TransferOwnershipRequest $request, Workspace $workspace)
     {
-        $workspace = $request->attributes->get('workspace');
-
         $this->authorize('delete', $workspace);
 
         $newOwnerId = $request->validated('new_owner_id');

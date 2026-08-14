@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Workspace extends Model
 {
@@ -27,9 +28,19 @@ class Workspace extends Model
         ];
     }
 
-    public function getRouteKeyName(): string
+    /**
+     * Build a route key of "{id}-{slug}" so URLs stay readable without ever
+     * breaking: only the leading id is used to resolve the model, so a
+     * rename never invalidates links that still carry the old slug text.
+     */
+    public function getRouteKey(): string
     {
-        return 'slug';
+        return "{$this->id}-{$this->slug}";
+    }
+
+    public function resolveRouteBinding($value, $field = null): ?self
+    {
+        return $this->newQuery()->find((int) Str::before($value, '-'));
     }
 
     /**

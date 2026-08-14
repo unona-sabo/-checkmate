@@ -43,8 +43,14 @@ const canManage = computed(() => {
 });
 
 const breadcrumbItems: BreadcrumbItem[] = [
-    { title: 'Workspace Settings', href: '/workspaces/settings' },
-    { title: 'Grafana', href: '/workspaces/settings/grafana' },
+    {
+        title: 'Workspace Settings',
+        href: `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings`,
+    },
+    {
+        title: 'Grafana',
+        href: `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/grafana`,
+    },
 ];
 
 const form = useForm({
@@ -55,13 +61,16 @@ const form = useForm({
 });
 
 function save() {
-    form.put('/workspaces/settings/grafana', {
-        preserveScroll: true,
-        onSuccess: () => {
-            form.reset('api_token');
-            form.defaults();
+    form.put(
+        `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/grafana`,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset('api_token');
+                form.defaults();
+            },
         },
-    });
+    );
 }
 
 const testingConnection = ref(false);
@@ -76,7 +85,7 @@ async function testConnection() {
 
     try {
         const response = await fetch(
-            '/workspaces/settings/grafana/test-connection',
+            `/workspaces/${props.workspace.id}-${props.workspace.slug}/settings/grafana/test-connection`,
             {
                 method: 'POST',
                 headers: {

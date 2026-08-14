@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\RequiresWorkspaceManager;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Workspaces\AiSettingsRequest;
 use App\Models\AiSetting;
+use App\Models\Workspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,9 +16,8 @@ class AiController extends Controller
 {
     use RequiresWorkspaceManager;
 
-    public function show(Request $request): Response|RedirectResponse
+    public function show(Request $request, Workspace $workspace): Response|RedirectResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
             return $redirect;
         }
@@ -37,9 +37,8 @@ class AiController extends Controller
         ]);
     }
 
-    public function update(AiSettingsRequest $request): RedirectResponse
+    public function update(AiSettingsRequest $request, Workspace $workspace): RedirectResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
             return $redirect;
         }

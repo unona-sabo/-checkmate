@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ClickupSettingsRequest;
 use App\Http\Requests\Settings\ClickupStatusMappingRequest;
 use App\Models\ClickupSetting;
+use App\Models\Workspace;
 use App\Services\AchievementService;
 use App\Services\ClickupService;
 use Illuminate\Http\JsonResponse;
@@ -22,9 +23,8 @@ class ClickupController extends Controller
 {
     use RequiresWorkspaceManager;
 
-    public function show(Request $request): Response|RedirectResponse
+    public function show(Request $request, Workspace $workspace): Response|RedirectResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
             return $redirect;
         }
@@ -74,9 +74,8 @@ class ClickupController extends Controller
         ];
     }
 
-    public function update(ClickupSettingsRequest $request, AchievementService $achievements): RedirectResponse
+    public function update(ClickupSettingsRequest $request, Workspace $workspace, AchievementService $achievements): RedirectResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
             return $redirect;
         }
@@ -95,9 +94,8 @@ class ClickupController extends Controller
         return back()->with('success', 'ClickUp settings saved.');
     }
 
-    public function updateStatusMapping(ClickupStatusMappingRequest $request): RedirectResponse
+    public function updateStatusMapping(ClickupStatusMappingRequest $request, Workspace $workspace): RedirectResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
             return $redirect;
         }
@@ -111,9 +109,8 @@ class ClickupController extends Controller
         return back()->with('success', 'Status mapping saved.');
     }
 
-    public function fetchStatuses(Request $request): JsonResponse
+    public function fetchStatuses(Request $request, Workspace $workspace): JsonResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($response = $this->ensureCanManageWorkspaceJson($request, $workspace)) {
             return $response;
         }
@@ -134,9 +131,8 @@ class ClickupController extends Controller
         }
     }
 
-    public function registerWebhook(Request $request): RedirectResponse
+    public function registerWebhook(Request $request, Workspace $workspace): RedirectResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($redirect = $this->ensureCanManageWorkspace($request, $workspace)) {
             return $redirect;
         }
@@ -230,9 +226,8 @@ class ClickupController extends Controller
      * otherwise, and "the webhook object still exists" isn't the same as
      * "ClickUp is successfully delivering to it."
      */
-    public function webhookHealth(Request $request): JsonResponse
+    public function webhookHealth(Request $request, Workspace $workspace): JsonResponse
     {
-        $workspace = $request->attributes->get('workspace');
         if ($response = $this->ensureCanManageWorkspaceJson($request, $workspace)) {
             return $response;
         }
