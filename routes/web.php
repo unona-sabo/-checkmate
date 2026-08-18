@@ -102,6 +102,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('test-suites/reorder-cases', [TestCaseController::class, 'reorderAcrossSuites'])->name('reorder-cases');
         Route::post('test-suites/bulk-delete-cases', [TestCaseController::class, 'bulkDestroy'])->name('bulk-destroy-cases');
         Route::post('test-suites/bulk-copy-cases', [TestCaseController::class, 'bulkCopy'])->name('bulk-copy-cases');
+        Route::post('test-suites/bulk-assign-feature', [TestCaseController::class, 'bulkAssignFeature'])->name('bulk-assign-feature');
         Route::post('test-suites/archive-cases', [TestCaseController::class, 'archive'])->name('archive-cases');
         Route::post('test-suites/unarchive-cases', [TestCaseController::class, 'unarchive'])->name('unarchive-cases');
         Route::get('test-suites/export-cases', [TestCaseController::class, 'export'])->name('export-cases');

@@ -31,6 +31,7 @@ import {
     AlertTriangle,
     Archive,
     ArchiveRestore,
+    Tag,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted } from 'vue';
 import FeatureBadges from '@/components/FeatureBadges.vue';
@@ -710,6 +711,45 @@ const copyToSuite = () => {
             },
             onError: () => {
                 isCopying.value = false;
+            },
+        },
+    );
+};
+
+// Assign Feature dialog
+const showFeatureAssignDialog = ref(false);
+const bulkFeatureIds = ref<number[]>([]);
+const isAssigningFeature = ref(false);
+
+const openFeatureAssignDialog = () => {
+    bulkFeatureIds.value = [];
+    showFeatureAssignDialog.value = true;
+};
+
+const submitFeatureAssign = () => {
+    if (
+        bulkFeatureIds.value.length === 0 ||
+        selectedTestCaseIds.value.length === 0
+    ) {
+        return;
+    }
+    isAssigningFeature.value = true;
+
+    router.post(
+        `/projects/${props.project.id}/test-suites/bulk-assign-feature`,
+        {
+            test_case_ids: selectedTestCaseIds.value,
+            feature_ids: bulkFeatureIds.value,
+        },
+        {
+            preserveState: false,
+            onSuccess: () => {
+                showFeatureAssignDialog.value = false;
+                selectedTestCaseIds.value = [];
+                isAssigningFeature.value = false;
+            },
+            onError: () => {
+                isAssigningFeature.value = false;
             },
         },
     );
@@ -1520,6 +1560,13 @@ onMounted(() => {
                                 >
                                     <Copy class="mr-2 h-4 w-4" />
                                     Copy to Test Suite
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    class="cursor-pointer"
+                                    @click="openFeatureAssignDialog"
+                                >
+                                    <Tag class="mr-2 h-4 w-4" />
+                                    Assign Feature
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     v-if="!testSuite.parent_id"
@@ -2907,6 +2954,50 @@ onMounted(() => {
                     >
                         <Copy class="h-4 w-4" />
                         {{ isCopying ? 'Copying...' : 'Copy' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Assign Feature Dialog -->
+        <Dialog v-model:open="showFeatureAssignDialog">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Tag class="h-5 w-5 text-primary" />
+                        Assign Feature
+                    </DialogTitle>
+                    <DialogDescription>
+                        Link {{ selectedTestCaseIds.length }} test case(s) to
+                        one or more features.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="py-2">
+                    <FeatureSelector
+                        :features="availableFeatures"
+                        v-model="bulkFeatureIds"
+                        :project-id="project.id"
+                    />
+                </div>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        @click="showFeatureAssignDialog = false"
+                        >Cancel</Button
+                    >
+                    <Button
+                        @click="submitFeatureAssign"
+                        :disabled="
+                            bulkFeatureIds.length === 0 || isAssigningFeature
+                        "
+                        class="gap-2"
+                    >
+                        <Tag class="h-4 w-4" />
+                        {{
+                            isAssigningFeature
+                                ? 'Assigning...'
+                                : `Assign to ${selectedTestCaseIds.length} test case(s)`
+                        }}
                     </Button>
                 </DialogFooter>
             </DialogContent>

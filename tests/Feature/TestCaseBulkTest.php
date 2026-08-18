@@ -136,6 +136,118 @@ test('bulk copy rejects target suite from another project', function () {
     $response->assertSessionHasErrors('target_suite_id');
 });
 
+test('bulk assign feature links features to selected test cases', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $cases = TestCase::factory()->count(2)->create(['test_suite_id' => $suite->id]);
+    $features = ProjectFeature::factory()->count(2)->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-suites.bulk-assign-feature', $project),
+        [
+            'test_case_ids' => $cases->pluck('id')->toArray(),
+            'feature_ids' => $features->pluck('id')->toArray(),
+        ]
+    );
+
+    $response->assertRedirect();
+
+    foreach ($cases as $case) {
+        expect($case->fresh()->projectFeatures)->toHaveCount(2);
+    }
+});
+
+test('bulk assign feature keeps a case\'s existing feature links', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $case = TestCase::factory()->create(['test_suite_id' => $suite->id]);
+
+    $existingFeature = ProjectFeature::factory()->create(['project_id' => $project->id, 'name' => 'Login']);
+    $case->projectFeatures()->attach($existingFeature->id);
+
+    $newFeature = ProjectFeature::factory()->create(['project_id' => $project->id, 'name' => 'Checkout']);
+
+    $response = $this->actingAs($user)->post(
+        route('test-suites.bulk-assign-feature', $project),
+        [
+            'test_case_ids' => [$case->id],
+            'feature_ids' => [$newFeature->id],
+        ]
+    );
+
+    $response->assertRedirect();
+
+    $linkedFeatureIds = $case->fresh()->projectFeatures->pluck('id');
+    expect($linkedFeatureIds)->toHaveCount(2);
+    expect($linkedFeatureIds)->toContain($existingFeature->id, $newFeature->id);
+});
+
+test('bulk assign feature only affects cases from project suites', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $ownCase = TestCase::factory()->create(['test_suite_id' => $suite->id]);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id]);
+
+    $otherProject = Project::factory()->create(['user_id' => $user->id]);
+    $otherSuite = TestSuite::factory()->create(['project_id' => $otherProject->id]);
+    $otherCase = TestCase::factory()->create(['test_suite_id' => $otherSuite->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-suites.bulk-assign-feature', $project),
+        [
+            'test_case_ids' => [$ownCase->id, $otherCase->id],
+            'feature_ids' => [$feature->id],
+        ]
+    );
+
+    $response->assertRedirect();
+    expect($ownCase->fresh()->projectFeatures)->toHaveCount(1);
+    expect($otherCase->fresh()->projectFeatures)->toHaveCount(0);
+});
+
+test('bulk assign feature validates required fields', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('test-suites.bulk-assign-feature', $project),
+        []
+    );
+
+    $response->assertSessionHasErrors(['test_case_ids', 'feature_ids']);
+});
+
+test('viewer cannot bulk assign feature', function () {
+    $owner = User::factory()->create();
+    $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+    $workspace->members()->attach($owner->id, ['role' => 'owner']);
+
+    $project = Project::factory()->create([
+        'user_id' => $owner->id,
+        'workspace_id' => $workspace->id,
+    ]);
+    $suite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $case = TestCase::factory()->create(['test_suite_id' => $suite->id]);
+    $feature = ProjectFeature::factory()->create(['project_id' => $project->id]);
+
+    $viewer = User::factory()->create();
+    $workspace->members()->attach($viewer->id, ['role' => 'viewer']);
+    $viewer->update(['current_workspace_id' => $workspace->id]);
+
+    $response = $this->actingAs($viewer)->post(
+        route('test-suites.bulk-assign-feature', $project),
+        [
+            'test_case_ids' => [$case->id],
+            'feature_ids' => [$feature->id],
+        ]
+    );
+
+    $response->assertForbidden();
+});
+
 test('viewer cannot bulk delete test cases', function () {
     $owner = User::factory()->create();
     $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);

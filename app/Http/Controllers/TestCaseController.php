@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\TestCase\ArchiveTestCasesRequest;
+use App\Http\Requests\TestCase\BulkAssignFeatureTestCasesRequest;
 use App\Http\Requests\TestCase\BulkDeleteTestCasesRequest;
 use App\Http\Requests\TestCase\BulkUpdateTestCasesRequest;
 use App\Http\Requests\TestCase\ImportTestCasesFromFileRequest;
@@ -250,6 +251,25 @@ class TestCaseController extends Controller
         }
 
         return back()->with('success', $testCases->count().' test case(s) deleted.');
+    }
+
+    public function bulkAssignFeature(BulkAssignFeatureTestCasesRequest $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validated();
+
+        $projectSuiteIds = $project->testSuites()->pluck('id');
+
+        $testCases = TestCase::whereIn('id', $validated['test_case_ids'])
+            ->whereIn('test_suite_id', $projectSuiteIds)
+            ->get();
+
+        foreach ($testCases as $testCase) {
+            $testCase->projectFeatures()->syncWithoutDetaching($validated['feature_ids']);
+        }
+
+        return back()->with('success', 'Feature(s) assigned to '.$testCases->count().' test case(s).');
     }
 
     public function bulkCopy(MoveTestCasesRequest $request, Project $project)
