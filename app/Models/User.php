@@ -34,6 +34,8 @@ class User extends Authenticatable
         'checklists_created_count',
         'documents_created_count',
         'notes_created_count',
+        'is_admin',
+        'blocked_at',
     ];
 
     /**
@@ -60,7 +62,17 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'last_active_date' => 'date',
+            'is_admin' => 'boolean',
+            'blocked_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Determine if the user is blocked from signing in.
+     */
+    public function isBlocked(): bool
+    {
+        return $this->blocked_at !== null;
     }
 
     /**

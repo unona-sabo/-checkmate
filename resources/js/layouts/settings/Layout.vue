@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
+import { index as usersIndex } from '@/routes/admin/users';
 import { edit as editAppearance } from '@/routes/appearance';
 import { show as showBackup } from '@/routes/backup';
 import { edit as editProfile } from '@/routes/profile';
@@ -56,6 +57,13 @@ const sidebarNavItems = computed<NavItem[]>(() => {
             href: '/settings/project-updates',
         },
     );
+
+    if (page.props.auth.user.is_admin) {
+        items.push({
+            title: 'Users',
+            href: usersIndex(),
+        });
+    }
 
     return items;
 });
