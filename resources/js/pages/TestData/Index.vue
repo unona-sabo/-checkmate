@@ -3665,13 +3665,30 @@ const formatCredentialsValues = (
                                                         col.key === 'category'
                                                     "
                                                 >
-                                                    <Badge
+                                                    <Tooltip
                                                         v-if="cmd.category"
-                                                        variant="secondary"
-                                                        >{{
-                                                            cmd.category
-                                                        }}</Badge
                                                     >
+                                                        <TooltipTrigger
+                                                            as-child
+                                                        >
+                                                            <Badge
+                                                                variant="secondary"
+                                                                class="max-w-full"
+                                                                ><span
+                                                                    class="min-w-0 truncate"
+                                                                    >{{
+                                                                        cmd.category
+                                                                    }}</span
+                                                                ></Badge
+                                                            >
+                                                        </TooltipTrigger>
+                                                        <TooltipContent
+                                                            side="top"
+                                                            >{{
+                                                                cmd.category
+                                                            }}</TooltipContent
+                                                        >
+                                                    </Tooltip>
                                                     <span
                                                         v-else
                                                         class="text-muted-foreground"
@@ -4135,13 +4152,30 @@ const formatCredentialsValues = (
                                                         col.key === 'category'
                                                     "
                                                 >
-                                                    <Badge
+                                                    <Tooltip
                                                         v-if="link.category"
-                                                        variant="secondary"
-                                                        >{{
-                                                            link.category
-                                                        }}</Badge
                                                     >
+                                                        <TooltipTrigger
+                                                            as-child
+                                                        >
+                                                            <Badge
+                                                                variant="secondary"
+                                                                class="max-w-full"
+                                                                ><span
+                                                                    class="min-w-0 truncate"
+                                                                    >{{
+                                                                        link.category
+                                                                    }}</span
+                                                                ></Badge
+                                                            >
+                                                        </TooltipTrigger>
+                                                        <TooltipContent
+                                                            side="top"
+                                                            >{{
+                                                                link.category
+                                                            }}</TooltipContent
+                                                        >
+                                                    </Tooltip>
                                                     <span
                                                         v-else
                                                         class="text-muted-foreground"
