@@ -1396,18 +1396,18 @@ const textColumnsForTestCase = computed(() =>
     ),
 );
 
-const findDescriptionColumn = (): string => {
+const findCheckColumnForTestCase = (): string => {
     const text = textColumnsForTestCase.value;
     const match =
         text.find(
             (col) =>
-                col.key.toLowerCase() === 'description' ||
-                col.label.toLowerCase() === 'description',
+                col.key.toLowerCase() === 'check' ||
+                col.label.toLowerCase() === 'check',
         ) ??
         text.find(
             (col) =>
-                col.key.toLowerCase().includes('description') ||
-                col.label.toLowerCase().includes('description'),
+                col.key.toLowerCase().includes('check') ||
+                col.label.toLowerCase().includes('check'),
         );
     return match?.key ?? text[0]?.key ?? '';
 };
@@ -1434,7 +1434,7 @@ const openTestCaseDialog = () => {
     newSuiteNameForTestCase.value = '';
     testCaseTargetSuiteId.value = props.testSuites[0]?.id ?? null;
     testCaseTargetChildId.value = null;
-    testCaseColumnKey.value = findDescriptionColumn();
+    testCaseColumnKey.value = findCheckColumnForTestCase();
     showTestCaseDialog.value = true;
 };
 
