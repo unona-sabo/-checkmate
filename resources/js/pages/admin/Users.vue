@@ -41,6 +41,12 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const deleteDialogOpen = ref(false);
 const selectedUser = ref<AdminUser | null>(null);
 
+function formatDateTime(iso: string): string {
+    const [datePart, timePart] = iso.split('T');
+
+    return `${datePart} ${timePart.slice(0, 8)}`;
+}
+
 function toggleBlock(user: AdminUser) {
     const action = user.blocked_at
         ? UserController.unblock(user.id)
@@ -134,7 +140,7 @@ function executeDelete() {
                                     </Badge>
                                 </td>
                                 <td class="px-4 py-2">
-                                    {{ user.created_at }}
+                                    {{ formatDateTime(user.created_at) }}
                                 </td>
                                 <td class="px-4 py-2 text-right">
                                     <div class="flex justify-end gap-2">
