@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import Color from '@tiptap/extension-color';
+import Link from '@tiptap/extension-link';
 import { TextStyle } from '@tiptap/extension-text-style';
 import StarterKit from '@tiptap/starter-kit';
 import { useEditor, EditorContent } from '@tiptap/vue-3';
-import { ref, watch, onBeforeUnmount } from 'vue';
+import { ExternalLink } from 'lucide-vue-next';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import CellColorPicker from './CellColorPicker.vue';
 
 const props = withDefaults(
@@ -32,10 +34,29 @@ const showToolbar = ref(false);
 const toolbarStyle = ref({ top: '0px', left: '0px' });
 const toolbarRef = ref<HTMLElement | null>(null);
 
+const URL_PATTERN = /https?:\/\/[^\s<]+/g;
+
+const linkifyPlainText = (value: string): string =>
+    value.replace(
+        URL_PATTERN,
+        (url) =>
+            `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`,
+    );
+
 const wrapPlainText = (value: string): string => {
     if (!value) return '<p></p>';
     if (/<[a-z][\s\S]*>/i.test(value)) return value;
-    return `<p>${value.replace(/\n/g, '</p><p>')}</p>`;
+    return `<p>${linkifyPlainText(value).replace(/\n/g, '</p><p>')}</p>`;
+};
+
+const firstLinkHref = computed(
+    () => props.modelValue?.match(URL_PATTERN)?.[0] ?? null,
+);
+
+const openFirstLink = () => {
+    if (firstLinkHref.value) {
+        window.open(firstLinkHref.value, '_blank', 'noopener,noreferrer');
+    }
 };
 
 const updateToolbarPosition = () => {
@@ -82,6 +103,15 @@ const editor = useEditor({
         }),
         TextStyle,
         Color,
+        Link.configure({
+            autolink: true,
+            openOnClick: false,
+            HTMLAttributes: {
+                class: 'text-primary underline',
+                target: '_blank',
+                rel: 'noopener noreferrer',
+            },
+        }),
     ],
     editorProps: {
         attributes: {
@@ -188,7 +218,24 @@ watch(
         ]"
         :style="{ color: fontColor || 'inherit' }"
     >
-        <EditorContent v-if="editor" :editor="editor" />
+        <div class="flex items-start gap-1">
+            <EditorContent
+                v-if="editor"
+                class="min-w-0 flex-1"
+                :editor="editor"
+            />
+
+            <button
+                v-if="firstLinkHref"
+                type="button"
+                class="mt-0.5 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                title="Open link in new tab"
+                @mousedown.prevent
+                @click="openFirstLink"
+            >
+                <ExternalLink class="h-3.5 w-3.5" />
+            </button>
+        </div>
 
         <div
             v-if="showToolbar && editor && !readonly"
