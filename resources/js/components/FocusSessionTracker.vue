@@ -6,10 +6,15 @@ import { pushAchievementToast } from '@/lib/achievement-toast-bus';
 const STORAGE_KEY = 'checkmate_focus_session';
 const HOUR_MS = 60 * 60 * 1000;
 const CHECK_INTERVAL_MS = 30_000;
+// A gap this much bigger than the check interval means the tab was
+// backgrounded/throttled or the machine slept — treat it as the user having
+// stepped away, not continuous activity, and start a fresh session.
+const IDLE_RESET_MS = 15 * 60 * 1000;
 
 interface FocusSession {
     startedAt: number;
     lastFiredHour: number;
+    lastTickAt: number;
 }
 
 let intervalId: number | undefined;
@@ -31,21 +36,24 @@ function saveSession(session: FocusSession): void {
 }
 
 function tick(): void {
+    const now = Date.now();
     const existing = loadSession();
 
-    if (!existing) {
-        saveSession({ startedAt: Date.now(), lastFiredHour: 0 });
+    if (!existing || now - existing.lastTickAt > IDLE_RESET_MS) {
+        saveSession({ startedAt: now, lastFiredHour: 0, lastTickAt: now });
 
         return;
     }
 
-    const elapsedHours = Math.floor(
-        (Date.now() - existing.startedAt) / HOUR_MS,
-    );
+    const elapsedHours = Math.floor((now - existing.startedAt) / HOUR_MS);
 
-    if (elapsedHours <= existing.lastFiredHour) return;
+    if (elapsedHours <= existing.lastFiredHour) {
+        saveSession({ ...existing, lastTickAt: now });
 
-    saveSession({ ...existing, lastFiredHour: elapsedHours });
+        return;
+    }
+
+    saveSession({ ...existing, lastFiredHour: elapsedHours, lastTickAt: now });
 
     if (elapsedHours === 1) {
         fetch('/focus-sessions/ping', {
@@ -73,13 +81,19 @@ function tick(): void {
     });
 }
 
+function handleVisibilityChange(): void {
+    if (document.visibilityState === 'visible') tick();
+}
+
 onMounted(() => {
     tick();
     intervalId = window.setInterval(tick, CHECK_INTERVAL_MS);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 });
 
 onBeforeUnmount(() => {
     if (intervalId) window.clearInterval(intervalId);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
 });
 </script>
 
