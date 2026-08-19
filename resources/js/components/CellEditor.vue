@@ -106,6 +106,10 @@ const editor = useEditor({
         Link.configure({
             autolink: true,
             openOnClick: false,
+            // Tiptap's default autolink also treats bare email addresses as
+            // mailto: links — restrict it to http(s) URLs so a plain email
+            // typed into a cell doesn't turn into an underlined link.
+            shouldAutoLink: (url) => /^https?:\/\//i.test(url),
             HTMLAttributes: {
                 class: 'text-primary underline',
                 target: '_blank',
