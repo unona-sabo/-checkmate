@@ -390,6 +390,19 @@ const hasDetails = (trc: TestRunCase): boolean => {
     );
 };
 
+// Where a test run case originated from — the underlying Test Case if this
+// run was built from a suite, otherwise the source Checklist for a
+// checklist-based run (rows created that way have no per-row backlink).
+const sourceLink = (trc: TestRunCase): string | null => {
+    if (trc.test_case) {
+        return `/projects/${props.project.id}/test-suites/${trc.test_case.test_suite_id}/test-cases/${trc.test_case.id}`;
+    }
+    if (props.testRun.checklist) {
+        return `/projects/${props.project.id}/checklists/${props.testRun.checklist.id}`;
+    }
+    return null;
+};
+
 const createBugReportUrl = (trc: TestRunCase): string => {
     const params = new URLSearchParams();
     if (trc.test_case) {
@@ -1054,6 +1067,19 @@ const addCasesCount = computed(() => {
                                                         )
                                                     "
                                                 />
+                                                <a
+                                                    v-if="sourceLink(trc)"
+                                                    :href="sourceLink(trc)!"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    title="Open in new tab to edit"
+                                                    class="shrink-0 text-muted-foreground hover:text-foreground"
+                                                    @click.stop
+                                                >
+                                                    <ExternalLink
+                                                        class="h-3.5 w-3.5"
+                                                    />
+                                                </a>
                                                 <Badge
                                                     :variant="
                                                         testResultVariant(
