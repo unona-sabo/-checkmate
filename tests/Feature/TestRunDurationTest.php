@@ -180,6 +180,38 @@ test('adjust time rejects zero time', function () {
     $response->assertSessionHas('error');
 });
 
+test('set time overwrites the elapsed duration to the given value', function () {
+    $testRun = TestRun::factory()->active()->create([
+        'project_id' => $this->project->id,
+        'started_at' => now()->subHours(2),
+        'time_adjustment_seconds' => 0,
+    ]);
+
+    $this->actingAs($this->user)->post(
+        route('test-runs.set-time', [$this->project, $testRun]),
+        ['hours' => 1, 'minutes' => 0]
+    );
+
+    $testRun->refresh();
+    expect($testRun->getElapsedSeconds())->toBe(3600);
+});
+
+test('set time can reset the elapsed duration to zero', function () {
+    $testRun = TestRun::factory()->active()->create([
+        'project_id' => $this->project->id,
+        'started_at' => now()->subHours(2),
+        'time_adjustment_seconds' => 1800,
+    ]);
+
+    $this->actingAs($this->user)->post(
+        route('test-runs.set-time', [$this->project, $testRun]),
+        ['hours' => 0, 'minutes' => 0]
+    );
+
+    $testRun->refresh();
+    expect($testRun->getElapsedSeconds())->toBe(0);
+});
+
 test('time adjustment is included in elapsed seconds', function () {
     $testRun = TestRun::factory()->active()->create([
         'project_id' => $this->project->id,

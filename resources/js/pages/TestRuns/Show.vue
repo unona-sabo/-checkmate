@@ -235,24 +235,46 @@ const resumeRun = () => {
 
 // --- Time Adjustment ---
 const showTimeDialog = ref(false);
+const timeDialogMode = ref<'add' | 'set'>('add');
 const timeAdjustHours = ref(0);
 const timeAdjustMinutes = ref(0);
 const timeAdjustProcessing = ref(false);
 
+const secondsToHoursMinutes = (seconds: number): [number, number] => [
+    Math.floor(seconds / 3600),
+    Math.floor((seconds % 3600) / 60),
+];
+
 const openTimeDialog = () => {
+    timeDialogMode.value = 'add';
     timeAdjustHours.value = 0;
     timeAdjustMinutes.value = 0;
     showTimeDialog.value = true;
 };
 
+const setTimeDialogMode = (mode: 'add' | 'set') => {
+    timeDialogMode.value = mode;
+    if (mode === 'set') {
+        [timeAdjustHours.value, timeAdjustMinutes.value] =
+            secondsToHoursMinutes(liveElapsed.value ?? 0);
+    } else {
+        timeAdjustHours.value = 0;
+        timeAdjustMinutes.value = 0;
+    }
+};
+
 const submitTimeAdjustment = () => {
     const hours = Number(timeAdjustHours.value) || 0;
     const minutes = Number(timeAdjustMinutes.value) || 0;
-    if (hours === 0 && minutes === 0) return;
+
+    if (timeDialogMode.value === 'add' && hours === 0 && minutes === 0) return;
+
+    const endpoint =
+        timeDialogMode.value === 'add' ? 'adjust-time' : 'set-time';
 
     timeAdjustProcessing.value = true;
     router.post(
-        `/projects/${props.project.id}/test-runs/${props.testRun.id}/adjust-time`,
+        `/projects/${props.project.id}/test-runs/${props.testRun.id}/${endpoint}`,
         { hours, minutes },
         {
             preserveScroll: true,
@@ -1730,13 +1752,42 @@ const addCasesCount = computed(() => {
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <Clock class="h-5 w-5 text-primary" />
-                        Add Time
+                        {{ timeDialogMode === 'add' ? 'Add Time' : 'Set Time' }}
                     </DialogTitle>
                     <DialogDescription>
-                        Enter additional time to add to the elapsed duration of
-                        this test run.
+                        {{
+                            timeDialogMode === 'add'
+                                ? 'Enter additional time to add to the elapsed duration of this test run.'
+                                : 'Overwrite the total elapsed duration of this test run.'
+                        }}
                     </DialogDescription>
                 </DialogHeader>
+                <div class="flex gap-1 rounded-lg bg-muted p-1">
+                    <button
+                        type="button"
+                        class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                        :class="
+                            timeDialogMode === 'add'
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
+                        "
+                        @click="setTimeDialogMode('add')"
+                    >
+                        Add Time
+                    </button>
+                    <button
+                        type="button"
+                        class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                        :class="
+                            timeDialogMode === 'set'
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
+                        "
+                        @click="setTimeDialogMode('set')"
+                    >
+                        Set Total Time
+                    </button>
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-2">
                         <Label for="adjust-hours">Hours</Label>
@@ -1769,11 +1820,16 @@ const addCasesCount = computed(() => {
                             @click="submitTimeAdjustment"
                             :disabled="
                                 timeAdjustProcessing ||
-                                (timeAdjustHours === 0 &&
+                                (timeDialogMode === 'add' &&
+                                    timeAdjustHours === 0 &&
                                     timeAdjustMinutes === 0)
                             "
                         >
-                            Add Time
+                            {{
+                                timeDialogMode === 'add'
+                                    ? 'Add Time'
+                                    : 'Set Time'
+                            }}
                         </Button>
                     </RestrictedAction>
                 </DialogFooter>
