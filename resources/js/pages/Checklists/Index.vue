@@ -560,12 +560,15 @@ const selectedColumnKey = ref<string>('');
 const isImporting = ref(false);
 const drafts = ref<NoteDraft[]>([]);
 
+const isCreatingNewChecklistForNote = ref(false);
+
 const openNoteDialog = () => {
     editingDraftId.value = null;
     noteContent.value = '';
     selectedChecklistId.value = null;
     selectedColumnKey.value = '';
     newChecklistName.value = '';
+    isCreatingNewChecklistForNote.value = false;
     showNoteDialog.value = true;
 };
 
@@ -675,6 +678,7 @@ const openDraft = (draft: NoteDraft) => {
     noteContent.value = draft.content;
     selectedChecklistId.value = draft.selectedChecklistId;
     selectedColumnKey.value = draft.selectedColumnKey;
+    isCreatingNewChecklistForNote.value = false;
     showNoteDialog.value = true;
 };
 
@@ -696,6 +700,9 @@ onMounted(() => {
 const selectedChecklistId_section = ref<number | null>(null);
 const newChecklistName = ref('');
 const hasChecklists = computed(() => props.checklists.length > 0);
+const showNewChecklistForm = computed(
+    () => !hasChecklists.value || isCreatingNewChecklistForNote.value,
+);
 
 const selectedChecklist = computed(() => {
     if (!selectedChecklistId.value) return null;
@@ -752,7 +759,7 @@ const parsedNotes = computed(() => {
 const importNotes = () => {
     if (parsedNotes.value.length === 0) return;
 
-    if (!hasChecklists.value) {
+    if (showNewChecklistForm.value) {
         if (!newChecklistName.value.trim()) return;
 
         isImporting.value = true;
@@ -1402,8 +1409,22 @@ watch(showNoteDialog, (open) => {
                             v-if="parsedNotes.length > 0"
                             class="space-y-4 rounded-lg border border-amber-300 bg-amber-100/70 p-4 dark:border-amber-700/50 dark:bg-amber-900/25"
                         >
-                            <div v-if="!hasChecklists" class="space-y-2">
-                                <Label>New Checklist Name</Label>
+                            <div v-if="showNewChecklistForm" class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <Label>New Checklist Name</Label>
+                                    <Button
+                                        v-if="hasChecklists"
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        class="h-auto cursor-pointer px-2 py-1 text-xs"
+                                        @click="
+                                            isCreatingNewChecklistForNote = false
+                                        "
+                                    >
+                                        Use existing checklist
+                                    </Button>
+                                </div>
                                 <Input
                                     v-model="newChecklistName"
                                     placeholder="Checklist name..."
@@ -1411,7 +1432,21 @@ watch(showNoteDialog, (open) => {
                             </div>
 
                             <div v-else class="space-y-2">
-                                <Label>Import to Checklist</Label>
+                                <div class="flex items-center justify-between">
+                                    <Label>Import to Checklist</Label>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        class="h-auto cursor-pointer gap-1 px-2 py-1 text-xs"
+                                        @click="
+                                            isCreatingNewChecklistForNote = true
+                                        "
+                                    >
+                                        <Plus class="h-3 w-3" />
+                                        New checklist
+                                    </Button>
+                                </div>
                                 <Select v-model="selectedChecklistId">
                                     <SelectTrigger>
                                         <SelectValue
@@ -1559,18 +1594,18 @@ watch(showNoteDialog, (open) => {
                                     :disabled="
                                         parsedNotes.length === 0 ||
                                         isImporting ||
-                                        (hasChecklists
-                                            ? !selectedChecklistId ||
-                                              !selectedColumnKey
-                                            : !newChecklistName.trim())
+                                        (showNewChecklistForm
+                                            ? !newChecklistName.trim()
+                                            : !selectedChecklistId ||
+                                              !selectedColumnKey)
                                     "
                                     class="gap-2"
                                 >
                                     <Import class="h-4 w-4" />
                                     {{
-                                        hasChecklists
-                                            ? 'Import to Checklist'
-                                            : 'Create Checklist'
+                                        showNewChecklistForm
+                                            ? 'Create Checklist'
+                                            : 'Import to Checklist'
                                     }}
                                 </Button>
                             </RestrictedAction>
