@@ -77,6 +77,34 @@ test('updating a test case status does not overwrite existing started_at', funct
     expect($testRun->started_at->timestamp)->toBe($originalStartedAt->timestamp);
 });
 
+test('marking a case does not change the display order of test run cases', function () {
+    $testRun = TestRun::factory()->active()->create([
+        'project_id' => $this->project->id,
+    ]);
+
+    $cases = collect(range(1, 3))->map(fn () => TestRunCase::create([
+        'test_run_id' => $testRun->id,
+        'test_case_id' => TestCase::factory()->create(['test_suite_id' => $this->testSuite->id])->id,
+        'status' => 'untested',
+    ]));
+
+    // Mark the first case last — it must not jump to the bottom of the list.
+    $this->actingAs($this->user)->put(
+        route('test-run-cases.update', [$this->project, $testRun, $cases->first()]),
+        ['status' => 'passed']
+    );
+
+    $response = $this->actingAs($this->user)->get(
+        route('test-runs.show', [$this->project, $testRun])
+    );
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('testRun.test_run_cases.0.id', $cases[0]->id)
+        ->where('testRun.test_run_cases.1.id', $cases[1]->id)
+        ->where('testRun.test_run_cases.2.id', $cases[2]->id)
+    );
+});
+
 test('resetting a test case to untested clears its result and time spent', function () {
     $testRun = TestRun::factory()->active()->create([
         'project_id' => $this->project->id,

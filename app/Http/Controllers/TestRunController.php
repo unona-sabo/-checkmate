@@ -138,8 +138,10 @@ class TestRunController extends Controller
         abort_unless($testRun->project_id === $project->id, 404);
 
         $testRun->load([
-            'testRunCases.testCase.testSuite',
-            'testRunCases.assignedUser',
+            // Ordered explicitly by id so a case doesn't jump position in
+            // the list just because its status changed and the page reloaded.
+            'testRunCases' => fn ($query) => $query->orderBy('id')
+                ->with(['testCase.testSuite', 'assignedUser']),
             'creator:id,name',
             'checklist:id,name',
             'duplicatedFrom:id,name',
