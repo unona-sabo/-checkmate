@@ -217,6 +217,8 @@ export interface TestRun {
     source?: string | null;
     checklist_id?: number | null;
     checklist?: { id: number; name: string } | null;
+    duplicated_from_id?: number | null;
+    duplicated_from?: { id: number; name: string } | null;
     progress: number;
     stats: TestRunStats | null;
     started_at: string | null;

@@ -21,6 +21,7 @@ class TestRun extends Model
         'status',
         'source',
         'checklist_id',
+        'duplicated_from_id',
         'progress',
         'stats',
         'started_at',
@@ -72,6 +73,14 @@ class TestRun extends Model
     public function completedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'completed_by');
+    }
+
+    /**
+     * Get the test run this one was duplicated from (if any).
+     */
+    public function duplicatedFrom(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'duplicated_from_id');
     }
 
     /**

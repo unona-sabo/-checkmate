@@ -142,6 +142,7 @@ class TestRunController extends Controller
             'testRunCases.assignedUser',
             'creator:id,name',
             'checklist:id,name',
+            'duplicatedFrom:id,name',
         ]);
 
         $testRun->setAttribute('elapsed_seconds', $testRun->getElapsedSeconds());
@@ -378,13 +379,14 @@ class TestRunController extends Controller
         abort_unless($testRun->project_id === $project->id, 404);
 
         $newRun = $project->testRuns()->create([
-            'name' => 'Copy of '.$testRun->name,
+            'name' => 'Duplicate of '.$testRun->name,
             'description' => $testRun->description,
             'environment' => $testRun->environment,
             'milestone' => $testRun->milestone,
             'priority' => $testRun->priority,
             'source' => $testRun->source,
             'checklist_id' => $testRun->checklist_id,
+            'duplicated_from_id' => $testRun->id,
             'status' => 'active',
             'created_by' => auth()->id(),
         ]);
@@ -398,10 +400,11 @@ class TestRunController extends Controller
             ]);
         });
 
+        $newRun->updateProgress();
         $newRun->updateStats();
 
         return redirect()->route('test-runs.show', [$project, $newRun])
-            ->with('success', 'Test run cloned successfully.');
+            ->with('success', 'Test run duplicated successfully.');
     }
 
     public function resume(Project $project, TestRun $testRun)

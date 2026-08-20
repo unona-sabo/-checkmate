@@ -28,6 +28,7 @@ import {
     Bug,
     Clock,
     Undo2,
+    Copy,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -233,6 +234,17 @@ const removeCase = () => {
 const completeRun = () => {
     router.post(
         `/projects/${props.project.id}/test-runs/${props.testRun.id}/complete`,
+    );
+};
+
+const duplicatingRun = ref(false);
+
+const duplicateRun = () => {
+    duplicatingRun.value = true;
+    router.post(
+        `/projects/${props.project.id}/test-runs/${props.testRun.id}/clone`,
+        {},
+        { onFinish: () => (duplicatingRun.value = false) },
     );
 };
 
@@ -765,6 +777,14 @@ const addCasesCount = computed(() => {
                         <Badge v-if="testRun.environment" variant="blue">
                             {{ testRun.environment }}
                         </Badge>
+                        <Link
+                            v-if="testRun.duplicated_from"
+                            :href="`/projects/${project.id}/test-runs/${testRun.duplicated_from.id}`"
+                            class="inline-flex cursor-pointer items-center gap-1 rounded-md bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                            <Copy class="h-3 w-3" />
+                            Duplicated from: {{ testRun.duplicated_from.name }}
+                        </Link>
                         <DropdownMenu
                             v-if="
                                 testRun.source === 'checklist' &&
@@ -913,6 +933,20 @@ const addCasesCount = computed(() => {
                                 Edit
                             </Button>
                         </Link>
+                    </RestrictedAction>
+                    <RestrictedAction>
+                        <Button
+                            @click="duplicateRun"
+                            :disabled="duplicatingRun"
+                            variant="outline"
+                            class="gap-2"
+                            title="Create a copy of this run with all checks reset to Untested — handy for re-running on another environment or device"
+                        >
+                            <Copy class="h-4 w-4" />
+                            {{
+                                duplicatingRun ? 'Duplicating...' : 'Duplicate'
+                            }}
+                        </Button>
                     </RestrictedAction>
                 </div>
             </div>
