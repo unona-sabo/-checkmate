@@ -27,6 +27,7 @@ import {
     Trash2,
     Bug,
     Clock,
+    Undo2,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import RestrictedAction from '@/components/RestrictedAction.vue';
@@ -169,6 +170,16 @@ const openResultDialog = (testRunCase: TestRunCase) => {
     showResultDialog.value = true;
 };
 
+watch(
+    () => resultForm.value.status,
+    (status) => {
+        if (status === 'untested') {
+            resultForm.value.actual_result = '';
+            resultForm.value.time_spent = null;
+        }
+    },
+);
+
 const saveResult = () => {
     if (!selectedCase.value) return;
 
@@ -192,6 +203,14 @@ const quickStatus = (
     router.put(
         `/projects/${props.project.id}/test-runs/${props.testRun.id}/cases/${testRunCase.id}`,
         { status },
+        { preserveScroll: true },
+    );
+};
+
+const resetToUntested = (testRunCase: TestRunCase) => {
+    router.put(
+        `/projects/${props.project.id}/test-runs/${props.testRun.id}/cases/${testRunCase.id}`,
+        { status: 'untested', actual_result: null, time_spent: null },
         { preserveScroll: true },
     );
 };
@@ -1180,6 +1199,23 @@ const addCasesCount = computed(() => {
                                                 >
                                                     <Edit class="h-4 w-4" />
                                                 </Button>
+                                                <Button
+                                                    v-if="
+                                                        trc.status !==
+                                                        'untested'
+                                                    "
+                                                    size="icon-sm"
+                                                    variant="ghost"
+                                                    class="p-0"
+                                                    @click="
+                                                        resetToUntested(trc)
+                                                    "
+                                                    title="Reset to Untested — clears the result so it can be retested"
+                                                >
+                                                    <Undo2
+                                                        class="h-4 w-4 text-muted-foreground"
+                                                    />
+                                                </Button>
                                             </div>
                                         </RestrictedAction>
                                         <!-- External Links -->
@@ -1340,6 +1376,9 @@ const addCasesCount = computed(() => {
                                 <SelectItem value="blocked">Blocked</SelectItem>
                                 <SelectItem value="skipped">Skipped</SelectItem>
                                 <SelectItem value="retest">Retest</SelectItem>
+                                <SelectItem value="untested"
+                                    >Untested (reset)</SelectItem
+                                >
                             </SelectContent>
                         </Select>
                     </div>

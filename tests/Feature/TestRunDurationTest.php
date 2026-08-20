@@ -77,6 +77,30 @@ test('updating a test case status does not overwrite existing started_at', funct
     expect($testRun->started_at->timestamp)->toBe($originalStartedAt->timestamp);
 });
 
+test('resetting a test case to untested clears its result and time spent', function () {
+    $testRun = TestRun::factory()->active()->create([
+        'project_id' => $this->project->id,
+    ]);
+
+    $testRunCase = TestRunCase::create([
+        'test_run_id' => $testRun->id,
+        'test_case_id' => $this->testCase->id,
+        'status' => 'passed',
+        'actual_result' => 'It worked',
+        'time_spent' => 15,
+    ]);
+
+    $this->actingAs($this->user)->put(
+        route('test-run-cases.update', [$this->project, $testRun, $testRunCase]),
+        ['status' => 'untested', 'actual_result' => null, 'time_spent' => null]
+    );
+
+    $testRunCase->refresh();
+    expect($testRunCase->status)->toBe('untested');
+    expect($testRunCase->actual_result)->toBeNull();
+    expect($testRunCase->time_spent)->toBeNull();
+});
+
 test('bulk updating test cases sets started_at when null', function () {
     $testRun = TestRun::factory()->active()->create([
         'project_id' => $this->project->id,
