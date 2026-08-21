@@ -6,6 +6,7 @@ use App\Models\TestRun;
 use App\Models\TestRunCase;
 use App\Models\TestSuite;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -233,6 +234,8 @@ test('adjust time rejects zero time', function () {
 });
 
 test('set time overwrites the elapsed duration to the given value', function () {
+    Carbon::setTestNow('2026-02-15 10:00:00');
+
     $testRun = TestRun::factory()->active()->create([
         'project_id' => $this->project->id,
         'started_at' => now()->subHours(2),
@@ -246,9 +249,13 @@ test('set time overwrites the elapsed duration to the given value', function () 
 
     $testRun->refresh();
     expect($testRun->getElapsedSeconds())->toBe(3600);
+
+    Carbon::setTestNow();
 });
 
 test('set time can reset the elapsed duration to zero', function () {
+    Carbon::setTestNow('2026-02-15 10:00:00');
+
     $testRun = TestRun::factory()->active()->create([
         'project_id' => $this->project->id,
         'started_at' => now()->subHours(2),
@@ -262,6 +269,8 @@ test('set time can reset the elapsed duration to zero', function () {
 
     $testRun->refresh();
     expect($testRun->getElapsedSeconds())->toBe(0);
+
+    Carbon::setTestNow();
 });
 
 test('time adjustment is included in elapsed seconds', function () {
