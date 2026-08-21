@@ -16,6 +16,15 @@ class ExportBugreportToClickUp implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * Never auto-retry: creating the ClickUp task is not idempotent, so a
+     * retry after a failure between task creation and saving its id locally
+     * would create a second, orphaned task in ClickUp. A failed export is
+     * safer to re-trigger manually (which correctly no-ops once
+     * clickup_task_id is set) than to retry blindly.
+     */
+    public int $tries = 1;
+
     public function __construct(
         public Bugreport $bugreport,
     ) {}
@@ -70,7 +79,16 @@ class ExportBugreportToClickUp implements ShouldQueue
             }
 
             $fullPath = Storage::disk('public')->path($attachment->stored_path);
-            $service->attachToTask($taskId, $fullPath, $attachment->original_filename);
+
+            try {
+                $service->attachToTask($taskId, $fullPath, $attachment->original_filename);
+            } catch (\Throwable $e) {
+                // The task itself already exists and is linked at this
+                // point — one failed attachment shouldn't fail the whole
+                // export or block the rest of the attachments from
+                // uploading.
+                report($e);
+            }
         }
     }
 

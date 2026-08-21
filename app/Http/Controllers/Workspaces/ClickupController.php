@@ -156,6 +156,12 @@ class ClickupController extends Controller
             if (empty($teams)) {
                 return back()->with('error', 'No ClickUp teams found.');
             }
+            // Picking teams[0] would silently register the webhook against
+            // the wrong team for a token with access to more than one —
+            // fail loudly instead rather than guessing.
+            if (count($teams) > 1) {
+                return back()->with('error', 'This API token has access to more than one ClickUp team, which this integration doesn\'t support yet — use a token scoped to a single team.');
+            }
             $teamId = $teams[0]['id'];
 
             // Delete every webhook already pointing at our endpoint for this
@@ -246,8 +252,17 @@ class ClickupController extends Controller
                 return response()->json(['error' => 'No ClickUp teams found for this API token.'], 422);
             }
 
-            $webhooks = $service->listWebhooks($teams[0]['id']);
-            $webhook = collect($webhooks)->firstWhere('id', $settings->webhook_id);
+            // Don't assume teams[0] is the team the webhook was registered
+            // under — a token with access to multiple teams could have the
+            // matching webhook on any of them. Search all of them.
+            $webhook = null;
+            foreach ($teams as $team) {
+                $webhooks = $service->listWebhooks($team['id']);
+                $webhook = collect($webhooks)->firstWhere('id', $settings->webhook_id);
+                if ($webhook) {
+                    break;
+                }
+            }
 
             if (! $webhook) {
                 return response()->json(['error' => "ClickUp no longer has a webhook with ID {$settings->webhook_id} — it may have been deleted or disabled on ClickUp's side. Try registering it again."], 422);

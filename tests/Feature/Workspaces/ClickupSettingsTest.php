@@ -89,6 +89,28 @@ test('clickup status mapping can be saved', function () {
     expect($settings->status_mapping)->toHaveKey('done', 'done');
 });
 
+test('clickup status mapping is normalized to lowercase before saving', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+
+    $response = $this->actingAs($user)->put(route('workspaces.clickup.status-mapping', $workspace), [
+        'status_mapping' => [
+            'to_do' => 'To Do',
+            'done' => 'Needs QA',
+        ],
+    ]);
+
+    $response->assertSessionHasNoErrors()->assertRedirect();
+
+    $settings = ClickupSetting::forWorkspace($workspace);
+    // ClickupService::resolveAppStatus() looks up an incoming status with
+    // strtolower() — if this weren't normalized at save time, a mixed-case
+    // custom ClickUp status would never match.
+    expect($settings->status_mapping)->toBe([
+        'to_do' => 'to do',
+        'done' => 'needs qa',
+    ]);
+});
+
 test('fetch statuses returns error when not configured', function () {
     [$user, $workspace] = createUserWithWorkspace();
 

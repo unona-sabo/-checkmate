@@ -215,6 +215,53 @@ test('webhook ignores unknown task ids', function () {
     $response->assertOk();
 });
 
+test('webhook does not update a bugreport with a matching task id in a different workspace', function () {
+    Http::fake([
+        'api.clickup.com/api/v2/task/shared-id' => Http::response([
+            'id' => 'shared-id',
+            'status' => ['status' => 'done'],
+        ]),
+    ]);
+
+    $workspaceA = Workspace::factory()->create();
+    ClickupSetting::forWorkspace($workspaceA)->update([
+        'webhook_secret' => 'secret-a',
+        'status_mapping' => ['to_do' => 'to do', 'done' => 'done'],
+    ]);
+
+    $workspaceB = Workspace::factory()->create();
+    ClickupSetting::forWorkspace($workspaceB)->update([
+        'api_token' => 'test-token',
+        'list_id' => 'list-1',
+        'webhook_secret' => 'secret-b',
+        'status_mapping' => ['to_do' => 'to do', 'done' => 'done'],
+    ]);
+
+    // Same clickup_task_id, but the bug report lives in workspace B's
+    // project — a webhook delivered for workspace A must not touch it.
+    $projectB = Project::factory()->create(['workspace_id' => $workspaceB->id]);
+    $bugreportInB = Bugreport::factory()->create([
+        'project_id' => $projectB->id,
+        'status' => 'to_do',
+        'clickup_task_id' => 'shared-id',
+    ]);
+
+    $payload = json_encode([
+        'event' => 'taskStatusUpdated',
+        'task_id' => 'shared-id',
+    ]);
+
+    $signature = hash_hmac('sha256', $payload, 'secret-a');
+
+    $response = $this->postJson("/api/webhooks/clickup/{$workspaceA->id}", json_decode($payload, true), [
+        'X-Signature' => $signature,
+    ]);
+
+    $response->assertOk();
+
+    expect($bugreportInB->refresh()->status)->toBe('to_do');
+});
+
 test('webhook signature for one workspace is rejected on another workspace URL', function () {
     $workspaceA = Workspace::factory()->create();
     ClickupSetting::forWorkspace($workspaceA)->update(['webhook_secret' => 'secret-a']);

@@ -113,7 +113,12 @@ class ClickupWebhookController extends Controller
             return;
         }
 
-        $bugreport = Bugreport::where('clickup_task_id', $taskId)->first();
+        // Scope to the workspace this webhook is registered for — a bare
+        // clickup_task_id match alone would let a webhook delivered for one
+        // workspace update a bug report belonging to a different one.
+        $bugreport = Bugreport::where('clickup_task_id', $taskId)
+            ->whereHas('project', fn ($query) => $query->where('workspace_id', $settings->workspace_id))
+            ->first();
 
         if (! $bugreport) {
             Log::info("ClickUp webhook: no bugreport is linked to ClickUp task {$taskId}.");
