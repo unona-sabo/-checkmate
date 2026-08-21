@@ -401,6 +401,17 @@ const history = useChecklistHistory(3);
 const saveError = ref(false);
 const isSaving = ref(false);
 const canUndo = history.canUndo;
+
+const pasteNotice = ref<string | null>(null);
+let pasteNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+
+const showPasteNotice = (message: string) => {
+    pasteNotice.value = message;
+    if (pasteNoticeTimer) clearTimeout(pasteNoticeTimer);
+    pasteNoticeTimer = setTimeout(() => {
+        pasteNotice.value = null;
+    }, 4000);
+};
 // Set right before saving a just-undone state, so that save doesn't record
 // a (no-op) history step for its own revert.
 let skipNextHistoryPush = false;
@@ -439,6 +450,14 @@ const undoLastSave = () => {
 
 const dismissSaveError = () => {
     saveError.value = false;
+};
+
+const retrySave = () => {
+    if (dirtyRowIds.size > 0) {
+        saveDirtyRows();
+    } else {
+        saveRows();
+    }
 };
 
 // Search state
@@ -915,8 +934,19 @@ const saveRows = () => {
     );
 };
 
+// If a save is already in flight when another one is requested (the
+// debounce timer and a blur-triggered save can race), queue a follow-up
+// instead of firing a second overlapping request that could land out of
+// order and clobber the in-flight one's data.
+let saveDirtyRowsQueued = false;
+
 const saveDirtyRows = async () => {
     if (dirtyRowIds.size === 0) return;
+
+    if (isSaving.value) {
+        saveDirtyRowsQueued = true;
+        return;
+    }
 
     saveError.value = false;
     isSaving.value = true;
@@ -957,6 +987,10 @@ const saveDirtyRows = async () => {
         saveError.value = true;
     } finally {
         isSaving.value = false;
+        if (saveDirtyRowsQueued) {
+            saveDirtyRowsQueued = false;
+            saveDirtyRows();
+        }
     }
 };
 
@@ -1054,6 +1088,7 @@ const toggleRowType = (row: ExtendedChecklistRow) => {
         row.background_color = null;
         row.font_weight = 'normal';
     }
+    dirtyRowIds.add(row.id);
     hasContentChanges.value = true;
 };
 
@@ -2219,7 +2254,14 @@ const parsePastedValue = (
         );
         return match ? match.value : trimmed;
     }
-    return text;
+    // Text columns store CellEditor's rendered HTML, and a plain value here
+    // is later fed straight into it (see CellEditor's wrapPlainText). Escape
+    // angle brackets so pasted text that merely looks like a tag — e.g.
+    // "<Header>" copied from code — can't be parsed as real markup.
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 };
 
 // Paste a tab/newline-delimited block starting at the given cell, extending
@@ -2235,6 +2277,13 @@ const pasteGridAtCell = (
         startColIndex + width,
     );
     if (targetCols.length === 0) return;
+
+    if (targetCols.length < width) {
+        const skipped = width - targetCols.length;
+        showPasteNotice(
+            `${skipped} column${skipped > 1 ? 's' : ''} of the pasted data didn't fit and ${skipped > 1 ? 'were' : 'was'} skipped.`,
+        );
+    }
 
     let rowsAdded = false;
 
@@ -2419,6 +2468,7 @@ onUnmounted(() => {
     window.removeEventListener('beforeunload', handleBeforeUnload);
     window.removeEventListener('resize', onScroll);
     scrollContainerRef.value?.removeEventListener('scroll', onScroll);
+    if (pasteNoticeTimer) clearTimeout(pasteNoticeTimer);
 });
 </script>
 
@@ -3160,6 +3210,16 @@ onUnmounted(() => {
                     >
                 </div>
                 <div class="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        class="gap-1.5"
+                        :disabled="isSaving"
+                        @click="retrySave"
+                    >
+                        <RefreshCw class="h-3.5 w-3.5" />
+                        Retry
+                    </Button>
                     <!-- Was referencing undefined saveSnapshot/undoChanges; fixed to use the actual canUndo/undoLastSave -->
                     <Button
                         v-if="canUndo"
@@ -3178,6 +3238,15 @@ onUnmounted(() => {
                         <X class="h-4 w-4" />
                     </button>
                 </div>
+            </div>
+
+            <!-- Transient paste warning (e.g. columns skipped) -->
+            <div
+                v-if="pasteNotice"
+                class="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-100/70 px-4 py-2 text-sm text-amber-900 dark:border-amber-700/50 dark:bg-amber-900/25 dark:text-amber-200"
+            >
+                <AlertCircle class="h-4 w-4 shrink-0" />
+                <span>{{ pasteNotice }}</span>
             </div>
 
             <!-- Filter Dropdown -->
