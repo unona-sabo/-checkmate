@@ -1151,6 +1151,31 @@ const selectedRows = computed(() => {
 // Check if any rows are selected
 const hasSelectedRows = computed(() => selectedRows.value.length > 0);
 
+// "Select all" header toggle — respects the current search/filter, same as
+// selectAllRows()/Ctrl+A.
+const visibleDataRowCount = computed(
+    () =>
+        filteredRows.value.filter((r) => r.row_type !== 'section_header')
+            .length,
+);
+
+const selectAllCheckboxState = computed<boolean | 'indeterminate'>(() => {
+    if (visibleDataRowCount.value === 0 || selectedRows.value.length === 0) {
+        return false;
+    }
+    return selectedRows.value.length >= visibleDataRowCount.value
+        ? true
+        : 'indeterminate';
+});
+
+const toggleSelectAllRows = () => {
+    if (hasSelectedRows.value) {
+        clearManualSelection();
+    } else {
+        selectAllRows();
+    }
+};
+
 // Get select columns for "Change Status" action
 const selectColumns = computed(() =>
     columns.value.filter((col) => col.type === 'select' && col.options?.length),
@@ -3394,7 +3419,22 @@ onUnmounted(() => {
                                 :class="isScrolled ? 'shadow-md' : ''"
                             >
                                 <tr class="border-b bg-muted">
-                                    <th class="w-10 px-1 py-2"></th>
+                                    <th class="w-10 px-1 py-2">
+                                        <Checkbox
+                                            :model-value="
+                                                selectAllCheckboxState
+                                            "
+                                            @update:model-value="
+                                                toggleSelectAllRows
+                                            "
+                                            class="cursor-pointer"
+                                            :title="
+                                                hasSelectedRows
+                                                    ? 'Deselect all'
+                                                    : 'Select all'
+                                            "
+                                        />
+                                    </th>
                                     <th
                                         v-for="(
                                             column, colIndex
