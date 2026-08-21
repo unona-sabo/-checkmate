@@ -26,6 +26,7 @@ import {
     DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -197,6 +198,33 @@ const formatDate = (date: string): string => {
 // ClickUp export & sync
 const isExportingToClickUp = ref(false);
 const isSyncingFromClickUp = ref(false);
+const isLinkingClickUp = ref(false);
+const showClickupLinkInput = ref(false);
+const clickupLinkInput = ref('');
+
+const openClickupLinkInput = () => {
+    clickupLinkInput.value = props.bugreport.clickup_task_id ?? '';
+    showClickupLinkInput.value = true;
+};
+
+const saveClickupLink = () => {
+    if (!clickupLinkInput.value.trim()) return;
+
+    isLinkingClickUp.value = true;
+    router.post(
+        `/projects/${props.project.id}/bugreports/${props.bugreport.id}/link-clickup`,
+        { clickup_link: clickupLinkInput.value.trim() },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showClickupLinkInput.value = false;
+            },
+            onFinish: () => {
+                isLinkingClickUp.value = false;
+            },
+        },
+    );
+};
 
 const exportToClickUp = () => {
     isExportingToClickUp.value = true;
@@ -567,7 +595,42 @@ const syncFromClickUp = () => {
                                     ClickUp
                                 </p>
                                 <div
-                                    v-if="bugreport.clickup_task_id"
+                                    v-if="showClickupLinkInput"
+                                    class="space-y-2"
+                                >
+                                    <Input
+                                        v-model="clickupLinkInput"
+                                        placeholder="Paste a ClickUp task link or ID..."
+                                        class="text-sm"
+                                        @keyup.enter="saveClickupLink"
+                                    />
+                                    <div class="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            class="flex-1 cursor-pointer gap-1.5"
+                                            :disabled="
+                                                isLinkingClickUp ||
+                                                !clickupLinkInput.trim()
+                                            "
+                                            @click="saveClickupLink"
+                                        >
+                                            <Check class="h-3.5 w-3.5" />
+                                            Save
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            class="cursor-pointer"
+                                            @click="
+                                                showClickupLinkInput = false
+                                            "
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div
+                                    v-else-if="bugreport.clickup_task_id"
                                     class="flex items-center gap-2"
                                 >
                                     <a
@@ -594,17 +657,37 @@ const syncFromClickUp = () => {
                                             }"
                                         />
                                     </Button>
+                                    <RestrictedAction>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-6 w-6 cursor-pointer p-0"
+                                            title="Change linked ClickUp task"
+                                            @click="openClickupLinkInput"
+                                        >
+                                            <Edit class="h-3.5 w-3.5" />
+                                        </Button>
+                                    </RestrictedAction>
                                 </div>
                                 <RestrictedAction v-else>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        class="w-full cursor-pointer gap-2"
-                                        @click="exportToClickUp"
-                                    >
-                                        <ExternalLink class="h-3.5 w-3.5" />
-                                        Export to ClickUp
-                                    </Button>
+                                    <div class="space-y-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            class="w-full cursor-pointer gap-2"
+                                            @click="exportToClickUp"
+                                        >
+                                            <ExternalLink class="h-3.5 w-3.5" />
+                                            Export to ClickUp
+                                        </Button>
+                                        <button
+                                            type="button"
+                                            class="w-full cursor-pointer text-center text-xs text-muted-foreground hover:text-foreground hover:underline"
+                                            @click="openClickupLinkInput"
+                                        >
+                                            or link an existing task
+                                        </button>
+                                    </div>
                                 </RestrictedAction>
                             </div>
                         </CardContent>

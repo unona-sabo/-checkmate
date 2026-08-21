@@ -16,6 +16,7 @@ use App\Services\AttachmentService;
 use App\Services\ClickupService;
 use App\Services\FeatureLinkingService;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -189,6 +190,90 @@ class BugreportController extends Controller
         ExportBugreportToClickUp::dispatch($bugreport);
 
         return back()->with('success', 'Bug report is being exported to ClickUp.');
+    }
+
+    public function linkClickUp(Request $request, Project $project, Bugreport $bugreport)
+    {
+        $this->authorize('update', $project);
+        abort_unless($bugreport->project_id === $project->id, 404);
+
+        $validated = $request->validate([
+            'clickup_link' => 'required|string|max:500',
+        ]);
+
+        $taskId = $this->extractClickupTaskId($validated['clickup_link']);
+
+        if ($taskId === '') {
+            return back()->with('error', "Couldn't find a task in that link — paste the task's own link (opened from the task itself, not a list or board), or just its ID.");
+        }
+
+        $settings = $project->workspace ? ClickupSetting::forWorkspace($project->workspace) : null;
+
+        if ($settings?->isConfigured()) {
+            try {
+                ClickupService::fromSettings($settings)->getTask($taskId);
+            } catch (RequestException $e) {
+                // Only a clear "task not found" should block saving — this
+                // usually means a typo in the pasted link/ID. Other failures
+                // (e.g. 401 "Team not authorized" when the task belongs to a
+                // different ClickUp team than the one this workspace's token
+                // is scoped to) don't mean the ID is wrong, so don't block a
+                // manual link on them; sync/export will surface the real
+                // issue later if it's still a problem.
+                if ($e->response->status() === 404) {
+                    return back()->with('error', 'Could not find that ClickUp task — check the link and try again.');
+                }
+            } catch (\Throwable) {
+                // Network errors etc. shouldn't block saving either.
+            }
+        }
+
+        $bugreport->update(['clickup_task_id' => $taskId]);
+
+        return back()->with('success', 'Linked to ClickUp task.');
+    }
+
+    /**
+     * ClickUp task URLs come in several shapes ("/t/{taskId}" permalinks,
+     * "/t/{teamId}/{taskId}" in-context links, board/list URLs with a
+     * "?task={taskId}" query string, etc.) that all differ in how many
+     * navigational segments surround the id. Rather than hardcoding every
+     * shape, look for a "?task=" param first, then scan the path segments
+     * for one that looks like a task id: team/list/space/folder ids in
+     * ClickUp are purely numeric, while task ids (including custom ids)
+     * always contain at least one letter — so a numeric-only segment is
+     * never the task, and known navigational keywords are skipped too.
+     */
+    private function extractClickupTaskId(string $link): string
+    {
+        $link = trim($link);
+
+        if (preg_match('/[?&]task=([a-zA-Z0-9_-]+)/', $link, $matches)) {
+            return $matches[1];
+        }
+
+        if (! str_contains($link, '://')) {
+            return trim($link, "/ \t\n\r\0\x0B");
+        }
+
+        $path = (string) parse_url($link, PHP_URL_PATH);
+        $segments = array_values(array_filter(
+            explode('/', $path),
+            fn ($segment) => $segment !== '',
+        ));
+
+        $navigationalKeywords = ['t', 'v', 'b', 'l', 'li', 's', 'o', 'f', 'g', 'dc', 'home', 'task'];
+
+        foreach (array_reverse($segments) as $segment) {
+            if (in_array($segment, $navigationalKeywords, true)) {
+                continue;
+            }
+            if (preg_match('/^[a-zA-Z0-9_-]{3,20}$/', $segment) && preg_match('/[a-zA-Z]/', $segment)) {
+                return $segment;
+            }
+        }
+
+        return '';
     }
 
     public function syncFromClickUp(Project $project, Bugreport $bugreport)

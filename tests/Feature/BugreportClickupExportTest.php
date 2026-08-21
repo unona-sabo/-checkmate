@@ -86,6 +86,198 @@ test('export to clickup prevents double export', function () {
     Queue::assertNotPushed(ExportBugreportToClickUp::class);
 });
 
+test('link clickup extracts the task id from a pasted task url', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => null]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        ['clickup_link' => 'https://app.clickup.com/t/abc123?block=activity']
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    expect($bugreport->refresh()->clickup_task_id)->toBe('abc123');
+});
+
+test('link clickup extracts the task id from an in-context team/task url', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => null]);
+
+    // "/t/{teamId}/{taskId}" — the numeric team id must be skipped in favor
+    // of the alphanumeric task id that follows it.
+    $response = $this->actingAs($user)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        ['clickup_link' => 'https://app.clickup.com/t/9007725923/86eppvpp0']
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+    expect($bugreport->refresh()->clickup_task_id)->toBe('86eppvpp0');
+});
+
+test('link clickup extracts the task id from a real-world team/task url', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => null]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        ['clickup_link' => 'https://app.clickup.com/t/9003147722/869en83m9']
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+    expect($bugreport->refresh()->clickup_task_id)->toBe('869en83m9');
+});
+
+test('link clickup rejects a board/list url with no identifiable task', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => null]);
+
+    // Board/list URLs share the "/t/{teamId}/..." shape with task
+    // permalinks — the team id here must NOT be saved as a task id.
+    $response = $this->actingAs($user)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        ['clickup_link' => 'https://app.clickup.com/t/9007725923/v/b/li/900701234567']
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect($bugreport->refresh()->clickup_task_id)->toBeNull();
+});
+
+test('link clickup extracts the task id from a board url task query param', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => null]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        ['clickup_link' => 'https://app.clickup.com/9007725923/v/b/li/900701234567?task=86eppvpp0']
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+    expect($bugreport->refresh()->clickup_task_id)->toBe('86eppvpp0');
+});
+
+test('link clickup accepts a raw task id', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => null]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        ['clickup_link' => 'abc123']
+    );
+
+    $response->assertRedirect();
+    expect($bugreport->refresh()->clickup_task_id)->toBe('abc123');
+});
+
+test('link clickup verifies the task exists when integration is configured', function () {
+    Http::fake([
+        'api.clickup.com/api/v2/task/abc123' => Http::response(
+            ['err' => 'Task not found', 'ECODE' => 'ITEM_013'],
+            404
+        ),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => null]);
+
+    ClickupSetting::forWorkspace($workspace)->update([
+        'api_token' => 'pk_test_token',
+        'list_id' => '123456',
+    ]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        ['clickup_link' => 'https://app.clickup.com/t/abc123']
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect($bugreport->refresh()->clickup_task_id)->toBeNull();
+});
+
+test('link clickup still saves when verification fails for a reason other than not-found', function () {
+    Http::fake([
+        'api.clickup.com/api/v2/task/abc123' => Http::response(
+            ['err' => 'Team not authorized', 'ECODE' => 'OAUTH_027'],
+            401
+        ),
+    ]);
+
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => null]);
+
+    ClickupSetting::forWorkspace($workspace)->update([
+        'api_token' => 'pk_test_token',
+        'list_id' => '123456',
+    ]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        ['clickup_link' => 'https://app.clickup.com/t/abc123']
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+    expect($bugreport->refresh()->clickup_task_id)->toBe('abc123');
+});
+
+test('link clickup can replace an already-linked task', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => 'old_task']);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        ['clickup_link' => 'new_task']
+    );
+
+    $response->assertRedirect();
+    expect($bugreport->refresh()->clickup_task_id)->toBe('new_task');
+});
+
+test('link clickup validates the link is required', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->actingAs($user)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        []
+    );
+
+    $response->assertSessionHasErrors('clickup_link');
+});
+
+test('viewer cannot link clickup', function () {
+    [$owner, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $owner->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id]);
+
+    $viewer = User::factory()->create();
+    $workspace->members()->attach($viewer->id, ['role' => 'viewer']);
+    $viewer->update(['current_workspace_id' => $workspace->id]);
+
+    $response = $this->actingAs($viewer)->post(
+        route('bugreports.link-clickup', [$project, $bugreport]),
+        ['clickup_link' => 'abc123']
+    );
+
+    $response->assertForbidden();
+});
+
 test('sync from clickup returns error when not linked', function () {
     [$user, $workspace] = createUserWithWorkspace();
     $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
