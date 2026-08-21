@@ -1042,6 +1042,13 @@ const toggleRowType = (row: ExtendedChecklistRow) => {
         row.row_type = 'section_header';
         row.background_color = row.background_color || '#dbeafe';
         row.font_weight = 'bold';
+        // The header shows this value in a plain <textarea>, which doesn't
+        // parse HTML — strip any tags left over from CellEditor's rich text.
+        const headerKey = columns.value[0]?.key;
+        const headerValue = headerKey && row.data[headerKey];
+        if (headerKey && typeof headerValue === 'string') {
+            row.data[headerKey] = stripHtmlToPlainText(headerValue);
+        }
     } else {
         row.row_type = 'normal';
         row.background_color = null;
@@ -3730,9 +3737,11 @@ onUnmounted(() => {
                                         >
                                             <Textarea
                                                 :model-value="
-                                                    (row.data[
-                                                        columns[0]?.key
-                                                    ] as string) || ''
+                                                    stripHtmlToPlainText(
+                                                        (row.data[
+                                                            columns[0]?.key
+                                                        ] as string) || '',
+                                                    )
                                                 "
                                                 @update:model-value="
                                                     (val) =>
