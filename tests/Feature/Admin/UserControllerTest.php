@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\Workspace;
 
 test('non-admins cannot view the users list', function () {
     $user = User::factory()->create();
@@ -64,6 +65,20 @@ test('admins can delete a user', function () {
         ->assertRedirect();
 
     expect(User::find($target->id))->toBeNull();
+});
+
+test('admins cannot delete a user who owns a workspace', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $target = User::factory()->create();
+    Workspace::factory()->create(['owner_id' => $target->id, 'name' => 'Acme Corp']);
+
+    $response = $this->actingAs($admin)
+        ->delete(route('admin.users.destroy', $target));
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect(session('error'))->toContain('Acme Corp');
+    expect(User::find($target->id))->not->toBeNull();
 });
 
 test('admins cannot delete themselves', function () {
