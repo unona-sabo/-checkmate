@@ -3,11 +3,14 @@
 namespace App\Http\Requests\TestCase;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreTestCaseRequest extends FormRequest
 {
     public function rules(): array
     {
+        $projectId = $this->route('project')?->id;
+
         return [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -29,7 +32,9 @@ class StoreTestCaseRequest extends FormRequest
             'checklist_row_ids' => 'nullable|string',
             'checklist_link_column' => 'nullable|string|max:255',
             'feature_ids' => 'nullable|array',
-            'feature_ids.*' => 'exists:project_features,id',
+            'feature_ids.*' => [
+                Rule::exists('project_features', 'id')->where('project_id', $projectId),
+            ],
             'bugreport_id' => 'nullable|integer|exists:bugreports,id',
         ];
     }

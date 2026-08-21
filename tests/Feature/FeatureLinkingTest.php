@@ -167,6 +167,51 @@ test('test suite update syncs feature_ids', function () {
         ->toBe([$features[1]->id, $features[2]->id]);
 });
 
+// ===== Cross-tenant scoping =====
+
+test('test case store rejects a feature from another project', function () {
+    $suite = TestSuite::factory()->create(['project_id' => $this->project->id]);
+    $otherProject = Project::factory()->create();
+    $foreignFeature = ProjectFeature::factory()->create(['project_id' => $otherProject->id]);
+
+    $response = $this->actingAs($this->user)->post(route('test-cases.store', [$this->project, $suite]), [
+        'title' => 'Login test',
+        'priority' => 'high',
+        'severity' => 'major',
+        'type' => 'functional',
+        'automation_status' => 'not_automated',
+        'feature_ids' => [$foreignFeature->id],
+    ]);
+
+    $response->assertSessionHasErrors('feature_ids.0');
+});
+
+test('test suite store rejects a feature from another project', function () {
+    $otherProject = Project::factory()->create();
+    $foreignFeature = ProjectFeature::factory()->create(['project_id' => $otherProject->id]);
+
+    $response = $this->actingAs($this->user)->post(route('test-suites.store', $this->project), [
+        'name' => 'Auth Suite',
+        'type' => 'functional',
+        'feature_ids' => [$foreignFeature->id],
+    ]);
+
+    $response->assertSessionHasErrors('feature_ids.0');
+});
+
+test('test suite store rejects a parent suite from another project', function () {
+    $otherProject = Project::factory()->create();
+    $foreignSuite = TestSuite::factory()->create(['project_id' => $otherProject->id]);
+
+    $response = $this->actingAs($this->user)->post(route('test-suites.store', $this->project), [
+        'name' => 'Auth Suite',
+        'type' => 'functional',
+        'parent_id' => $foreignSuite->id,
+    ]);
+
+    $response->assertSessionHasErrors('parent_id');
+});
+
 // ===== Quick create feature endpoint =====
 
 test('quick create feature returns json', function () {

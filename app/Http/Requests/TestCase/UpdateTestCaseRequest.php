@@ -3,11 +3,14 @@
 namespace App\Http\Requests\TestCase;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateTestCaseRequest extends FormRequest
 {
     public function rules(): array
     {
+        $projectId = $this->route('project')?->id;
+
         return [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -26,7 +29,9 @@ class UpdateTestCaseRequest extends FormRequest
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip',
             'feature_ids' => 'nullable|array',
-            'feature_ids.*' => 'exists:project_features,id',
+            'feature_ids.*' => [
+                Rule::exists('project_features', 'id')->where('project_id', $projectId),
+            ],
         ];
     }
 
