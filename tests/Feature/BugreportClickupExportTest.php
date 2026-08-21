@@ -278,6 +278,37 @@ test('viewer cannot link clickup', function () {
     $response->assertForbidden();
 });
 
+test('unlink clickup clears the task id', function () {
+    [$user, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => 'abc123']);
+
+    $response = $this->actingAs($user)->delete(
+        route('bugreports.unlink-clickup', [$project, $bugreport])
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+    expect($bugreport->refresh()->clickup_task_id)->toBeNull();
+});
+
+test('viewer cannot unlink clickup', function () {
+    [$owner, $workspace] = createUserWithWorkspace();
+    $project = Project::factory()->create(['user_id' => $owner->id, 'workspace_id' => $workspace->id]);
+    $bugreport = Bugreport::factory()->create(['project_id' => $project->id, 'clickup_task_id' => 'abc123']);
+
+    $viewer = User::factory()->create();
+    $workspace->members()->attach($viewer->id, ['role' => 'viewer']);
+    $viewer->update(['current_workspace_id' => $workspace->id]);
+
+    $response = $this->actingAs($viewer)->delete(
+        route('bugreports.unlink-clickup', [$project, $bugreport])
+    );
+
+    $response->assertForbidden();
+    expect($bugreport->refresh()->clickup_task_id)->toBe('abc123');
+});
+
 test('sync from clickup returns error when not linked', function () {
     [$user, $workspace] = createUserWithWorkspace();
     $project = Project::factory()->create(['user_id' => $user->id, 'workspace_id' => $workspace->id]);

@@ -233,6 +233,16 @@ class BugreportController extends Controller
         return back()->with('success', 'Linked to ClickUp task.');
     }
 
+    public function unlinkClickUp(Project $project, Bugreport $bugreport)
+    {
+        $this->authorize('update', $project);
+        abort_unless($bugreport->project_id === $project->id, 404);
+
+        $bugreport->update(['clickup_task_id' => null]);
+
+        return back()->with('success', 'Unlinked from ClickUp.');
+    }
+
     /**
      * ClickUp task URLs come in several shapes ("/t/{taskId}" permalinks,
      * "/t/{teamId}/{taskId}" in-context links, board/list URLs with a

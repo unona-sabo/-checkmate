@@ -199,7 +199,9 @@ const formatDate = (date: string): string => {
 const isExportingToClickUp = ref(false);
 const isSyncingFromClickUp = ref(false);
 const isLinkingClickUp = ref(false);
+const isUnlinkingClickUp = ref(false);
 const showClickupLinkInput = ref(false);
+const showUnlinkClickupConfirm = ref(false);
 const clickupLinkInput = ref('');
 
 const openClickupLinkInput = () => {
@@ -221,6 +223,22 @@ const saveClickupLink = () => {
             },
             onFinish: () => {
                 isLinkingClickUp.value = false;
+            },
+        },
+    );
+};
+
+const unlinkClickUp = () => {
+    isUnlinkingClickUp.value = true;
+    router.delete(
+        `/projects/${props.project.id}/bugreports/${props.bugreport.id}/link-clickup`,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showUnlinkClickupConfirm.value = false;
+            },
+            onFinish: () => {
+                isUnlinkingClickUp.value = false;
             },
         },
     );
@@ -630,6 +648,35 @@ const syncFromClickUp = () => {
                                     </div>
                                 </div>
                                 <div
+                                    v-else-if="showUnlinkClickupConfirm"
+                                    class="space-y-2"
+                                >
+                                    <p class="text-sm text-muted-foreground">
+                                        Remove the link to this ClickUp task?
+                                    </p>
+                                    <div class="flex gap-2">
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            class="flex-1 cursor-pointer"
+                                            :disabled="isUnlinkingClickUp"
+                                            @click="unlinkClickUp"
+                                        >
+                                            Remove Link
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            class="cursor-pointer"
+                                            @click="
+                                                showUnlinkClickupConfirm = false
+                                            "
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div
                                     v-else-if="bugreport.clickup_task_id"
                                     class="flex items-center gap-2"
                                 >
@@ -666,6 +713,19 @@ const syncFromClickUp = () => {
                                             @click="openClickupLinkInput"
                                         >
                                             <Edit class="h-3.5 w-3.5" />
+                                        </Button>
+                                    </RestrictedAction>
+                                    <RestrictedAction>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-6 w-6 cursor-pointer p-0 text-muted-foreground hover:text-destructive"
+                                            title="Remove ClickUp link"
+                                            @click="
+                                                showUnlinkClickupConfirm = true
+                                            "
+                                        >
+                                            <Trash2 class="h-3.5 w-3.5" />
                                         </Button>
                                     </RestrictedAction>
                                 </div>
