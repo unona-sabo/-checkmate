@@ -52,6 +52,7 @@ class AttachmentService
     {
         foreach ($model->attachments as $attachment) {
             Storage::disk('public')->delete($attachment->stored_path);
+            $attachment->delete();
         }
     }
 

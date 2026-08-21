@@ -12,6 +12,7 @@ use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Models\User;
 use App\Services\AchievementService;
+use App\Services\AttachmentService;
 use App\Services\FeatureLinkingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,10 @@ use Inertia\Response;
 
 class TestSuiteController extends Controller
 {
-    public function __construct(private readonly FeatureLinkingService $featureLinkingService) {}
+    public function __construct(
+        private readonly FeatureLinkingService $featureLinkingService,
+        private readonly AttachmentService $attachmentService,
+    ) {}
 
     public function index(Project $project): Response
     {
@@ -215,6 +219,16 @@ class TestSuiteController extends Controller
     {
         $this->authorize('update', $project);
         abort_unless($testSuite->project_id === $project->id, 404);
+
+        // test_cases.test_suite_id cascades on delete at the DB level, which
+        // bypasses Eloquent model events — without this, attachment files on
+        // disk for every contained (and child-suite) test case would be
+        // orphaned instead of cleaned up, unlike TestCaseController's own
+        // destroy/bulkDestroy paths.
+        $suiteIds = [$testSuite->id, ...$testSuite->children()->pluck('id')];
+        TestCase::whereIn('test_suite_id', $suiteIds)
+            ->with('attachments')
+            ->each(fn (TestCase $testCase) => $this->attachmentService->deleteAll($testCase));
 
         $testSuite->delete();
 

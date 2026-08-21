@@ -7,6 +7,7 @@ use App\Models\TestCase;
 use App\Models\TestSuite;
 use App\Models\User;
 use App\Models\Workspace;
+use Illuminate\Support\Facades\Storage;
 
 test('index page renders with test suites for authenticated user', function () {
     $user = User::factory()->create();
@@ -134,6 +135,41 @@ test('destroy deletes test suite', function () {
     $response->assertRedirect(route('test-suites.index', $project));
 
     $this->assertDatabaseMissing('test_suites', ['id' => $testSuite->id]);
+});
+
+test('destroy cleans up attachments for test cases in the suite and its children', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('attachments/test-cases/parent.png', 'x');
+    Storage::disk('public')->put('attachments/test-cases/child.png', 'x');
+
+    $user = User::factory()->create();
+    $project = Project::factory()->create(['user_id' => $user->id]);
+    $parentSuite = TestSuite::factory()->create(['project_id' => $project->id]);
+    $childSuite = TestSuite::factory()->create(['project_id' => $project->id, 'parent_id' => $parentSuite->id]);
+
+    $caseInParent = TestCase::factory()->create(['test_suite_id' => $parentSuite->id]);
+    $caseInParent->attachments()->create([
+        'original_filename' => 'parent.png',
+        'stored_path' => 'attachments/test-cases/parent.png',
+        'mime_type' => 'image/png',
+        'size' => 1,
+    ]);
+
+    $caseInChild = TestCase::factory()->create(['test_suite_id' => $childSuite->id]);
+    $caseInChild->attachments()->create([
+        'original_filename' => 'child.png',
+        'stored_path' => 'attachments/test-cases/child.png',
+        'mime_type' => 'image/png',
+        'size' => 1,
+    ]);
+
+    $this->actingAs($user)->delete(route('test-suites.destroy', [$project, $parentSuite]))
+        ->assertRedirect(route('test-suites.index', $project));
+
+    $this->assertDatabaseMissing('attachments', ['attachable_id' => $caseInParent->id, 'attachable_type' => TestCase::class]);
+    $this->assertDatabaseMissing('attachments', ['attachable_id' => $caseInChild->id, 'attachable_type' => TestCase::class]);
+    Storage::disk('public')->assertMissing('attachments/test-cases/parent.png');
+    Storage::disk('public')->assertMissing('attachments/test-cases/child.png');
 });
 
 test('viewer cannot store test suite', function () {
