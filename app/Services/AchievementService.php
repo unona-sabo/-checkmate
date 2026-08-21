@@ -9,6 +9,7 @@ use App\Models\TestCase;
 use App\Models\TestCaseNote;
 use App\Models\User;
 use App\Models\UserAchievement;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 class AchievementService
@@ -92,10 +93,19 @@ class AchievementService
 
     public function unlock(User $user, string $key): void
     {
-        $achievement = UserAchievement::firstOrCreate(
-            ['user_id' => $user->id, 'achievement_key' => $key],
-            ['unlocked_at' => now()],
-        );
+        // firstOrCreate() is select-then-insert, not atomic — two concurrent
+        // requests unlocking the same achievement can both pass the select
+        // and race on the insert, with the loser hitting the table's unique
+        // (user_id, achievement_key) constraint. Treat that as "someone else
+        // just unlocked it" instead of letting it surface as a 500.
+        try {
+            $achievement = UserAchievement::firstOrCreate(
+                ['user_id' => $user->id, 'achievement_key' => $key],
+                ['unlocked_at' => now()],
+            );
+        } catch (UniqueConstraintViolationException) {
+            return;
+        }
 
         if (! $achievement->wasRecentlyCreated) {
             return;
@@ -227,22 +237,26 @@ class AchievementService
 
     public function trackDailyActivity(User $user): void
     {
-        $today = now()->toDateString();
+        // Streak/night-owl/early-bird boundaries are meaningless in server
+        // time — a user's "today" and "3am" only make sense in their own
+        // timezone, reported via the cookie TrackUserActivity syncs.
+        $timezone = $user->timezone ?: config('app.timezone');
+        $today = now($timezone)->toDateString();
 
         if ($user->last_active_date?->toDateString() === $today) {
             return;
         }
 
-        DB::transaction(function () use ($user, $today) {
+        DB::transaction(function () use ($user, $today, $timezone) {
             $locked = User::whereKey($user->id)->lockForUpdate()->first();
 
             if ($locked->last_active_date?->toDateString() !== $today) {
                 $previousDate = $locked->last_active_date;
-                $wasYesterday = $previousDate && $previousDate->toDateString() === now()->subDay()->toDateString();
+                $wasYesterday = $previousDate && $previousDate->toDateString() === now($timezone)->subDay()->toDateString();
 
                 $locked->current_streak_days = $wasYesterday ? $locked->current_streak_days + 1 : 1;
 
-                $hour = (int) now()->format('G');
+                $hour = (int) now($timezone)->format('G');
 
                 if ($hour >= 0 && $hour < 5) {
                     $locked->night_owl_days++;

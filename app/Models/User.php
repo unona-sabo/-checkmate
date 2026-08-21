@@ -36,6 +36,7 @@ class User extends Authenticatable
         'notes_created_count',
         'is_admin',
         'blocked_at',
+        'timezone',
     ];
 
     /**

@@ -4,6 +4,7 @@ import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import '../css/app.css';
 import { initializeTheme } from './composables/useAppearance';
+import { initializeTimezoneCookie } from './composables/useTimezone';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -26,3 +27,7 @@ createInertiaApp({
 
 // This will set light / dark mode on page load...
 initializeTheme();
+
+// Reports the browser's timezone so streak/achievement day boundaries are
+// computed in the user's own timezone rather than the server's.
+initializeTimezoneCookie();

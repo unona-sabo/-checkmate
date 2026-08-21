@@ -231,6 +231,37 @@ test('night owl and early bird count distinct days in the right hour windows', f
         ->and(unlockedKeys($user))->toContain('early-bird');
 });
 
+test('night owl respects the users timezone, not the servers', function () {
+    $user = User::factory()->create(['timezone' => 'Asia/Tokyo']);
+
+    // 2am UTC is 11am in Tokyo (UTC+9) — broad daylight there, not a
+    // "night owl" hour, even though it falls in the window under raw
+    // server (UTC) time.
+    Carbon::setTestNow(Carbon::parse('2026-01-01 02:00:00', 'UTC'));
+    for ($i = 0; $i < 10; $i++) {
+        $this->service->trackDailyActivity($user->fresh());
+        Carbon::setTestNow(Carbon::now()->addDay());
+    }
+    Carbon::setTestNow();
+
+    expect(unlockedKeys($user))->not->toContain('night-owl');
+});
+
+test('night owl unlocks based on the users local hour', function () {
+    $user = User::factory()->create(['timezone' => 'Asia/Tokyo']);
+
+    // 17:00 UTC is 02:00 the next day in Tokyo — squarely in the
+    // night-owl window locally, even though it isn't in server (UTC) time.
+    Carbon::setTestNow(Carbon::parse('2026-01-01 17:00:00', 'UTC'));
+    for ($i = 0; $i < 10; $i++) {
+        $this->service->trackDailyActivity($user->fresh());
+        Carbon::setTestNow(Carbon::now()->addDay());
+    }
+    Carbon::setTestNow();
+
+    expect(unlockedKeys($user))->toContain('night-owl');
+});
+
 test('legend unlocks automatically once all other achievements are unlocked', function () {
     $user = User::factory()->create();
 
